@@ -7,7 +7,6 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
     --bg: #0a0c0f;
     --surface: #12161b;
@@ -18,352 +17,56 @@
     --text2: #8a93a2;
     --text3: #555f6e;
     --accent: #3b82f6;
-    --accent2: #60a5fa;
     --green: #22c55e;
     --red: #ef4444;
-    --amber: #f59e0b;
   }
-
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100vh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
-
-  #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    height: 52px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    z-index: 100;
-  }
-
-  .logo {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .logo-mark {
-    width: 28px;
-    height: 28px;
-    background: var(--accent);
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'DM Mono', monospace;
-    font-size: 12px;
-    font-weight: 500;
-    color: white;
-    letter-spacing: -0.5px;
-  }
-
-  .logo-text {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text);
-    letter-spacing: 0.02em;
-  }
-
-  .logo-sub {
-    font-size: 11px;
-    color: var(--text3);
-    font-weight: 400;
-  }
-
-  #property-name {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
-    font-family: 'DM Mono', monospace;
-    background: var(--surface2);
-    padding: 4px 10px;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-  }
-
-  #main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-
-  #map {
-    flex: 1;
-    position: relative;
-  }
-
-  #panel {
-    width: 340px;
-    background: var(--surface);
-    border-left: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
-    transition: transform 0.3s ease;
-  }
-
-  #panel.hidden {
-    transform: translateX(340px);
-  }
-
-  .panel-header {
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-
-  .panel-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
-  .panel-address {
-    font-size: 11px;
-    color: var(--text3);
-    margin-top: 2px;
-    font-family: 'DM Mono', monospace;
-  }
-
-  .close-btn {
-    width: 28px;
-    height: 28px;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text2);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    transition: all 0.15s;
-  }
-
-  .close-btn:hover {
-    background: var(--surface2);
-    color: var(--text);
-  }
-
-  #panel-content {
-    overflow-y: auto;
-    flex: 1;
-    padding: 12px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border2) transparent;
-  }
-
-  .view-section {
-    margin-bottom: 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--surface2);
-  }
-
-  .view-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s;
-  }
-
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
+  .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
+  .logo-sub { font-size: 11px; color: var(--text3); }
+  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); }
+  #main { display: flex; flex: 1; overflow: hidden; }
+  #map { flex: 1; position: relative; }
+  #panel { width: 340px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease; }
+  #panel.hidden { transform: translateX(340px); }
+  .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+  #panel-content { overflow-y: auto; flex: 1; padding: 12px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .view-section { margin-bottom: 12px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
+  .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
-
-  .view-badge {
-    width: 22px;
-    height: 22px;
-    border-radius: 5px;
-    background: var(--accent);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 600;
-    color: white;
-    flex-shrink: 0;
-    font-family: 'DM Mono', monospace;
-  }
-
+  .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
   .view-badge.nadir { background: #7c3aed; }
   .view-badge.deg360 { background: #059669; }
-
-  .view-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text);
-    flex: 1;
-  }
-
-  .chevron {
-    font-size: 10px;
-    color: var(--text3);
-    transition: transform 0.2s;
-  }
-
+  .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
+  .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
   .view-body { display: block; }
   .view-body.collapsed { display: none; }
-
-  .view-img {
-    width: 100%;
-    aspect-ratio: 16/10;
-    object-fit: cover;
-    display: block;
-    background: var(--surface);
-  }
-
-  .view-bullets {
-    padding: 8px 12px;
-    list-style: none;
-  }
-
-  .view-bullets li {
-    font-size: 11px;
-    color: var(--text2);
-    padding: 3px 0;
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-    line-height: 1.5;
-  }
-
-  .view-bullets li::before {
-    content: '';
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--accent);
-    flex-shrink: 0;
-    margin-top: 5px;
-  }
-
-  .btn-360 {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 8px 12px 12px;
-    padding: 9px;
-    background: var(--accent);
-    color: white;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 500;
-    text-decoration: none;
-    transition: opacity 0.15s;
-  }
-
+  .view-img { width: 100%; aspect-ratio: 16/10; object-fit: cover; display: block; background: var(--surface); }
+  .view-bullets { padding: 8px 12px; list-style: none; }
+  .view-bullets li { font-size: 11px; color: var(--text2); padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; }
+  .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 5px; }
+  .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 12px 12px; padding: 9px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
-
-  #loading {
-    position: absolute;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 200;
-  }
-
-  .spinner {
-    width: 32px;
-    height: 32px;
-    border: 2px solid var(--border2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
+  #loading { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 200; }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  .loading-text {
-    font-size: 13px;
-    color: var(--text3);
-    font-family: 'DM Mono', monospace;
-  }
-
-  #error {
-    position: absolute;
-    inset: 0;
-    background: var(--bg);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    z-index: 200;
-    padding: 32px;
-    text-align: center;
-  }
-
+  .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  #error { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 200; padding: 32px; text-align: center; }
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-
-  #toggle-panel {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
-    z-index: 50;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transition: all 0.15s;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-  }
-
+  #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
-
-  .status-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--green);
-    animation: pulse 2s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   @media (max-width: 640px) {
-    #panel {
-      position: absolute;
-      top: 52px;
-      right: 0;
-      bottom: 0;
-      width: 100%;
-      z-index: 50;
-    }
+    #panel { position: absolute; top: 52px; right: 0; bottom: 0; width: 100%; z-index: 50; }
     #panel.hidden { transform: translateX(100%); }
   }
 </style>
@@ -385,22 +88,21 @@
   <div id="map">
     <div id="loading">
       <div class="spinner"></div>
-      <div class="loading-text">Loading property data...</div>
+      <div class="loading-text" id="loading-text">Loading property data...</div>
     </div>
     <div id="error">
       <div class="error-icon">⚠</div>
       <div class="error-title">Property not found</div>
-      <div class="error-msg" id="error-msg">No property ID was provided. Please use a valid property link.</div>
+      <div class="error-msg" id="error-msg">No property ID provided.</div>
     </div>
   </div>
-
   <div id="panel" class="hidden">
     <div class="panel-header">
       <div>
         <div class="panel-title" id="panel-title">Property Details</div>
         <div class="panel-address" id="panel-address"></div>
       </div>
-      <button class="close-btn" onclick="togglePanel()" title="Close panel">✕</button>
+      <button class="close-btn" onclick="togglePanel()">✕</button>
     </div>
     <div id="panel-content"></div>
   </div>
@@ -412,60 +114,69 @@
 </button>
 
 <script>
-const MAPS_API_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
-let map, marker, panelOpen = false;
+let map, panelOpen = false;
 
 function togglePanel() {
   panelOpen = !panelOpen;
-  const panel = document.getElementById('panel');
-  const label = document.getElementById('toggle-label');
-  if (panelOpen) {
-    panel.classList.remove('hidden');
-    label.textContent = 'Hide Intel';
-  } else {
-    panel.classList.add('hidden');
-    label.textContent = 'View Intel';
-  }
+  document.getElementById('panel').classList.toggle('hidden', !panelOpen);
+  document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
 }
 
 function getParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-function formatDesc(desc) {
-  if (!desc) return [];
-  return desc.split(/\.\s+|\n/).map(s => s.trim()).filter(s => s.length > 2);
+function setLoading(msg) {
+  document.getElementById('loading-text').textContent = msg;
 }
 
-function buildPanel(data) {
+function showError(msg) {
+  document.getElementById('loading').style.display = 'none';
+  const err = document.getElementById('error');
+  err.style.display = 'flex';
+  document.getElementById('error-msg').textContent = msg;
+}
+
+function formatDesc(desc) {
+  if (!desc) return [];
+  return desc.split(/\.\s+|\n/).map(s => s.trim()).filter(s => s.length > 3);
+}
+
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  body.classList.toggle('collapsed');
+  chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+}
+
+function buildPanel(data, name, address) {
+  document.getElementById('panel-title').textContent = name;
+  document.getElementById('panel-address').textContent = address;
+
   const views = [
-    { key: 'alpha', label: 'Alpha', badge: 'A' },
-    { key: 'bravo', label: 'Bravo', badge: 'B' },
-    { key: 'charlie', label: 'Charlie', badge: 'C' },
-    { key: 'delta', label: 'Delta', badge: 'D' },
+    { key: 'alpha', label: 'Alpha', badge: 'A', cls: '' },
+    { key: 'bravo', label: 'Bravo', badge: 'B', cls: '' },
+    { key: 'charlie', label: 'Charlie', badge: 'C', cls: '' },
+    { key: 'delta', label: 'Delta', badge: 'D', cls: '' },
     { key: 'nadir', label: 'Nadir', badge: 'N', cls: 'nadir' }
   ];
 
   let html = '';
-
   views.forEach(v => {
     const imgUrl = data[v.key + 'Url'];
     const desc = data[v.key + 'Desc'];
     if (!imgUrl) return;
-
     const bullets = formatDesc(desc);
     html += `
       <div class="view-section">
         <div class="view-header" onclick="toggleSection(this)">
-          <div class="view-badge ${v.cls || ''}">${v.badge}</div>
+          <div class="view-badge ${v.cls}">${v.badge}</div>
           <div class="view-label">${v.label}</div>
           <div class="chevron">▼</div>
         </div>
         <div class="view-body">
           <img class="view-img" src="${imgUrl}" alt="${v.label} view" loading="lazy">
-          <ul class="view-bullets">
-            ${bullets.map(b => `<li>${b}</li>`).join('')}
-          </ul>
+          <ul class="view-bullets">${bullets.map(b => `<li>${b}</li>`).join('')}</ul>
         </div>
       </div>`;
   });
@@ -484,9 +195,7 @@ function buildPanel(data) {
             <li>Pan, tilt, and zoom to explore every angle</li>
             <li>Complete site overview before arrival</li>
           </ul>
-          <a class="btn-360" href="${data.viewer360}" target="_blank">
-            ↗ Launch 360° Viewer
-          </a>
+          <a class="btn-360" href="${data.viewer360}" target="_blank">↗ Launch 360° Viewer</a>
         </div>
       </div>`;
   }
@@ -494,149 +203,142 @@ function buildPanel(data) {
   document.getElementById('panel-content').innerHTML = html;
 }
 
-function toggleSection(header) {
-  const body = header.nextElementSibling;
-  const chevron = header.querySelector('.chevron');
-  body.classList.toggle('collapsed');
-  chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
-}
-
-function initMap(lat, lng, name, address) {
+function initMap(lat, lng) {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat, lng },
     zoom: 18,
-    mapTypeId: 'satellite',
+    mapTypeId: google.maps.MapTypeId.SATELLITE,
     tilt: 0,
-    disableDefaultUI: false,
     mapTypeControl: true,
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-      mapTypeIds: ['satellite', 'roadmap', 'hybrid']
+      mapTypeIds: ['satellite', 'hybrid', 'roadmap']
     },
     zoomControl: true,
     streetViewControl: true,
-    fullscreenControl: true,
-    styles: []
+    fullscreenControl: true
   });
 
-  marker = new google.maps.Marker({
+  const marker = new google.maps.Marker({
     position: { lat, lng },
     map,
-    title: name,
     animation: google.maps.Animation.DROP
   });
 
-  marker.addListener('click', () => {
-    if (!panelOpen) togglePanel();
-  });
-
+  marker.addListener('click', () => { if (!panelOpen) togglePanel(); });
   document.getElementById('loading').style.display = 'none';
-  document.getElementById('property-name').textContent = name;
-  document.getElementById('panel-title').textContent = name;
-  document.getElementById('panel-address').textContent = address;
-
-  setTimeout(() => {
-    if (!panelOpen) togglePanel();
-  }, 800);
+  document.getElementById('property-name').textContent = document.getElementById('panel-title').textContent;
+  setTimeout(() => { if (!panelOpen) togglePanel(); }, 600);
 }
 
-function showError(msg) {
-  document.getElementById('loading').style.display = 'none';
-  const err = document.getElementById('error');
-  err.style.display = 'flex';
-  document.getElementById('error-msg').textContent = msg;
+function parseKML(kmlText) {
+  const parser = new DOMParser();
+  const kml = parser.parseFromString(kmlText, 'text/xml');
+
+  const name = kml.querySelector('Placemark name')?.textContent?.trim()
+             || kml.querySelector('Document name')?.textContent?.trim()
+             || 'Property';
+
+  const coordStr = kml.querySelector('coordinates')?.textContent?.trim() || '';
+  const parts = coordStr.split(',');
+  const lng = parseFloat(parts[0]);
+  const lat = parseFloat(parts[1]);
+
+  const rawDesc = kml.querySelector('description')?.textContent || '';
+  const dp = new DOMParser();
+  const doc = dp.parseFromString(rawDesc, 'text/html');
+
+  function getSection(label) {
+    for (const h of doc.querySelectorAll('h3')) {
+      if (h.textContent.includes(label)) {
+        const ul = h.nextElementSibling;
+        return ul ? Array.from(ul.querySelectorAll('li')).map(li => li.textContent.trim()).join('. ') : '';
+      }
+    }
+    return '';
+  }
+
+  function getImg(label) {
+    for (const h of doc.querySelectorAll('h3')) {
+      if (h.textContent.includes(label)) {
+        let el = h.nextElementSibling;
+        while (el) {
+          if (el.tagName === 'IMG') return el.getAttribute('src') || '';
+          if (el.tagName === 'UL') { el = el.nextElementSibling; continue; }
+          break;
+        }
+      }
+    }
+    return '';
+  }
+
+  function get360() {
+    for (const a of doc.querySelectorAll('a')) {
+      const href = a.getAttribute('href') || '';
+      if (href.includes('3dviewer') || href.includes('dji')) return href;
+    }
+    return '';
+  }
+
+  return {
+    name, lat, lng,
+    data: {
+      alphaUrl: getImg('Alpha'), alphaDesc: getSection('Alpha'),
+      bravoUrl: getImg('Bravo'), bravoDesc: getSection('Bravo'),
+      charlieUrl: getImg('Charlie'), charlieDesc: getSection('Charlie'),
+      deltaUrl: getImg('Delta'), deltaDesc: getSection('Delta'),
+      nadirUrl: getImg('Nadir'), nadirDesc: getSection('Nadir'),
+      viewer360: get360()
+    }
+  };
 }
 
 async function loadProperty() {
   const fileId = getParam('id');
-  if (!fileId) {
-    showError('No property ID was provided. Please use a valid property link from column R.');
+  if (!fileId) { showError('No property ID provided. Please use a valid link from the FR Portal.'); return; }
+
+  const proxies = [
+    `https://corsproxy.io/?${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}`
+  ];
+
+  let kmlText = null;
+
+  for (let i = 0; i < proxies.length; i++) {
+    try {
+      setLoading(`Fetching property data... (attempt ${i + 1} of 3)`);
+      const res = await fetch(proxies[i], { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) continue;
+      const text = await res.text();
+      if (text.includes('<kml') || text.includes('<?xml')) {
+        kmlText = text;
+        break;
+      }
+    } catch (e) {
+      continue;
+    }
+  }
+
+  if (!kmlText) {
+    showError('Could not load property data. Ensure the KMZ file in Google Drive is set to "Anyone with the link".');
     return;
   }
 
   try {
-    const kmlUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
-    const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(kmlUrl)}`);
-    const json = await res.json();
-    const kmlText = json.contents;
-
-    const parser = new DOMParser();
-    const kml = parser.parseFromString(kmlText, 'text/xml');
-
-    const getName = tag => kml.querySelector(tag)?.textContent?.trim() || '';
-    const name = getName('Placemark name') || getName('Document name') || 'Property';
-    const coordStr = getName('coordinates');
-    const coords = coordStr.split(',');
-    const lng = parseFloat(coords[0]);
-    const lat = parseFloat(coords[1]);
-
-    const descRaw = kml.querySelector('description')?.textContent || '';
-    const descParser = new DOMParser();
-    const descDoc = descParser.parseFromString(descRaw, 'text/html');
-
-    function extractSection(label) {
-      const headers = descDoc.querySelectorAll('h3');
-      for (const h of headers) {
-        if (h.textContent.includes(label)) {
-          const ul = h.nextElementSibling;
-          if (ul) return Array.from(ul.querySelectorAll('li')).map(li => li.textContent).join('. ');
-        }
-      }
-      return '';
-    }
-
-    function extractImg(label) {
-      const headers = descDoc.querySelectorAll('h3');
-      for (const h of headers) {
-        if (h.textContent.includes(label)) {
-          let el = h.nextElementSibling;
-          while (el) {
-            if (el.tagName === 'IMG') return el.src || el.getAttribute('src');
-            if (el.tagName === 'UL') { el = el.nextElementSibling; continue; }
-            break;
-          }
-        }
-      }
-      return '';
-    }
-
-    function extract360() {
-      const links = descDoc.querySelectorAll('a');
-      for (const a of links) {
-        if (a.href && a.href.includes('3dviewer')) return a.href;
-        if (a.href && a.href.includes('dji')) return a.href;
-      }
-      return '';
-    }
-
-    const data = {
-      alphaUrl: extractImg('Alpha'),
-      alphaDesc: extractSection('Alpha'),
-      bravoUrl: extractImg('Bravo'),
-      bravoDesc: extractSection('Bravo'),
-      charlieUrl: extractImg('Charlie'),
-      charlieDesc: extractSection('Charlie'),
-      deltaUrl: extractImg('Delta'),
-      deltaDesc: extractSection('Delta'),
-      nadirUrl: extractImg('Nadir'),
-      nadirDesc: extractSection('Nadir'),
-      viewer360: extract360()
-    };
-
-    buildPanel(data);
-    initMap(lat, lng, name, '');
-
+    setLoading('Parsing property data...');
+    const { name, lat, lng, data } = parseKML(kmlText);
+    if (isNaN(lat) || isNaN(lng)) { showError('Property coordinates could not be read from the file.'); return; }
+    buildPanel(data, name, '');
+    initMap(lat, lng);
   } catch (e) {
-    showError('Could not load property data. The file may not be publicly accessible. Error: ' + e.message);
+    showError('Error reading property file: ' + e.message);
   }
 }
 
 window.initGoogleMaps = function() { loadProperty(); };
 </script>
 
-<script async defer
-  src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps">
-</script>
-
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
 </html>
