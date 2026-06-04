@@ -87,7 +87,7 @@
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
 
-  /* ── DESKTOP TOGGLE BUTTON ── */
+  /* ── DESKTOP TOGGLE ── */
   #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
@@ -95,56 +95,81 @@
 
   /* ── MOBILE LAYOUT ── */
   @media (max-width: 768px) {
-
     #property-name { display: none; }
-
-    /* Map takes top 45% of screen */
-    #main { flex-direction: column; }
-    #map { flex: none; height: 45vh; width: 100%; position: relative; }
-
-    /* Hide desktop panel completely */
-    #panel {
-      position: static !important;
-      transform: none !important;
-      width: 100% !important;
-      flex: 1;
-      border-left: none;
-      border-top: 1px solid var(--border);
-      overflow: hidden;
-    }
-    #panel.hidden {
-      transform: none !important;
-      width: 100% !important;
-    }
-
-    /* Always show panel on mobile */
-    #panel { display: flex !important; }
-
-    /* Hide desktop toggle button on mobile */
     #toggle-panel { display: none; }
 
-    /* Hide close button on mobile — panel is always visible */
-    .close-btn { display: none; }
+    #main { flex-direction: column; position: relative; }
 
-    /* Compact panel header on mobile */
+    /* Map pane */
+    #map {
+      flex: none;
+      width: 100%;
+      height: calc(100vh - 52px);
+      transition: height 0.35s ease;
+    }
+
+    /* Panel pane */
+    #panel {
+      position: absolute !important;
+      left: 0; right: 0; bottom: 0;
+      width: 100% !important;
+      transform: none !important;
+      border-left: none;
+      border-top: 1px solid var(--border2);
+      height: 55vh;
+      transition: height 0.35s ease;
+      z-index: 10;
+    }
+
+    /* When map is fullscreen — panel slides down out of view */
+    body.map-full #map { height: calc(100vh - 52px); }
+    body.map-full #panel { height: 0; overflow: hidden; border-top: none; }
+
+    /* When intel is fullscreen — map shrinks to nothing */
+    body.intel-full #map { height: 0; }
+    body.intel-full #panel { height: calc(100vh - 52px); }
+
+    /* Default split */
+    body.split #map { height: 45vh; }
+    body.split #panel { height: calc(55vh - 0px); position: absolute; top: calc(45vh + 52px); }
+
+    /* Mobile swap button */
+    #mobile-swap {
+      position: absolute;
+      bottom: calc(55vh + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+      transition: bottom 0.35s ease, background 0.15s;
+      white-space: nowrap;
+    }
+    #mobile-swap:hover { background: var(--surface2); }
+    body.map-full #mobile-swap { bottom: 16px; }
+    body.intel-full #mobile-swap { bottom: calc(100vh - 52px - 44px); position: fixed; top: auto; }
+
+    .close-btn { display: none; }
     .panel-header { padding: 10px 14px; }
     .panel-title { font-size: 13px; }
     .panel-address { font-size: 10px; }
-
-    /* Scrollable content area */
     #panel-content { padding: 10px; }
-
-    /* Slightly smaller text on mobile */
     .view-bullets li { font-size: 11px; }
     .view-label { font-size: 11px; }
-
-    /* Force map controls to top right on mobile */
-    .gm-bundled-control { right: 8px !important; top: 8px !important; bottom: auto !important; left: auto !important; }
-    .gmnoprint { right: 8px !important; }
   }
 </style>
 </head>
-<body>
+<body class="split">
 
 <div id="header">
   <div class="logo">
@@ -165,7 +190,8 @@
       <div class="error-msg" id="error-msg">No property data provided.</div>
     </div>
   </div>
-  <div id="panel" class="hidden">
+
+  <div id="panel">
     <div class="panel-header">
       <div>
         <div class="panel-title" id="panel-title">Property Details</div>
@@ -175,6 +201,12 @@
     </div>
     <div id="panel-content"></div>
   </div>
+
+  <!-- Mobile swap button -->
+  <button id="mobile-swap" onclick="mobileSwap()">
+    <span id="swap-icon">⬆</span>
+    <span id="swap-label">Full Map</span>
+  </button>
 </div>
 
 <button id="toggle-panel" onclick="togglePanel()">
@@ -199,10 +231,47 @@
 
 <script>
 let map, panelOpen = false;
-let lightboxViews = [];
-let lightboxIndex = 0;
+let lightboxViews = [], lightboxIndex = 0;
+// Mobile states: 'split' | 'map-full' | 'intel-full'
+let mobileState = 'split';
 const isMobile = () => window.innerWidth <= 768;
 
+// ── MOBILE SWAP ──
+function mobileSwap() {
+  if (mobileState === 'split') {
+    setMobileState('map-full');
+  } else if (mobileState === 'map-full') {
+    setMobileState('intel-full');
+  } else {
+    setMobileState('split');
+  }
+}
+
+function setMobileState(state) {
+  mobileState = state;
+  document.body.classList.remove('split', 'map-full', 'intel-full');
+  document.body.classList.add(state);
+
+  const icon = document.getElementById('swap-icon');
+  const label = document.getElementById('swap-label');
+
+  if (state === 'split') {
+    icon.textContent = '⬆';
+    label.textContent = 'Full Map';
+  } else if (state === 'map-full') {
+    icon.textContent = '☰';
+    label.textContent = 'View Intel';
+  } else {
+    icon.textContent = '⬇';
+    label.textContent = 'Split View';
+  }
+
+  setTimeout(function() {
+    if (map) google.maps.event.trigger(map, 'resize');
+  }, 380);
+}
+
+// ── DESKTOP TOGGLE ──
 function togglePanel() {
   if (isMobile()) return;
   panelOpen = !panelOpen;
@@ -297,7 +366,7 @@ function buildPanel(d) {
       + '<div class="view-body">'
       + '<div class="view-img-wrap" onclick="openLightbox(' + idx + ')">'
       + '<img class="view-img" src="' + v.data.url + '" alt="' + v.label + ' view" loading="lazy">'
-      + '<div class="zoom-hint">🔍 Click to enlarge</div>'
+      + '<div class="zoom-hint">🔍 Tap to enlarge</div>'
       + '</div>'
       + '<ul class="view-bullets">' + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('') + '</ul>'
       + '</div></div>';
@@ -328,24 +397,19 @@ function initMap(lat, lng) {
     tilt: 0,
     mapTypeControl: !mobile,
     zoomControl: true,
-    zoomControlOptions: {
-      position: google.maps.ControlPosition.RIGHT_TOP
-    },
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
     streetViewControl: !mobile,
     fullscreenControl: true,
-    fullscreenControlOptions: {
-      position: google.maps.ControlPosition.RIGHT_TOP
-    }
+    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
   });
 
-  const marker = new google.maps.Marker({
+  new google.maps.Marker({
     position: { lat: lat, lng: lng },
     map: map,
     animation: google.maps.Animation.DROP
   });
 
   if (!mobile) {
-    marker.addListener('click', function() { if (!panelOpen) togglePanel(); });
     setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
   }
 }
@@ -353,7 +417,6 @@ function initMap(lat, lng) {
 window.initGoogleMaps = async function() {
   const id = new URLSearchParams(window.location.search).get('id');
   if (!id) { showError('No property ID provided.'); return; }
-
   try {
     const res = await fetch('https://jonahbourgeois1.github.io/property-intel/data/' + id + '.json');
     if (!res.ok) { showError('Property "' + id + '" not found.'); return; }
