@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"><title>Property Intel — Vyanet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Property Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,18 +26,7 @@
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
   /* ── HEADER ── */
-  #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    padding-top: env(safe-area-inset-top);
-    height: calc(52px + env(safe-area-inset-top));
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    z-index: 100;
-  }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
@@ -97,32 +87,14 @@
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
 
-  /* ── DESKTOP TOGGLE BUTTON ── */
+  /* ── DESKTOP TOGGLE ── */
   #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-  /* ── MOBILE TOGGLE BUTTON ── */
-  #mobile-toggle {
-    display: none;
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 50;
-    background: var(--surface);
-    border: 1px solid var(--border2);
-    border-radius: 8px;
-    padding: 10px 14px;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text);
-    cursor: pointer;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-    transition: background 0.15s;
-  }
+  /* ── MOBILE TOGGLE ── */
+  #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: background 0.15s; }
   #mobile-toggle:hover { background: var(--surface2); }
 
   /* ── MOBILE LAYOUT ── */
@@ -133,12 +105,6 @@
 
     #main { position: relative; }
 
-    #header {
-      padding-top: env(safe-area-inset-top);
-      height: calc(52px + env(safe-area-inset-top));
-    }
-
-    /* Map always fills full screen on mobile */
     #map {
       position: absolute;
       inset: 0;
@@ -146,13 +112,12 @@
       height: 100%;
     }
 
-    /* Panel slides up from bottom */
     #panel {
       position: fixed !important;
       left: 0;
       right: 0;
       bottom: 0;
-      top: calc(52px + env(safe-area-inset-top)) !important;
+      top: 52px;
       width: 100% !important;
       transform: translateY(100%) !important;
       transition: transform 0.35s ease !important;
@@ -161,7 +126,6 @@
       z-index: 40;
     }
 
-    /* When intel is shown — panel slides up to cover map */
     #panel.mobile-open {
       transform: translateY(0%) !important;
     }
@@ -210,19 +174,16 @@
   </div>
 </div>
 
-<!-- Desktop toggle -->
 <button id="toggle-panel" onclick="togglePanel()">
   <div class="status-dot"></div>
   <span id="toggle-label">View Intel</span>
 </button>
 
-<!-- Mobile toggle -->
 <button id="mobile-toggle" onclick="mobileToggle()">
   <div class="status-dot"></div>
   <span id="mobile-label">Show Intel</span>
 </button>
 
-<!-- Lightbox -->
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
@@ -242,7 +203,6 @@ let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
 
-// ── DESKTOP TOGGLE ──
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -252,7 +212,6 @@ function togglePanel() {
   }, 350);
 }
 
-// ── MOBILE TOGGLE ──
 function mobileToggle() {
   mobileIntelOpen = !mobileIntelOpen;
   document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
