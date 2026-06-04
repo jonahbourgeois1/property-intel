@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Property Intel — Vyanet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"><title>Property Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -121,6 +120,11 @@
 
     #main { position: relative; }
 
+    #header {
+      padding-top: env(safe-area-inset-top);
+      height: calc(52px + env(safe-area-inset-top));
+    }
+
     /* Map always fills full screen on mobile */
     #map {
       position: absolute;
@@ -135,7 +139,7 @@
       left: 0;
       right: 0;
       bottom: 0;
-      top: 52px;
+      top: calc(52px + env(safe-area-inset-top)) !important;
       width: 100% !important;
       transform: translateY(100%) !important;
       transition: transform 0.35s ease !important;
