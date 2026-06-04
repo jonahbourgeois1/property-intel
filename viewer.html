@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <title>Property Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -21,12 +21,31 @@
     --accent: #3b82f6;
     --green: #22c55e;
     --red: #ef4444;
+    --header-h: 52px;
   }
 
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
 
   /* ── HEADER ── */
-  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
+  #header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 100;
+  }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
@@ -94,8 +113,7 @@
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
   /* ── MOBILE TOGGLE ── */
-  #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: background 0.15s; }
-  #mobile-toggle:hover { background: var(--surface2); }
+  #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
 
   /* ── MOBILE LAYOUT ── */
   @media (max-width: 768px) {
@@ -103,7 +121,9 @@
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
 
-    #main { position: relative; }
+    body { height: 100dvh; }
+
+    #main { position: relative; flex: 1; min-height: 0; }
 
     #map {
       position: absolute;
@@ -114,16 +134,18 @@
 
     #panel {
       position: fixed !important;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      top: 52px;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      top: var(--header-h) !important;
       width: 100% !important;
+      height: calc(100dvh - var(--header-h)) !important;
       transform: translateY(100%) !important;
       transition: transform 0.35s ease !important;
-      border-left: none;
-      border-top: 1px solid var(--border2);
+      border-left: none !important;
+      border-top: 1px solid var(--border2) !important;
       z-index: 40;
+      overflow: hidden;
     }
 
     #panel.mobile-open {
@@ -137,6 +159,9 @@
     #panel-content { padding: 10px; }
     .view-bullets li { font-size: 11px; }
     .view-label { font-size: 11px; }
+
+    /* Keep mobile toggle above panel */
+    #mobile-toggle { z-index: 50; bottom: 20px; }
   }
 </style>
 </head>
