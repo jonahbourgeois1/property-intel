@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Property Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -20,13 +20,18 @@
     --green: #22c55e;
     --red: #ef4444;
   }
+
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+  /* ── HEADER ── */
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
-  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ── DESKTOP LAYOUT ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
   #map { flex: 1; position: relative; }
   #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
@@ -37,6 +42,8 @@
   .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
   .close-btn:hover { background: var(--surface2); color: var(--text); }
   #panel-content { overflow-y: auto; flex: 1; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+  /* ── VIEW SECTIONS ── */
   .view-section { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
@@ -59,10 +66,10 @@
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
 
-  /* Lightbox */
+  /* ── LIGHTBOX ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
-  #lightbox-img { max-width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 48px rgba(0,0,0,0.6); }
+  #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 48px rgba(0,0,0,0.6); }
   #lightbox-caption { margin-top: 16px; text-align: center; }
   #lightbox-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
   #lightbox-bullets { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; max-width: 700px; }
@@ -74,18 +81,66 @@
   .nav-btn:hover { background: var(--surface2); }
   #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
 
+  /* ── ERROR ── */
   #error { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 200; padding: 32px; text-align: center; }
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
+
+  /* ── DESKTOP TOGGLE BUTTON ── */
   #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  /* ── MOBILE LAYOUT ── */
   @media (max-width: 768px) {
-    #panel { position: absolute; top: 52px; right: 0; bottom: 0; width: 100%; z-index: 50; }
-    #panel.hidden { transform: translateX(100%); width: 100%; }
-    #toggle-panel { bottom: 16px; right: 16px; }
+
+    #property-name { display: none; }
+
+    /* Map takes top 45% of screen */
+    #main { flex-direction: column; }
+    #map { flex: none; height: 45vh; width: 100%; position: relative; }
+
+    /* Hide desktop panel completely */
+    #panel {
+      position: static !important;
+      transform: none !important;
+      width: 100% !important;
+      flex: 1;
+      border-left: none;
+      border-top: 1px solid var(--border);
+      overflow: hidden;
+    }
+    #panel.hidden {
+      transform: none !important;
+      width: 100% !important;
+    }
+
+    /* Always show panel on mobile */
+    #panel { display: flex !important; }
+
+    /* Hide desktop toggle button on mobile */
+    #toggle-panel { display: none; }
+
+    /* Hide close button on mobile — panel is always visible */
+    .close-btn { display: none; }
+
+    /* Compact panel header on mobile */
+    .panel-header { padding: 10px 14px; }
+    .panel-title { font-size: 13px; }
+    .panel-address { font-size: 10px; }
+
+    /* Scrollable content area */
+    #panel-content { padding: 10px; }
+
+    /* Slightly smaller text on mobile */
+    .view-bullets li { font-size: 11px; }
+    .view-label { font-size: 11px; }
+
+    /* Force map controls to top right on mobile */
+    .gm-bundled-control { right: 8px !important; top: 8px !important; bottom: auto !important; left: auto !important; }
+    .gmnoprint { right: 8px !important; }
   }
 </style>
 </head>
@@ -146,8 +201,10 @@
 let map, panelOpen = false;
 let lightboxViews = [];
 let lightboxIndex = 0;
+const isMobile = () => window.innerWidth <= 768;
 
 function togglePanel() {
+  if (isMobile()) return;
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
@@ -263,19 +320,22 @@ function buildPanel(d) {
 }
 
 function initMap(lat, lng) {
+  const mobile = isMobile();
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: lat, lng: lng },
     zoom: 18,
     mapTypeId: google.maps.MapTypeId.SATELLITE,
     tilt: 0,
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-      mapTypeIds: ['satellite', 'hybrid', 'roadmap']
-    },
+    mapTypeControl: !mobile,
     zoomControl: true,
-    streetViewControl: true,
-    fullscreenControl: true
+    zoomControlOptions: {
+      position: google.maps.ControlPosition.RIGHT_TOP
+    },
+    streetViewControl: !mobile,
+    fullscreenControl: true,
+    fullscreenControlOptions: {
+      position: google.maps.ControlPosition.RIGHT_TOP
+    }
   });
 
   const marker = new google.maps.Marker({
@@ -284,8 +344,10 @@ function initMap(lat, lng) {
     animation: google.maps.Animation.DROP
   });
 
-  marker.addListener('click', function() { if (!panelOpen) togglePanel(); });
-  setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+  if (!mobile) {
+    marker.addListener('click', function() { if (!panelOpen) togglePanel(); });
+    setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+  }
 }
 
 window.initGoogleMaps = async function() {
