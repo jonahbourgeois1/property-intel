@@ -19,7 +19,6 @@
     --accent: #3b82f6;
     --green: #22c55e;
     --red: #ef4444;
-    --amber: #f59e0b;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: 52px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
@@ -27,7 +26,7 @@
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
-  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); }
+  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
   #map { flex: 1; position: relative; }
   #panel { width: 340px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease; }
@@ -54,10 +53,6 @@
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 5px; }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 12px 12px; padding: 9px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
-  #loading { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 200; }
-  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
   #error { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 200; padding: 32px; text-align: center; }
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
@@ -66,23 +61,10 @@
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  /* Debug console */
-  #debug-bar { background: #0d1117; border-top: 1px solid var(--border2); flex-shrink: 0; }
-  #debug-toggle { width: 100%; padding: 6px 12px; background: transparent; border: none; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; }
-  #debug-toggle:hover { color: var(--text2); }
-  #debug-console { display: none; height: 140px; overflow-y: auto; padding: 8px 12px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  #debug-console.open { display: block; }
-  .log-line { font-family: 'DM Mono', monospace; font-size: 11px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 10px; }
-  .log-time { color: var(--text3); flex-shrink: 0; }
-  .log-info { color: #60a5fa; }
-  .log-success { color: var(--green); }
-  .log-warn { color: var(--amber); }
-  .log-error { color: var(--red); }
-
   @media (max-width: 640px) {
     #panel { position: absolute; top: 52px; right: 0; bottom: 0; width: 100%; z-index: 50; }
     #panel.hidden { transform: translateX(100%); }
+    #toggle-panel { bottom: 16px; right: 16px; }
   }
 </style>
 </head>
@@ -101,14 +83,10 @@
 
 <div id="main">
   <div id="map">
-    <div id="loading">
-      <div class="spinner"></div>
-      <div class="loading-text" id="loading-text">Loading property data...</div>
-    </div>
     <div id="error">
       <div class="error-icon">⚠</div>
       <div class="error-title">Property not found</div>
-      <div class="error-msg" id="error-msg">No property ID provided.</div>
+      <div class="error-msg" id="error-msg">No property data provided.</div>
     </div>
   </div>
   <div id="panel" class="hidden">
@@ -128,35 +106,8 @@
   <span id="toggle-label">View Intel</span>
 </button>
 
-<div id="debug-bar">
-  <button id="debug-toggle" onclick="toggleDebug()">
-    <span id="debug-arrow">▶</span> Debug Console <span id="debug-count" style="color:var(--accent)">[0 logs]</span>
-  </button>
-  <div id="debug-console"></div>
-</div>
-
 <script>
-let map, panelOpen = false, debugOpen = false, logCount = 0;
-
-function toggleDebug() {
-  debugOpen = !debugOpen;
-  document.getElementById('debug-console').classList.toggle('open', debugOpen);
-  document.getElementById('debug-arrow').textContent = debugOpen ? '▼' : '▶';
-}
-
-function dbg(msg, type = 'info') {
-  logCount++;
-  document.getElementById('debug-count').textContent = `[${logCount} logs]`;
-  const now = new Date();
-  const time = now.toTimeString().split(' ')[0];
-  const line = document.createElement('div');
-  line.className = 'log-line';
-  line.innerHTML = `<span class="log-time">${time}</span><span class="log-${type}">${msg}</span>`;
-  const console = document.getElementById('debug-console');
-  console.appendChild(line);
-  console.scrollTop = console.scrollHeight;
-  if (!debugOpen) toggleDebug();
-}
+let map, panelOpen = false;
 
 function togglePanel() {
   panelOpen = !panelOpen;
@@ -164,26 +115,18 @@ function togglePanel() {
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
 }
 
-function getParam(name) {
-  return new URLSearchParams(window.location.search).get(name);
-}
-
-function setLoading(msg) {
-  document.getElementById('loading-text').textContent = msg;
-  dbg(msg, 'info');
+function p(name) {
+  return decodeURIComponent(new URLSearchParams(window.location.search).get(name) || '');
 }
 
 function showError(msg) {
-  document.getElementById('loading').style.display = 'none';
-  const err = document.getElementById('error');
-  err.style.display = 'flex';
+  document.getElementById('error').style.display = 'flex';
   document.getElementById('error-msg').textContent = msg;
-  dbg('ERROR: ' + msg, 'error');
 }
 
 function formatDesc(desc) {
   if (!desc) return [];
-  return desc.split(/\.\s+|\n/).map(s => s.trim()).filter(s => s.length > 3);
+  return desc.split('|').map(s => s.trim()).filter(s => s.length > 2);
 }
 
 function toggleSection(header) {
@@ -193,24 +136,25 @@ function toggleSection(header) {
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
-function buildPanel(data, name, address) {
-  document.getElementById('panel-title').textContent = name;
+function buildPanel() {
+  const name = p('name');
+  const address = p('address');
+  document.getElementById('panel-title').textContent = name || 'Property';
   document.getElementById('panel-address').textContent = address;
-  dbg('Building panel for: ' + name, 'info');
+  document.getElementById('property-name').textContent = name || 'Property';
 
   const views = [
-    { key: 'alpha', label: 'Alpha', badge: 'A', cls: '' },
-    { key: 'bravo', label: 'Bravo', badge: 'B', cls: '' },
-    { key: 'charlie', label: 'Charlie', badge: 'C', cls: '' },
-    { key: 'delta', label: 'Delta', badge: 'D', cls: '' },
-    { key: 'nadir', label: 'Nadir', badge: 'N', cls: 'nadir' }
+    { label: 'Alpha', badge: 'A', cls: '', imgKey: 'au', descKey: 'ad' },
+    { label: 'Bravo', badge: 'B', cls: '', imgKey: 'bu', descKey: 'bd' },
+    { label: 'Charlie', badge: 'C', cls: '', imgKey: 'cu', descKey: 'cd' },
+    { label: 'Delta', badge: 'D', cls: '', imgKey: 'du', descKey: 'dd' },
+    { label: 'Nadir', badge: 'N', cls: 'nadir', imgKey: 'nu', descKey: 'nd' }
   ];
 
   let html = '';
   views.forEach(v => {
-    const imgUrl = data[v.key + 'Url'];
-    const desc = data[v.key + 'Desc'];
-    dbg(`${v.label} → img: ${imgUrl ? '✓' : 'MISSING'} | desc: ${desc ? '✓' : 'MISSING'}`, imgUrl ? 'success' : 'warn');
+    const imgUrl = p(v.imgKey);
+    const desc = p(v.descKey);
     if (!imgUrl) return;
     const bullets = formatDesc(desc);
     html += `
@@ -227,8 +171,8 @@ function buildPanel(data, name, address) {
       </div>`;
   });
 
-  if (data.viewer360) {
-    dbg('360 viewer URL found: ' + data.viewer360, 'success');
+  const viewer360 = p('v360');
+  if (viewer360) {
     html += `
       <div class="view-section">
         <div class="view-header" onclick="toggleSection(this)">
@@ -242,18 +186,19 @@ function buildPanel(data, name, address) {
             <li>Pan, tilt, and zoom to explore every angle</li>
             <li>Complete site overview before arrival</li>
           </ul>
-          <a class="btn-360" href="${data.viewer360}" target="_blank">↗ Launch 360° Viewer</a>
+          <a class="btn-360" href="${viewer360}" target="_blank">↗ Launch 360° Viewer</a>
         </div>
       </div>`;
-  } else {
-    dbg('No 360 viewer URL found', 'warn');
   }
 
   document.getElementById('panel-content').innerHTML = html;
 }
 
-function initMap(lat, lng) {
-  dbg(`Initializing map at ${lat}, ${lng}`, 'info');
+function initMap() {
+  const lat = parseFloat(p('lat'));
+  const lng = parseFloat(p('lng'));
+  if (isNaN(lat) || isNaN(lng)) { showError('Property coordinates are missing.'); return; }
+
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat, lng },
     zoom: 18,
@@ -276,152 +221,16 @@ function initMap(lat, lng) {
   });
 
   marker.addListener('click', () => { if (!panelOpen) togglePanel(); });
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('property-name').textContent = document.getElementById('panel-title').textContent;
-  dbg('Map initialized successfully', 'success');
   setTimeout(() => { if (!panelOpen) togglePanel(); }, 600);
 }
 
-function parseKML(kmlText) {
-  dbg('Parsing KML — length: ' + kmlText.length + ' chars', 'info');
-  const parser = new DOMParser();
-  const kml = parser.parseFromString(kmlText, 'text/xml');
-
-  const parseErr = kml.querySelector('parsererror');
-  if (parseErr) {
-    dbg('XML parse error: ' + parseErr.textContent.substring(0, 100), 'error');
-  }
-
-  const name = kml.querySelector('Placemark name')?.textContent?.trim()
-             || kml.querySelector('Document name')?.textContent?.trim()
-             || 'Property';
-  dbg('Placemark name: ' + name, 'info');
-
-  const coordStr = kml.querySelector('coordinates')?.textContent?.trim() || '';
-  dbg('Coordinates raw: ' + coordStr.substring(0, 60), 'info');
-  const parts = coordStr.split(',');
-  const lng = parseFloat(parts[0]);
-  const lat = parseFloat(parts[1]);
-  dbg(`Parsed lat: ${lat}, lng: ${lng}`, isNaN(lat) ? 'error' : 'success');
-
-  const rawDesc = kml.querySelector('description')?.textContent || '';
-  dbg('Description length: ' + rawDesc.length + ' chars', rawDesc.length > 0 ? 'success' : 'warn');
-
-  const dp = new DOMParser();
-  const doc = dp.parseFromString(rawDesc, 'text/html');
-  const h3s = doc.querySelectorAll('h3');
-  dbg('H3 headers found in description: ' + h3s.length, h3s.length > 0 ? 'success' : 'warn');
-  h3s.forEach(h => dbg('  → ' + h.textContent.trim(), 'info'));
-
-  function getSection(label) {
-    for (const h of doc.querySelectorAll('h3')) {
-      if (h.textContent.includes(label)) {
-        const ul = h.nextElementSibling;
-        return ul ? Array.from(ul.querySelectorAll('li')).map(li => li.textContent.trim()).join('. ') : '';
-      }
-    }
-    return '';
-  }
-
-  function getImg(label) {
-    for (const h of doc.querySelectorAll('h3')) {
-      if (h.textContent.includes(label)) {
-        let el = h.nextElementSibling;
-        while (el) {
-          if (el.tagName === 'IMG') return el.getAttribute('src') || '';
-          if (el.tagName === 'UL') { el = el.nextElementSibling; continue; }
-          break;
-        }
-      }
-    }
-    return '';
-  }
-
-  function get360() {
-    for (const a of doc.querySelectorAll('a')) {
-      const href = a.getAttribute('href') || '';
-      if (href.includes('3dviewer') || href.includes('dji')) return href;
-    }
-    return '';
-  }
-
-  return {
-    name, lat, lng,
-    data: {
-      alphaUrl: getImg('Alpha'), alphaDesc: getSection('Alpha'),
-      bravoUrl: getImg('Bravo'), bravoDesc: getSection('Bravo'),
-      charlieUrl: getImg('Charlie'), charlieDesc: getSection('Charlie'),
-      deltaUrl: getImg('Delta'), deltaDesc: getSection('Delta'),
-      nadirUrl: getImg('Nadir'), nadirDesc: getSection('Nadir'),
-      viewer360: get360()
-    }
-  };
-}
-
-async function loadProperty() {
-  const fileId = getParam('id');
-  dbg('File ID from URL: ' + (fileId || 'MISSING'), fileId ? 'info' : 'error');
-  if (!fileId) { showError('No property ID provided.'); return; }
-
-  const proxies = [
-    { name: 'corsproxy.io', url: `https://corsproxy.io/?${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}` },
-    { name: 'codetabs', url: `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}` },
-    { name: 'allorigins', url: `https://api.allorigins.win/raw?url=${encodeURIComponent('https://drive.google.com/uc?export=download&id=' + fileId)}` }
-  ];
-
-  let kmlText = null;
-
-  for (let i = 0; i < proxies.length; i++) {
-    const proxy = proxies[i];
-    try {
-      dbg(`Trying proxy ${i+1}/3: ${proxy.name}`, 'info');
-      setLoading(`Fetching via ${proxy.name}...`);
-      const res = await fetch(proxy.url, { signal: AbortSignal.timeout(8000) });
-      dbg(`${proxy.name} response status: ${res.status}`, res.ok ? 'success' : 'warn');
-      if (!res.ok) { dbg(`${proxy.name} returned ${res.status} — skipping`, 'warn'); continue; }
-      const text = await res.text();
-      dbg(`${proxy.name} returned ${text.length} chars`, 'info');
-      dbg(`First 100 chars: ${text.substring(0, 100)}`, 'info');
-      if (text.includes('<kml') || text.includes('<?xml')) {
-        dbg(`Valid KML detected via ${proxy.name}`, 'success');
-        kmlText = text;
-        break;
-      } else {
-        dbg(`${proxy.name} response does not appear to be KML`, 'warn');
-      }
-    } catch (e) {
-      dbg(`${proxy.name} failed: ${e.message}`, 'error');
-    }
-  }
-
-  if (!kmlText) {
-    showError('All proxies failed. Check debug console for details.');
-    return;
-  }
-
-  try {
-    setLoading('Parsing property data...');
-    const { name, lat, lng, data } = parseKML(kmlText);
-    if (isNaN(lat) || isNaN(lng)) { showError('Coordinates could not be parsed from KML.'); return; }
-    buildPanel(data, name, '');
-    initMap(lat, lng);
-  } catch (e) {
-    showError('Parse error: ' + e.message);
-    dbg('Stack: ' + e.stack, 'error');
-  }
-}
-
 window.initGoogleMaps = function() {
-  dbg('Google Maps API loaded successfully', 'success');
-  loadProperty();
+  const name = p('name');
+  const lat = p('lat');
+  if (!name && !lat) { showError('No property data found. Please use a valid FR Link.'); return; }
+  buildPanel();
+  initMap();
 };
-
-window.onerror = function(msg, src, line) {
-  dbg(`JS Error: ${msg} (line ${line})`, 'error');
-};
-
-dbg('Page initialized', 'info');
-dbg('URL: ' + window.location.href, 'info');
 </script>
 
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
