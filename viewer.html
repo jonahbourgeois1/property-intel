@@ -113,6 +113,9 @@ function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
+  setTimeout(function() {
+    google.maps.event.trigger(map, 'resize');
+  }, 350);
 }
 
 function p(name) {
