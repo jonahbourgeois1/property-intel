@@ -258,21 +258,15 @@ function toggleSection(header) {
 // ── GEOCODING ──
 function geocodeAddress(address, callback) {
   const cleanAddress = address.replace(/^\s+/, '');
-  const url = 'https://maps.googleapis.com/maps/api/geocode/json?address='
-    + encodeURIComponent(cleanAddress)
-    + '&key=' + MAPS_API_KEY;
-
-  fetch(url)
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
-      if (data.status === 'OK') {
-        const loc = data.results[0].geometry.location;
-        callback(loc.lat, loc.lng);
-      } else {
-        callback(null, null);
-      }
-    })
-    .catch(function() { callback(null, null); });
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode({ address: cleanAddress }, function(results, status) {
+    if (status === 'OK' && results[0]) {
+      const loc = results[0].geometry.location;
+      callback(loc.lat(), loc.lng());
+    } else {
+      callback(null, null);
+    }
+  });
 }
 
 // ── LIGHTBOX ──
