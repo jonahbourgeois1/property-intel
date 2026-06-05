@@ -25,37 +25,27 @@
   }
 
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-
-  /* ── HEADER ── */
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
   #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* ── DESKTOP LAYOUT ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
   #map { flex: 1; position: relative; background: var(--bg); }
   #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(680px); width: 0; }
-
-  /* ── VIEW TABS ── */
   #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
   #view-tabs::-webkit-scrollbar { display: none; }
   .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ── PANEL ── */
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
   .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
   .close-btn:hover { background: var(--surface2); color: var(--text); }
   #panel-content { overflow-y: auto; flex: 1; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-
-  /* ── VIEW SECTIONS ── */
   .view-section { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
@@ -77,14 +67,10 @@
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
-
-  /* ── LOADING ── */
   #loading { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 200; }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
-
-  /* ── LIGHTBOX ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
   #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 48px rgba(0,0,0,0.6); }
@@ -96,23 +82,16 @@
   #lightbox-nav { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
   .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
-
-  /* ── ERROR ── */
   #error { position: absolute; inset: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 200; padding: 32px; text-align: center; }
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-
-  /* ── DESKTOP TOGGLE ── */
   #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  /* ── MOBILE TOGGLE ── */
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
 
-  /* ── MOBILE LAYOUT ── */
   @media (max-width: 768px) {
     #property-name { display: none; }
     #toggle-panel { display: none; }
@@ -211,8 +190,9 @@ let lightboxViews = [], lightboxIndex = 0;
 let propertyIndex = null;
 let currentViewData = null;
 let currentViews = null;
+let mapsApiReady = false;
+let pendingEntry = null;
 const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
-const MAPS_API_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const isMobile = () => window.innerWidth <= 768;
 
 // ── PANEL TOGGLE ──
@@ -242,6 +222,10 @@ function setLoading(msg) {
   document.getElementById('loading-text').textContent = msg;
 }
 
+function hideLoading() {
+  document.getElementById('loading').style.display = 'none';
+}
+
 // ── HELPERS ──
 function formatDesc(desc) {
   if (!desc) return [];
@@ -255,18 +239,60 @@ function toggleSection(header) {
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
-// ── GEOCODING ──
-function geocodeAddress(address, callback) {
-  const cleanAddress = address.replace(/^\s+/, '');
-  const geocoder = new google.maps.Geocoder();
-  geocoder.geocode({ address: cleanAddress }, function(results, status) {
-    if (status === 'OK' && results[0]) {
-      const loc = results[0].geometry.location;
-      callback(loc.lat(), loc.lng());
-    } else {
-      callback(null, null);
-    }
+// ── MAP INIT ──
+function initMap(lat, lng) {
+  const mapEl = document.getElementById('map');
+  map = new google.maps.Map(mapEl, {
+    center: { lat: lat, lng: lng },
+    zoom: 18,
+    mapTypeId: google.maps.MapTypeId.SATELLITE,
+    tilt: 0,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+      mapTypeIds: ['satellite', 'hybrid', 'roadmap']
+    },
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: true,
+    streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    fullscreenControl: true,
+    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
   });
+
+  new google.maps.Marker({
+    position: { lat: lat, lng: lng },
+    map: map,
+    animation: google.maps.Animation.DROP
+  });
+
+  hideLoading();
+
+  if (!isMobile()) {
+    setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+  }
+}
+
+// ── GEOCODE AND INIT MAP ──
+function resolveAndInitMap(entry) {
+  if (entry.lat && entry.lng) {
+    initMap(entry.lat, entry.lng);
+  } else {
+    setLoading('Locating property...');
+    const cleanAddress = entry.address.replace(/^\s+/, '');
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address: cleanAddress }, function(results, status) {
+      if (status === 'OK' && results[0]) {
+        const loc = results[0].geometry.location;
+        initMap(loc.lat(), loc.lng());
+      } else {
+        hideLoading();
+        if (!isMobile()) {
+          setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+        }
+      }
+    });
+  }
 }
 
 // ── LIGHTBOX ──
@@ -407,41 +433,8 @@ async function loadView(views, viewSuffix) {
   }
 }
 
-// ── MAP ──
-function initMap(lat, lng) {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: lat, lng: lng },
-    zoom: 18,
-    mapTypeId: google.maps.MapTypeId.SATELLITE,
-    tilt: 0,
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-      mapTypeIds: ['satellite', 'hybrid', 'roadmap']
-    },
-    zoomControl: true,
-    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: true,
-    streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    fullscreenControl: true,
-    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
-  });
-
-  new google.maps.Marker({
-    position: { lat: lat, lng: lng },
-    map: map,
-    animation: google.maps.Animation.DROP
-  });
-
-  document.getElementById('loading').style.display = 'none';
-
-  if (!isMobile()) {
-    setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
-  }
-}
-
-// ── INIT ──
-window.initGoogleMaps = async function() {
+// ── LOAD PROPERTY DATA ──
+async function loadPropertyData() {
   const propertyHash = new URLSearchParams(window.location.search).get('property');
   if (!propertyHash) { showError('No property ID provided.'); return; }
 
@@ -454,53 +447,46 @@ window.initGoogleMaps = async function() {
     const entry = propertyIndex[propertyHash];
     if (!entry) { showError('Property not found in index.'); return; }
 
-    // Store views globally so tabs can access them
     currentViews = entry.views;
 
-    // Set property name and address
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
 
-    // Find first available view in order
     const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
     const firstView = viewOrder.find(function(v) { return entry.views[v]; });
     if (!firstView) { showError('No views available for this property.'); return; }
 
-    // Build tabs
     buildTabs(entry.views, firstView);
 
-    // Load first view
     setLoading('Loading ' + firstView + ' view...');
     await loadView(entry.views, firstView);
 
-    // Init map — use coordinates if available, otherwise geocode address
-    if (entry.lat && entry.lng) {
-      initMap(entry.lat, entry.lng);
+    // If Maps API already ready, init map now
+    // Otherwise store entry and wait for Maps API callback
+    if (mapsApiReady) {
+      resolveAndInitMap(entry);
     } else {
-      setLoading('Locating property...');
-      geocodeAddress(entry.address, function(lat, lng) {
-        if (lat && lng) {
-          initMap(lat, lng);
-          setTimeout(function() {
-            if (map) {
-              google.maps.event.trigger(map, 'resize');
-              map.setCenter({ lat: lat, lng: lng });
-            }
-          }, 500);
-        } else {
-          document.getElementById('loading').style.display = 'none';
-          if (!isMobile()) {
-            setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
-          }
-        }
-      });
+      pendingEntry = entry;
     }
 
   } catch(e) {
     showError('Failed to load property: ' + e.message);
   }
+}
+
+// ── MAPS API CALLBACK ──
+window.initGoogleMaps = function() {
+  mapsApiReady = true;
+  // If property data already loaded, init map now
+  if (pendingEntry) {
+    resolveAndInitMap(pendingEntry);
+    pendingEntry = null;
+  }
 };
+
+// Start loading property data immediately — don't wait for Maps API
+loadPropertyData();
 </script>
 
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
