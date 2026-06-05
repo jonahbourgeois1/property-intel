@@ -3,10 +3,16 @@ name: Build config
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'config.js'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+concurrency:
+  group: build-config
+  cancel-in-progress: false
 
 jobs:
   build:
