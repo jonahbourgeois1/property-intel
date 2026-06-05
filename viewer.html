@@ -47,6 +47,7 @@
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+  /* ── PANEL ── */
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
@@ -209,9 +210,11 @@ let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
 let propertyIndex = null;
 let currentViewData = null;
+let currentViews = null;
 const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const isMobile = () => window.innerWidth <= 768;
 
+// ── PANEL TOGGLE ──
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -226,6 +229,7 @@ function mobileToggle() {
   setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
 
+// ── ERROR / LOADING ──
 function showError(msg) {
   document.getElementById('loading').style.display = 'none';
   const err = document.getElementById('error');
@@ -237,6 +241,7 @@ function setLoading(msg) {
   document.getElementById('loading-text').textContent = msg;
 }
 
+// ── HELPERS ──
 function formatDesc(desc) {
   if (!desc) return [];
   return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
@@ -249,6 +254,7 @@ function toggleSection(header) {
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
+// ── LIGHTBOX ──
 function openLightbox(index) {
   lightboxIndex = index;
   updateLightbox();
@@ -281,10 +287,16 @@ function updateLightbox() {
   ul.innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
 }
 
+// ── TABS ──
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
-  const viewLabels = { satellite: '🛰 Satellite', plane: '✈ Plane', drone: '🚁 Drone', interior: '🏠 Interior' };
+  const viewLabels = {
+    satellite: '🛰 Satellite',
+    plane: '✈ Plane',
+    drone: '🚁 Drone',
+    interior: '🏠 Interior'
+  };
 
   tabsEl.innerHTML = '';
   viewOrder.forEach(function(v) {
@@ -292,18 +304,20 @@ function buildTabs(views, activeView) {
     const tab = document.createElement('div');
     tab.className = 'view-tab' + (v === activeView ? ' active' : '');
     tab.textContent = viewLabels[v] || v;
-    tab.onclick = function() { loadView(views, v); };
+    tab.setAttribute('data-view', v);
+    tab.onclick = function() { loadView(currentViews, v); };
     tabsEl.appendChild(tab);
   });
 }
 
+// ── PANEL CONTENT ──
 function buildPanel(d) {
   const views = [
-    { label: 'Alpha', badge: 'A', cls: '', data: d.alpha },
-    { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
-    { label: 'Charlie', badge: 'C', cls: '', data: d.charlie },
-    { label: 'Delta', badge: 'D', cls: '', data: d.delta },
-    { label: 'Nadir', badge: 'N', cls: 'nadir', data: d.nadir }
+    { label: 'Alpha',   badge: 'A', cls: '',      data: d.alpha },
+    { label: 'Bravo',   badge: 'B', cls: '',      data: d.bravo },
+    { label: 'Charlie', badge: 'C', cls: '',      data: d.charlie },
+    { label: 'Delta',   badge: 'D', cls: '',      data: d.delta },
+    { label: 'Nadir',   badge: 'N', cls: 'nadir', data: d.nadir }
   ];
 
   lightboxViews = [];
@@ -330,7 +344,9 @@ function buildPanel(d) {
       + '<img class="view-img" src="' + v.data.url + '" alt="' + v.label + ' view" loading="lazy">'
       + '<div class="zoom-hint">🔍 Tap to enlarge</div>'
       + '</div>'
-      + '<ul class="view-bullets">' + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('') + '</ul>'
+      + '<ul class="view-bullets">'
+      + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('')
+      + '</ul>'
       + '</div></div>';
   });
 
@@ -342,7 +358,11 @@ function buildPanel(d) {
       + '<div class="chevron">▼</div>'
       + '</div>'
       + '<div class="view-body">'
-      + '<ul class="view-bullets"><li>Full interactive drone flyover of the property</li><li>Pan, tilt, and zoom to explore every angle</li><li>Complete site overview before arrival</li></ul>'
+      + '<ul class="view-bullets">'
+      + '<li>Full interactive drone flyover of the property</li>'
+      + '<li>Pan, tilt, and zoom to explore every angle</li>'
+      + '<li>Complete site overview before arrival</li>'
+      + '</ul>'
       + '<a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a>'
       + '</div></div>';
   }
@@ -350,20 +370,21 @@ function buildPanel(d) {
   document.getElementById('panel-content').innerHTML = html;
 }
 
+// ── LOAD VIEW ──
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
 
   // Update active tab
   document.querySelectorAll('.view-tab').forEach(function(t) {
-    t.classList.toggle('active', t.textContent.toLowerCase().includes(viewSuffix));
+    t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
   });
 
   document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading ' + viewSuffix + ' view...</div>';
 
   try {
     const res = await fetch(BASE_URL + hashedViewId + '.json');
-    if (!res.ok) { throw new Error('View not found'); }
+    if (!res.ok) throw new Error('View not found');
     const d = await res.json();
     currentViewData = d;
     buildPanel(d);
@@ -372,6 +393,7 @@ async function loadView(views, viewSuffix) {
   }
 }
 
+// ── MAP ──
 function initMap(lat, lng) {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: lat, lng: lng },
@@ -404,12 +426,12 @@ function initMap(lat, lng) {
   }
 }
 
+// ── INIT ──
 window.initGoogleMaps = async function() {
   const propertyHash = new URLSearchParams(window.location.search).get('property');
   if (!propertyHash) { showError('No property ID provided.'); return; }
 
   try {
-    // Load index
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
     if (!indexRes.ok) { showError('Property index not found.'); return; }
@@ -418,24 +440,35 @@ window.initGoogleMaps = async function() {
     const entry = propertyIndex[propertyHash];
     if (!entry) { showError('Property not found in index.'); return; }
 
+    // Store views globally so tabs can access them
+    currentViews = entry.views;
+
     // Set property name and address
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
     document.getElementById('panel-address').textContent = entry.address;
 
-    // Build view tabs
-    buildTabs(entry.views, null);
-
-    // Load first available view
+    // Find first available view in order
     const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
     const firstView = viewOrder.find(function(v) { return entry.views[v]; });
     if (!firstView) { showError('No views available for this property.'); return; }
 
+    // Build tabs
+    buildTabs(entry.views, firstView);
+
+    // Load first view
     setLoading('Loading ' + firstView + ' view...');
     await loadView(entry.views, firstView);
 
-    // Init map
-    initMap(entry.lat, entry.lng);
+    // Init map if coordinates available
+    if (entry.lat && entry.lng) {
+      initMap(entry.lat, entry.lng);
+    } else {
+      document.getElementById('loading').style.display = 'none';
+      if (!isMobile()) {
+        setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+      }
+    }
 
   } catch(e) {
     showError('Failed to load property: ' + e.message);
