@@ -212,6 +212,7 @@ let propertyIndex = null;
 let currentViewData = null;
 let currentViews = null;
 const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const MAPS_API_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const isMobile = () => window.innerWidth <= 768;
 
 // ── PANEL TOGGLE ──
@@ -252,6 +253,26 @@ function toggleSection(header) {
   const chevron = header.querySelector('.chevron');
   body.classList.toggle('collapsed');
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+}
+
+// ── GEOCODING ──
+function geocodeAddress(address, callback) {
+  const cleanAddress = address.replace(/^\s+/, '');
+  const url = 'https://maps.googleapis.com/maps/api/geocode/json?address='
+    + encodeURIComponent(cleanAddress)
+    + '&key=' + MAPS_API_KEY;
+
+  fetch(url)
+    .then(function(res) { return res.json(); })
+    .then(function(data) {
+      if (data.status === 'OK') {
+        const loc = data.results[0].geometry.location;
+        callback(loc.lat, loc.lng);
+      } else {
+        callback(null, null);
+      }
+    })
+    .catch(function() { callback(null, null); });
 }
 
 // ── LIGHTBOX ──
@@ -446,7 +467,7 @@ window.initGoogleMaps = async function() {
     // Set property name and address
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
-    document.getElementById('panel-address').textContent = entry.address;
+    document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
 
     // Find first available view in order
     const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
@@ -460,19 +481,21 @@ window.initGoogleMaps = async function() {
     setLoading('Loading ' + firstView + ' view...');
     await loadView(entry.views, firstView);
 
-    // Init map if coordinates available
+    // Init map — use coordinates if available, otherwise geocode address
     if (entry.lat && entry.lng) {
       initMap(entry.lat, entry.lng);
     } else {
-      document.getElementById('loading').style.display = 'none';
-      document.getElementById('map').innerHTML = '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--bg);color:var(--text3);font-family:\'DM Mono\',monospace;font-size:13px;text-align:center;padding:32px;">'
-        + '<div style="font-size:28px;">📍</div>'
-        + '<div style="color:var(--text2);font-size:14px;font-weight:500;">No map available</div>'
-        + '<div style="font-size:12px;line-height:1.6;max-width:260px;">Satellite mapping has not been completed for this property. Map view will be available once satellite data is added.</div>'
-        + '</div>';
-      if (!isMobile()) {
-        setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
-      }
+      setLoading('Locating property...');
+      geocodeAddress(entry.address, function(lat, lng) {
+        if (lat && lng) {
+          initMap(lat, lng);
+        } else {
+          document.getElementById('loading').style.display = 'none';
+          if (!isMobile()) {
+            setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+          }
+        }
+      });
     }
 
   } catch(e) {
