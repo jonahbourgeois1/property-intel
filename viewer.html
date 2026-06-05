@@ -36,7 +36,7 @@
 
   /* ── DESKTOP LAYOUT ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; }
-  #map { flex: 1; position: relative; }
+  #map { flex: 1; position: relative; background: var(--bg); }
   #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(680px); width: 0; }
 
@@ -396,7 +396,6 @@ async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
 
-  // Update active tab
   document.querySelectorAll('.view-tab').forEach(function(t) {
     t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
   });
@@ -489,6 +488,12 @@ window.initGoogleMaps = async function() {
       geocodeAddress(entry.address, function(lat, lng) {
         if (lat && lng) {
           initMap(lat, lng);
+          setTimeout(function() {
+            if (map) {
+              google.maps.event.trigger(map, 'resize');
+              map.setCenter({ lat: lat, lng: lng });
+            }
+          }, 500);
         } else {
           document.getElementById('loading').style.display = 'none';
           if (!isMobile()) {
