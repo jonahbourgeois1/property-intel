@@ -22,7 +22,6 @@
     --accent: #3b82f6;
     --green: #22c55e;
     --red: #ef4444;
-    --amber: #f59e0b;
     --header-h: 52px;
   }
 
@@ -40,7 +39,7 @@
   #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(680px); width: 0; }
 
-  /* ── OVERLAYS — outside map div ── */
+  /* ── OVERLAYS ── */
   #loading {
     position: absolute;
     top: 0; left: 0; right: 680px; bottom: 0;
@@ -134,18 +133,6 @@
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-
-  /* ── DEBUG ── */
-  #debug-bar { background: #0d1117; border-top: 1px solid var(--border2); flex-shrink: 0; }
-  #debug-toggle { width: 100%; padding: 6px 12px; background: transparent; border: none; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; }
-  #debug-console { display: none; height: 160px; overflow-y: auto; padding: 8px 12px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  #debug-console.open { display: block; }
-  .log-line { font-family: 'DM Mono', monospace; font-size: 11px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 10px; }
-  .log-time { color: var(--text3); flex-shrink: 0; }
-  .log-info { color: #60a5fa; }
-  .log-success { color: var(--green); }
-  .log-warn { color: var(--amber); }
-  .log-error { color: var(--red); }
 
   /* ── MOBILE ── */
   @media (max-width: 768px) {
@@ -241,13 +228,6 @@
   </div>
 </div>
 
-<div id="debug-bar">
-  <button id="debug-toggle" onclick="toggleDebug()">
-    <span id="debug-arrow">▶</span> Debug Console <span id="debug-count" style="color:var(--accent)">[0 logs]</span>
-  </button>
-  <div id="debug-console"></div>
-</div>
-
 <script>
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
@@ -256,37 +236,9 @@ let currentViewData = null;
 let currentViews = null;
 let mapsApiReady = false;
 let pendingEntry = null;
-let debugOpen = false;
-let logCount = 0;
 const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const isMobile = () => window.innerWidth <= 768;
-
-// ── DEBUG ──
-function toggleDebug() {
-  debugOpen = !debugOpen;
-  document.getElementById('debug-console').classList.toggle('open', debugOpen);
-  document.getElementById('debug-arrow').textContent = debugOpen ? '▼' : '▶';
-}
-
-function dbg(msg, type) {
-  type = type || 'info';
-  logCount++;
-  document.getElementById('debug-count').textContent = '[' + logCount + ' logs]';
-  const now = new Date();
-  const time = now.toTimeString().split(' ')[0];
-  const line = document.createElement('div');
-  line.className = 'log-line';
-  line.innerHTML = '<span class="log-time">' + time + '</span><span class="log-' + type + '">' + msg + '</span>';
-  const con = document.getElementById('debug-console');
-  con.appendChild(line);
-  con.scrollTop = con.scrollHeight;
-  if (!debugOpen) toggleDebug();
-}
-
-window.onerror = function(msg, src, line) {
-  dbg('JS Error: ' + msg + ' (line ' + line + ')', 'error');
-};
 
 // ── PANEL TOGGLE ──
 function togglePanel() {
@@ -305,20 +257,17 @@ function mobileToggle() {
 
 // ── LOADING / ERROR ──
 function showError(msg) {
-  dbg('ERROR: ' + msg, 'error');
   hideLoading();
   document.getElementById('error').classList.add('visible');
   document.getElementById('error-msg').textContent = msg;
 }
 
 function setLoading(msg) {
-  dbg(msg, 'info');
   const el = document.getElementById('loading-text');
   if (el) el.textContent = msg;
 }
 
 function hideLoading() {
-  dbg('Hiding loading overlay', 'success');
   const el = document.getElementById('loading');
   if (el) el.classList.add('hidden');
 }
@@ -338,7 +287,6 @@ function toggleSection(header) {
 
 // ── MAP INIT ──
 function initMap(lat, lng) {
-  dbg('initMap: lat=' + lat + ' lng=' + lng, 'info');
   try {
     map = new google.maps.Map(document.getElementById('map'), {
       center: { lat: lat, lng: lng },
@@ -357,14 +305,12 @@ function initMap(lat, lng) {
       fullscreenControl: true,
       fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
     });
-    dbg('Map created', 'success');
 
     new google.maps.Marker({
       position: { lat: lat, lng: lng },
       map: map,
       animation: google.maps.Animation.DROP
     });
-    dbg('Marker added', 'success');
 
     hideLoading();
 
@@ -372,7 +318,6 @@ function initMap(lat, lng) {
       if (map) {
         google.maps.event.trigger(map, 'resize');
         map.setCenter({ lat: lat, lng: lng });
-        dbg('Map resized and centered', 'success');
       }
     }, 100);
 
@@ -380,42 +325,33 @@ function initMap(lat, lng) {
       setTimeout(function() { if (!panelOpen) togglePanel(); }, 700);
     }
   } catch(e) {
-    dbg('initMap exception: ' + e.message, 'error');
+    console.error('initMap error:', e);
   }
 }
 
 // ── RESOLVE MAP ──
 function resolveAndInitMap(entry) {
-  dbg('resolveAndInitMap: lat=' + entry.lat + ' lng=' + entry.lng, 'info');
-
   if (entry.lat && entry.lng) {
-    dbg('Using stored coordinates', 'success');
     initMap(entry.lat, entry.lng);
   } else {
-    dbg('No coordinates — geocoding', 'warn');
     setLoading('Locating property...');
     const cleanAddress = entry.address.replace(/^\s+/, '');
-    dbg('Geocoding: ' + cleanAddress, 'info');
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address='
       + encodeURIComponent(cleanAddress)
       + '&key=' + GEOCODE_KEY)
       .then(function(res) { return res.json(); })
       .then(function(data) {
-        dbg('Geocode status: ' + data.status, data.status === 'OK' ? 'success' : 'error');
         if (data.status === 'OK' && data.results[0]) {
           const loc = data.results[0].geometry.location;
-          dbg('Geocoded: ' + loc.lat + ', ' + loc.lng, 'success');
           initMap(loc.lat, loc.lng);
         } else {
-          dbg('Geocode failed', 'error');
           hideLoading();
           if (!isMobile()) {
             setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
           }
         }
       })
-      .catch(function(e) {
-        dbg('Geocode fetch error: ' + e.message, 'error');
+      .catch(function() {
         hideLoading();
       });
   }
@@ -469,7 +405,6 @@ function buildTabs(views, activeView) {
     tab.setAttribute('data-view', v);
     tab.onclick = function() { loadView(currentViews, v); };
     tabsEl.appendChild(tab);
-    dbg('Tab: ' + v, 'info');
   });
 }
 
@@ -531,15 +466,13 @@ function buildPanel(d) {
   }
 
   document.getElementById('panel-content').innerHTML = html;
-  dbg('Panel built', 'success');
 }
 
 // ── LOAD VIEW ──
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
-  if (!hashedViewId) { dbg('No hash for: ' + viewSuffix, 'error'); return; }
+  if (!hashedViewId) return;
 
-  dbg('Loading view: ' + viewSuffix, 'info');
   document.querySelectorAll('.view-tab').forEach(function(t) {
     t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
   });
@@ -548,39 +481,30 @@ async function loadView(views, viewSuffix) {
 
   try {
     const res = await fetch(BASE_URL + hashedViewId + '.json');
-    dbg('View fetch: ' + res.status, res.ok ? 'success' : 'error');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
     buildPanel(d);
   } catch(e) {
-    dbg('loadView error: ' + e.message, 'error');
-    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed: ' + e.message + '</div>';
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load view: ' + e.message + '</div>';
   }
 }
 
 // ── LOAD PROPERTY ──
 async function loadPropertyData() {
-  dbg('URL: ' + window.location.href, 'info');
   const propertyHash = new URLSearchParams(window.location.search).get('property');
-  dbg('Hash: ' + (propertyHash || 'MISSING'), propertyHash ? 'info' : 'error');
   if (!propertyHash) { showError('No property ID provided.'); return; }
 
   try {
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
-    dbg('Index: ' + indexRes.status, indexRes.ok ? 'success' : 'error');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
-    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'success');
 
     const entry = propertyIndex[propertyHash];
-    dbg('Entry: ' + (entry ? entry.name : 'NOT FOUND'), entry ? 'success' : 'error');
     if (!entry) { showError('Property not found.'); return; }
 
     currentViews = entry.views;
-    dbg('Views: ' + Object.keys(entry.views).join(', '), 'info');
-    dbg('Coords: ' + (entry.lat ? entry.lat + ', ' + entry.lng : 'NONE'), entry.lat ? 'success' : 'warn');
 
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
@@ -589,38 +513,31 @@ async function loadPropertyData() {
     const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
     const firstView = viewOrder.find(function(v) { return entry.views[v]; });
     if (!firstView) { showError('No views available.'); return; }
-    dbg('First view: ' + firstView, 'info');
 
     buildTabs(entry.views, firstView);
     setLoading('Loading ' + firstView + '...');
     await loadView(entry.views, firstView);
 
-    dbg('mapsApiReady: ' + mapsApiReady, 'info');
     if (mapsApiReady) {
       resolveAndInitMap(entry);
     } else {
-      dbg('Waiting for Maps API...', 'warn');
       pendingEntry = entry;
     }
 
   } catch(e) {
-    dbg('loadPropertyData error: ' + e.message, 'error');
-    showError('Failed: ' + e.message);
+    showError('Failed to load property: ' + e.message);
   }
 }
 
 // ── MAPS API CALLBACK ──
 window.initGoogleMaps = function() {
-  dbg('Maps API ready', 'success');
   mapsApiReady = true;
   if (pendingEntry) {
-    dbg('Processing pending: ' + pendingEntry.name, 'info');
     resolveAndInitMap(pendingEntry);
     pendingEntry = null;
   }
 };
 
-dbg('Script init', 'info');
 loadPropertyData();
 </script>
 
