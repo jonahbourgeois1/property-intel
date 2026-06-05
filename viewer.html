@@ -21,6 +21,7 @@
     --accent: #3b82f6;
     --green: #22c55e;
     --red: #ef4444;
+    --amber: #f59e0b;
     --header-h: 52px;
   }
 
@@ -73,7 +74,7 @@
   .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
-  #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 48px rgba(0,0,0,0.6); }
+  #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
   #lightbox-caption { margin-top: 16px; text-align: center; }
   #lightbox-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
   #lightbox-bullets { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; max-width: 700px; }
@@ -91,6 +92,18 @@
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+
+  /* ── DEBUG ── */
+  #debug-bar { background: #0d1117; border-top: 1px solid var(--border2); flex-shrink: 0; }
+  #debug-toggle { width: 100%; padding: 6px 12px; background: transparent; border: none; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 11px; cursor: pointer; text-align: left; display: flex; align-items: center; gap: 8px; }
+  #debug-console { display: none; height: 160px; overflow-y: auto; padding: 8px 12px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  #debug-console.open { display: block; }
+  .log-line { font-family: 'DM Mono', monospace; font-size: 11px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; gap: 10px; }
+  .log-time { color: var(--text3); flex-shrink: 0; }
+  .log-info { color: #60a5fa; }
+  .log-success { color: var(--green); }
+  .log-warn { color: var(--amber); }
+  .log-error { color: var(--red); }
 
   @media (max-width: 768px) {
     #property-name { display: none; }
@@ -184,6 +197,13 @@
   </div>
 </div>
 
+<div id="debug-bar">
+  <button id="debug-toggle" onclick="toggleDebug()">
+    <span id="debug-arrow">▶</span> Debug Console <span id="debug-count" style="color:var(--accent)">[0 logs]</span>
+  </button>
+  <div id="debug-console"></div>
+</div>
+
 <script>
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
@@ -192,8 +212,36 @@ let currentViewData = null;
 let currentViews = null;
 let mapsApiReady = false;
 let pendingEntry = null;
+let debugOpen = false;
+let logCount = 0;
 const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const isMobile = () => window.innerWidth <= 768;
+
+// ── DEBUG ──
+function toggleDebug() {
+  debugOpen = !debugOpen;
+  document.getElementById('debug-console').classList.toggle('open', debugOpen);
+  document.getElementById('debug-arrow').textContent = debugOpen ? '▼' : '▶';
+}
+
+function dbg(msg, type) {
+  type = type || 'info';
+  logCount++;
+  document.getElementById('debug-count').textContent = '[' + logCount + ' logs]';
+  const now = new Date();
+  const time = now.toTimeString().split(' ')[0];
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = '<span class="log-time">' + time + '</span><span class="log-' + type + '">' + msg + '</span>';
+  const con = document.getElementById('debug-console');
+  con.appendChild(line);
+  con.scrollTop = con.scrollHeight;
+  if (!debugOpen) toggleDebug();
+}
+
+window.onerror = function(msg, src, line) {
+  dbg('JS Error: ' + msg + ' (line ' + line + ')', 'error');
+};
 
 // ── PANEL TOGGLE ──
 function togglePanel() {
@@ -212,6 +260,7 @@ function mobileToggle() {
 
 // ── ERROR / LOADING ──
 function showError(msg) {
+  dbg('ERROR: ' + msg, 'error');
   document.getElementById('loading').style.display = 'none';
   const err = document.getElementById('error');
   err.style.display = 'flex';
@@ -219,10 +268,12 @@ function showError(msg) {
 }
 
 function setLoading(msg) {
+  dbg(msg, 'info');
   document.getElementById('loading-text').textContent = msg;
 }
 
 function hideLoading() {
+  dbg('Loading hidden', 'success');
   document.getElementById('loading').style.display = 'none';
 }
 
@@ -241,57 +292,78 @@ function toggleSection(header) {
 
 // ── MAP INIT ──
 function initMap(lat, lng) {
+  dbg('initMap called: lat=' + lat + ' lng=' + lng, 'info');
   const mapEl = document.getElementById('map');
-  map = new google.maps.Map(mapEl, {
-    center: { lat: lat, lng: lng },
-    zoom: 18,
-    mapTypeId: google.maps.MapTypeId.SATELLITE,
-    tilt: 0,
-    mapTypeControl: true,
-    mapTypeControlOptions: {
-      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-      mapTypeIds: ['satellite', 'hybrid', 'roadmap']
-    },
-    zoomControl: true,
-    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: true,
-    streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    fullscreenControl: true,
-    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
-  });
+  try {
+    map = new google.maps.Map(mapEl, {
+      center: { lat: lat, lng: lng },
+      zoom: 18,
+      mapTypeId: google.maps.MapTypeId.SATELLITE,
+      tilt: 0,
+      mapTypeControl: true,
+      mapTypeControlOptions: {
+        style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+        mapTypeIds: ['satellite', 'hybrid', 'roadmap']
+      },
+      zoomControl: true,
+      zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+      streetViewControl: true,
+      streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+      fullscreenControl: true,
+      fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+    });
+    dbg('Map object created successfully', 'success');
 
-  new google.maps.Marker({
-    position: { lat: lat, lng: lng },
-    map: map,
-    animation: google.maps.Animation.DROP
-  });
+    new google.maps.Marker({
+      position: { lat: lat, lng: lng },
+      map: map,
+      animation: google.maps.Animation.DROP
+    });
+    dbg('Marker added', 'success');
 
-  hideLoading();
+    hideLoading();
 
-  if (!isMobile()) {
-    setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+    if (!isMobile()) {
+      setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+    }
+  } catch(e) {
+    dbg('initMap error: ' + e.message, 'error');
   }
 }
 
 // ── GEOCODE AND INIT MAP ──
 function resolveAndInitMap(entry) {
+  dbg('resolveAndInitMap called', 'info');
+  dbg('entry.lat=' + entry.lat + ' entry.lng=' + entry.lng, 'info');
+
   if (entry.lat && entry.lng) {
+    dbg('Using stored coordinates', 'success');
     initMap(entry.lat, entry.lng);
   } else {
+    dbg('No coordinates — attempting geocode', 'warn');
     setLoading('Locating property...');
     const cleanAddress = entry.address.replace(/^\s+/, '');
-    const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: cleanAddress }, function(results, status) {
-      if (status === 'OK' && results[0]) {
-        const loc = results[0].geometry.location;
-        initMap(loc.lat(), loc.lng());
-      } else {
-        hideLoading();
-        if (!isMobile()) {
-          setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+    dbg('Geocoding address: ' + cleanAddress, 'info');
+    try {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: cleanAddress }, function(results, status) {
+        dbg('Geocoder status: ' + status, status === 'OK' ? 'success' : 'error');
+        if (status === 'OK' && results[0]) {
+          const loc = results[0].geometry.location;
+          dbg('Geocoded to: ' + loc.lat() + ', ' + loc.lng(), 'success');
+          initMap(loc.lat(), loc.lng());
+        } else {
+          dbg('Geocode failed — no map displayed', 'error');
+          hideLoading();
+          if (!isMobile()) {
+            setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
+          }
         }
-      }
-    });
+      });
+    } catch(e) {
+      dbg('Geocoder exception: ' + e.message, 'error');
+      hideLoading();
+    }
   }
 }
 
@@ -332,12 +404,7 @@ function updateLightbox() {
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
-  const viewLabels = {
-    satellite: 'Satellite',
-    plane: 'Plane',
-    drone: 'Drone',
-    interior: 'Interior'
-  };
+  const viewLabels = { satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
 
   tabsEl.innerHTML = '';
   viewOrder.forEach(function(v) {
@@ -348,6 +415,7 @@ function buildTabs(views, activeView) {
     tab.setAttribute('data-view', v);
     tab.onclick = function() { loadView(currentViews, v); };
     tabsEl.appendChild(tab);
+    dbg('Tab built: ' + v, 'info');
   });
 }
 
@@ -409,12 +477,15 @@ function buildPanel(d) {
   }
 
   document.getElementById('panel-content').innerHTML = html;
+  dbg('Panel content built', 'success');
 }
 
 // ── LOAD VIEW ──
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
-  if (!hashedViewId) return;
+  if (!hashedViewId) { dbg('No hash for view: ' + viewSuffix, 'error'); return; }
+
+  dbg('Loading view: ' + viewSuffix + ' → ' + hashedViewId, 'info');
 
   document.querySelectorAll('.view-tab').forEach(function(t) {
     t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
@@ -423,31 +494,45 @@ async function loadView(views, viewSuffix) {
   document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading ' + viewSuffix + ' view...</div>';
 
   try {
-    const res = await fetch(BASE_URL + hashedViewId + '.json');
-    if (!res.ok) throw new Error('View not found');
+    const url = BASE_URL + hashedViewId + '.json';
+    dbg('Fetching: ' + url, 'info');
+    const res = await fetch(url);
+    dbg('Fetch status: ' + res.status, res.ok ? 'success' : 'error');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
+    dbg('JSON parsed OK', 'success');
     currentViewData = d;
     buildPanel(d);
   } catch(e) {
+    dbg('loadView error: ' + e.message, 'error');
     document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load view: ' + e.message + '</div>';
   }
 }
 
 // ── LOAD PROPERTY DATA ──
 async function loadPropertyData() {
+  dbg('Page loaded: ' + window.location.href, 'info');
   const propertyHash = new URLSearchParams(window.location.search).get('property');
+  dbg('Property hash: ' + (propertyHash || 'MISSING'), propertyHash ? 'info' : 'error');
   if (!propertyHash) { showError('No property ID provided.'); return; }
 
   try {
     setLoading('Loading property index...');
-    const indexRes = await fetch(BASE_URL + 'index.json');
+    const indexUrl = BASE_URL + 'index.json';
+    dbg('Fetching index: ' + indexUrl, 'info');
+    const indexRes = await fetch(indexUrl);
+    dbg('Index fetch status: ' + indexRes.status, indexRes.ok ? 'success' : 'error');
     if (!indexRes.ok) { showError('Property index not found.'); return; }
     propertyIndex = await indexRes.json();
+    dbg('Index loaded — ' + Object.keys(propertyIndex).length + ' properties', 'success');
 
     const entry = propertyIndex[propertyHash];
+    dbg('Entry found: ' + (entry ? 'YES — ' + entry.name : 'NO'), entry ? 'success' : 'error');
     if (!entry) { showError('Property not found in index.'); return; }
 
     currentViews = entry.views;
+    dbg('Views available: ' + Object.keys(entry.views).join(', '), 'info');
+    dbg('Has lat/lng: ' + (entry.lat ? 'YES (' + entry.lat + ', ' + entry.lng + ')' : 'NO'), entry.lat ? 'success' : 'warn');
 
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
@@ -455,37 +540,45 @@ async function loadPropertyData() {
 
     const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
     const firstView = viewOrder.find(function(v) { return entry.views[v]; });
+    dbg('First view: ' + (firstView || 'NONE'), firstView ? 'info' : 'error');
     if (!firstView) { showError('No views available for this property.'); return; }
 
     buildTabs(entry.views, firstView);
-
     setLoading('Loading ' + firstView + ' view...');
     await loadView(entry.views, firstView);
 
-    // If Maps API already ready, init map now
-    // Otherwise store entry and wait for Maps API callback
+    dbg('mapsApiReady: ' + mapsApiReady, 'info');
     if (mapsApiReady) {
       resolveAndInitMap(entry);
     } else {
+      dbg('Storing pendingEntry — waiting for Maps API', 'warn');
       pendingEntry = entry;
     }
 
   } catch(e) {
+    dbg('loadPropertyData error: ' + e.message, 'error');
     showError('Failed to load property: ' + e.message);
   }
 }
 
 // ── MAPS API CALLBACK ──
 window.initGoogleMaps = function() {
+  dbg('Google Maps API ready', 'success');
   mapsApiReady = true;
-  // If property data already loaded, init map now
   if (pendingEntry) {
+    dbg('Processing pendingEntry: ' + pendingEntry.name, 'info');
     resolveAndInitMap(pendingEntry);
     pendingEntry = null;
+  } else {
+    dbg('No pendingEntry yet — data not loaded', 'warn');
   }
 };
 
-// Start loading property data immediately — don't wait for Maps API
+window.onerror = function(msg, src, line) {
+  dbg('JS Error: ' + msg + ' (line ' + line + ')', 'error');
+};
+
+dbg('Script initialized', 'info');
 loadPropertyData();
 </script>
 
