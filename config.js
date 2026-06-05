@@ -1,0 +1,1 @@
+const CONFIG = { GEOCODE_KEY: 'AIzaSyDR31KFPReOPW4n5wnM5X0kpfRwG7Pltl0' };
