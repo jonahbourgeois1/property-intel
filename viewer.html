@@ -292,10 +292,10 @@ function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
   const viewLabels = {
-    satellite: '🛰 Satellite',
-    plane: '✈ Plane',
-    drone: '🚁 Drone',
-    interior: '🏠 Interior'
+    satellite: 'Satellite',
+    plane: 'Plane',
+    drone: 'Drone',
+    interior: 'Interior'
   };
 
   tabsEl.innerHTML = '';
@@ -465,6 +465,11 @@ window.initGoogleMaps = async function() {
       initMap(entry.lat, entry.lng);
     } else {
       document.getElementById('loading').style.display = 'none';
+      document.getElementById('map').innerHTML = '<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:var(--bg);color:var(--text3);font-family:\'DM Mono\',monospace;font-size:13px;text-align:center;padding:32px;">'
+        + '<div style="font-size:28px;">📍</div>'
+        + '<div style="color:var(--text2);font-size:14px;font-weight:500;">No map available</div>'
+        + '<div style="font-size:12px;line-height:1.6;max-width:260px;">Satellite mapping has not been completed for this property. Map view will be available once satellite data is added.</div>'
+        + '</div>';
       if (!isMobile()) {
         setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
       }
