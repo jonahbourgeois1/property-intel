@@ -1,0 +1,24 @@
+name: Build config
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Generate config.js
+        run: |
+          echo "const CONFIG = { GEOCODE_KEY: '${{ secrets.GEOCODE_API_KEY }}' };" > config.js
+
+      - name: Commit config.js
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add config.js
+          git diff --staged --quiet || git commit -m "Update config"
+          git push
