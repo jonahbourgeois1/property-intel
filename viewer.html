@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <title>Property Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -24,28 +24,10 @@
     --header-h: 52px;
   }
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    height: 100dvh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
   /* ── HEADER ── */
-  #header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-    height: var(--header-h);
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-    z-index: 100;
-  }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
@@ -57,6 +39,14 @@
   #map { flex: 1; position: relative; }
   #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(680px); width: 0; }
+
+  /* ── VIEW TABS ── */
+  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+  #view-tabs::-webkit-scrollbar { display: none; }
+  .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+  .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
+  .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
@@ -86,6 +76,12 @@
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
+
+  /* ── LOADING ── */
+  #loading { position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 200; }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
 
   /* ── LIGHTBOX ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -120,24 +116,12 @@
     #property-name { display: none; }
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
-
-    body { height: 100dvh; }
-
-    #main { position: relative; flex: 1; min-height: 0; }
-
-    #map {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-    }
-
+    #main { position: relative; }
+    #map { position: absolute; inset: 0; width: 100%; height: 100%; }
     #panel {
       position: fixed !important;
-      left: 0 !important;
-      right: 0 !important;
-      bottom: 0 !important;
-      top: var(--header-h) !important;
+      left: 0; right: 0; bottom: 0;
+      top: var(--header-h);
       width: 100% !important;
       height: calc(100dvh - var(--header-h)) !important;
       transform: translateY(100%) !important;
@@ -145,13 +129,8 @@
       border-left: none !important;
       border-top: 1px solid var(--border2) !important;
       z-index: 40;
-      overflow: hidden;
     }
-
-    #panel.mobile-open {
-      transform: translateY(0%) !important;
-    }
-
+    #panel.mobile-open { transform: translateY(0%) !important; }
     .close-btn { display: none; }
     .panel-header { padding: 10px 14px; }
     .panel-title { font-size: 13px; }
@@ -159,9 +138,6 @@
     #panel-content { padding: 10px; }
     .view-bullets li { font-size: 11px; }
     .view-label { font-size: 11px; }
-
-    /* Keep mobile toggle above panel */
-    #mobile-toggle { z-index: 50; bottom: 20px; }
   }
 </style>
 </head>
@@ -180,6 +156,10 @@
 
 <div id="main">
   <div id="map">
+    <div id="loading">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">Loading property data...</div>
+    </div>
     <div id="error">
       <div class="error-icon">⚠</div>
       <div class="error-title">Property not found</div>
@@ -195,6 +175,7 @@
       </div>
       <button class="close-btn" onclick="togglePanel()">✕</button>
     </div>
+    <div id="view-tabs"></div>
     <div id="panel-content"></div>
   </div>
 </div>
@@ -226,29 +207,34 @@
 <script>
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
+let propertyIndex = null;
+let currentViewData = null;
+const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const isMobile = () => window.innerWidth <= 768;
 
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
-  setTimeout(function() {
-    if (map) google.maps.event.trigger(map, 'resize');
-  }, 350);
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
 
 function mobileToggle() {
   mobileIntelOpen = !mobileIntelOpen;
   document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
   document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
-  setTimeout(function() {
-    if (map) google.maps.event.trigger(map, 'resize');
-  }, 380);
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
 
 function showError(msg) {
-  document.getElementById('error').style.display = 'flex';
+  document.getElementById('loading').style.display = 'none';
+  const err = document.getElementById('error');
+  err.style.display = 'flex';
   document.getElementById('error-msg').textContent = msg;
+}
+
+function setLoading(msg) {
+  document.getElementById('loading-text').textContent = msg;
 }
 
 function formatDesc(desc) {
@@ -295,11 +281,23 @@ function updateLightbox() {
   ul.innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
 }
 
-function buildPanel(d) {
-  document.getElementById('panel-title').textContent = d.name || 'Property';
-  document.getElementById('panel-address').textContent = d.address || '';
-  document.getElementById('property-name').textContent = d.name || 'Property';
+function buildTabs(views, activeView) {
+  const tabsEl = document.getElementById('view-tabs');
+  const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
+  const viewLabels = { satellite: '🛰 Satellite', plane: '✈ Plane', drone: '🚁 Drone', interior: '🏠 Interior' };
 
+  tabsEl.innerHTML = '';
+  viewOrder.forEach(function(v) {
+    if (!views[v]) return;
+    const tab = document.createElement('div');
+    tab.className = 'view-tab' + (v === activeView ? ' active' : '');
+    tab.textContent = viewLabels[v] || v;
+    tab.onclick = function() { loadView(views, v); };
+    tabsEl.appendChild(tab);
+  });
+}
+
+function buildPanel(d) {
   const views = [
     { label: 'Alpha', badge: 'A', cls: '', data: d.alpha },
     { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
@@ -352,6 +350,28 @@ function buildPanel(d) {
   document.getElementById('panel-content').innerHTML = html;
 }
 
+async function loadView(views, viewSuffix) {
+  const hashedViewId = views[viewSuffix];
+  if (!hashedViewId) return;
+
+  // Update active tab
+  document.querySelectorAll('.view-tab').forEach(function(t) {
+    t.classList.toggle('active', t.textContent.toLowerCase().includes(viewSuffix));
+  });
+
+  document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading ' + viewSuffix + ' view...</div>';
+
+  try {
+    const res = await fetch(BASE_URL + hashedViewId + '.json');
+    if (!res.ok) { throw new Error('View not found'); }
+    const d = await res.json();
+    currentViewData = d;
+    buildPanel(d);
+  } catch(e) {
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load view: ' + e.message + '</div>';
+  }
+}
+
 function initMap(lat, lng) {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: lat, lng: lng },
@@ -377,22 +397,48 @@ function initMap(lat, lng) {
     animation: google.maps.Animation.DROP
   });
 
+  document.getElementById('loading').style.display = 'none';
+
   if (!isMobile()) {
-    setTimeout(function() { togglePanel(); }, 600);
+    setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
   }
 }
 
 window.initGoogleMaps = async function() {
-  const id = new URLSearchParams(window.location.search).get('id');
-  if (!id) { showError('No property ID provided.'); return; }
+  const propertyHash = new URLSearchParams(window.location.search).get('property');
+  if (!propertyHash) { showError('No property ID provided.'); return; }
+
   try {
-    const res = await fetch('https://jonahbourgeois1.github.io/property-intel/data/' + id + '.json');
-    if (!res.ok) { showError('Property "' + id + '" not found.'); return; }
-    const d = await res.json();
-    buildPanel(d);
-    initMap(d.lat, d.lng);
+    // Load index
+    setLoading('Loading property index...');
+    const indexRes = await fetch(BASE_URL + 'index.json');
+    if (!indexRes.ok) { showError('Property index not found.'); return; }
+    propertyIndex = await indexRes.json();
+
+    const entry = propertyIndex[propertyHash];
+    if (!entry) { showError('Property not found in index.'); return; }
+
+    // Set property name and address
+    document.getElementById('property-name').textContent = entry.name;
+    document.getElementById('panel-title').textContent = entry.name;
+    document.getElementById('panel-address').textContent = entry.address;
+
+    // Build view tabs
+    buildTabs(entry.views, null);
+
+    // Load first available view
+    const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
+    const firstView = viewOrder.find(function(v) { return entry.views[v]; });
+    if (!firstView) { showError('No views available for this property.'); return; }
+
+    setLoading('Loading ' + firstView + ' view...');
+    await loadView(entry.views, firstView);
+
+    // Init map
+    initMap(entry.lat, entry.lng);
+
   } catch(e) {
-    showError('Failed to load property data: ' + e.message);
+    showError('Failed to load property: ' + e.message);
   }
 };
 </script>
