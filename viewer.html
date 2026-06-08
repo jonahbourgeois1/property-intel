@@ -135,7 +135,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v1.1.0 — parcel boundary</div>
+    <div id="version-badge">v1.3.0 — parcel boundary</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -199,7 +199,7 @@
 </div>
 
 <script>
-const VERSION = 'v1.1.0';
+const VERSION = 'v1.3.0';
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
 let propertyIndex = null, currentViewData = null, currentViews = null;
@@ -295,11 +295,27 @@ function pointInPolygon(lat, lng, ring) {
   return inside;
 }
 
+const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
+const PARCEL_LAT_MIN = 43.61;
+const PARCEL_LNG_MIN = -122.01;
+const PARCEL_CELL = 0.07;
+
+function getParcelFile(lat, lng) {
+  var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
+  var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
+  var latStr = latCell.toFixed(2);
+  var lngStr = lngCell.toFixed(2);
+  return 'deschutes_' + latStr + '_' + lngStr + '.geojson';
+}
+
 function drawParcelBoundary(lat, lng, mapInstance) {
-  dbg('Fetching parcel GeoJSON...', 'info');
-  fetch(PARCEL_URL)
+  var filename = getParcelFile(lat, lng);
+  var url = PARCEL_BASE + filename;
+  dbg('Fetching parcel file: ' + filename, 'info');
+  fetch(url)
     .then(function(res) {
       dbg('Parcel fetch status: ' + res.status, res.ok ? 'ok' : 'error');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     })
     .then(function(geojson) {
@@ -315,7 +331,7 @@ function drawParcelBoundary(lat, lng, mapInstance) {
         dbg('No parcel matched for lat:' + lat.toFixed(5) + ' lng:' + lng.toFixed(5), 'warn');
         return;
       }
-      dbg('Parcel matched: ' + (matched.properties.TAXLOT || matched.properties.taxlot || 'unknown'), 'ok');
+      dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'unknown'), 'ok');
       var paths = matched.geometry.coordinates.map(function(ring) {
         return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; });
       });
