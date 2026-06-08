@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>HOA Intel — Vyanet</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
+    --accent: #3b82f6; --green: #22c55e; --red: #cd3333; --header-h: 52px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
+  .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
+  .logo-sub { font-size: 11px; color: var(--text3); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  #hoa-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
+  #map { flex: 1; background: var(--bg); min-width: 0; }
+  #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
+  #panel.hidden { transform: translateX(680px); width: 0; }
+  #loading { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  #error { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
+  #error.visible { display: flex; }
+  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .error-icon { font-size: 32px; color: var(--red); }
+  .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
+  .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
+
+  /* ── PANEL ── */
+  .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── WELCOME STATE ── */
+  #welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 32px; text-align: center; gap: 12px; }
+  .welcome-icon { width: 48px; height: 48px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 4px; }
+  .welcome-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .welcome-sub { font-size: 12px; color: var(--text3); line-height: 1.7; max-width: 260px; }
+  .property-count { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent); background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); padding: 4px 12px; border-radius: 999px; margin-top: 4px; }
+
+  /* ── VIEW TABS ── */
+  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+  #view-tabs::-webkit-scrollbar { display: none; }
+  .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+  .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
+  .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  #panel-content { overflow-y: auto; flex: 1; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+
+  /* ── VIEW SECTIONS ── */
+  .view-section { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
+  .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
+  .view-header:hover { background: rgba(255,255,255,0.03); }
+  .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+  .view-badge.nadir { background: #7c3aed; }
+  .view-badge.deg360 { background: #059669; }
+  .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
+  .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
+  .view-body { display: block; }
+  .view-body.collapsed { display: none; }
+  .view-img-wrap { position: relative; cursor: zoom-in; overflow: hidden; }
+  .view-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--surface); transition: transform 0.2s ease; }
+  .view-img-wrap:hover .view-img { transform: scale(1.02); }
+  .zoom-hint { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white; font-size: 10px; padding: 3px 7px; border-radius: 4px; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
+  .view-img-wrap:hover .zoom-hint { opacity: 1; }
+  .view-bullets { padding: 10px 14px; list-style: none; }
+  .view-bullets li { font-size: 12px; color: var(--text2); padding: 4px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .view-bullets li:last-child { border-bottom: none; }
+  .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
+  .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
+  .btn-360:hover { opacity: 0.85; }
+
+  /* ── LIGHTBOX ── */
+  #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+  #lightbox.open { display: flex; }
+  #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
+  #lightbox-caption { margin-top: 16px; text-align: center; }
+  #lightbox-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  #lightbox-bullets { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; max-width: 700px; }
+  #lightbox-bullets li { font-size: 11px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 999px; }
+  #lightbox-close { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #lightbox-nav { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
+  .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+
+  /* ── TOGGLE ── */
+  #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  #toggle-panel:hover { background: var(--surface2); }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+
+  /* ── DEBUG ── */
+  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  #debug-panel.collapsed #debug-log { display: none; }
+  #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
+  #debug-header span { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
+  #debug-toggle-btn { color: var(--accent); font-size: 10px; background: none; border: none; cursor: pointer; }
+  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
+  .debug-line.info { color: var(--text2); }
+  .debug-line.ok { color: var(--green); }
+  .debug-line.warn { color: #f59e0b; }
+  .debug-line.error { color: var(--red); }
+  .debug-time { color: var(--text3); margin-right: 6px; }
+  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
+  #debug-clear:hover { color: var(--text2); }
+
+  @media (max-width: 768px) {
+    #hoa-name { display: none; }
+    #toggle-panel { display: none; }
+    #mobile-toggle { display: flex; }
+    #map { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #loading { right: 0; }
+    #error { right: 0; }
+    #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
+    #panel.mobile-open { transform: translateY(0%) !important; }
+    .close-btn { display: none; }
+    #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">
+    <div class="logo-mark">VI</div>
+    <div>
+      <div class="logo-text">Vyanet Intel</div>
+      <div class="logo-sub">HOA Community Portal</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div id="version-badge">v1.0.0 — HOA viewer</div>
+    <div id="hoa-name">Loading...</div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="map"></div>
+  <div id="loading">
+    <div class="spinner"></div>
+    <div class="loading-text" id="loading-text">Loading community data...</div>
+  </div>
+  <div id="error">
+    <div class="error-icon">⚠</div>
+    <div class="error-title">Community not found</div>
+    <div class="error-msg" id="error-msg">No HOA data provided.</div>
+  </div>
+  <div id="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title" id="panel-title">Community Intel</div>
+        <div class="panel-address" id="panel-address"></div>
+      </div>
+      <button class="close-btn" onclick="togglePanel()">✕</button>
+    </div>
+    <div id="view-tabs"></div>
+    <div id="panel-content">
+      <div id="welcome">
+        <div class="welcome-icon">🏘</div>
+        <div class="welcome-title">Select a Property</div>
+        <div class="welcome-sub">Click any pin on the map to view detailed intel for that property.</div>
+        <div class="property-count" id="property-count">Loading properties...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button id="toggle-panel" onclick="togglePanel()">
+  <div class="status-dot"></div>
+  <span id="toggle-label">View Intel</span>
+</button>
+
+<button id="mobile-toggle" onclick="mobileToggle()">
+  <div class="status-dot"></div>
+  <span id="mobile-label">Show Intel</span>
+</button>
+
+<div id="debug-panel">
+  <div id="debug-header" onclick="toggleDebug()">
+    <span>DEBUG CONSOLE</span>
+    <button id="debug-toggle-btn">▼</button>
+  </div>
+  <div id="debug-log"></div>
+  <button id="debug-clear" onclick="clearDebug()">clear log</button>
+</div>
+
+<div id="lightbox">
+  <button id="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div id="lightbox-caption">
+    <div id="lightbox-title"></div>
+    <ul id="lightbox-bullets"></ul>
+  </div>
+  <div id="lightbox-nav">
+    <button class="nav-btn" onclick="lightboxNav(-1)">&#8592;</button>
+    <span id="lightbox-counter"></span>
+    <button class="nav-btn" onclick="lightboxNav(1)">&#8594;</button>
+  </div>
+</div>
+
+<script>
+const VERSION = 'v1.0.0';
+let map, panelOpen = false, mobileIntelOpen = false;
+let lightboxViews = [], lightboxIndex = 0;
+let propertyIndex = null, currentViews = null, currentViewData = null;
+let mapsApiReady = false;
+let hoaData = null;
+let allMarkers = [];
+let allPolygons = [];
+let activeMarker = null;
+const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
+const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
+const PARCEL_LAT_MIN = 43.61;
+const PARCEL_LNG_MIN = -122.01;
+const PARCEL_CELL = 0.07;
+const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
+const isMobile = () => window.innerWidth <= 768;
+
+// ── DEBUG ─────────────────────────────────────────────────────
+function dbg(msg, type) {
+  type = type || 'info';
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':'
+             + now.getMinutes().toString().padStart(2,'0') + ':'
+             + now.getSeconds().toString().padStart(2,'0');
+  const line = document.createElement('div');
+  line.className = 'debug-line ' + type;
+  line.innerHTML = '<span class="debug-time">' + time + '</span>' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+function toggleDebug() {
+  const panel = document.getElementById('debug-panel');
+  const btn = document.getElementById('debug-toggle-btn');
+  panel.classList.toggle('collapsed');
+  btn.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+}
+function clearDebug() {
+  const log = document.getElementById('debug-log');
+  if (log) log.innerHTML = '';
+}
+
+// ── PANEL TOGGLE ──────────────────────────────────────────────
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('panel').classList.toggle('hidden', !panelOpen);
+  document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
+}
+function mobileToggle() {
+  mobileIntelOpen = !mobileIntelOpen;
+  document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
+  document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
+}
+function showError(msg) {
+  hideLoading();
+  document.getElementById('error').classList.add('visible');
+  document.getElementById('error-msg').textContent = msg;
+  dbg('ERROR: ' + msg, 'error');
+}
+function setLoading(msg) {
+  const el = document.getElementById('loading-text');
+  if (el) el.textContent = msg;
+  dbg(msg, 'info');
+}
+function hideLoading() {
+  const el = document.getElementById('loading');
+  if (el) el.classList.add('hidden');
+}
+function formatDesc(desc) {
+  if (!desc) return [];
+  return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
+}
+function toggleSection(header) {
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
+  body.classList.toggle('collapsed');
+  chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+}
+
+// ── PARCEL BOUNDARY ──────────────────────────────────────────
+function pointInPolygon(lat, lng, ring) {
+  var inside = false;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    var xi = ring[i][0], yi = ring[i][1];
+    var xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function getParcelFile(lat, lng) {
+  var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
+  var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
+  return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
+}
+
+// Cache parcel GeoJSON files so we don't re-fetch the same file multiple times
+var parcelCache = {};
+
+function drawParcelBoundaryForProperty(lat, lng, mapInstance) {
+  var filename = getParcelFile(lat, lng);
+  var url = PARCEL_BASE + filename;
+
+  function renderPolygon(geojson) {
+    var matched = null;
+    for (var i = 0; i < geojson.features.length; i++) {
+      var feature = geojson.features[i];
+      var coords = feature.geometry && feature.geometry.coordinates;
+      if (!coords || !coords[0]) continue;
+      if (pointInPolygon(lat, lng, coords[0])) { matched = feature; break; }
+    }
+    if (!matched) { dbg('No parcel matched: ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'warn'); return; }
+    dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'unknown'), 'ok');
+    var paths = matched.geometry.coordinates.map(function(ring) {
+      return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; });
+    });
+    var polygon = new google.maps.Polygon({
+      paths: paths,
+      strokeColor: '#cd3333',
+      strokeOpacity: 1.0,
+      strokeWeight: 4,
+      fillColor: '#cd3333',
+      fillOpacity: 0.0,
+      map: mapInstance
+    });
+    allPolygons.push(polygon);
+  }
+
+  if (parcelCache[filename]) {
+    renderPolygon(parcelCache[filename]);
+  } else {
+    fetch(url)
+      .then(function(res) { return res.json(); })
+      .then(function(geojson) {
+        parcelCache[filename] = geojson;
+        renderPolygon(geojson);
+      })
+      .catch(function(e) { dbg('Parcel fetch failed: ' + e.message, 'error'); });
+  }
+}
+
+// ── MAP INIT ─────────────────────────────────────────────────
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 44.06, lng: -121.31 },
+    zoom: 13,
+    mapTypeId: google.maps.MapTypeId.SATELLITE,
+    tilt: 0,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+      mapTypeIds: ['satellite', 'hybrid', 'roadmap']
+    },
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: true,
+    streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    fullscreenControl: true,
+    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+  });
+  dbg('Map initialized', 'ok');
+}
+
+// ── DROP ALL HOA PINS ─────────────────────────────────────────
+function dropAllPins(entries) {
+  var bounds = new google.maps.LatLngBounds();
+  var geocodeQueue = [];
+
+  entries.forEach(function(entry) {
+    if (entry.lat && entry.lng) {
+      placePin(entry, entry.lat, entry.lng, bounds);
+    } else {
+      geocodeQueue.push(entry);
+    }
+  });
+
+  // Fit map to all pins
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds);
+    // Don't zoom in too far for single property
+    google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+      if (map.getZoom() > 16) map.setZoom(16);
+    });
+  }
+
+  // Geocode any entries without coords
+  geocodeQueue.forEach(function(entry) {
+    var cleanAddress = entry.address.replace(/^\s+/, '');
+    fetch('https://maps.googleapis.com/maps/api/geocode/json?address='
+      + encodeURIComponent(cleanAddress) + '&key=' + GEOCODE_KEY)
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.status === 'OK' && data.results[0]) {
+          var loc = data.results[0].geometry.location;
+          placePin(entry, loc.lat, loc.lng, null);
+        }
+      })
+      .catch(function(e) { dbg('Geocode failed for ' + entry.name + ': ' + e.message, 'warn'); });
+  });
+}
+
+function placePin(entry, lat, lng, bounds) {
+  var marker = new google.maps.Marker({
+    position: { lat: lat, lng: lng },
+    map: map,
+    title: entry.name,
+    animation: google.maps.Animation.DROP,
+    icon: {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 8,
+      fillColor: '#3b82f6',
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 2
+    }
+  });
+
+  if (bounds) bounds.extend({ lat: lat, lng: lng });
+
+  // Draw parcel boundary for each property
+  drawParcelBoundaryForProperty(lat, lng, map);
+
+  // Click handler — load this property's intel into the panel
+  marker.addListener('click', function() {
+    dbg('Pin clicked: ' + entry.name, 'info');
+    // Highlight selected marker
+    if (activeMarker) {
+      activeMarker.setIcon({
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 8,
+        fillColor: '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
+      });
+    }
+    marker.setIcon({
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 10,
+      fillColor: '#cd3333',
+      fillOpacity: 1,
+      strokeColor: '#ffffff',
+      strokeWeight: 2
+    });
+    activeMarker = marker;
+    loadPropertyIntoPanel(entry);
+    if (!panelOpen) togglePanel();
+  });
+
+  allMarkers.push(marker);
+  dbg('Pin placed: ' + entry.name, 'ok');
+}
+
+// ── LOAD PROPERTY INTO PANEL ──────────────────────────────────
+async function loadPropertyIntoPanel(entry) {
+  currentViews = entry.views;
+  document.getElementById('panel-title').textContent = entry.name;
+  document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+
+  // Hide welcome, show tabs
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('view-tabs').style.display = 'flex';
+
+  const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
+  const firstView = viewOrder.find(function(v) { return entry.views[v]; });
+  if (!firstView) {
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">No views available.</div>';
+    return;
+  }
+
+  buildTabs(entry.views, firstView);
+  await loadView(entry.views, firstView);
+}
+
+// ── TABS ─────────────────────────────────────────────────────
+function buildTabs(views, activeView) {
+  const tabsEl = document.getElementById('view-tabs');
+  const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
+  const viewLabels = { satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
+  tabsEl.innerHTML = '';
+  viewOrder.forEach(function(v) {
+    if (!views[v]) return;
+    const tab = document.createElement('div');
+    tab.className = 'view-tab' + (v === activeView ? ' active' : '');
+    tab.textContent = viewLabels[v] || v;
+    tab.setAttribute('data-view', v);
+    tab.onclick = function() { loadView(currentViews, v); };
+    tabsEl.appendChild(tab);
+  });
+}
+
+// ── PANEL CONTENT ─────────────────────────────────────────────
+function buildPanel(d) {
+  const views = [
+    { label: 'Alpha',   badge: 'A', cls: '',      data: d.alpha },
+    { label: 'Bravo',   badge: 'B', cls: '',      data: d.bravo },
+    { label: 'Charlie', badge: 'C', cls: '',      data: d.charlie },
+    { label: 'Delta',   badge: 'D', cls: '',      data: d.delta },
+    { label: 'Nadir',   badge: 'N', cls: 'nadir', data: d.nadir }
+  ];
+  lightboxViews = [];
+  views.forEach(function(v) {
+    if (v.data && v.data.url) {
+      lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) });
+    }
+  });
+  let html = '', lbIndex = 0;
+  views.forEach(function(v) {
+    if (!v.data || !v.data.url) return;
+    const bullets = formatDesc(v.data.desc);
+    const idx = lbIndex++;
+    html += '<div class="view-section">'
+      + '<div class="view-header" onclick="toggleSection(this)">'
+      + '<div class="view-badge ' + v.cls + '">' + v.badge + '</div>'
+      + '<div class="view-label">' + v.label + '</div>'
+      + '<div class="chevron">▼</div>'
+      + '</div>'
+      + '<div class="view-body">'
+      + '<div class="view-img-wrap" onclick="openLightbox(' + idx + ')">'
+      + '<img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy">'
+      + '<div class="zoom-hint">🔍 Tap to enlarge</div>'
+      + '</div>'
+      + '<ul class="view-bullets">'
+      + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('')
+      + '</ul></div></div>';
+  });
+  if (d.viewer360) {
+    html += '<div class="view-section">'
+      + '<div class="view-header" onclick="toggleSection(this)">'
+      + '<div class="view-badge deg360">360</div>'
+      + '<div class="view-label">360° Aerial View</div>'
+      + '<div class="chevron">▼</div></div>'
+      + '<div class="view-body"><ul class="view-bullets">'
+      + '<li>Full interactive drone flyover of the property</li>'
+      + '<li>Pan, tilt, and zoom to explore every angle</li>'
+      + '<li>Complete site overview before arrival</li>'
+      + '</ul><a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a>'
+      + '</div></div>';
+  }
+  document.getElementById('panel-content').innerHTML = html;
+}
+
+// ── LOAD VIEW ─────────────────────────────────────────────────
+async function loadView(views, viewSuffix) {
+  const hashedViewId = views[viewSuffix];
+  if (!hashedViewId) return;
+  document.querySelectorAll('.view-tab').forEach(function(t) {
+    t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
+  });
+  document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading ' + viewSuffix + '...</div>';
+  try {
+    dbg('Loading view: ' + viewSuffix, 'info');
+    const res = await fetch(BASE_URL + hashedViewId + '.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    currentViewData = d;
+    buildPanel(d);
+    dbg('View loaded: ' + viewSuffix, 'ok');
+  } catch(e) {
+    dbg('View load failed: ' + e.message, 'error');
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load view: ' + e.message + '</div>';
+  }
+}
+
+// ── LIGHTBOX ─────────────────────────────────────────────────
+function openLightbox(index) {
+  lightboxIndex = index;
+  updateLightbox();
+  document.getElementById('lightbox').classList.add('open');
+  document.addEventListener('keydown', lightboxKey);
+}
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+  document.removeEventListener('keydown', lightboxKey);
+}
+function lightboxKey(e) {
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'ArrowLeft') lightboxNav(-1);
+  if (e.key === 'ArrowRight') lightboxNav(1);
+}
+function lightboxNav(dir) {
+  lightboxIndex = (lightboxIndex + dir + lightboxViews.length) % lightboxViews.length;
+  updateLightbox();
+}
+function updateLightbox() {
+  const v = lightboxViews[lightboxIndex];
+  document.getElementById('lightbox-img').src = v.url;
+  document.getElementById('lightbox-title').textContent = v.label;
+  document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
+  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
+}
+
+// ── LOAD HOA ─────────────────────────────────────────────────
+async function loadHoaData() {
+  dbg(VERSION + ' — HOA viewer loaded', 'ok');
+  const hoaSlug = new URLSearchParams(window.location.search).get('hoa');
+  if (!hoaSlug) { showError('No HOA specified.'); return; }
+  dbg('HOA slug: ' + hoaSlug, 'info');
+
+  try {
+    // Load HOA file
+    setLoading('Loading community data...');
+    const hoaRes = await fetch(HOA_BASE_URL + hoaSlug + '.json');
+    if (!hoaRes.ok) { showError('HOA not found: ' + hoaSlug); return; }
+    hoaData = await hoaRes.json();
+    dbg('HOA loaded: ' + hoaData.name + ' (' + hoaData.properties.length + ' properties)', 'ok');
+
+    document.getElementById('hoa-name').textContent = hoaData.name;
+    document.getElementById('panel-title').textContent = hoaData.name;
+
+    // Load property index
+    setLoading('Loading property index...');
+    const indexRes = await fetch(BASE_URL + 'index.json');
+    if (!indexRes.ok) { showError('Index not found.'); return; }
+    propertyIndex = await indexRes.json();
+    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' total properties', 'ok');
+
+    // Gather entries for this HOA
+    const entries = hoaData.properties
+      .map(function(hash) {
+        const entry = propertyIndex[hash];
+        if (!entry) { dbg('Hash not found in index: ' + hash.substring(0,8) + '...', 'warn'); return null; }
+        entry.hash = hash;
+        return entry;
+      })
+      .filter(Boolean);
+
+    dbg('Matched ' + entries.length + ' properties in index', 'ok');
+    document.getElementById('property-count').textContent = entries.length + ' properties in this community';
+
+    hideLoading();
+
+    // Init map then drop pins
+    if (mapsApiReady) {
+      initMap();
+      dropAllPins(entries);
+    } else {
+      window._pendingEntries = entries;
+    }
+
+    // Open panel after short delay
+    setTimeout(function() { if (!panelOpen) togglePanel(); }, 800);
+
+  } catch(e) {
+    showError('Failed to load HOA: ' + e.message);
+  }
+}
+
+// ── MAPS API CALLBACK ─────────────────────────────────────────
+window.initGoogleMaps = function() {
+  mapsApiReady = true;
+  dbg('Google Maps API ready', 'ok');
+  if (window._pendingEntries) {
+    initMap();
+    dropAllPins(window._pendingEntries);
+    window._pendingEntries = null;
+  }
+};
+
+loadHoaData();
+</script>
+
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
+</body>
+</html>
