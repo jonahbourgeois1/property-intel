@@ -11,63 +11,27 @@
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #0a0c0f;
-    --surface: #12161b;
-    --surface2: #1a1f27;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.14);
-    --text: #f0f2f5;
-    --text2: #8a93a2;
-    --text3: #555f6e;
-    --accent: #3b82f6;
-    --green: #22c55e;
-    --red: #ef4444;
-    --header-h: 52px;
+    --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
+    --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
+    --accent: #3b82f6; --green: #22c55e; --red: #ef4444; --header-h: 52px;
   }
-
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
   #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  /* ── MAIN LAYOUT ── */
+  #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
   #map { flex: 1; background: var(--bg); min-width: 0; }
   #panel { width: 680px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(680px); width: 0; }
-
-  /* ── OVERLAYS ── */
-  #loading {
-    position: absolute;
-    top: 0; left: 0; right: 680px; bottom: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    z-index: 500;
-    transition: opacity 0.3s ease;
-    pointer-events: all;
-  }
+  #loading { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
   #loading.hidden { opacity: 0; pointer-events: none; }
-  #error {
-    position: absolute;
-    top: 0; left: 0; right: 680px; bottom: 0;
-    background: var(--bg);
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    z-index: 500;
-    padding: 32px;
-    text-align: center;
-    pointer-events: all;
-  }
+  #error { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
   #error.visible { display: flex; }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -75,23 +39,17 @@
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-
-  /* ── VIEW TABS ── */
   #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
   #view-tabs::-webkit-scrollbar { display: none; }
   .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-  /* ── PANEL ── */
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
   .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
   .close-btn:hover { background: var(--surface2); color: var(--text); }
   #panel-content { overflow-y: auto; flex: 1; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-
-  /* ── VIEW SECTIONS ── */
   .view-section { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
@@ -113,8 +71,6 @@
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
-
-  /* ── LIGHTBOX ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
   #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
@@ -126,15 +82,28 @@
   #lightbox-nav { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
   .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
-
-  /* ── TOGGLE BUTTONS ── */
   #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
 
-  /* ── MOBILE ── */
+  /* ── DEBUG WINDOW ── */
+  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  #debug-panel.collapsed #debug-log { display: none; }
+  #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
+  #debug-header span { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
+  #debug-toggle-btn { color: var(--text3); font-size: 10px; background: none; border: none; cursor: pointer; color: var(--accent); }
+  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
+  .debug-line.info { color: var(--text2); }
+  .debug-line.ok { color: var(--green); }
+  .debug-line.warn { color: #f59e0b; }
+  .debug-line.error { color: var(--red); }
+  .debug-time { color: var(--text3); margin-right: 6px; }
+  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
+  #debug-clear:hover { color: var(--text2); }
+
   @media (max-width: 768px) {
     #property-name { display: none; }
     #toggle-panel { display: none; }
@@ -142,18 +111,7 @@
     #map { position: absolute; inset: 0; width: 100%; height: 100%; }
     #loading { right: 0; }
     #error { right: 0; }
-    #panel {
-      position: fixed !important;
-      left: 0; right: 0; bottom: 0;
-      top: var(--header-h);
-      width: 100% !important;
-      height: calc(100dvh - var(--header-h)) !important;
-      transform: translateY(100%) !important;
-      transition: transform 0.35s ease !important;
-      border-left: none !important;
-      border-top: 1px solid var(--border2) !important;
-      z-index: 40;
-    }
+    #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
     #panel.mobile-open { transform: translateY(0%) !important; }
     .close-btn { display: none; }
     .panel-header { padding: 10px 14px; }
@@ -162,6 +120,7 @@
     #panel-content { padding: 10px; }
     .view-bullets li { font-size: 11px; }
     .view-label { font-size: 11px; }
+    #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
   }
 </style>
 </head>
@@ -175,12 +134,14 @@
       <div class="logo-sub">First Responder Portal</div>
     </div>
   </div>
-  <div id="property-name">Loading...</div>
+  <div class="header-right">
+    <div id="version-badge">v1.1.0 — parcel boundary</div>
+    <div id="property-name">Loading...</div>
+  </div>
 </div>
 
 <div id="main">
   <div id="map"></div>
-
   <div id="loading">
     <div class="spinner"></div>
     <div class="loading-text" id="loading-text">Loading property data...</div>
@@ -190,7 +151,6 @@
     <div class="error-title">Property not found</div>
     <div class="error-msg" id="error-msg">No property data provided.</div>
   </div>
-
   <div id="panel">
     <div class="panel-header">
       <div>
@@ -214,6 +174,16 @@
   <span id="mobile-label">Show Intel</span>
 </button>
 
+<!-- DEBUG WINDOW -->
+<div id="debug-panel">
+  <div id="debug-header" onclick="toggleDebug()">
+    <span>DEBUG CONSOLE</span>
+    <button id="debug-toggle-btn">▼</button>
+  </div>
+  <div id="debug-log"></div>
+  <button id="debug-clear" onclick="clearDebug()">clear log</button>
+</div>
+
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
@@ -229,18 +199,45 @@
 </div>
 
 <script>
+const VERSION = 'v1.1.0';
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
-let propertyIndex = null;
-let currentViewData = null;
-let currentViews = null;
-let mapsApiReady = false;
-let pendingEntry = null;
+let propertyIndex = null, currentViewData = null, currentViews = null;
+let mapsApiReady = false, pendingEntry = null;
 const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const PARCEL_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/highlands_parcels.geojson';
 const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const isMobile = () => window.innerWidth <= 768;
 
-// ── PANEL TOGGLE ──
+// ── DEBUG ─────────────────────────────────────────────────────
+function dbg(msg, type) {
+  type = type || 'info';
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':'
+             + now.getMinutes().toString().padStart(2,'0') + ':'
+             + now.getSeconds().toString().padStart(2,'0');
+  const line = document.createElement('div');
+  line.className = 'debug-line ' + type;
+  line.innerHTML = '<span class="debug-time">' + time + '</span>' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function toggleDebug() {
+  const panel = document.getElementById('debug-panel');
+  const btn = document.getElementById('debug-toggle-btn');
+  panel.classList.toggle('collapsed');
+  btn.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+}
+
+function clearDebug() {
+  const log = document.getElementById('debug-log');
+  if (log) log.innerHTML = '';
+}
+
+// ── PANEL TOGGLE ──────────────────────────────────────────────
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -255,16 +252,17 @@ function mobileToggle() {
   setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
 
-// ── LOADING / ERROR ──
 function showError(msg) {
   hideLoading();
   document.getElementById('error').classList.add('visible');
   document.getElementById('error-msg').textContent = msg;
+  dbg('ERROR: ' + msg, 'error');
 }
 
 function setLoading(msg) {
   const el = document.getElementById('loading-text');
   if (el) el.textContent = msg;
+  dbg(msg, 'info');
 }
 
 function hideLoading() {
@@ -272,7 +270,6 @@ function hideLoading() {
   if (el) el.classList.add('hidden');
 }
 
-// ── HELPERS ──
 function formatDesc(desc) {
   if (!desc) return [];
   return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
@@ -285,9 +282,63 @@ function toggleSection(header) {
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
-// ── MAP INIT ──
+// ── PARCEL BOUNDARY ──────────────────────────────────────────
+function pointInPolygon(lat, lng, ring) {
+  var inside = false;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    var xi = ring[i][0], yi = ring[i][1];
+    var xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function drawParcelBoundary(lat, lng, mapInstance) {
+  dbg('Fetching parcel GeoJSON...', 'info');
+  fetch(PARCEL_URL)
+    .then(function(res) {
+      dbg('Parcel fetch status: ' + res.status, res.ok ? 'ok' : 'error');
+      return res.json();
+    })
+    .then(function(geojson) {
+      dbg('Parcel features loaded: ' + geojson.features.length, 'ok');
+      var matched = null;
+      for (var i = 0; i < geojson.features.length; i++) {
+        var feature = geojson.features[i];
+        var coords = feature.geometry && feature.geometry.coordinates;
+        if (!coords || !coords[0]) continue;
+        if (pointInPolygon(lat, lng, coords[0])) { matched = feature; break; }
+      }
+      if (!matched) {
+        dbg('No parcel matched for lat:' + lat.toFixed(5) + ' lng:' + lng.toFixed(5), 'warn');
+        return;
+      }
+      dbg('Parcel matched: ' + (matched.properties.TAXLOT || matched.properties.taxlot || 'unknown'), 'ok');
+      var paths = matched.geometry.coordinates.map(function(ring) {
+        return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; });
+      });
+      new google.maps.Polygon({
+        paths: paths,
+        strokeColor: '#FF4444',
+        strokeOpacity: 0.9,
+        strokeWeight: 2,
+        fillColor: '#FF4444',
+        fillOpacity: 0.12,
+        map: mapInstance
+      });
+      dbg('Parcel polygon drawn on map', 'ok');
+    })
+    .catch(function(e) {
+      dbg('Parcel fetch failed: ' + e.message, 'error');
+    });
+}
+
+// ── MAP INIT ─────────────────────────────────────────────────
 function initMap(lat, lng) {
   try {
+    dbg('Initializing map at ' + lat.toFixed(5) + ', ' + lng.toFixed(5), 'info');
     map = new google.maps.Map(document.getElementById('map'), {
       center: { lat: lat, lng: lng },
       zoom: 18,
@@ -312,6 +363,9 @@ function initMap(lat, lng) {
       animation: google.maps.Animation.DROP
     });
 
+    dbg('Map initialized, drawing parcel boundary...', 'ok');
+    drawParcelBoundary(lat, lng, map);
+
     hideLoading();
 
     setTimeout(function() {
@@ -325,39 +379,42 @@ function initMap(lat, lng) {
       setTimeout(function() { if (!panelOpen) togglePanel(); }, 700);
     }
   } catch(e) {
+    dbg('initMap error: ' + e.message, 'error');
     console.error('initMap error:', e);
   }
 }
 
-// ── RESOLVE MAP ──
+// ── RESOLVE MAP ──────────────────────────────────────────────
 function resolveAndInitMap(entry) {
   if (entry.lat && entry.lng) {
+    dbg('Using stored coords: ' + entry.lat + ', ' + entry.lng, 'info');
     initMap(entry.lat, entry.lng);
   } else {
     setLoading('Locating property...');
+    dbg('No coords stored, geocoding address...', 'warn');
     const cleanAddress = entry.address.replace(/^\s+/, '');
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address='
-      + encodeURIComponent(cleanAddress)
-      + '&key=' + GEOCODE_KEY)
+      + encodeURIComponent(cleanAddress) + '&key=' + GEOCODE_KEY)
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.status === 'OK' && data.results[0]) {
           const loc = data.results[0].geometry.location;
+          dbg('Geocode OK: ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5), 'ok');
           initMap(loc.lat, loc.lng);
         } else {
+          dbg('Geocode failed: ' + data.status, 'error');
           hideLoading();
-          if (!isMobile()) {
-            setTimeout(function() { if (!panelOpen) togglePanel(); }, 600);
-          }
+          if (!isMobile()) { setTimeout(function() { if (!panelOpen) togglePanel(); }, 600); }
         }
       })
-      .catch(function() {
+      .catch(function(e) {
+        dbg('Geocode error: ' + e.message, 'error');
         hideLoading();
       });
   }
 }
 
-// ── LIGHTBOX ──
+// ── LIGHTBOX ─────────────────────────────────────────────────
 function openLightbox(index) {
   lightboxIndex = index;
   updateLightbox();
@@ -386,16 +443,14 @@ function updateLightbox() {
   document.getElementById('lightbox-img').src = v.url;
   document.getElementById('lightbox-title').textContent = v.label;
   document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
-  const ul = document.getElementById('lightbox-bullets');
-  ul.innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
+  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
 }
 
-// ── TABS ──
+// ── TABS ─────────────────────────────────────────────────────
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
   const viewLabels = { satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
-
   tabsEl.innerHTML = '';
   viewOrder.forEach(function(v) {
     if (!views[v]) return;
@@ -408,7 +463,7 @@ function buildTabs(views, activeView) {
   });
 }
 
-// ── PANEL CONTENT ──
+// ── PANEL CONTENT ─────────────────────────────────────────────
 function buildPanel(d) {
   const views = [
     { label: 'Alpha',   badge: 'A', cls: '',      data: d.alpha },
@@ -417,16 +472,13 @@ function buildPanel(d) {
     { label: 'Delta',   badge: 'D', cls: '',      data: d.delta },
     { label: 'Nadir',   badge: 'N', cls: 'nadir', data: d.nadir }
   ];
-
   lightboxViews = [];
   views.forEach(function(v) {
     if (v.data && v.data.url) {
       lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) });
     }
   });
-
-  let html = '';
-  let lbIndex = 0;
+  let html = '', lbIndex = 0;
   views.forEach(function(v) {
     if (!v.data || !v.data.url) return;
     const bullets = formatDesc(v.data.desc);
@@ -444,17 +496,14 @@ function buildPanel(d) {
       + '</div>'
       + '<ul class="view-bullets">'
       + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('')
-      + '</ul>'
-      + '</div></div>';
+      + '</ul></div></div>';
   });
-
   if (d.viewer360) {
     html += '<div class="view-section">'
       + '<div class="view-header" onclick="toggleSection(this)">'
       + '<div class="view-badge deg360">360</div>'
       + '<div class="view-label">360° Aerial View</div>'
-      + '<div class="chevron">▼</div>'
-      + '</div>'
+      + '<div class="chevron">▼</div></div>'
       + '<div class="view-body">'
       + '<ul class="view-bullets">'
       + '<li>Full interactive drone flyover of the property</li>'
@@ -464,75 +513,72 @@ function buildPanel(d) {
       + '<a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a>'
       + '</div></div>';
   }
-
   document.getElementById('panel-content').innerHTML = html;
 }
 
-// ── LOAD VIEW ──
+// ── LOAD VIEW ─────────────────────────────────────────────────
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
-
   document.querySelectorAll('.view-tab').forEach(function(t) {
     t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
   });
-
   document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading ' + viewSuffix + '...</div>';
-
   try {
+    dbg('Loading view: ' + viewSuffix + ' (' + hashedViewId.substring(0,8) + '...)', 'info');
     const res = await fetch(BASE_URL + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
     buildPanel(d);
+    dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
+    dbg('View load failed: ' + e.message, 'error');
     document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load view: ' + e.message + '</div>';
   }
 }
 
-// ── LOAD PROPERTY ──
+// ── LOAD PROPERTY ─────────────────────────────────────────────
 async function loadPropertyData() {
+  dbg(VERSION + ' — Property Intel loaded', 'ok');
   const propertyHash = new URLSearchParams(window.location.search).get('property');
   if (!propertyHash) { showError('No property ID provided.'); return; }
-
+  dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
-
+    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'ok');
     const entry = propertyIndex[propertyHash];
     if (!entry) { showError('Property not found.'); return; }
-
+    dbg('Property found: ' + entry.name, 'ok');
     currentViews = entry.views;
-
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-
     const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
     const firstView = viewOrder.find(function(v) { return entry.views[v]; });
     if (!firstView) { showError('No views available.'); return; }
-
+    dbg('Available views: ' + Object.keys(entry.views).join(', '), 'info');
     buildTabs(entry.views, firstView);
     setLoading('Loading ' + firstView + '...');
     await loadView(entry.views, firstView);
-
-    if (mapsApiReady) {
-      resolveAndInitMap(entry);
-    } else {
+    if (mapsApiReady) { resolveAndInitMap(entry); } else {
+      dbg('Maps API not ready yet, queuing entry...', 'warn');
       pendingEntry = entry;
     }
-
   } catch(e) {
     showError('Failed to load property: ' + e.message);
   }
 }
 
-// ── MAPS API CALLBACK ──
+// ── MAPS API CALLBACK ─────────────────────────────────────────
 window.initGoogleMaps = function() {
   mapsApiReady = true;
+  dbg('Google Maps API ready', 'ok');
   if (pendingEntry) {
+    dbg('Processing queued entry...', 'info');
     resolveAndInitMap(pendingEntry);
     pendingEntry = null;
   }
