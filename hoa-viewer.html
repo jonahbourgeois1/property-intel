@@ -39,30 +39,22 @@
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-
-  /* ── PANEL ── */
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
   .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
   .close-btn:hover { background: var(--surface2); color: var(--text); }
-
-  /* ── WELCOME STATE ── */
   #welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 32px; text-align: center; gap: 12px; }
   .welcome-icon { width: 48px; height: 48px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 4px; }
   .welcome-title { font-size: 15px; font-weight: 600; color: var(--text); }
   .welcome-sub { font-size: 12px; color: var(--text3); line-height: 1.7; max-width: 260px; }
   .property-count { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent); background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); padding: 4px 12px; border-radius: 999px; margin-top: 4px; }
-
-  /* ── VIEW TABS ── */
   #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
   #view-tabs::-webkit-scrollbar { display: none; }
   .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   #panel-content { overflow-y: auto; flex: 1; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-
-  /* ── VIEW SECTIONS ── */
   .view-section { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
@@ -84,8 +76,6 @@
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
-
-  /* ── LIGHTBOX ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
   #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
@@ -98,8 +88,8 @@
   .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
 
-  /* ── TOGGLE ── */
-  #toggle-panel { position: absolute; bottom: 20px; left: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  /* ── TOGGLE — bottom right ── */
+  #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -146,7 +136,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v1.0.0 — HOA viewer</div>
+    <div id="version-badge">v1.1.0 — HOA viewer</div>
     <div id="hoa-name">Loading...</div>
   </div>
 </div>
@@ -216,7 +206,7 @@
 </div>
 
 <script>
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.1.0';
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
 let propertyIndex = null, currentViews = null, currentViewData = null;
@@ -311,20 +301,15 @@ function pointInPolygon(lat, lng, ring) {
   }
   return inside;
 }
-
 function getParcelFile(lat, lng) {
   var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
   var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
-
-// Cache parcel GeoJSON files so we don't re-fetch the same file multiple times
 var parcelCache = {};
-
 function drawParcelBoundaryForProperty(lat, lng, mapInstance) {
   var filename = getParcelFile(lat, lng);
   var url = PARCEL_BASE + filename;
-
   function renderPolygon(geojson) {
     var matched = null;
     for (var i = 0; i < geojson.features.length; i++) {
@@ -349,7 +334,6 @@ function drawParcelBoundaryForProperty(lat, lng, mapInstance) {
     });
     allPolygons.push(polygon);
   }
-
   if (parcelCache[filename]) {
     renderPolygon(parcelCache[filename]);
   } else {
@@ -375,12 +359,14 @@ function initMap() {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
       mapTypeIds: ['satellite', 'hybrid', 'roadmap']
     },
+    // ── Zoom + Pegman → bottom left ──
     zoomControl: true,
-    zoomControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+    zoomControlOptions: { position: google.maps.ControlPosition.LEFT_BOTTOM },
     streetViewControl: true,
-    streetViewControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
+    streetViewControlOptions: { position: google.maps.ControlPosition.LEFT_BOTTOM },
+    // ── Fullscreen → top right ──
     fullscreenControl: true,
-    fullscreenControlOptions: { position: google.maps.ControlPosition.LEFT_TOP }
+    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
   });
   dbg('Map initialized', 'ok');
 }
@@ -389,7 +375,6 @@ function initMap() {
 function dropAllPins(entries) {
   var bounds = new google.maps.LatLngBounds();
   var geocodeQueue = [];
-
   entries.forEach(function(entry) {
     if (entry.lat && entry.lng) {
       placePin(entry, entry.lat, entry.lng, bounds);
@@ -397,17 +382,12 @@ function dropAllPins(entries) {
       geocodeQueue.push(entry);
     }
   });
-
-  // Fit map to all pins
   if (!bounds.isEmpty()) {
     map.fitBounds(bounds);
-    // Don't zoom in too far for single property
     google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
       if (map.getZoom() > 16) map.setZoom(16);
     });
   }
-
-  // Geocode any entries without coords
   geocodeQueue.forEach(function(entry) {
     var cleanAddress = entry.address.replace(/^\s+/, '');
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address='
@@ -438,16 +418,10 @@ function placePin(entry, lat, lng, bounds) {
       strokeWeight: 2
     }
   });
-
   if (bounds) bounds.extend({ lat: lat, lng: lng });
-
-  // Draw parcel boundary for each property
   drawParcelBoundaryForProperty(lat, lng, map);
-
-  // Click handler — load this property's intel into the panel
   marker.addListener('click', function() {
     dbg('Pin clicked: ' + entry.name, 'info');
-    // Highlight selected marker
     if (activeMarker) {
       activeMarker.setIcon({
         path: google.maps.SymbolPath.CIRCLE,
@@ -470,7 +444,6 @@ function placePin(entry, lat, lng, bounds) {
     loadPropertyIntoPanel(entry);
     if (!panelOpen) togglePanel();
   });
-
   allMarkers.push(marker);
   dbg('Pin placed: ' + entry.name, 'ok');
 }
@@ -480,22 +453,16 @@ async function loadPropertyIntoPanel(entry) {
   currentViews = entry.views;
   document.getElementById('panel-title').textContent = entry.name;
   document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-
-  // Hide welcome, show tabs
   const welcome = document.getElementById('welcome');
   if (welcome) welcome.style.display = 'none';
   document.getElementById('view-tabs').style.display = 'flex';
-
-  // Clear panel content immediately so stale content doesn't persist
   document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading...</div>';
-
   const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
   const firstView = viewOrder.find(function(v) { return entry.views[v]; });
   if (!firstView) {
     document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">No views available.</div>';
     return;
   }
-
   buildTabs(entry.views, firstView);
   await loadView(entry.views, firstView);
 }
@@ -624,26 +591,19 @@ async function loadHoaData() {
   const hoaSlug = new URLSearchParams(window.location.search).get('hoa');
   if (!hoaSlug) { showError('No HOA specified.'); return; }
   dbg('HOA slug: ' + hoaSlug, 'info');
-
   try {
-    // Load HOA file
     setLoading('Loading community data...');
     const hoaRes = await fetch(HOA_BASE_URL + hoaSlug + '.json');
     if (!hoaRes.ok) { showError('HOA not found: ' + hoaSlug); return; }
     hoaData = await hoaRes.json();
     dbg('HOA loaded: ' + hoaData.name + ' (' + hoaData.properties.length + ' properties)', 'ok');
-
     document.getElementById('hoa-name').textContent = hoaData.name;
     document.getElementById('panel-title').textContent = hoaData.name;
-
-    // Load property index
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
     dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' total properties', 'ok');
-
-    // Gather entries for this HOA
     const entries = hoaData.properties
       .map(function(hash) {
         const entry = propertyIndex[hash];
@@ -652,23 +612,16 @@ async function loadHoaData() {
         return entry;
       })
       .filter(Boolean);
-
     dbg('Matched ' + entries.length + ' properties in index', 'ok');
     document.getElementById('property-count').textContent = entries.length + ' properties in this community';
-
     hideLoading();
-
-    // Init map then drop pins
     if (mapsApiReady) {
       initMap();
       dropAllPins(entries);
     } else {
       window._pendingEntries = entries;
     }
-
-    // Open panel after short delay
     setTimeout(function() { if (!panelOpen) togglePanel(); }, 800);
-
   } catch(e) {
     showError('Failed to load HOA: ' + e.message);
   }
