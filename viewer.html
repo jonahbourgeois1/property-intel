@@ -315,7 +315,10 @@ function drawParcelBoundary(lat, lng, mapInstance) {
   fetch(url)
     .then(function(res) {
       dbg('Parcel fetch status: ' + res.status, res.ok ? 'ok' : 'error');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) {
+        dbg('No parcel data for this location', 'warn');
+        return;
+      }
       return res.json();
     })
     .then(function(geojson) {
