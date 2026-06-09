@@ -546,7 +546,10 @@ async function loadView(views, viewSuffix) {
   try {
     dbg('Loading view: ' + viewSuffix, 'info');
     const res = await fetch(BASE_URL + hashedViewId + '.json');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) {
+      dbg('No parcel data for this location', 'warn');
+      return;
+    }
     const d = await res.json();
     currentViewData = d;
     buildPanel(d);
