@@ -14,7 +14,8 @@
     --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
     --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
     --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
-    --accent: #3b82f6; --green: #22c55e; --red: #ef4444; --header-h: 52px;
+    --accent: #3b82f6; --green: #22c55e; --red: #ef4444;
+    --orange: #f97316; --header-h: 52px;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
@@ -44,6 +45,8 @@
   .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .view-tab[data-view="safety"].active { color: var(--green); border-bottom-color: var(--green); }
+  .view-tab[data-view="wildfire"].active { color: var(--orange); border-bottom-color: var(--orange); }
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
@@ -54,8 +57,13 @@
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
   .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
-  .view-badge.nadir { background: #7c3aed; }
-  .view-badge.deg360 { background: #059669; }
+  .view-badge.nadir          { background: #7c3aed; }
+  .view-badge.safety         { background: var(--green); }
+  .view-badge.elements       { background: var(--green); }
+  .view-badge.considerations { background: var(--red); }
+  .view-badge.wildfire-img   { background: var(--orange); }
+  .view-badge.conditions     { background: var(--orange); }
+  .view-badge.deg360         { background: #059669; }
   .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
   .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
   .view-body { display: block; }
@@ -69,6 +77,9 @@
   .view-bullets li { font-size: 12px; color: var(--text2); padding: 4px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,0.03); }
   .view-bullets li:last-child { border-bottom: none; }
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
+  .view-bullets.safety-elements li::before       { background: var(--green); }
+  .view-bullets.safety-considerations li::before { background: var(--red); }
+  .view-bullets.wildfire-conditions li::before   { background: var(--orange); }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -87,45 +98,34 @@
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-
-  /* ── DEBUG WINDOW ── */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
   #debug-panel.collapsed #debug-log { display: none; }
   #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
   #debug-header span { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
-  #debug-toggle-btn { color: var(--text3); font-size: 10px; background: none; border: none; cursor: pointer; color: var(--accent); }
+  #debug-toggle-btn { color: var(--accent); font-size: 10px; background: none; border: none; cursor: pointer; }
   #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
   .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
-  .debug-line.info { color: var(--text2); }
-  .debug-line.ok { color: var(--green); }
-  .debug-line.warn { color: #f59e0b; }
+  .debug-line.info  { color: var(--text2); }
+  .debug-line.ok    { color: var(--green); }
+  .debug-line.warn  { color: #f59e0b; }
   .debug-line.error { color: var(--red); }
   .debug-time { color: var(--text3); margin-right: 6px; }
-  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; border-top: 1px solid rgba(255,255,255,0.05); color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
+  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
   #debug-clear:hover { color: var(--text2); }
-
   @media (max-width: 768px) {
     #property-name { display: none; }
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
     #map { position: absolute; inset: 0; width: 100%; height: 100%; }
-    #loading { right: 0; }
-    #error { right: 0; }
+    #loading { right: 0; } #error { right: 0; }
     #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
     #panel.mobile-open { transform: translateY(0%) !important; }
     .close-btn { display: none; }
-    .panel-header { padding: 10px 14px; }
-    .panel-title { font-size: 13px; }
-    .panel-address { font-size: 10px; }
-    #panel-content { padding: 10px; }
-    .view-bullets li { font-size: 11px; }
-    .view-label { font-size: 11px; }
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
   }
 </style>
 </head>
 <body>
-
 <div id="header">
   <div class="logo">
     <div class="logo-mark">VI</div>
@@ -135,22 +135,14 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v1.3.0 — parcel boundary</div>
+    <div id="version-badge">v1.4.0 — safety + wildfire</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
-
 <div id="main">
   <div id="map"></div>
-  <div id="loading">
-    <div class="spinner"></div>
-    <div class="loading-text" id="loading-text">Loading property data...</div>
-  </div>
-  <div id="error">
-    <div class="error-icon">⚠</div>
-    <div class="error-title">Property not found</div>
-    <div class="error-msg" id="error-msg">No property data provided.</div>
-  </div>
+  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
+  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
   <div id="panel">
     <div class="panel-header">
       <div>
@@ -163,27 +155,13 @@
     <div id="panel-content"></div>
   </div>
 </div>
-
-<button id="toggle-panel" onclick="togglePanel()">
-  <div class="status-dot"></div>
-  <span id="toggle-label">View Intel</span>
-</button>
-
-<button id="mobile-toggle" onclick="mobileToggle()">
-  <div class="status-dot"></div>
-  <span id="mobile-label">Show Intel</span>
-</button>
-
-<!-- DEBUG WINDOW -->
+<button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
+<button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
 <div id="debug-panel">
-  <div id="debug-header" onclick="toggleDebug()">
-    <span>DEBUG CONSOLE</span>
-    <button id="debug-toggle-btn">▼</button>
-  </div>
+  <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
   <div id="debug-log"></div>
   <button id="debug-clear" onclick="clearDebug()">clear log</button>
 </div>
-
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
@@ -197,84 +175,61 @@
     <button class="nav-btn" onclick="lightboxNav(1)">&#8594;</button>
   </div>
 </div>
-
 <script>
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.4.0';
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
 let propertyIndex = null, currentViewData = null, currentViews = null;
 let mapsApiReady = false, pendingEntry = null;
-const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/';
-const PARCEL_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/highlands_parcels.geojson';
+const BASE_URL    = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
+const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const isMobile = () => window.innerWidth <= 768;
 
-// ── DEBUG ─────────────────────────────────────────────────────
 function dbg(msg, type) {
   type = type || 'info';
   const log = document.getElementById('debug-log');
   if (!log) return;
   const now = new Date();
-  const time = now.getHours().toString().padStart(2,'0') + ':'
-             + now.getMinutes().toString().padStart(2,'0') + ':'
-             + now.getSeconds().toString().padStart(2,'0');
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
   const line = document.createElement('div');
   line.className = 'debug-line ' + type;
   line.innerHTML = '<span class="debug-time">' + time + '</span>' + msg;
   log.appendChild(line);
   log.scrollTop = log.scrollHeight;
 }
-
 function toggleDebug() {
   const panel = document.getElementById('debug-panel');
   const btn = document.getElementById('debug-toggle-btn');
   panel.classList.toggle('collapsed');
   btn.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
 }
+function clearDebug() { const log = document.getElementById('debug-log'); if (log) log.innerHTML = ''; }
 
-function clearDebug() {
-  const log = document.getElementById('debug-log');
-  if (log) log.innerHTML = '';
-}
-
-// ── PANEL TOGGLE ──────────────────────────────────────────────
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
   setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
-
 function mobileToggle() {
   mobileIntelOpen = !mobileIntelOpen;
   document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
   document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
   setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
-
-function showError(msg) {
-  hideLoading();
-  document.getElementById('error').classList.add('visible');
-  document.getElementById('error-msg').textContent = msg;
-  dbg('ERROR: ' + msg, 'error');
-}
-
-function setLoading(msg) {
-  const el = document.getElementById('loading-text');
-  if (el) el.textContent = msg;
-  dbg(msg, 'info');
-}
-
-function hideLoading() {
-  const el = document.getElementById('loading');
-  if (el) el.classList.add('hidden');
-}
-
+function showError(msg) { hideLoading(); document.getElementById('error').classList.add('visible'); document.getElementById('error-msg').textContent = msg; dbg('ERROR: ' + msg, 'error'); }
+function setLoading(msg) { const el = document.getElementById('loading-text'); if (el) el.textContent = msg; dbg(msg, 'info'); }
+function hideLoading() { const el = document.getElementById('loading'); if (el) el.classList.add('hidden'); }
 function formatDesc(desc) {
   if (!desc) return [];
   return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
 }
-
+function parseItems(str) {
+  if (!str) return [];
+  return str.split(';').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
+}
 function toggleSection(header) {
   const body = header.nextElementSibling;
   const chevron = header.querySelector('.chevron');
@@ -282,181 +237,80 @@ function toggleSection(header) {
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
-// ── PARCEL BOUNDARY ──────────────────────────────────────────
 function pointInPolygon(lat, lng, ring) {
   var inside = false;
   for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    var xi = ring[i][0], yi = ring[i][1];
-    var xj = ring[j][0], yj = ring[j][1];
-    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) {
-      inside = !inside;
-    }
+    var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
   }
   return inside;
 }
-
-const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
-const PARCEL_LAT_MIN = 43.61;
-const PARCEL_LNG_MIN = -122.01;
-const PARCEL_CELL = 0.07;
-
 function getParcelFile(lat, lng) {
   var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
   var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
-  var latStr = latCell.toFixed(2);
-  var lngStr = lngCell.toFixed(2);
-  return 'deschutes_' + latStr + '_' + lngStr + '.geojson';
+  return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
-
 function drawParcelBoundary(lat, lng, mapInstance) {
   var filename = getParcelFile(lat, lng);
-  var url = PARCEL_BASE + filename;
-  dbg('Fetching parcel file: ' + filename, 'info');
-  fetch(url)
-    .then(function(res) {
-      dbg('Parcel fetch status: ' + res.status, res.ok ? 'ok' : 'error');
-      if (!res.ok) {
-        dbg('No parcel data for this location', 'warn');
-        return;
-      }
-      return res.json();
-    })
+  dbg('Fetching parcel: ' + filename, 'info');
+  fetch(PARCEL_BASE + filename)
+    .then(function(res) { if (!res.ok) { dbg('No parcel data', 'warn'); return null; } return res.json(); })
     .then(function(geojson) {
-      dbg('Parcel features loaded: ' + geojson.features.length, 'ok');
+      if (!geojson) return;
+      dbg('Parcel features: ' + geojson.features.length, 'ok');
       var matched = null;
       for (var i = 0; i < geojson.features.length; i++) {
-        var feature = geojson.features[i];
-        var coords = feature.geometry && feature.geometry.coordinates;
+        var f = geojson.features[i];
+        var coords = f.geometry && f.geometry.coordinates;
         if (!coords || !coords[0]) continue;
-        if (pointInPolygon(lat, lng, coords[0])) { matched = feature; break; }
+        if (pointInPolygon(lat, lng, coords[0])) { matched = f; break; }
       }
-      if (!matched) {
-        dbg('No parcel matched for lat:' + lat.toFixed(5) + ' lng:' + lng.toFixed(5), 'warn');
-        return;
-      }
-      dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'unknown'), 'ok');
-      var paths = matched.geometry.coordinates.map(function(ring) {
-        return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; });
-      });
-      new google.maps.Polygon({
-        paths: paths,
-        strokeColor: '#cd3333',
-        strokeOpacity: 1.0,
-        strokeWeight: 4,
-        fillColor: '#cd3333',
-        fillOpacity: 0.0,
-        map: mapInstance
-      });
-      dbg('Parcel polygon drawn on map', 'ok');
+      if (!matched) { dbg('No parcel matched', 'warn'); return; }
+      dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'ok'), 'ok');
+      var paths = matched.geometry.coordinates.map(function(ring) { return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; }); });
+      new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillColor: '#cd3333', fillOpacity: 0.0, map: mapInstance });
     })
-    .catch(function(e) {
-      dbg('Parcel fetch failed: ' + e.message, 'error');
-    });
+    .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
 }
 
-// ── MAP INIT ─────────────────────────────────────────────────
 function initMap(lat, lng) {
   try {
     dbg('Initializing map at ' + lat.toFixed(5) + ', ' + lng.toFixed(5), 'info');
     map = new google.maps.Map(document.getElementById('map'), {
-      center: { lat: lat, lng: lng },
-      zoom: 18,
-      mapTypeId: google.maps.MapTypeId.SATELLITE,
-      tilt: 0,
-      mapTypeControl: true,
-      mapTypeControlOptions: {
-        style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
-        mapTypeIds: ['satellite', 'hybrid', 'roadmap']
-      },
-      zoomControl: true,
-      zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-      streetViewControl: true,
-      streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-      fullscreenControl: true,
-      fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+      center: { lat: lat, lng: lng }, zoom: 18,
+      mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+      mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite', 'hybrid', 'roadmap'] },
+      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+      streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+      fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
     });
-
-    new google.maps.Marker({
-      position: { lat: lat, lng: lng },
-      map: map,
-      animation: google.maps.Animation.DROP
-    });
-
-    dbg('Map initialized, drawing parcel boundary...', 'ok');
+    new google.maps.Marker({ position: { lat: lat, lng: lng }, map: map, animation: google.maps.Animation.DROP });
+    dbg('Map ready, drawing parcel...', 'ok');
     drawParcelBoundary(lat, lng, map);
-
     hideLoading();
-
-    setTimeout(function() {
-      if (map) {
-        google.maps.event.trigger(map, 'resize');
-        map.setCenter({ lat: lat, lng: lng });
-      }
-    }, 100);
-
-    if (!isMobile()) {
-      setTimeout(function() { if (!panelOpen) togglePanel(); }, 700);
-    }
-  } catch(e) {
-    dbg('initMap error: ' + e.message, 'error');
-    console.error('initMap error:', e);
-  }
+    setTimeout(function() { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat: lat, lng: lng }); } }, 100);
+    if (!isMobile()) { setTimeout(function() { if (!panelOpen) togglePanel(); }, 700); }
+  } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
 }
 
-// ── RESOLVE MAP ──────────────────────────────────────────────
 function resolveAndInitMap(entry) {
-  if (entry.lat && entry.lng) {
-    dbg('Using stored coords: ' + entry.lat + ', ' + entry.lng, 'info');
-    initMap(entry.lat, entry.lng);
-  } else {
+  if (entry.lat && entry.lng) { dbg('Using stored coords', 'info'); initMap(entry.lat, entry.lng); }
+  else {
     setLoading('Locating property...');
-    dbg('No coords stored, geocoding address...', 'warn');
-    const cleanAddress = entry.address.replace(/^\s+/, '');
-    fetch('https://maps.googleapis.com/maps/api/geocode/json?address='
-      + encodeURIComponent(cleanAddress) + '&key=' + GEOCODE_KEY)
+    fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(entry.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
       .then(function(res) { return res.json(); })
       .then(function(data) {
-        if (data.status === 'OK' && data.results[0]) {
-          const loc = data.results[0].geometry.location;
-          dbg('Geocode OK: ' + loc.lat.toFixed(5) + ', ' + loc.lng.toFixed(5), 'ok');
-          initMap(loc.lat, loc.lng);
-        } else {
-          dbg('Geocode failed: ' + data.status, 'error');
-          hideLoading();
-          if (!isMobile()) { setTimeout(function() { if (!panelOpen) togglePanel(); }, 600); }
-        }
+        if (data.status === 'OK' && data.results[0]) { var loc = data.results[0].geometry.location; dbg('Geocode OK', 'ok'); initMap(loc.lat, loc.lng); }
+        else { dbg('Geocode failed: ' + data.status, 'error'); hideLoading(); if (!isMobile()) { setTimeout(function() { if (!panelOpen) togglePanel(); }, 600); } }
       })
-      .catch(function(e) {
-        dbg('Geocode error: ' + e.message, 'error');
-        hideLoading();
-      });
+      .catch(function(e) { dbg('Geocode error: ' + e.message, 'error'); hideLoading(); });
   }
 }
 
-// ── LIGHTBOX ─────────────────────────────────────────────────
-function openLightbox(index) {
-  lightboxIndex = index;
-  updateLightbox();
-  document.getElementById('lightbox').classList.add('open');
-  document.addEventListener('keydown', lightboxKey);
-}
-
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
-  document.removeEventListener('keydown', lightboxKey);
-}
-
-function lightboxKey(e) {
-  if (e.key === 'Escape') closeLightbox();
-  if (e.key === 'ArrowLeft') lightboxNav(-1);
-  if (e.key === 'ArrowRight') lightboxNav(1);
-}
-
-function lightboxNav(dir) {
-  lightboxIndex = (lightboxIndex + dir + lightboxViews.length) % lightboxViews.length;
-  updateLightbox();
-}
-
+function openLightbox(index) { lightboxIndex = index; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.addEventListener('keydown', lightboxKey); }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.removeEventListener('keydown', lightboxKey); }
+function lightboxKey(e) { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); }
+function lightboxNav(dir) { lightboxIndex = (lightboxIndex + dir + lightboxViews.length) % lightboxViews.length; updateLightbox(); }
 function updateLightbox() {
   const v = lightboxViews[lightboxIndex];
   document.getElementById('lightbox-img').src = v.url;
@@ -465,11 +319,10 @@ function updateLightbox() {
   document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
 }
 
-// ── TABS ─────────────────────────────────────────────────────
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
-  const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
-  const viewLabels = { satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
+  const viewOrder  = ['safety', 'wildfire', 'satellite', 'plane', 'drone', 'interior'];
+  const viewLabels = { safety: 'Safety', wildfire: 'Wildfire', satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
   tabsEl.innerHTML = '';
   viewOrder.forEach(function(v) {
     if (!views[v]) return;
@@ -482,66 +335,80 @@ function buildTabs(views, activeView) {
   });
 }
 
-// ── PANEL CONTENT ─────────────────────────────────────────────
+function buildSafetyPanel(d) {
+  const fr = d.fr;
+  if (!fr) { document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">No safety data available.</div>'; return; }
+  const elements       = parseItems(fr.elements);
+  const considerations = parseItems(fr.considerations);
+  lightboxViews = [];
+  if (fr.nadir_url) lightboxViews.push({ label: 'Safety — Nadir View', url: fr.nadir_url, bullets: elements });
+  let html = '';
+  if (fr.nadir_url) {
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge safety">S</div><div class="view-label">Safety Nadir View</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + fr.nadir_url + '" alt="Safety Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
+  }
+  if (elements.length > 0) {
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge elements">PE</div><div class="view-label">Property Elements</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><ul class="view-bullets safety-elements">' + elements.map(function(e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div></div>';
+  }
+  if (considerations.length > 0 && considerations[0] !== 'None Visible') {
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge considerations">RC</div><div class="view-label">Responder Considerations</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><ul class="view-bullets safety-considerations">' + considerations.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul></div></div>';
+  }
+  document.getElementById('panel-content').innerHTML = html;
+  dbg('Safety panel: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
+}
+
+function buildWildfirePanel(d) {
+  const wf = d.wildfire;
+  if (!wf) { document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">No wildfire data available.</div>'; return; }
+  const conditions = parseItems(wf.conditions);
+  lightboxViews = [];
+  if (wf.nadir_url) lightboxViews.push({ label: 'Wildfire — Nadir View', url: wf.nadir_url, bullets: conditions });
+  let html = '';
+  if (wf.nadir_url) {
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge wildfire-img">W</div><div class="view-label">Wildfire Nadir View</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + wf.nadir_url + '" alt="Wildfire Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
+  }
+  if (conditions.length > 0 && conditions[0] !== 'None Visible') {
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge conditions">WC</div><div class="view-label">Wildfire Conditions</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><ul class="view-bullets wildfire-conditions">' + conditions.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul></div></div>';
+  }
+  document.getElementById('panel-content').innerHTML = html;
+  dbg('Wildfire panel: ' + conditions.length + ' conditions', 'ok');
+}
+
 function buildPanel(d) {
   const views = [
-    { label: 'Alpha',   badge: 'A', cls: '',      data: d.alpha },
-    { label: 'Bravo',   badge: 'B', cls: '',      data: d.bravo },
-    { label: 'Charlie', badge: 'C', cls: '',      data: d.charlie },
-    { label: 'Delta',   badge: 'D', cls: '',      data: d.delta },
-    { label: 'Nadir',   badge: 'N', cls: 'nadir', data: d.nadir }
+    { label: 'Alpha', badge: 'A', cls: '', data: d.alpha },
+    { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie', badge: 'C', cls: '', data: d.charlie },
+    { label: 'Delta', badge: 'D', cls: '', data: d.delta },
+    { label: 'Nadir', badge: 'N', cls: 'nadir', data: d.nadir }
   ];
   lightboxViews = [];
-  views.forEach(function(v) {
-    if (v.data && v.data.url) {
-      lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) });
-    }
-  });
+  views.forEach(function(v) { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
   let html = '', lbIndex = 0;
   views.forEach(function(v) {
     if (!v.data || !v.data.url) return;
     const bullets = formatDesc(v.data.desc);
     const idx = lbIndex++;
-    html += '<div class="view-section">'
-      + '<div class="view-header" onclick="toggleSection(this)">'
-      + '<div class="view-badge ' + v.cls + '">' + v.badge + '</div>'
-      + '<div class="view-label">' + v.label + '</div>'
-      + '<div class="chevron">▼</div>'
-      + '</div>'
-      + '<div class="view-body">'
-      + '<div class="view-img-wrap" onclick="openLightbox(' + idx + ')">'
-      + '<img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy">'
-      + '<div class="zoom-hint">🔍 Tap to enlarge</div>'
-      + '</div>'
-      + '<ul class="view-bullets">'
-      + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('')
-      + '</ul></div></div>';
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ' + v.cls + '">' + v.badge + '</div><div class="view-label">' + v.label + '</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(' + idx + ')"><img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div>'
+      + '<ul class="view-bullets">' + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('') + '</ul></div></div>';
   });
   if (d.viewer360) {
-    html += '<div class="view-section">'
-      + '<div class="view-header" onclick="toggleSection(this)">'
-      + '<div class="view-badge deg360">360</div>'
-      + '<div class="view-label">360° Aerial View</div>'
-      + '<div class="chevron">▼</div></div>'
-      + '<div class="view-body">'
-      + '<ul class="view-bullets">'
-      + '<li>Full interactive drone flyover of the property</li>'
-      + '<li>Pan, tilt, and zoom to explore every angle</li>'
-      + '<li>Complete site overview before arrival</li>'
-      + '</ul>'
-      + '<a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a>'
-      + '</div></div>';
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li><li>Complete site overview before arrival</li></ul>'
+      + '<a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a></div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
 }
 
-// ── LOAD VIEW ─────────────────────────────────────────────────
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
-  document.querySelectorAll('.view-tab').forEach(function(t) {
-    t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix);
-  });
+  document.querySelectorAll('.view-tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix); });
   document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;font-family:\'DM Mono\',monospace;">Loading ' + viewSuffix + '...</div>';
   try {
     dbg('Loading view: ' + viewSuffix + ' (' + hashedViewId.substring(0,8) + '...)', 'info');
@@ -549,18 +416,21 @@ async function loadView(views, viewSuffix) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
-    buildPanel(d);
+    if (viewSuffix === 'safety' && d.fr) { buildSafetyPanel(d); }
+    else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d); }
+    else { buildPanel(d); }
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
     dbg('View load failed: ' + e.message, 'error');
-    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load view: ' + e.message + '</div>';
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-size:13px;">Failed to load: ' + e.message + '</div>';
   }
 }
 
-// ── LOAD PROPERTY ─────────────────────────────────────────────
 async function loadPropertyData() {
   dbg(VERSION + ' — Property Intel loaded', 'ok');
-  const propertyHash = new URLSearchParams(window.location.search).get('property');
+  const params       = new URLSearchParams(window.location.search);
+  const propertyHash = params.get('property');
+  const tabParam     = params.get('tab');
   if (!propertyHash) { showError('No property ID provided.'); return; }
   dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
@@ -574,38 +444,27 @@ async function loadPropertyData() {
     dbg('Property found: ' + entry.name, 'ok');
     currentViews = entry.views;
     document.getElementById('property-name').textContent = entry.name;
-    document.getElementById('panel-title').textContent = entry.name;
+    document.getElementById('panel-title').textContent   = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-    const viewOrder = ['satellite', 'plane', 'drone', 'interior'];
-    const firstView = viewOrder.find(function(v) { return entry.views[v]; });
+    const viewOrder = ['safety', 'wildfire', 'satellite', 'plane', 'drone', 'interior'];
+    const firstView = (tabParam && entry.views[tabParam]) ? tabParam : viewOrder.find(function(v) { return entry.views[v]; });
     if (!firstView) { showError('No views available.'); return; }
     dbg('Available views: ' + Object.keys(entry.views).join(', '), 'info');
     buildTabs(entry.views, firstView);
     setLoading('Loading ' + firstView + '...');
     await loadView(entry.views, firstView);
-    if (mapsApiReady) { resolveAndInitMap(entry); } else {
-      dbg('Maps API not ready yet, queuing entry...', 'warn');
-      pendingEntry = entry;
-    }
-  } catch(e) {
-    showError('Failed to load property: ' + e.message);
-  }
+    if (mapsApiReady) { resolveAndInitMap(entry); } else { pendingEntry = entry; }
+  } catch(e) { showError('Failed to load property: ' + e.message); }
 }
 
-// ── MAPS API CALLBACK ─────────────────────────────────────────
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
-  if (pendingEntry) {
-    dbg('Processing queued entry...', 'info');
-    resolveAndInitMap(pendingEntry);
-    pendingEntry = null;
-  }
+  if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
 };
 
 loadPropertyData();
 </script>
-
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
 </html>
