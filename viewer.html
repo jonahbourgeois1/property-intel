@@ -484,8 +484,13 @@ function activatePin(pinId, marker, fromMap) {
     // Open InfoWindow with pin label and description
     if (!infoWindow) {
       infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
-      // Close on any map click
+      // Close on map click
       map.addListener('click', function() { infoWindow.close(); });
+      // Close when clicking the InfoWindow content itself
+      infoWindow.addListener('domready', function() {
+        var iwOuter = document.querySelector('.gm-style-iw-a');
+        if (iwOuter) iwOuter.addEventListener('click', function() { infoWindow.close(); });
+      });
     }
     infoWindow.setContent(buildInfoWindowContent(marker._label, marker._desc, marker._hexColor));
     infoWindow.open({ anchor: marker, map, shouldFocus: false });
