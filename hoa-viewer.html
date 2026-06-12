@@ -475,7 +475,11 @@ function activatePin(pinId, marker, fromMap) {
     if (!fromMap) map.panTo(marker.getPosition());
 
     // Open InfoWindow with pin label and description
-    if (!infoWindow) infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
+    if (!infoWindow) {
+      infoWindow = new google.maps.InfoWindow({ disableAutoPan: false, headerDisabled: true });
+      // Close on any map click
+      map.addListener('click', function() { infoWindow.close(); });
+    }
     infoWindow.setContent(buildInfoWindowContent(marker._label, marker._desc, marker._hexColor));
     infoWindow.open({ anchor: marker, map: map, shouldFocus: false });
   }
@@ -487,12 +491,12 @@ function buildInfoWindowContent(label, desc, hexColor) {
     + 'background:#12161b;'
     + 'color:#f0f2f5;'
     + 'border-radius:8px;'
-    + 'padding:10px 13px;'
+    + 'padding:9px 12px;'
     + 'min-width:140px;'
     + 'max-width:220px;'
-    + 'box-shadow:0 4px 16px rgba(0,0,0,0.5);'
+    + 'cursor:default;'
     + '">'
-    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+    + '<div style="display:flex;align-items:center;gap:8px;">'
     + '<div style="'
     +   'width:20px;height:20px;border-radius:50%;'
     +   'background:' + hexColor + ';'
@@ -936,7 +940,3 @@ window.initGoogleMaps = function() {
 };
 
 loadHoaData();
-</script>
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
-</body>
-</html>
