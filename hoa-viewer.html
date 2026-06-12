@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Property Intel — Vyanet</title>
+<title>HOA Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="config.js"></script>
 <style>
@@ -14,7 +14,7 @@
     --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
     --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
     --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
-    --accent: #3b82f6; --green: #22c55e; --red: #ef4444;
+    --accent: #3b82f6; --green: #22c55e; --red: #cd3333;
     --orange: #f97316; --header-h: 52px;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
@@ -26,17 +26,17 @@
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
   .header-right { display: flex; align-items: center; gap: 10px; }
-  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #hoa-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
 
   /* ── Main layout ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
-  #map { flex: 1; background: var(--bg); min-width: 0; position: relative; }
+  #map { flex: 1; background: var(--bg); min-width: 0; }
 
   /* ── Loading / Error ── */
-  #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
+  #loading { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
   #loading.hidden { opacity: 0; pointer-events: none; }
-  #error { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
+  #error { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
   #error.visible { display: flex; }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -45,25 +45,35 @@
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
 
-  /* ── Map controls overlay ── */
+  /* ── Map controls ── */
   #map-controls { position: absolute; bottom: 24px; left: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
   .map-ctrl-btn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
   .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
   .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
   .map-ctrl-btn .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  #overlay-btn { display: none; } /* hidden until a property is selected */
 
   /* ── Right panel ── */
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
 
-  .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
+  .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .panel-address { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
+  .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
+  .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
+  .close-btn:hover { background: var(--surface2); color: var(--text); }
+
+  /* ── Welcome screen ── */
+  #welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 32px; text-align: center; gap: 12px; }
+  .welcome-icon { width: 48px; height: 48px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 4px; }
+  .welcome-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .welcome-sub { font-size: 12px; color: var(--text3); line-height: 1.7; max-width: 260px; }
+  .property-count { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent); background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); padding: 4px 12px; border-radius: 999px; margin-top: 4px; }
 
   /* ── View tabs ── */
-  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; margin-top: 12px; }
+  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
   #view-tabs::-webkit-scrollbar { display: none; }
-  .view-tab { padding: 9px 14px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+  .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .view-tab[data-view="security"].active  { color: var(--green);  border-bottom-color: var(--green); }
@@ -74,27 +84,28 @@
 
   .pin-group { padding: 14px 16px 6px; }
   .pin-group-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
-
   .pin-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: background 0.12s; margin-bottom: 3px; border: 1px solid transparent; }
   .pin-row:hover { background: var(--surface2); }
   .pin-row.active { background: var(--surface2); border-color: var(--border2); }
-
   .pin-badge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; margin-top: 1px; }
   .pin-badge.green  { background: var(--green); }
   .pin-badge.red    { background: var(--red); }
   .pin-badge.orange { background: var(--orange); }
-
   .pin-label { font-size: 12px; color: var(--text2); line-height: 1.5; flex: 1; padding-top: 2px; }
   .pin-row.active .pin-label { color: var(--text); }
-
   .pin-group-divider { height: 1px; background: var(--border); margin: 8px 16px; }
 
-  /* Plane/Drone/Interior: keep old card style */
+  /* Plane/Drone/Interior legacy card style */
   .view-section { margin: 14px 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
   .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
   .view-badge.nadir  { background: #7c3aed; }
+  .view-badge.safety { background: var(--green); }
+  .view-badge.elements { background: var(--green); }
+  .view-badge.considerations { background: var(--red); }
+  .view-badge.wildfire-img { background: var(--orange); }
+  .view-badge.conditions { background: var(--orange); }
   .view-badge.deg360 { background: #059669; }
   .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
   .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
@@ -116,16 +127,14 @@
   .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
   .panel-pending { padding: 12px 16px 16px; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
 
-  /* ── Toggle panel button ── */
-  #toggle-panel { position: absolute; bottom: 24px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  /* ── Toggle buttons ── */
+  #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  /* ── Mobile ── */
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
 
-  /* ── Lightbox (for Plane/Drone/Interior) ── */
+  /* ── Lightbox ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
   #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
@@ -156,13 +165,14 @@
 
   /* ── Responsive ── */
   @media (max-width: 768px) {
-    #property-name { display: none; }
+    #hoa-name { display: none; }
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
     #map { position: absolute; inset: 0; width: 100%; height: 100%; }
     #loading { right: 0; } #error { right: 0; }
     #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
     #panel.mobile-open { transform: translateY(0%) !important; }
+    .close-btn { display: none; }
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
   }
@@ -175,12 +185,12 @@
     <div class="logo-mark">VI</div>
     <div>
       <div class="logo-text">Vyanet Intel</div>
-      <div class="logo-sub">First Responder Portal</div>
+      <div class="logo-sub">HOA Community Portal</div>
     </div>
   </div>
   <div class="header-right">
     <div id="version-badge">v2.0.0 — interactive pins</div>
-    <div id="property-name">Loading...</div>
+    <div id="hoa-name">Loading...</div>
   </div>
 </div>
 
@@ -193,16 +203,26 @@
     </div>
   </div>
 
-  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
-  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
+  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading community data...</div></div>
+  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Community not found</div><div class="error-msg" id="error-msg">No HOA data provided.</div></div>
 
   <div id="panel">
     <div class="panel-header">
-      <div class="panel-title" id="panel-title">Property Details</div>
-      <div class="panel-address" id="panel-address"></div>
+      <div>
+        <div class="panel-title" id="panel-title">Community Intel</div>
+        <div class="panel-address" id="panel-address"></div>
+      </div>
+      <button class="close-btn" onclick="togglePanel()">✕</button>
     </div>
     <div id="view-tabs"></div>
-    <div id="panel-content"></div>
+    <div id="panel-content">
+      <div id="welcome">
+        <div class="welcome-icon">🏘</div>
+        <div class="welcome-title">Select a Property</div>
+        <div class="welcome-sub">Click any pin on the map to view detailed intel for that property.</div>
+        <div class="property-count" id="property-count">Loading properties...</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -233,6 +253,7 @@
 // ── Constants ──────────────────────────────────────────────────────────────
 const VERSION      = 'v2.0.0';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
@@ -243,16 +264,23 @@ const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', satellite:'Sate
 
 // ── State ──────────────────────────────────────────────────────────────────
 let map, panelOpen = false, mobileIntelOpen = false;
-let mapsApiReady = false, pendingEntry = null;
+let mapsApiReady = false, hoaData = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
-let activeMarkers = [];       // google.maps.Marker objects currently on map
-let pendingPinSets = [];     // [{pins,color,hexColor}] to drop once map ready
-let pendingOverlay = null;    // {imageUrl,lat,lng,zoom} to set once map ready
-let groundOverlay = null;     // current GroundOverlay
+
+// Community-level markers (blue/red pins for all properties) — never cleared on tab switch
+let allMarkers = [], allPolygons = [], activeMarker = null;
+
+// Property-level intel pins — cleared and rebuilt on each tab switch
+let intelMarkers = [];
+let pendingPinSets = [];   // queued when map not yet ready (shouldn't happen in HOA viewer but safe)
+let pendingOverlay = null;
+let groundOverlay = null;
 let overlayVisible = false;
-let activePinId = null;       // currently highlighted pin row id
+let activePinId = null;
+
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
+const parcelCache = {};
 
 // ── Debug ──────────────────────────────────────────────────────────────────
 function dbg(msg, type) {
@@ -279,13 +307,13 @@ function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
-  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
 function mobileToggle() {
   mobileIntelOpen = !mobileIntelOpen;
   document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
   document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
-  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
 function showError(msg) { hideLoading(); document.getElementById('error').classList.add('visible'); document.getElementById('error-msg').textContent = msg; dbg('ERROR: ' + msg, 'error'); }
 function setLoading(msg) { const el = document.getElementById('loading-text'); if (el) el.textContent = msg; dbg(msg, 'info'); }
@@ -294,11 +322,11 @@ function hideLoading() { const el = document.getElementById('loading'); if (el) 
 // ── Utility ────────────────────────────────────────────────────────────────
 function formatDesc(desc) {
   if (!desc) return [];
-  return desc.split('|').map(s => s.trim()).filter(s => s.length > 2);
+  return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
 }
 function parseItems(str) {
   if (!str) return [];
-  return str.split(';').map(s => s.trim()).filter(s => s.length > 0);
+  return str.split(';').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 0; });
 }
 function toggleSection(header) {
   const body = header.nextElementSibling;
@@ -308,7 +336,6 @@ function toggleSection(header) {
 }
 
 // ── Coordinate math ────────────────────────────────────────────────────────
-// Re-derive lat/lng from x,y% for backward-compat with old string schema.
 function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {
   const size = 640;
   const pixelX = (xPct / 100) * size - size / 2;
@@ -319,49 +346,33 @@ function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {
     lng: centerLng + (pixelX * mpp) / (111320 * Math.cos(centerLat * Math.PI / 180))
   };
 }
-
-// Extract zoom from a static maps URL (fallback to 19)
 function extractZoom(url) {
   if (!url) return 19;
   const m = url.match(/[&?]zoom=(\d+)/);
   return m ? parseInt(m[1]) : 19;
 }
-
-// Compute GroundOverlay bounds for a 640×640 static map image
 function computeOverlayBounds(centerLat, centerLng, zoom) {
   const tl = pixelToLatLng(centerLat, centerLng, zoom, 0, 0);
   const br = pixelToLatLng(centerLat, centerLng, zoom, 100, 100);
   return new google.maps.LatLngBounds(
-    { lat: br.lat, lng: tl.lng },  // SW
-    { lat: tl.lat, lng: br.lng }   // NE
+    { lat: br.lat, lng: tl.lng },
+    { lat: tl.lat, lng: br.lng }
   );
 }
 
 // ── Parse pin arrays ───────────────────────────────────────────────────────
-// Accepts new array schema [{label,lat,lng}] or old plain text "Label; Label".
-// For old schema, coordinates are extracted from the baked static map URL's
-// &markers= params, which is the only place they exist for existing properties.
 function normalizePins(field) {
   if (!field) return [];
-  // New schema: array of {label, lat, lng}
   if (Array.isArray(field)) return field;
-  // Old schema: plain semicolon string with no coords — labels only.
-  // Coordinates come from parsePinsFromUrl() called separately.
-  return field.split(';').map(s => ({ label: s.trim(), lat: null, lng: null })).filter(p => p.label.length > 0);
+  return field.split(';').map(function(s) { return { label: s.trim(), lat: null, lng: null }; }).filter(function(p) { return p.label.length > 0; });
 }
-
-// Parse marker lat/lngs out of a Google Static Maps URL.
-// Returns array of {lat, lng} in marker order, matching the label list order.
-// URL format: &markers=color:green|label:1|44.0484,−121.3700&markers=...
 function parsePinsFromUrl(url) {
   if (!url) return [];
   const pins = [];
-  // Match each &markers= segment
   const re = /[&?]markers=([^&]+)/g;
   let m;
   while ((m = re.exec(url)) !== null) {
     const seg = decodeURIComponent(m[1]);
-    // The last pipe-separated part that looks like lat,lng is the coordinate
     const parts = seg.split('|');
     const coordPart = parts[parts.length - 1];
     const coords = coordPart.split(',');
@@ -373,77 +384,68 @@ function parsePinsFromUrl(url) {
   }
   return pins;
 }
-
-// Merge label list with URL-parsed coordinates.
-// If URL parsing yields coords, zip them with labels.
-// Falls back to property center if a coord is missing.
 function mergePinsWithCoords(labels, urlPins, centerLat, centerLng) {
-  return labels.map((item, i) => ({
-    label: item.label,
-    lat:   (urlPins[i] ? urlPins[i].lat : null) || centerLat,
-    lng:   (urlPins[i] ? urlPins[i].lng : null) || centerLng
-  }));
+  return labels.map(function(item, i) {
+    return {
+      label: item.label,
+      lat:   (urlPins[i] ? urlPins[i].lat : null) || centerLat,
+      lng:   (urlPins[i] ? urlPins[i].lng : null) || centerLng
+    };
+  });
 }
 
-// ── Map markers ────────────────────────────────────────────────────────────
-function clearMarkers() {
-  activeMarkers.forEach(m => m.setMap(null));
-  activeMarkers = [];
+// ── Intel pin markers ──────────────────────────────────────────────────────
+// Separate from community allMarkers — only intel pins are cleared on tab switch.
+function clearIntelMarkers() {
+  intelMarkers.forEach(function(m) { m.setMap(null); });
+  intelMarkers = [];
   activePinId = null;
   pendingPinSets = [];
   pendingOverlay = null;
 }
 
 function makePinSvg(color, text) {
-  // Teardrop pin with label inside
   const c = encodeURIComponent(color);
+  const t = encodeURIComponent(text);
   return {
-    url: `data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="${c}" stroke="%23fff" stroke-width="1.5"/><text x="14" y="17" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="9" font-weight="700" fill="white">${encodeURIComponent(text)}</text></svg>`,
+    url: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="' + c + '" stroke="%23fff" stroke-width="1.5"/><text x="14" y="17" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="9" font-weight="700" fill="white">' + t + '</text></svg>',
     scaledSize: new google.maps.Size(28, 36),
     anchor: new google.maps.Point(14, 36)
   };
 }
 
 function dropPins(pins, color, hexColor) {
-  if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
-  pins.forEach((pin, i) => {
+  if (!map) { pendingPinSets.push({ pins: pins, color: color, hexColor: hexColor }); return; }
+  pins.forEach(function(pin, i) {
     const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
     const pinId = color + '-' + i;
     const marker = new google.maps.Marker({
       position: { lat: pin.lat, lng: pin.lng },
-      map,
+      map: map,
       icon: makePinSvg(hexColor, label),
       title: pin.label,
-      zIndex: 10
+      zIndex: 20
     });
-    marker.addListener('click', () => activatePin(pinId, marker, true));
+    marker.addListener('click', function() { activatePin(pinId, marker, true); });
     marker._pinId = pinId;
-    activeMarkers.push(marker);
+    intelMarkers.push(marker);
   });
 }
 
 function activatePin(pinId, marker, fromMap) {
-  // Deactivate previous
-  document.querySelectorAll('.pin-row.active').forEach(r => r.classList.remove('active'));
+  document.querySelectorAll('.pin-row.active').forEach(function(r) { r.classList.remove('active'); });
   activePinId = pinId;
-
-  // Highlight panel row
   const row = document.querySelector('.pin-row[data-pin-id="' + pinId + '"]');
-  if (row) {
-    row.classList.add('active');
-    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  // Bounce marker briefly
+  if (row) { row.classList.add('active'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   if (marker) {
     marker.setAnimation(google.maps.Animation.BOUNCE);
-    setTimeout(() => marker.setAnimation(null), 700);
+    setTimeout(function() { marker.setAnimation(null); }, 700);
     if (!fromMap) map.panTo(marker.getPosition());
   }
 }
 
 function pinRowClick(pinId) {
-  const marker = activeMarkers.find(m => m._pinId === pinId);
+  const marker = intelMarkers.find(function(m) { return m._pinId === pinId; });
   activatePin(pinId, marker, false);
 }
 
@@ -451,7 +453,7 @@ function pinRowClick(pinId) {
 function setOverlay(imageUrl, centerLat, centerLng, zoom) {
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   if (!imageUrl) return;
-  if (!map) { pendingOverlay = { imageUrl, centerLat, centerLng, zoom }; return; }
+  if (!map) { pendingOverlay = { imageUrl: imageUrl, centerLat: centerLat, centerLng: centerLng, zoom: zoom }; return; }
   const bounds = computeOverlayBounds(centerLat, centerLng, zoom);
   groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
   if (overlayVisible) groundOverlay.setMap(map);
@@ -459,13 +461,13 @@ function setOverlay(imageUrl, centerLat, centerLng, zoom) {
 
 function flushPendingMapData() {
   if (pendingOverlay) {
-    const { imageUrl, centerLat, centerLng, zoom } = pendingOverlay;
+    const p = pendingOverlay;
     pendingOverlay = null;
-    setOverlay(imageUrl, centerLat, centerLng, zoom);
+    setOverlay(p.imageUrl, p.centerLat, p.centerLng, p.zoom);
   }
   const sets = pendingPinSets.slice();
   pendingPinSets = [];
-  sets.forEach(({ pins, color, hexColor }) => dropPins(pins, color, hexColor));
+  sets.forEach(function(s) { dropPins(s.pins, s.color, s.hexColor); });
 }
 
 function toggleOverlay() {
@@ -483,180 +485,186 @@ function toggleOverlay() {
   }
 }
 
-// ── Parcel boundary ────────────────────────────────────────────────────────
+// ── Parcel boundaries ──────────────────────────────────────────────────────
 function pointInPolygon(lat, lng, ring) {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+  var inside = false;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
     if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
   }
   return inside;
 }
 function getParcelFile(lat, lng) {
-  const latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
-  const lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
+  var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
+  var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
-function drawParcelBoundary(lat, lng) {
-  fetch(PARCEL_BASE + getParcelFile(lat, lng))
-    .then(r => r.ok ? r.json() : null)
-    .then(geojson => {
-      if (!geojson) return;
-      const matched = geojson.features.find(f => {
-        const c = f.geometry && f.geometry.coordinates;
-        return c && c[0] && pointInPolygon(lat, lng, c[0]);
-      });
-      if (!matched) { dbg('No parcel matched', 'warn'); return; }
-      dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'ok'), 'ok');
-      const paths = matched.geometry.coordinates.map(ring => ring.map(pt => ({ lat: pt[1], lng: pt[0] })));
-      new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
-    })
-    .catch(e => dbg('Parcel error: ' + e.message, 'error'));
-}
-
-// ── Map init ───────────────────────────────────────────────────────────────
-function initMap(lat, lng) {
-  try {
-    map = new google.maps.Map(document.getElementById('map'), {
-      center: { lat, lng }, zoom: 18,
-      mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
-      mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-      streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-      fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
-    });
-    // Home pin (small, non-interactive)
-    new google.maps.Marker({
-      position: { lat, lng }, map,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#fff', fillOpacity: 0.9, strokeColor: '#3b82f6', strokeWeight: 2 },
-      zIndex: 1
-    });
-    drawParcelBoundary(lat, lng);
-    hideLoading();
-    setTimeout(() => { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat, lng }); } }, 100);
-    if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
-    dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
-    flushPendingMapData();
-  } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
-}
-
-function resolveAndInitMap(entry) {
-  if (entry.lat && entry.lng) { initMap(entry.lat, entry.lng); }
+function drawParcelBoundaryForProperty(lat, lng, mapInstance) {
+  var filename = getParcelFile(lat, lng);
+  function renderPolygon(geojson) {
+    var matched = null;
+    for (var i = 0; i < geojson.features.length; i++) {
+      var f = geojson.features[i];
+      var coords = f.geometry && f.geometry.coordinates;
+      if (!coords || !coords[0]) continue;
+      if (pointInPolygon(lat, lng, coords[0])) { matched = f; break; }
+    }
+    if (!matched) return;
+    var paths = matched.geometry.coordinates.map(function(ring) { return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; }); });
+    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
+    allPolygons.push(polygon);
+  }
+  if (parcelCache[filename]) { renderPolygon(parcelCache[filename]); }
   else {
-    setLoading('Locating property...');
-    fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(entry.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
-      .then(r => r.json())
-      .then(data => {
-        if (data.status === 'OK' && data.results[0]) { const loc = data.results[0].geometry.location; initMap(loc.lat, loc.lng); }
-        else { dbg('Geocode failed: ' + data.status, 'error'); hideLoading(); if (!isMobile() && !panelOpen) togglePanel(); }
-      })
-      .catch(e => { dbg('Geocode error: ' + e.message, 'error'); hideLoading(); });
+    fetch(PARCEL_BASE + filename)
+      .then(function(res) { return res.json(); })
+      .then(function(geojson) { parcelCache[filename] = geojson; renderPolygon(geojson); })
+      .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
   }
 }
 
-// ── Tab builder ────────────────────────────────────────────────────────────
+// ── Community map init ─────────────────────────────────────────────────────
+function initMap() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 44.06, lng: -121.31 }, zoom: 13,
+    mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+    mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite', 'hybrid', 'roadmap'] },
+    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+  });
+  dbg('Map initialized', 'ok');
+  flushPendingMapData();
+}
+
+function dropAllPins(entries) {
+  var bounds = new google.maps.LatLngBounds();
+  var geocodeQueue = [];
+  entries.forEach(function(entry) {
+    if (entry.lat && entry.lng) { placePin(entry, entry.lat, entry.lng, bounds); }
+    else { geocodeQueue.push(entry); }
+  });
+  if (!bounds.isEmpty()) {
+    map.fitBounds(bounds);
+    google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 16) map.setZoom(16); });
+  }
+  geocodeQueue.forEach(function(entry) {
+    fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(entry.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
+      .then(function(res) { return res.json(); })
+      .then(function(data) { if (data.status === 'OK' && data.results[0]) { var loc = data.results[0].geometry.location; placePin(entry, loc.lat, loc.lng, null); } })
+      .catch(function(e) { dbg('Geocode failed: ' + entry.name + ': ' + e.message, 'warn'); });
+  });
+}
+
+function placePin(entry, lat, lng, bounds) {
+  var marker = new google.maps.Marker({
+    position: { lat: lat, lng: lng }, map: map, title: entry.name,
+    animation: google.maps.Animation.DROP,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
+    zIndex: 10
+  });
+  if (bounds) bounds.extend({ lat: lat, lng: lng });
+  drawParcelBoundaryForProperty(lat, lng, map);
+  marker.addListener('click', function() {
+    dbg('Pin clicked: ' + entry.name, 'info');
+    if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
+    marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
+    activeMarker = marker;
+    loadPropertyIntoPanel(entry);
+    if (!panelOpen) togglePanel();
+  });
+  allMarkers.push(marker);
+  dbg('Pin placed: ' + entry.name, 'ok');
+}
+
+// ── Panel builders ─────────────────────────────────────────────────────────
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   tabsEl.innerHTML = '';
-  VIEW_ORDER.forEach(v => {
+  VIEW_ORDER.forEach(function(v) {
     if (!views[v]) return;
     const tab = document.createElement('div');
     tab.className = 'view-tab' + (v === activeView ? ' active' : '');
     tab.textContent = VIEW_LABELS[v] || v;
     tab.setAttribute('data-view', v);
-    tab.onclick = () => loadView(currentViews, v);
+    tab.onclick = function() { loadView(currentViews, v); };
     tabsEl.appendChild(tab);
   });
 }
 
-// ── Security panel ─────────────────────────────────────────────────────────
 function buildSecurityPanel(d, centerLat, centerLng) {
-  clearMarkers();
-
+  clearIntelMarkers();
   const fr = d.fr;
   if (!fr || !fr.nadir_url) {
     document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>';
     return;
   }
-
   const zoom     = extractZoom(fr.nadir_url);
   const hasError = !fr.elements || (typeof fr.elements === 'string' && fr.elements.startsWith('ERROR:'));
 
   let elements = [], considerations = [];
   if (!hasError) {
     if (Array.isArray(fr.elements)) {
-      // New schema — lat/lng already stored
       elements       = fr.elements;
       considerations = Array.isArray(fr.considerations) ? fr.considerations : [];
     } else {
-      // Old schema — extract real lat/lng from the baked nadir URL marker params
-      const rawEl = normalizePins(fr.elements);
-      const rawRc = normalizePins(fr.considerations);
-      const allPins = parsePinsFromUrl(fr.nadir_url); // green markers then red
+      const rawEl  = normalizePins(fr.elements);
+      const rawRc  = normalizePins(fr.considerations);
+      const allPins = parsePinsFromUrl(fr.nadir_url);
       elements       = mergePinsWithCoords(rawEl, allPins.slice(0, rawEl.length), centerLat, centerLng);
       considerations = mergePinsWithCoords(rawRc, allPins.slice(rawEl.length),    centerLat, centerLng);
     }
   }
 
-  // Set overlay image (raw nadir, no baked pins)
   setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
-
-  // Drop map pins
   dropPins(elements,       'green',  '#22c55e');
-  dropPins(considerations, 'red',    '#ef4444');
+  dropPins(considerations, 'red',    '#cd3333');
+
+  // Show overlay button now that a property is selected
+  document.getElementById('overlay-btn').style.display = 'flex';
 
   dbg('Security: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
 
-  // Build panel HTML
-  let html = '';
-
   if (hasError) {
-    html += '<div class="panel-pending">⏳ Analysis pending — data will appear once processing completes.</div>';
-    document.getElementById('panel-content').innerHTML = html;
+    document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending — data will appear once processing completes.</div>';
     return;
   }
 
+  let html = '';
   if (elements.length > 0) {
     html += '<div class="pin-group"><div class="pin-group-label">Property Elements</div>';
-    elements.forEach((el, i) => {
+    elements.forEach(function(el, i) {
       const label = ELEMENT_LABELS[i] || String(i+1);
       const pinId = 'green-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')">
-        <div class="pin-badge green">${label}</div>
-        <div class="pin-label">${el.label}</div>
-      </div>`;
+      html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')">'
+        + '<div class="pin-badge green">' + label + '</div>'
+        + '<div class="pin-label">' + el.label + '</div></div>';
     });
     html += '</div>';
   }
-
   if (considerations.length > 0 && !(considerations.length === 1 && considerations[0].label === 'None Visible')) {
     if (elements.length > 0) html += '<div class="pin-group-divider"></div>';
     html += '<div class="pin-group"><div class="pin-group-label">Responder Considerations</div>';
-    considerations.forEach((el, i) => {
+    considerations.forEach(function(el, i) {
       const label = CONCERN_LABELS[i] || String(i+1);
       const pinId = 'red-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')">
-        <div class="pin-badge red">${label}</div>
-        <div class="pin-label">${el.label}</div>
-      </div>`;
+      html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')">'
+        + '<div class="pin-badge red">' + label + '</div>'
+        + '<div class="pin-label">' + el.label + '</div></div>';
     });
     html += '</div>';
   }
-
   if (!html) html = '<div class="panel-empty">No elements identified for this property.</div>';
   document.getElementById('panel-content').innerHTML = html;
 }
 
-// ── Wildfire panel ─────────────────────────────────────────────────────────
 function buildWildfirePanel(d, centerLat, centerLng) {
-  clearMarkers();
-
+  clearIntelMarkers();
   const wf = d.wildfire;
   if (!wf || !wf.nadir_url) {
     document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>';
     return;
   }
-
   const zoom     = extractZoom(wf.nadir_url);
   const hasError = !wf.conditions || (typeof wf.conditions === 'string' && wf.conditions.startsWith('ERROR:'));
 
@@ -674,39 +682,35 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
   dropPins(conditions, 'orange', '#f97316');
 
+  document.getElementById('overlay-btn').style.display = 'flex';
+
   dbg('Wildfire: ' + conditions.length + ' conditions', 'ok');
 
-  let html = '';
-
   if (hasError) {
-    html = '<div class="panel-pending">⏳ Analysis pending — data will appear once processing completes.</div>';
-    document.getElementById('panel-content').innerHTML = html;
+    document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending — data will appear once processing completes.</div>';
     return;
   }
 
+  let html = '';
   if (conditions.length > 0 && !(conditions.length === 1 && conditions[0].label === 'None Visible')) {
     html += '<div class="pin-group"><div class="pin-group-label">Wildfire Conditions</div>';
-    conditions.forEach((el, i) => {
+    conditions.forEach(function(el, i) {
       const label = ELEMENT_LABELS[i] || String(i+1);
       const pinId = 'orange-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')">
-        <div class="pin-badge orange">${label}</div>
-        <div class="pin-label">${el.label}</div>
-      </div>`;
+      html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')">'
+        + '<div class="pin-badge orange">' + label + '</div>'
+        + '<div class="pin-label">' + el.label + '</div></div>';
     });
     html += '</div>';
   } else {
     html = '<div class="panel-empty">No conditions identified for this property.</div>';
   }
-
   document.getElementById('panel-content').innerHTML = html;
 }
 
-// ── Plane / Drone / Interior panel (legacy card style) ─────────────────────
 function buildPanel(d) {
-  clearMarkers();
-  if (groundOverlay) { groundOverlay.setMap(null); }
-
+  clearIntelMarkers();
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   const views = [
     { label: 'Alpha',   badge: 'A', cls: '',      data: d.alpha },
     { label: 'Bravo',   badge: 'B', cls: '',      data: d.bravo },
@@ -715,21 +719,20 @@ function buildPanel(d) {
     { label: 'Nadir',   badge: 'N', cls: 'nadir', data: d.nadir }
   ];
   lightboxViews = [];
-  views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
-
+  views.forEach(function(v) { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
   let html = '', lbIndex = 0;
-  views.forEach(v => {
+  views.forEach(function(v) {
     if (!v.data || !v.data.url) return;
     const bullets = formatDesc(v.data.desc);
     const idx = lbIndex++;
-    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div>
-      <div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div>
-      <ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ' + v.cls + '">' + v.badge + '</div><div class="view-label">' + v.label + '</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(' + idx + ')"><img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div>'
+      + '<ul class="view-bullets">' + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('') + '</ul></div></div>';
   });
   if (d.viewer360) {
-    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div>
-      <div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li><li>Complete site overview before arrival</li></ul>
-      <a class="btn-360" href="${d.viewer360}" target="_blank">↗ Launch 360° Viewer</a></div></div>`;
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li></ul>'
+      + '<a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a></div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
 }
@@ -738,27 +741,22 @@ function buildPanel(d) {
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
-
-  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix));
+  document.querySelectorAll('.view-tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix); });
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
-
   try {
-    dbg('Loading view: ' + viewSuffix + ' (' + hashedViewId.substring(0,8) + '...)', 'info');
+    dbg('Loading view: ' + viewSuffix, 'info');
     const res = await fetch(BASE_URL + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
-
-    // Resolve center coords — prefer stored lat/lng, fall back to map center
     const centerLat = d.lat || (map ? map.getCenter().lat() : 0);
     const centerLng = d.lng || (map ? map.getCenter().lng() : 0);
-
     if (viewSuffix === 'security' && d.fr) {
       buildSecurityPanel(d, centerLat, centerLng);
     } else if (viewSuffix === 'wildfire' && d.wildfire) {
       buildWildfirePanel(d, centerLat, centerLng);
     } else if (d.fr || d.wildfire) {
-      clearMarkers();
+      clearIntelMarkers();
       document.getElementById('panel-content').innerHTML =
         '<div class="panel-empty">No legacy view.<br>Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>';
     } else {
@@ -771,6 +769,34 @@ async function loadView(views, viewSuffix) {
   }
 }
 
+// ── Load property into panel (called on community pin click) ───────────────
+async function loadPropertyIntoPanel(entry) {
+  currentViews = entry.views;
+  document.getElementById('panel-title').textContent   = entry.name;
+  document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+
+  // Hide welcome, show tabs
+  const welcome = document.getElementById('welcome');
+  if (welcome) welcome.style.display = 'none';
+  document.getElementById('view-tabs').style.display = 'flex';
+
+  // Clear any existing intel pins / overlay from previous property
+  clearIntelMarkers();
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
+  overlayVisible = false;
+  document.getElementById('overlay-btn').classList.remove('active');
+  document.getElementById('overlay-label').textContent = 'Show Overlay';
+  document.getElementById('overlay-btn').style.display = 'none'; // re-shown by buildSecurityPanel/buildWildfirePanel
+
+  const firstView = VIEW_ORDER.find(function(v) { return entry.views[v]; });
+  if (!firstView) {
+    document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>';
+    return;
+  }
+  buildTabs(entry.views, firstView);
+  await loadView(entry.views, firstView);
+}
+
 // ── Lightbox ───────────────────────────────────────────────────────────────
 function openLightbox(index) { lightboxIndex = index; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.addEventListener('keydown', lightboxKey); }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.removeEventListener('keydown', lightboxKey); }
@@ -781,53 +807,59 @@ function updateLightbox() {
   document.getElementById('lightbox-img').src = v.url;
   document.getElementById('lightbox-title').textContent = v.label;
   document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
-  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(b => '<li>' + b + '</li>').join('');
+  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
 }
 
-// ── Main load ──────────────────────────────────────────────────────────────
-async function loadPropertyData() {
-  dbg(VERSION + ' — Property Intel loaded', 'ok');
-  const params       = new URLSearchParams(window.location.search);
-  const propertyHash = params.get('property');
-  const tabParam     = params.get('tab');
-  if (!propertyHash) { showError('No property ID provided.'); return; }
-  dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
+// ── HOA data load ──────────────────────────────────────────────────────────
+async function loadHoaData() {
+  dbg(VERSION + ' — HOA viewer loaded', 'ok');
+  const hoaSlug = new URLSearchParams(window.location.search).get('hoa');
+  if (!hoaSlug) { showError('No HOA specified.'); return; }
+  dbg('HOA slug: ' + hoaSlug, 'info');
   try {
+    setLoading('Loading community data...');
+    const hoaRes = await fetch(HOA_BASE_URL + hoaSlug + '.json');
+    if (!hoaRes.ok) { showError('HOA not found: ' + hoaSlug); return; }
+    hoaData = await hoaRes.json();
+    dbg('HOA loaded: ' + hoaData.name + ' (' + hoaData.properties.length + ' properties)', 'ok');
+    document.getElementById('hoa-name').textContent    = hoaData.name;
+    document.getElementById('panel-title').textContent = hoaData.name;
+
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
-    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'ok');
+    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' total properties', 'ok');
 
-    const entry = propertyIndex[propertyHash];
-    if (!entry) { showError('Property not found.'); return; }
-    dbg('Property found: ' + entry.name, 'ok');
+    const entries = hoaData.properties
+      .map(function(hash) {
+        const entry = propertyIndex[hash];
+        if (!entry) { dbg('Hash not found: ' + hash.substring(0,8) + '...', 'warn'); return null; }
+        entry.hash = hash;
+        return entry;
+      })
+      .filter(Boolean);
 
-    currentViews = entry.views;
-    document.getElementById('property-name').textContent = entry.name;
-    document.getElementById('panel-title').textContent   = entry.name;
-    document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+    dbg('Matched ' + entries.length + ' properties', 'ok');
+    document.getElementById('property-count').textContent = entries.length + ' properties in this community';
+    hideLoading();
 
-    const firstView = (tabParam && entry.views[tabParam]) ? tabParam : VIEW_ORDER.find(v => entry.views[v]);
-    if (!firstView) { showError('No views available.'); return; }
-    dbg('Available views: ' + Object.keys(entry.views).join(', '), 'info');
+    if (mapsApiReady) { initMap(); dropAllPins(entries); }
+    else { window._pendingEntries = entries; }
 
-    buildTabs(entry.views, firstView);
-    setLoading('Loading ' + firstView + '...');
-    await loadView(entry.views, firstView);
-
-    if (mapsApiReady) { resolveAndInitMap(entry); } else { pendingEntry = entry; }
-  } catch(e) { showError('Failed to load property: ' + e.message); }
+    setTimeout(function() { if (!panelOpen) togglePanel(); }, 800);
+  } catch(e) { showError('Failed to load HOA: ' + e.message); }
 }
 
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
-  if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
+  if (window._pendingEntries) { initMap(); dropAllPins(window._pendingEntries); window._pendingEntries = null; }
 };
 
-loadPropertyData();
+loadHoaData();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
 </html>
+
