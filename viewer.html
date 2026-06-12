@@ -166,6 +166,34 @@
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
   }
+
+  /* ── Google Maps InfoWindow dark theme override ── */
+  .gm-style .gm-style-iw-c {
+    background: #12161b !important;
+    border-radius: 10px !important;
+    padding: 0 !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
+  }
+  .gm-style .gm-style-iw-d {
+    overflow: hidden !important;
+  }
+  .gm-style .gm-style-iw-t::after {
+    background: #12161b !important;
+  }
+  .gm-style .gm-style-iw-tc::after {
+    background: #12161b !important;
+  }
+  .gm-style-iw-chr {
+    background: #12161b !important;
+    border-radius: 10px 10px 0 0 !important;
+  }
+  .gm-style-iw-chr button {
+    filter: invert(1) !important;
+    opacity: 0.6 !important;
+  }
+  .gm-style-iw-chr button:hover {
+    opacity: 1 !important;
+  }
 </style>
 </head>
 <body>
@@ -250,6 +278,7 @@ let pendingOverlay = null;    // {imageUrl,lat,lng,zoom} to set once map ready
 let groundOverlay = null;     // current GroundOverlay
 let overlayVisible = false;
 let activePinId = null;       // currently highlighted pin row id
+let infoWindow = null;        // single shared InfoWindow instance
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
 
@@ -391,6 +420,7 @@ function clearMarkers() {
   activePinId = null;
   pendingPinSets = [];
   pendingOverlay = null;
+  if (infoWindow) { infoWindow.close(); }
 }
 
 function makePinSvg(color, text) {
@@ -415,14 +445,17 @@ function dropPins(pins, color, hexColor) {
       title: pin.label,
       zIndex: 10
     });
+    marker._pinId    = pinId;
+    marker._label    = label;
+    marker._desc     = pin.label;
+    marker._hexColor = hexColor;
     marker.addListener('click', () => activatePin(pinId, marker, true));
-    marker._pinId = pinId;
     activeMarkers.push(marker);
   });
 }
 
 function activatePin(pinId, marker, fromMap) {
-  // Deactivate previous
+  // Deactivate previous panel row
   document.querySelectorAll('.pin-row.active').forEach(r => r.classList.remove('active'));
   activePinId = pinId;
 
@@ -438,7 +471,36 @@ function activatePin(pinId, marker, fromMap) {
     marker.setAnimation(google.maps.Animation.BOUNCE);
     setTimeout(() => marker.setAnimation(null), 700);
     if (!fromMap) map.panTo(marker.getPosition());
+
+    // Open InfoWindow with pin label and description
+    if (!infoWindow) infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
+    infoWindow.setContent(buildInfoWindowContent(marker._label, marker._desc, marker._hexColor));
+    infoWindow.open({ anchor: marker, map, shouldFocus: false });
   }
+}
+
+function buildInfoWindowContent(label, desc, hexColor) {
+  return '<div style="'
+    + 'font-family:'DM Sans',sans-serif;'
+    + 'background:#12161b;'
+    + 'color:#f0f2f5;'
+    + 'border-radius:8px;'
+    + 'padding:10px 13px;'
+    + 'min-width:140px;'
+    + 'max-width:220px;'
+    + 'box-shadow:0 4px 16px rgba(0,0,0,0.5);'
+    + '">'
+    + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">'
+    + '<div style="'
+    +   'width:20px;height:20px;border-radius:50%;'
+    +   'background:' + hexColor + ';'
+    +   'display:flex;align-items:center;justify-content:center;'
+    +   'font-size:9px;font-weight:700;color:white;font-family:monospace;flex-shrink:0;">'
+    + label
+    + '</div>'
+    + '<span style="font-size:12px;font-weight:600;color:#f0f2f5;line-height:1.3;">' + desc + '</span>'
+    + '</div>'
+    + '</div>';
 }
 
 function pinRowClick(pinId) {
