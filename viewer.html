@@ -332,26 +332,28 @@ function buildTabs(views, activeView) {
 
 function buildSecurityPanel(d) {
   const fr = d.fr;
-  if (!fr || !fr.elements || fr.elements.startsWith('ERROR:')) {
-    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Security analysis not yet available for this property.</div>';
+  if (!fr || !fr.nadir_url) {
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Security data not yet available for this property.</div>';
     return;
   }
-  const elements       = parseItems(fr.elements);
-  const considerations = parseItems(fr.considerations);
+  const hasError = !fr.elements || fr.elements.startsWith('ERROR:');
+  const elements       = hasError ? [] : parseItems(fr.elements);
+  const considerations = hasError ? [] : parseItems(fr.considerations);
   lightboxViews = [];
-  if (fr.nadir_url) lightboxViews.push({ label: 'Security — Nadir View', url: fr.nadir_url, bullets: elements });
+  lightboxViews.push({ label: 'Security — Nadir View', url: fr.nadir_url, bullets: elements });
   let html = '';
-  if (fr.nadir_url) {
-    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge safety">S</div><div class="view-label">Security Nadir View</div><div class="chevron">▼</div></div>'
-      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + fr.nadir_url + '" alt="Security Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
-  }
-  if (elements.length > 0) {
+  html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge safety">S</div><div class="view-label">Security Nadir View</div><div class="chevron">▼</div></div>'
+    + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + fr.nadir_url + '" alt="Security Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
+  if (!hasError && elements.length > 0) {
     html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge elements">PE</div><div class="view-label">Property Elements</div><div class="chevron">▼</div></div>'
       + '<div class="view-body"><ul class="view-bullets security-elements">' + elements.map(function(e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div></div>';
   }
-  if (considerations.length > 0 && considerations[0] !== 'None Visible') {
+  if (!hasError && considerations.length > 0 && considerations[0] !== 'None Visible') {
     html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge considerations">RC</div><div class="view-label">Responder Considerations</div><div class="chevron">▼</div></div>'
       + '<div class="view-body"><ul class="view-bullets security-considerations">' + considerations.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul></div></div>';
+  }
+  if (hasError) {
+    html += '<div style="padding:10px 16px 14px;font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;">⏳ Analysis pending — data will appear once processing completes.</div>';
   }
   document.getElementById('panel-content').innerHTML = html;
   dbg('Security panel: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
@@ -359,21 +361,23 @@ function buildSecurityPanel(d) {
 
 function buildWildfirePanel(d) {
   const wf = d.wildfire;
-  if (!wf || !wf.conditions || wf.conditions.startsWith('ERROR:')) {
-    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Wildfire analysis not yet available for this property.</div>';
+  if (!wf || !wf.nadir_url) {
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Wildfire data not yet available for this property.</div>';
     return;
   }
-  const conditions = parseItems(wf.conditions);
+  const hasError = !wf.conditions || wf.conditions.startsWith('ERROR:');
+  const conditions = hasError ? [] : parseItems(wf.conditions);
   lightboxViews = [];
-  if (wf.nadir_url) lightboxViews.push({ label: 'Wildfire — Nadir View', url: wf.nadir_url, bullets: conditions });
+  lightboxViews.push({ label: 'Wildfire — Nadir View', url: wf.nadir_url, bullets: conditions });
   let html = '';
-  if (wf.nadir_url) {
-    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge wildfire-img">W</div><div class="view-label">Wildfire Nadir View</div><div class="chevron">▼</div></div>'
-      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + wf.nadir_url + '" alt="Wildfire Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
-  }
-  if (conditions.length > 0 && conditions[0] !== 'None Visible') {
+  html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge wildfire-img">W</div><div class="view-label">Wildfire Nadir View</div><div class="chevron">▼</div></div>'
+    + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + wf.nadir_url + '" alt="Wildfire Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
+  if (!hasError && conditions.length > 0 && conditions[0] !== 'None Visible') {
     html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge conditions">WC</div><div class="view-label">Wildfire Conditions</div><div class="chevron">▼</div></div>'
       + '<div class="view-body"><ul class="view-bullets wildfire-conditions">' + conditions.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul></div></div>';
+  }
+  if (hasError) {
+    html += '<div style="padding:10px 16px 14px;font-size:11px;color:var(--text3);font-family:\'DM Mono\',monospace;">⏳ Analysis pending — data will appear once processing completes.</div>';
   }
   document.getElementById('panel-content').innerHTML = html;
   dbg('Wildfire panel: ' + conditions.length + ' conditions', 'ok');
