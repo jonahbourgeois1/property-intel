@@ -55,7 +55,7 @@
   .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .view-tab[data-view="safety"].active   { color: var(--green);  border-bottom-color: var(--green); }
+  .view-tab[data-view="security"].active   { color: var(--green);  border-bottom-color: var(--green); }
   .view-tab[data-view="wildfire"].active { color: var(--orange); border-bottom-color: var(--orange); }
   #panel-content { overflow-y: auto; flex: 1; padding: 16px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
   .view-section { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
@@ -355,8 +355,8 @@ async function loadPropertyIntoPanel(entry) {
 
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
-  const viewOrder  = ['safety', 'wildfire', 'satellite', 'plane', 'drone', 'interior'];
-  const viewLabels = { safety: 'Security', wildfire: 'Wildfire', satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
+  const viewOrder  = ['security', 'wildfire', 'satellite', 'plane', 'drone', 'interior'];
+  const viewLabels = { security: 'Security', wildfire: 'Wildfire', satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
   tabsEl.innerHTML = '';
   viewOrder.forEach(function(v) {
     if (!views[v]) return;
@@ -460,7 +460,7 @@ async function loadView(views, viewSuffix) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
-    if (viewSuffix === 'safety' && d.fr) {
+    if (viewSuffix === 'security' && d.fr) {
       buildSecurityPanel(d);
     } else if (viewSuffix === 'wildfire' && d.wildfire) {
       buildWildfirePanel(d);
