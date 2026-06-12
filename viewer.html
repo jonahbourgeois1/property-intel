@@ -203,6 +203,13 @@
     height: 0 !important;
     padding: 0 !important;
   }
+
+  /* ── Recommendations block ── */
+  .rec-block { margin: 0 16px 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .rec-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 7px; }
+  .rec-label.security { color: var(--green); }
+  .rec-label.wildfire { color: var(--orange); }
+  .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
 </style>
 </head>
 <body>
@@ -714,6 +721,12 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   }
 
   if (!html) html = '<div class="panel-empty">No elements identified for this property.</div>';
+  if (!hasError && fr.recommendations && fr.recommendations.length > 0) {
+    html += '<div class="rec-block">'
+      + '<div class="rec-label security">FR Recommendations</div>'
+      + '<div class="rec-text">' + fr.recommendations + '</div>'
+      + '</div>';
+  }
   document.getElementById('panel-content').innerHTML = html;
 }
 
@@ -768,7 +781,12 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   } else {
     html = '<div class="panel-empty">No conditions identified for this property.</div>';
   }
-
+  if (!hasError && wf.recommendations && wf.recommendations.length > 0) {
+    html += '<div class="rec-block">'
+      + '<div class="rec-label wildfire">Wildfire Recommendations</div>'
+      + '<div class="rec-text">' + wf.recommendations + '</div>'
+      + '</div>';
+  }
   document.getElementById('panel-content').innerHTML = html;
 }
 
