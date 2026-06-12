@@ -82,9 +82,9 @@
   .view-bullets li { font-size: 12px; color: var(--text2); padding: 4px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,0.03); }
   .view-bullets li:last-child { border-bottom: none; }
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
-  .view-bullets.safety-elements li::before       { background: var(--green); }
-  .view-bullets.safety-considerations li::before { background: var(--red); }
-  .view-bullets.wildfire-conditions li::before   { background: var(--orange); }
+  .view-bullets.security-elements li::before       { background: var(--green); }
+  .view-bullets.security-considerations li::before { background: var(--red); }
+  .view-bullets.wildfire-conditions li::before     { background: var(--orange); }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -140,7 +140,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v1.2.0 — safety + wildfire</div>
+    <div id="version-badge">v1.3.0 — security + wildfire</div>
     <div id="hoa-name">Loading...</div>
   </div>
 </div>
@@ -188,7 +188,7 @@
   </div>
 </div>
 <script>
-const VERSION = 'v1.2.0';
+const VERSION = 'v1.3.0';
 let map, panelOpen = false, mobileIntelOpen = false;
 let lightboxViews = [], lightboxIndex = 0;
 let propertyIndex = null, currentViews = null, currentViewData = null;
@@ -356,7 +356,7 @@ async function loadPropertyIntoPanel(entry) {
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   const viewOrder  = ['safety', 'wildfire', 'satellite', 'plane', 'drone', 'interior'];
-  const viewLabels = { safety: 'Safety', wildfire: 'Wildfire', satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
+  const viewLabels = { safety: 'Security', wildfire: 'Wildfire', satellite: 'Satellite', plane: 'Plane', drone: 'Drone', interior: 'Interior' };
   tabsEl.innerHTML = '';
   viewOrder.forEach(function(v) {
     if (!views[v]) return;
@@ -369,33 +369,39 @@ function buildTabs(views, activeView) {
   });
 }
 
-function buildSafetyPanel(d) {
+function buildSecurityPanel(d) {
   const fr = d.fr;
-  if (!fr) { document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">No safety data available.</div>'; return; }
+  if (!fr || !fr.elements || fr.elements.startsWith('ERROR:')) {
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Security analysis not yet available for this property.</div>';
+    return;
+  }
   const elements       = parseItems(fr.elements);
   const considerations = parseItems(fr.considerations);
   lightboxViews = [];
-  if (fr.nadir_url) lightboxViews.push({ label: 'Safety — Nadir View', url: fr.nadir_url, bullets: elements });
+  if (fr.nadir_url) lightboxViews.push({ label: 'Security — Nadir View', url: fr.nadir_url, bullets: elements });
   let html = '';
   if (fr.nadir_url) {
-    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge safety">S</div><div class="view-label">Safety Nadir View</div><div class="chevron">▼</div></div>'
-      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + fr.nadir_url + '" alt="Safety Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge safety">S</div><div class="view-label">Security Nadir View</div><div class="chevron">▼</div></div>'
+      + '<div class="view-body"><div class="view-img-wrap" onclick="openLightbox(0)"><img class="view-img" src="' + fr.nadir_url + '" alt="Security Nadir" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div></div></div>';
   }
   if (elements.length > 0) {
     html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge elements">PE</div><div class="view-label">Property Elements</div><div class="chevron">▼</div></div>'
-      + '<div class="view-body"><ul class="view-bullets safety-elements">' + elements.map(function(e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div></div>';
+      + '<div class="view-body"><ul class="view-bullets security-elements">' + elements.map(function(e) { return '<li>' + e + '</li>'; }).join('') + '</ul></div></div>';
   }
   if (considerations.length > 0 && considerations[0] !== 'None Visible') {
     html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge considerations">RC</div><div class="view-label">Responder Considerations</div><div class="chevron">▼</div></div>'
-      + '<div class="view-body"><ul class="view-bullets safety-considerations">' + considerations.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul></div></div>';
+      + '<div class="view-body"><ul class="view-bullets security-considerations">' + considerations.map(function(c) { return '<li>' + c + '</li>'; }).join('') + '</ul></div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
-  dbg('Safety panel: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
+  dbg('Security panel: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
 }
 
 function buildWildfirePanel(d) {
   const wf = d.wildfire;
-  if (!wf) { document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">No wildfire data available.</div>'; return; }
+  if (!wf || !wf.conditions || wf.conditions.startsWith('ERROR:')) {
+    document.getElementById('panel-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Wildfire analysis not yet available for this property.</div>';
+    return;
+  }
   const conditions = parseItems(wf.conditions);
   lightboxViews = [];
   if (wf.nadir_url) lightboxViews.push({ label: 'Wildfire — Nadir View', url: wf.nadir_url, bullets: conditions });
@@ -450,9 +456,16 @@ async function loadView(views, viewSuffix) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
-    if (viewSuffix === 'safety' && d.fr) { buildSafetyPanel(d); }
-    else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d); }
-    else { buildPanel(d); }
+    if (viewSuffix === 'safety' && d.fr) {
+      buildSecurityPanel(d);
+    } else if (viewSuffix === 'wildfire' && d.wildfire) {
+      buildWildfirePanel(d);
+    } else if (d.fr || d.wildfire) {
+      document.getElementById('panel-content').innerHTML =
+        '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;line-height:2;">No legacy view available.<br>Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>';
+    } else {
+      buildPanel(d);
+    }
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
     dbg('View load failed: ' + e.message, 'error');
