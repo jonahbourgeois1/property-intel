@@ -246,6 +246,8 @@ let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
 let activeMarkers = [];       // google.maps.Marker objects currently on map
+let pendingPinSets = [];     // [{pins,color,hexColor}] to drop once map ready
+let pendingOverlay = null;    // {imageUrl,lat,lng,zoom} to set once map ready
 let groundOverlay = null;     // current GroundOverlay
 let overlayVisible = false;
 let activePinId = null;       // currently highlighted pin row id
@@ -388,6 +390,8 @@ function clearMarkers() {
   activeMarkers.forEach(m => m.setMap(null));
   activeMarkers = [];
   activePinId = null;
+  pendingPinSets = [];
+  pendingOverlay = null;
 }
 
 function makePinSvg(color, text) {
@@ -401,6 +405,7 @@ function makePinSvg(color, text) {
 }
 
 function dropPins(pins, color, hexColor) {
+  if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
   pins.forEach((pin, i) => {
     const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
     const pinId = color + '-' + i;
@@ -446,9 +451,21 @@ function pinRowClick(pinId) {
 function setOverlay(imageUrl, centerLat, centerLng, zoom) {
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   if (!imageUrl) return;
+  if (!map) { pendingOverlay = { imageUrl, centerLat, centerLng, zoom }; return; }
   const bounds = computeOverlayBounds(centerLat, centerLng, zoom);
   groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
   if (overlayVisible) groundOverlay.setMap(map);
+}
+
+function flushPendingMapData() {
+  if (pendingOverlay) {
+    const { imageUrl, centerLat, centerLng, zoom } = pendingOverlay;
+    pendingOverlay = null;
+    setOverlay(imageUrl, centerLat, centerLng, zoom);
+  }
+  const sets = pendingPinSets.slice();
+  pendingPinSets = [];
+  sets.forEach(({ pins, color, hexColor }) => dropPins(pins, color, hexColor));
 }
 
 function toggleOverlay() {
@@ -519,6 +536,7 @@ function initMap(lat, lng) {
     setTimeout(() => { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat, lng }); } }, 100);
     if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
     dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
+    flushPendingMapData();
   } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
 }
 
