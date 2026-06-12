@@ -567,6 +567,7 @@ function placePin(entry, lat, lng, bounds) {
   drawParcelBoundaryForProperty(lat, lng, map);
   marker.addListener('click', function() {
     dbg('Pin clicked: ' + entry.name, 'info');
+    dbg('Entry views: ' + JSON.stringify(entry.views || null), 'info');
     if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
     marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     activeMarker = marker;
@@ -771,30 +772,46 @@ async function loadView(views, viewSuffix) {
 
 // ── Load property into panel (called on community pin click) ───────────────
 async function loadPropertyIntoPanel(entry) {
-  currentViews = entry.views;
-  document.getElementById('panel-title').textContent   = entry.name;
-  document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+  try {
+    dbg('Loading panel for: ' + entry.name, 'info');
+    currentViews = entry.views;
+    document.getElementById('panel-title').textContent   = entry.name;
+    document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
 
-  // Hide welcome, show tabs
-  const welcome = document.getElementById('welcome');
-  if (welcome) welcome.style.display = 'none';
-  document.getElementById('view-tabs').style.display = 'flex';
+    // Hide welcome, show tabs
+    const welcome = document.getElementById('welcome');
+    if (welcome) welcome.style.display = 'none';
+    document.getElementById('view-tabs').style.display = 'flex';
 
-  // Clear any existing intel pins / overlay from previous property
-  clearIntelMarkers();
-  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
-  overlayVisible = false;
-  document.getElementById('overlay-btn').classList.remove('active');
-  document.getElementById('overlay-label').textContent = 'Show Overlay';
-  document.getElementById('overlay-btn').style.display = 'none'; // re-shown by buildSecurityPanel/buildWildfirePanel
+    // Clear any existing intel pins / overlay from previous property
+    clearIntelMarkers();
+    if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
+    overlayVisible = false;
+    document.getElementById('overlay-btn').classList.remove('active');
+    document.getElementById('overlay-label').textContent = 'Show Overlay';
+    document.getElementById('overlay-btn').style.display = 'none';
 
-  const firstView = VIEW_ORDER.find(function(v) { return entry.views[v]; });
-  if (!firstView) {
-    document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>';
-    return;
+    if (!entry.views) {
+      dbg('No views object on entry: ' + entry.name, 'warn');
+      document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>';
+      return;
+    }
+
+    dbg('Views: ' + JSON.stringify(Object.keys(entry.views)), 'info');
+    const firstView = VIEW_ORDER.find(function(v) { return entry.views[v]; });
+    if (!firstView) {
+      dbg('No matching view found in VIEW_ORDER', 'warn');
+      document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>';
+      return;
+    }
+
+    dbg('First view: ' + firstView, 'info');
+    buildTabs(entry.views, firstView);
+    await loadView(entry.views, firstView);
+  } catch(e) {
+    dbg('loadPropertyIntoPanel error: ' + e.message, 'error');
+    document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Error: ' + e.message + '</div>';
   }
-  buildTabs(entry.views, firstView);
-  await loadView(entry.views, firstView);
 }
 
 // ── Lightbox ───────────────────────────────────────────────────────────────
@@ -862,4 +879,3 @@ loadHoaData();
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
 </html>
-
