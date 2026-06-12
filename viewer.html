@@ -336,26 +336,51 @@ function computeOverlayBounds(centerLat, centerLng, zoom) {
 }
 
 // ── Parse pin arrays ───────────────────────────────────────────────────────
-// Accepts new array schema or old semicolon string, returns [{label, lat, lng}]
-function normalizePins(field, centerLat, centerLng, zoom, labels) {
+// Accepts new array schema [{label,lat,lng}] or old plain text "Label; Label".
+// For old schema, coordinates are extracted from the baked static map URL's
+// &markers= params, which is the only place they exist for existing properties.
+function normalizePins(field) {
   if (!field) return [];
   // New schema: array of {label, lat, lng}
   if (Array.isArray(field)) return field;
-  // Old schema: "Label|x,y; Label|x,y"
-  return field.split(';').map((item, i) => {
-    const parts = item.trim().split('|');
-    const label = parts[0].trim();
-    if (!label) return null;
-    let lat = centerLat, lng = centerLng;
-    if (parts[1]) {
-      const coords = parts[1].trim().split(',');
-      const x = Math.max(25, Math.min(75, parseFloat(coords[0]) || 50));
-      const y = Math.max(25, Math.min(75, parseFloat(coords[1]) || 50));
-      const c = pixelToLatLng(centerLat, centerLng, zoom, x, y);
-      lat = c.lat; lng = c.lng;
+  // Old schema: plain semicolon string with no coords — labels only.
+  // Coordinates come from parsePinsFromUrl() called separately.
+  return field.split(';').map(s => ({ label: s.trim(), lat: null, lng: null })).filter(p => p.label.length > 0);
+}
+
+// Parse marker lat/lngs out of a Google Static Maps URL.
+// Returns array of {lat, lng} in marker order, matching the label list order.
+// URL format: &markers=color:green|label:1|44.0484,−121.3700&markers=...
+function parsePinsFromUrl(url) {
+  if (!url) return [];
+  const pins = [];
+  // Match each &markers= segment
+  const re = /[&?]markers=([^&]+)/g;
+  let m;
+  while ((m = re.exec(url)) !== null) {
+    const seg = decodeURIComponent(m[1]);
+    // The last pipe-separated part that looks like lat,lng is the coordinate
+    const parts = seg.split('|');
+    const coordPart = parts[parts.length - 1];
+    const coords = coordPart.split(',');
+    if (coords.length === 2) {
+      const lat = parseFloat(coords[0]);
+      const lng = parseFloat(coords[1]);
+      if (!isNaN(lat) && !isNaN(lng)) pins.push({ lat, lng });
     }
-    return { label, lat, lng };
-  }).filter(Boolean);
+  }
+  return pins;
+}
+
+// Merge label list with URL-parsed coordinates.
+// If URL parsing yields coords, zip them with labels.
+// Falls back to property center if a coord is missing.
+function mergePinsWithCoords(labels, urlPins, centerLat, centerLng) {
+  return labels.map((item, i) => ({
+    label: item.label,
+    lat:   (urlPins[i] ? urlPins[i].lat : null) || centerLat,
+    lng:   (urlPins[i] ? urlPins[i].lng : null) || centerLng
+  }));
 }
 
 // ── Map markers ────────────────────────────────────────────────────────────
@@ -539,8 +564,21 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   const zoom     = extractZoom(fr.nadir_url);
   const hasError = !fr.elements || (typeof fr.elements === 'string' && fr.elements.startsWith('ERROR:'));
 
-  const elements       = hasError ? [] : normalizePins(fr.elements,       centerLat, centerLng, zoom, ELEMENT_LABELS);
-  const considerations = hasError ? [] : normalizePins(fr.considerations, centerLat, centerLng, zoom, CONCERN_LABELS);
+  let elements = [], considerations = [];
+  if (!hasError) {
+    if (Array.isArray(fr.elements)) {
+      // New schema — lat/lng already stored
+      elements       = fr.elements;
+      considerations = Array.isArray(fr.considerations) ? fr.considerations : [];
+    } else {
+      // Old schema — extract real lat/lng from the baked nadir URL marker params
+      const rawEl = normalizePins(fr.elements);
+      const rawRc = normalizePins(fr.considerations);
+      const allPins = parsePinsFromUrl(fr.nadir_url); // green markers then red
+      elements       = mergePinsWithCoords(rawEl, allPins.slice(0, rawEl.length), centerLat, centerLng);
+      considerations = mergePinsWithCoords(rawRc, allPins.slice(rawEl.length),    centerLat, centerLng);
+    }
+  }
 
   // Set overlay image (raw nadir, no baked pins)
   setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
@@ -603,7 +641,17 @@ function buildWildfirePanel(d, centerLat, centerLng) {
 
   const zoom     = extractZoom(wf.nadir_url);
   const hasError = !wf.conditions || (typeof wf.conditions === 'string' && wf.conditions.startsWith('ERROR:'));
-  const conditions = hasError ? [] : normalizePins(wf.conditions, centerLat, centerLng, zoom, ELEMENT_LABELS);
+
+  let conditions = [];
+  if (!hasError) {
+    if (Array.isArray(wf.conditions)) {
+      conditions = wf.conditions;
+    } else {
+      const rawConds = normalizePins(wf.conditions);
+      const urlPins  = parsePinsFromUrl(wf.nadir_url);
+      conditions = mergePinsWithCoords(rawConds, urlPins, centerLat, centerLng);
+    }
+  }
 
   setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
   dropPins(conditions, 'orange', '#f97316');
