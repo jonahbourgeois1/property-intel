@@ -33,6 +33,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add config.js
-          git pull --rebase origin main
           git diff --staged --quiet || git commit -m "Update config"
+          git pull --rebase origin main
           git push
