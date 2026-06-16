@@ -157,7 +157,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.1.0 — parcel ring</div>
+    <div id="version-badge">v2.1.1 — parcel ring fix</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -211,7 +211,7 @@ const VIEW_ORDER   = ['security','wildfire','satellite','plane','drone','interio
 const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', satellite:'Satellite', plane:'Plane', drone:'Drone', interior:'Interior' };
 
 let map, panelOpen = false, mobileIntelOpen = false;
-let mapsApiReady = false, pendingEntry = null;
+let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
@@ -644,19 +644,26 @@ async function loadPropertyData() {
     buildTabs(entry.views, firstView);
     setLoading('Loading ' + firstView + '...');
     await loadView(entry.views, firstView);
-    // Pass stored parcel ring to map init — prevents adjacent parcel polygons
+    // loadView is now complete — currentViewData has parcel_ring if available.
+    // Always resolve map AFTER loadView so storedRing is populated.
     const storedRing = currentViewData && currentViewData.parcel_ring || null;
-    if (mapsApiReady) { resolveAndInitMap(entry, storedRing); }
-    else { pendingEntry = entry; }
+    if (storedRing) dbg('Stored parcel ring found (' + storedRing.length + ' pts)', 'ok');
+    if (mapsApiReady) {
+      resolveAndInitMap(entry, storedRing);
+    } else {
+      // Store both entry AND ring so initGoogleMaps can use the correct ring
+      pendingEntry = entry;
+      pendingStoredRing = storedRing;
+    }
   } catch(e) { showError('Failed to load property: ' + e.message); }
 }
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
   if (pendingEntry) {
-    const storedRing = currentViewData && currentViewData.parcel_ring || null;
-    resolveAndInitMap(pendingEntry, storedRing);
+    resolveAndInitMap(pendingEntry, pendingStoredRing || null);
     pendingEntry = null;
+    pendingStoredRing = null;
   }
 };
 loadPropertyData();
