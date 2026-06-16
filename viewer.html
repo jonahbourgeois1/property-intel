@@ -18,8 +18,6 @@
     --orange: #f97316; --header-h: 52px;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-
-  /* ── Header ── */
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
@@ -28,12 +26,8 @@
   .header-right { display: flex; align-items: center; gap: 10px; }
   #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
-
-  /* ── Main layout ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
   #map { flex: 1; background: var(--bg); min-width: 0; position: relative; }
-
-  /* ── Loading / Error ── */
   #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
   #loading.hidden { opacity: 0; pointer-events: none; }
   #error { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
@@ -44,23 +38,16 @@
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-
-  /* ── Map controls overlay ── */
   #map-controls { position: absolute; bottom: 24px; left: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
   .map-ctrl-btn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
   .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
   .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
   .map-ctrl-btn .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-
-  /* ── Right panel ── */
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
-
   .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
   .panel-address { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
-
-  /* ── View tabs ── */
   #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; margin-top: 12px; }
   #view-tabs::-webkit-scrollbar { display: none; }
   .view-tab { padding: 9px 14px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
@@ -68,28 +55,19 @@
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   .view-tab[data-view="security"].active  { color: var(--green);  border-bottom-color: var(--green); }
   .view-tab[data-view="wildfire"].active  { color: var(--orange); border-bottom-color: var(--orange); }
-
-  /* ── Pin list ── */
   #panel-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-
   .pin-group { padding: 14px 16px 6px; }
   .pin-group-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
-
   .pin-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: background 0.12s; margin-bottom: 3px; border: 1px solid transparent; }
   .pin-row:hover { background: var(--surface2); }
   .pin-row.active { background: var(--surface2); border-color: var(--border2); }
-
   .pin-badge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; margin-top: 1px; }
   .pin-badge.green  { background: var(--green); }
   .pin-badge.red    { background: var(--red); }
   .pin-badge.orange { background: var(--orange); }
-
   .pin-label { font-size: 12px; color: var(--text2); line-height: 1.5; flex: 1; padding-top: 2px; }
   .pin-row.active .pin-label { color: var(--text); }
-
   .pin-group-divider { height: 1px; background: var(--border); margin: 8px 16px; }
-
-  /* Plane/Drone/Interior: keep old card style */
   .view-section { margin: 14px 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
@@ -111,21 +89,13 @@
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
   .btn-360 { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px 14px 14px; padding: 10px; background: var(--accent); color: white; border-radius: 6px; font-size: 12px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
   .btn-360:hover { opacity: 0.85; }
-
-  /* Empty / pending states */
   .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
   .panel-pending { padding: 12px 16px 16px; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
-
-  /* ── Toggle panel button ── */
   #toggle-panel { position: absolute; bottom: 24px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-  /* ── Mobile ── */
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-
-  /* ── Lightbox (for Plane/Drone/Interior) ── */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
   #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
@@ -137,8 +107,6 @@
   #lightbox-nav { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
   .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
-
-  /* ── Debug ── */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
   #debug-panel.collapsed #debug-log { display: none; }
   #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
@@ -153,8 +121,6 @@
   .debug-time { color: var(--text3); margin-right: 6px; }
   #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
   #debug-clear:hover { color: var(--text2); }
-
-  /* ── Responsive ── */
   @media (max-width: 768px) {
     #property-name { display: none; }
     #toggle-panel { display: none; }
@@ -166,45 +132,14 @@
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
   }
-
-  /* ── Google Maps InfoWindow dark theme override ── */
-  .gm-style .gm-style-iw-c {
-    background: #12161b !important;
-    border-radius: 10px !important;
-    padding: 0 !important;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important;
-  }
-  .gm-style .gm-style-iw-d {
-    overflow: hidden !important;
-  }
-  .gm-style .gm-style-iw-t::after {
-    background: #12161b !important;
-  }
-  .gm-style .gm-style-iw-tc::after {
-    background: #12161b !important;
-  }
-  .gm-style-iw-chr {
-    background: #12161b !important;
-    border-radius: 10px 10px 0 0 !important;
-  }
-  .gm-style-iw-chr button {
-    filter: invert(1) !important;
-    opacity: 0.6 !important;
-  }
-  .gm-style-iw-chr button:hover {
-    opacity: 1 !important;
-  }
-  /* Hide the X close button entirely */
-  .gm-style-iw-chr button.gm-ui-hover-effect {
-    display: none !important;
-  }
-  /* Collapse the empty header row */
-  .gm-style-iw-chr {
-    height: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* ── Recommendations block ── */
+  .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
+  .gm-style .gm-style-iw-d { overflow: hidden !important; }
+  .gm-style .gm-style-iw-t::after { background: #12161b !important; }
+  .gm-style .gm-style-iw-tc::after { background: #12161b !important; }
+  .gm-style-iw-chr { background: #12161b !important; border-radius: 10px 10px 0 0 !important; height: 0 !important; padding: 0 !important; }
+  .gm-style-iw-chr button { filter: invert(1) !important; opacity: 0.6 !important; }
+  .gm-style-iw-chr button:hover { opacity: 1 !important; }
+  .gm-style-iw-chr button.gm-ui-hover-effect { display: none !important; }
   .rec-block { margin: 0 16px 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
   .rec-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 7px; }
   .rec-label.security { color: var(--green); }
@@ -213,7 +148,6 @@
 </style>
 </head>
 <body>
-
 <div id="header">
   <div class="logo">
     <div class="logo-mark">VI</div>
@@ -223,11 +157,10 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.0.0 — interactive pins</div>
+    <div id="version-badge">v2.1.0 — parcel ring</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
-
 <div id="main">
   <div id="map"></div>
   <div id="map-controls">
@@ -235,10 +168,8 @@
       <span class="ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
     </button>
   </div>
-
   <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
   <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
-
   <div id="panel">
     <div class="panel-header">
       <div class="panel-title" id="panel-title">Property Details</div>
@@ -248,16 +179,13 @@
     <div id="panel-content"></div>
   </div>
 </div>
-
 <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
 <button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
-
 <div id="debug-panel">
   <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
   <div id="debug-log"></div>
   <button id="debug-clear" onclick="clearDebug()">clear log</button>
 </div>
-
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
@@ -271,10 +199,8 @@
     <button class="nav-btn" onclick="lightboxNav(1)">&#8594;</button>
   </div>
 </div>
-
 <script>
-// ── Constants ──────────────────────────────────────────────────────────────
-const VERSION      = 'v2.0.0';
+const VERSION      = 'v2.1.0';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
@@ -284,21 +210,15 @@ const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const VIEW_ORDER   = ['security','wildfire','satellite','plane','drone','interior'];
 const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', satellite:'Satellite', plane:'Plane', drone:'Drone', interior:'Interior' };
 
-// ── State ──────────────────────────────────────────────────────────────────
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
-let activeMarkers = [];       // google.maps.Marker objects currently on map
-let pendingPinSets = [];     // [{pins,color,hexColor}] to drop once map ready
-let pendingOverlay = null;    // {imageUrl,lat,lng,zoom} to set once map ready
-let groundOverlay = null;     // current GroundOverlay
-let overlayVisible = false;
-let activePinId = null;       // currently highlighted pin row id
-let infoWindow = null;        // single shared InfoWindow instance
+let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
+let groundOverlay = null, overlayVisible = false;
+let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
 
-// ── Debug ──────────────────────────────────────────────────────────────────
 function dbg(msg, type) {
   type = type || 'info';
   const log = document.getElementById('debug-log');
@@ -317,8 +237,6 @@ function toggleDebug() {
   b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
 }
 function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
-
-// ── Panel toggle ───────────────────────────────────────────────────────────
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -334,15 +252,9 @@ function mobileToggle() {
 function showError(msg) { hideLoading(); document.getElementById('error').classList.add('visible'); document.getElementById('error-msg').textContent = msg; dbg('ERROR: ' + msg, 'error'); }
 function setLoading(msg) { const el = document.getElementById('loading-text'); if (el) el.textContent = msg; dbg(msg, 'info'); }
 function hideLoading() { const el = document.getElementById('loading'); if (el) el.classList.add('hidden'); }
-
-// ── Utility ────────────────────────────────────────────────────────────────
 function formatDesc(desc) {
   if (!desc) return [];
   return desc.split('|').map(s => s.trim()).filter(s => s.length > 2);
-}
-function parseItems(str) {
-  if (!str) return [];
-  return str.split(';').map(s => s.trim()).filter(s => s.length > 0);
 }
 function toggleSection(header) {
   const body = header.nextElementSibling;
@@ -350,9 +262,6 @@ function toggleSection(header) {
   body.classList.toggle('collapsed');
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
-
-// ── Coordinate math ────────────────────────────────────────────────────────
-// Re-derive lat/lng from x,y% for backward-compat with old string schema.
 function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {
   const size = 640;
   const pixelX = (xPct / 100) * size - size / 2;
@@ -363,73 +272,45 @@ function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {
     lng: centerLng + (pixelX * mpp) / (111320 * Math.cos(centerLat * Math.PI / 180))
   };
 }
-
-// Extract zoom from a static maps URL (fallback to 19)
 function extractZoom(url) {
   if (!url) return 19;
   const m = url.match(/[&?]zoom=(\d+)/);
   return m ? parseInt(m[1]) : 19;
 }
-
-// Compute GroundOverlay bounds for a 640×640 static map image
 function computeOverlayBounds(centerLat, centerLng, zoom) {
   const tl = pixelToLatLng(centerLat, centerLng, zoom, 0, 0);
   const br = pixelToLatLng(centerLat, centerLng, zoom, 100, 100);
-  return new google.maps.LatLngBounds(
-    { lat: br.lat, lng: tl.lng },  // SW
-    { lat: tl.lat, lng: br.lng }   // NE
-  );
+  return new google.maps.LatLngBounds({ lat: br.lat, lng: tl.lng }, { lat: tl.lat, lng: br.lng });
 }
-
-// ── Parse pin arrays ───────────────────────────────────────────────────────
-// Accepts new array schema [{label,lat,lng}] or old plain text "Label; Label".
-// For old schema, coordinates are extracted from the baked static map URL's
-// &markers= params, which is the only place they exist for existing properties.
 function normalizePins(field) {
   if (!field) return [];
-  // New schema: array of {label, lat, lng}
   if (Array.isArray(field)) return field;
-  // Old schema: plain semicolon string with no coords — labels only.
-  // Coordinates come from parsePinsFromUrl() called separately.
   return field.split(';').map(s => ({ label: s.trim(), lat: null, lng: null })).filter(p => p.label.length > 0);
 }
-
-// Parse marker lat/lngs out of a Google Static Maps URL.
-// Returns array of {lat, lng} in marker order, matching the label list order.
-// URL format: &markers=color:green|label:1|44.0484,−121.3700&markers=...
 function parsePinsFromUrl(url) {
   if (!url) return [];
   const pins = [];
-  // Match each &markers= segment
   const re = /[&?]markers=([^&]+)/g;
   let m;
   while ((m = re.exec(url)) !== null) {
     const seg = decodeURIComponent(m[1]);
-    // The last pipe-separated part that looks like lat,lng is the coordinate
     const parts = seg.split('|');
     const coordPart = parts[parts.length - 1];
     const coords = coordPart.split(',');
     if (coords.length === 2) {
-      const lat = parseFloat(coords[0]);
-      const lng = parseFloat(coords[1]);
+      const lat = parseFloat(coords[0]), lng = parseFloat(coords[1]);
       if (!isNaN(lat) && !isNaN(lng)) pins.push({ lat, lng });
     }
   }
   return pins;
 }
-
-// Merge label list with URL-parsed coordinates.
-// If URL parsing yields coords, zip them with labels.
-// Falls back to property center if a coord is missing.
 function mergePinsWithCoords(labels, urlPins, centerLat, centerLng) {
   return labels.map((item, i) => ({
     label: item.label,
-    lat:   (urlPins[i] ? urlPins[i].lat : null) || centerLat,
-    lng:   (urlPins[i] ? urlPins[i].lng : null) || centerLng
+    lat: (urlPins[i] ? urlPins[i].lat : null) || centerLat,
+    lng: (urlPins[i] ? urlPins[i].lng : null) || centerLng
   }));
 }
-
-// ── Map markers ────────────────────────────────────────────────────────────
 function clearMarkers() {
   activeMarkers.forEach(m => m.setMap(null));
   activeMarkers = [];
@@ -438,9 +319,7 @@ function clearMarkers() {
   pendingOverlay = null;
   if (infoWindow) { infoWindow.close(); }
 }
-
 function makePinSvg(color, text) {
-  // Teardrop pin with label inside
   const c = encodeURIComponent(color);
   return {
     url: `data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="${c}" stroke="%23fff" stroke-width="1.5"/><text x="14" y="17" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="9" font-weight="700" fill="white">${encodeURIComponent(text)}</text></svg>`,
@@ -448,52 +327,32 @@ function makePinSvg(color, text) {
     anchor: new google.maps.Point(14, 36)
   };
 }
-
 function dropPins(pins, color, hexColor) {
   if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
   pins.forEach((pin, i) => {
     const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
     const pinId = color + '-' + i;
     const marker = new google.maps.Marker({
-      position: { lat: pin.lat, lng: pin.lng },
-      map,
-      icon: makePinSvg(hexColor, label),
-      title: pin.label,
-      zIndex: 10
+      position: { lat: pin.lat, lng: pin.lng }, map,
+      icon: makePinSvg(hexColor, label), title: pin.label, zIndex: 10
     });
-    marker._pinId    = pinId;
-    marker._label    = label;
-    marker._desc     = pin.label;
-    marker._hexColor = hexColor;
+    marker._pinId = pinId; marker._label = label; marker._desc = pin.label; marker._hexColor = hexColor;
     marker.addListener('click', () => activatePin(pinId, marker, true));
     activeMarkers.push(marker);
   });
 }
-
 function activatePin(pinId, marker, fromMap) {
-  // Deactivate previous panel row
   document.querySelectorAll('.pin-row.active').forEach(r => r.classList.remove('active'));
   activePinId = pinId;
-
-  // Highlight panel row
   const row = document.querySelector('.pin-row[data-pin-id="' + pinId + '"]');
-  if (row) {
-    row.classList.add('active');
-    row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  // Bounce marker briefly
+  if (row) { row.classList.add('active'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   if (marker) {
     marker.setAnimation(google.maps.Animation.BOUNCE);
     setTimeout(() => marker.setAnimation(null), 700);
     if (!fromMap) map.panTo(marker.getPosition());
-
-    // Open InfoWindow with pin label and description
     if (!infoWindow) {
       infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
-      // Close on map click
       map.addListener('click', function() { infoWindow.close(); });
-      // Close when clicking the InfoWindow content itself
       infoWindow.addListener('domready', function() {
         var iwOuter = document.querySelector('.gm-style-iw-a');
         if (iwOuter) iwOuter.addEventListener('click', function() { infoWindow.close(); });
@@ -503,28 +362,13 @@ function activatePin(pinId, marker, fromMap) {
     infoWindow.open({ anchor: marker, map, shouldFocus: false });
   }
 }
-
 function buildInfoWindowContent(label, desc, hexColor) {
-  return [
-    '<div style="font-family:sans-serif;background:#12161b;color:#f0f2f5;',
-    'border-radius:8px;padding:9px 12px;min-width:140px;max-width:220px;">',
-    '<div style="display:flex;align-items:center;gap:8px;">',
-    '<div style="width:20px;height:20px;border-radius:50%;background:' + hexColor + ';',
-    'display:flex;align-items:center;justify-content:center;',
-    'font-size:9px;font-weight:700;color:white;font-family:monospace;flex-shrink:0;">',
-    label,
-    '</div>',
-    '<span style="font-size:12px;font-weight:600;color:#f0f2f5;line-height:1.3;">' + desc + '</span>',
-    '</div></div>'
-  ].join('');
+  return '<div style="font-family:sans-serif;background:#12161b;color:#f0f2f5;border-radius:8px;padding:9px 12px;min-width:140px;max-width:220px;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:20px;height:20px;border-radius:50%;background:' + hexColor + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;font-family:monospace;flex-shrink:0;">' + label + '</div><span style="font-size:12px;font-weight:600;color:#f0f2f5;line-height:1.3;">' + desc + '</span></div></div>';
 }
-
 function pinRowClick(pinId) {
   const marker = activeMarkers.find(m => m._pinId === pinId);
   activatePin(pinId, marker, false);
 }
-
-// ── Ground overlay ─────────────────────────────────────────────────────────
 function setOverlay(imageUrl, centerLat, centerLng, zoom) {
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   if (!imageUrl) return;
@@ -533,7 +377,6 @@ function setOverlay(imageUrl, centerLat, centerLng, zoom) {
   groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
   if (overlayVisible) groundOverlay.setMap(map);
 }
-
 function flushPendingMapData() {
   if (pendingOverlay) {
     const { imageUrl, centerLat, centerLng, zoom } = pendingOverlay;
@@ -544,23 +387,12 @@ function flushPendingMapData() {
   pendingPinSets = [];
   sets.forEach(({ pins, color, hexColor }) => dropPins(pins, color, hexColor));
 }
-
 function toggleOverlay() {
   overlayVisible = !overlayVisible;
-  const btn = document.getElementById('overlay-btn');
-  const lbl = document.getElementById('overlay-label');
-  if (overlayVisible) {
-    btn.classList.add('active');
-    lbl.textContent = 'Hide Overlay';
-    if (groundOverlay) groundOverlay.setMap(map);
-  } else {
-    btn.classList.remove('active');
-    lbl.textContent = 'Show Overlay';
-    if (groundOverlay) groundOverlay.setMap(null);
-  }
+  const btn = document.getElementById('overlay-btn'), lbl = document.getElementById('overlay-label');
+  if (overlayVisible) { btn.classList.add('active'); lbl.textContent = 'Hide Overlay'; if (groundOverlay) groundOverlay.setMap(map); }
+  else { btn.classList.remove('active'); lbl.textContent = 'Show Overlay'; if (groundOverlay) groundOverlay.setMap(null); }
 }
-
-// ── Parcel boundary ────────────────────────────────────────────────────────
 function pointInPolygon(lat, lng, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -574,7 +406,17 @@ function getParcelFile(lat, lng) {
   const lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
-function drawParcelBoundary(lat, lng) {
+
+// ── Parcel boundary — uses stored ring if available, falls back to GeoJSON tile ──
+function drawParcelBoundary(lat, lng, storedRing) {
+  if (storedRing && storedRing.length >= 3) {
+    // New path: draw stored ring directly — no adjacent parcels rendered
+    const paths = storedRing.map(pt => ({ lat: pt.lat, lng: pt.lng }));
+    new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
+    dbg('Parcel matched: stored ring (' + storedRing.length + ' pts)', 'ok');
+    return;
+  }
+  // Fallback: fetch GeoJSON tile for older properties without stored ring
   fetch(PARCEL_BASE + getParcelFile(lat, lng))
     .then(r => r.ok ? r.json() : null)
     .then(geojson => {
@@ -591,8 +433,7 @@ function drawParcelBoundary(lat, lng) {
     .catch(e => dbg('Parcel error: ' + e.message, 'error'));
 }
 
-// ── Map init ───────────────────────────────────────────────────────────────
-function initMap(lat, lng) {
+function initMap(lat, lng, storedRing) {
   try {
     map = new google.maps.Map(document.getElementById('map'), {
       center: { lat, lng }, zoom: 18,
@@ -602,13 +443,12 @@ function initMap(lat, lng) {
       streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
       fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
     });
-    // Home pin (small, non-interactive)
     new google.maps.Marker({
       position: { lat, lng }, map,
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#fff', fillOpacity: 0.9, strokeColor: '#3b82f6', strokeWeight: 2 },
       zIndex: 1
     });
-    drawParcelBoundary(lat, lng);
+    drawParcelBoundary(lat, lng, storedRing || null);
     hideLoading();
     setTimeout(() => { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat, lng }); } }, 100);
     if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
@@ -616,22 +456,19 @@ function initMap(lat, lng) {
     flushPendingMapData();
   } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
 }
-
-function resolveAndInitMap(entry) {
-  if (entry.lat && entry.lng) { initMap(entry.lat, entry.lng); }
+function resolveAndInitMap(entry, storedRing) {
+  if (entry.lat && entry.lng) { initMap(entry.lat, entry.lng, storedRing); }
   else {
     setLoading('Locating property...');
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(entry.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
       .then(r => r.json())
       .then(data => {
-        if (data.status === 'OK' && data.results[0]) { const loc = data.results[0].geometry.location; initMap(loc.lat, loc.lng); }
+        if (data.status === 'OK' && data.results[0]) { const loc = data.results[0].geometry.location; initMap(loc.lat, loc.lng, storedRing); }
         else { dbg('Geocode failed: ' + data.status, 'error'); hideLoading(); if (!isMobile() && !panelOpen) togglePanel(); }
       })
       .catch(e => { dbg('Geocode error: ' + e.message, 'error'); hideLoading(); });
   }
 }
-
-// ── Tab builder ────────────────────────────────────────────────────────────
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   tabsEl.innerHTML = '';
@@ -645,221 +482,131 @@ function buildTabs(views, activeView) {
     tabsEl.appendChild(tab);
   });
 }
-
-// ── Security panel ─────────────────────────────────────────────────────────
 function buildSecurityPanel(d, centerLat, centerLng) {
   clearMarkers();
-
   const fr = d.fr;
-  if (!fr || !fr.nadir_url) {
-    document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>';
-    return;
-  }
-
-  const zoom     = extractZoom(fr.nadir_url);
+  if (!fr || !fr.nadir_url) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>'; return; }
+  const zoom = extractZoom(fr.nadir_url);
   const hasError = !fr.elements || (typeof fr.elements === 'string' && fr.elements.startsWith('ERROR:'));
-
   let elements = [], considerations = [];
   if (!hasError) {
     if (Array.isArray(fr.elements)) {
-      // New schema — lat/lng already stored
-      elements       = fr.elements;
+      elements = fr.elements;
       considerations = Array.isArray(fr.considerations) ? fr.considerations : [];
     } else {
-      // Old schema — extract real lat/lng from the baked nadir URL marker params
-      const rawEl = normalizePins(fr.elements);
-      const rawRc = normalizePins(fr.considerations);
-      const allPins = parsePinsFromUrl(fr.nadir_url); // green markers then red
-      elements       = mergePinsWithCoords(rawEl, allPins.slice(0, rawEl.length), centerLat, centerLng);
-      considerations = mergePinsWithCoords(rawRc, allPins.slice(rawEl.length),    centerLat, centerLng);
+      const rawEl = normalizePins(fr.elements), rawRc = normalizePins(fr.considerations);
+      const allPins = parsePinsFromUrl(fr.nadir_url);
+      elements = mergePinsWithCoords(rawEl, allPins.slice(0, rawEl.length), centerLat, centerLng);
+      considerations = mergePinsWithCoords(rawRc, allPins.slice(rawEl.length), centerLat, centerLng);
     }
   }
-
-  // Set overlay image (raw nadir, no baked pins)
   setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
-
-  // Drop map pins
-  dropPins(elements,       'green',  '#22c55e');
-  dropPins(considerations, 'red',    '#ef4444');
-
+  dropPins(elements, 'green', '#22c55e');
+  dropPins(considerations, 'red', '#ef4444');
   dbg('Security: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
-
-  // Build panel HTML
+  if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
   let html = '';
-
-  if (hasError) {
-    html += '<div class="panel-pending">⏳ Analysis pending — data will appear once processing completes.</div>';
-    document.getElementById('panel-content').innerHTML = html;
-    return;
-  }
-
   if (elements.length > 0) {
     html += '<div class="pin-group"><div class="pin-group-label">Property Elements</div>';
     elements.forEach((el, i) => {
-      const label = ELEMENT_LABELS[i] || String(i+1);
-      const pinId = 'green-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')">
-        <div class="pin-badge green">${label}</div>
-        <div class="pin-label">${el.label}</div>
-      </div>`;
+      const label = ELEMENT_LABELS[i] || String(i+1), pinId = 'green-' + i;
+      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge green">${label}</div><div class="pin-label">${el.label}</div></div>`;
     });
     html += '</div>';
   }
-
   if (considerations.length > 0 && !(considerations.length === 1 && considerations[0].label === 'None Visible')) {
     if (elements.length > 0) html += '<div class="pin-group-divider"></div>';
     html += '<div class="pin-group"><div class="pin-group-label">Responder Considerations</div>';
     considerations.forEach((el, i) => {
-      const label = CONCERN_LABELS[i] || String(i+1);
-      const pinId = 'red-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')">
-        <div class="pin-badge red">${label}</div>
-        <div class="pin-label">${el.label}</div>
-      </div>`;
+      const label = CONCERN_LABELS[i] || String(i+1), pinId = 'red-' + i;
+      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge red">${label}</div><div class="pin-label">${el.label}</div></div>`;
     });
     html += '</div>';
   }
-
-  if (!html) html = '<div class="panel-empty">No elements identified for this property.</div>';
+  if (!html) html = '<div class="panel-empty">No elements identified.</div>';
   if (!hasError && fr.recommendations && fr.recommendations.length > 0) {
-    html += '<div class="rec-block">'
-      + '<div class="rec-label security">FR Recommendations</div>'
-      + '<div class="rec-text">' + fr.recommendations + '</div>'
-      + '</div>';
+    html += '<div class="rec-block"><div class="rec-label security">FR Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
 }
-
-// ── Wildfire panel ─────────────────────────────────────────────────────────
 function buildWildfirePanel(d, centerLat, centerLng) {
   clearMarkers();
-
   const wf = d.wildfire;
-  if (!wf || !wf.nadir_url) {
-    document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>';
-    return;
-  }
-
-  const zoom     = extractZoom(wf.nadir_url);
+  if (!wf || !wf.nadir_url) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>'; return; }
+  const zoom = extractZoom(wf.nadir_url);
   const hasError = !wf.conditions || (typeof wf.conditions === 'string' && wf.conditions.startsWith('ERROR:'));
-
   let conditions = [];
   if (!hasError) {
-    if (Array.isArray(wf.conditions)) {
-      conditions = wf.conditions;
-    } else {
-      const rawConds = normalizePins(wf.conditions);
-      const urlPins  = parsePinsFromUrl(wf.nadir_url);
+    if (Array.isArray(wf.conditions)) { conditions = wf.conditions; }
+    else {
+      const rawConds = normalizePins(wf.conditions), urlPins = parsePinsFromUrl(wf.nadir_url);
       conditions = mergePinsWithCoords(rawConds, urlPins, centerLat, centerLng);
     }
   }
-
   setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
   dropPins(conditions, 'orange', '#f97316');
-
   dbg('Wildfire: ' + conditions.length + ' conditions', 'ok');
-
+  if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
   let html = '';
-
-  if (hasError) {
-    html = '<div class="panel-pending">⏳ Analysis pending — data will appear once processing completes.</div>';
-    document.getElementById('panel-content').innerHTML = html;
-    return;
-  }
-
   if (conditions.length > 0 && !(conditions.length === 1 && conditions[0].label === 'None Visible')) {
     html += '<div class="pin-group"><div class="pin-group-label">Wildfire Conditions</div>';
     conditions.forEach((el, i) => {
-      const label = ELEMENT_LABELS[i] || String(i+1);
-      const pinId = 'orange-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')">
-        <div class="pin-badge orange">${label}</div>
-        <div class="pin-label">${el.label}</div>
-      </div>`;
+      const label = ELEMENT_LABELS[i] || String(i+1), pinId = 'orange-' + i;
+      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge orange">${label}</div><div class="pin-label">${el.label}</div></div>`;
     });
     html += '</div>';
-  } else {
-    html = '<div class="panel-empty">No conditions identified for this property.</div>';
-  }
+  } else { html = '<div class="panel-empty">No conditions identified.</div>'; }
   if (!hasError && wf.recommendations && wf.recommendations.length > 0) {
-    html += '<div class="rec-block">'
-      + '<div class="rec-label wildfire">Wildfire Recommendations</div>'
-      + '<div class="rec-text">' + wf.recommendations + '</div>'
-      + '</div>';
+    html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Recommendations</div><div class="rec-text">' + wf.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
 }
-
-// ── Plane / Drone / Interior panel (legacy card style) ─────────────────────
 function buildPanel(d) {
   clearMarkers();
   if (groundOverlay) { groundOverlay.setMap(null); }
-
   const views = [
-    { label: 'Alpha',   badge: 'A', cls: '',      data: d.alpha },
-    { label: 'Bravo',   badge: 'B', cls: '',      data: d.bravo },
-    { label: 'Charlie', badge: 'C', cls: '',      data: d.charlie },
-    { label: 'Delta',   badge: 'D', cls: '',      data: d.delta },
-    { label: 'Nadir',   badge: 'N', cls: 'nadir', data: d.nadir }
+    { label: 'Alpha', badge: 'A', cls: '', data: d.alpha },
+    { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie', badge: 'C', cls: '', data: d.charlie },
+    { label: 'Delta', badge: 'D', cls: '', data: d.delta },
+    { label: 'Nadir', badge: 'N', cls: 'nadir', data: d.nadir }
   ];
   lightboxViews = [];
   views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
-
   let html = '', lbIndex = 0;
   views.forEach(v => {
     if (!v.data || !v.data.url) return;
-    const bullets = formatDesc(v.data.desc);
-    const idx = lbIndex++;
-    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div>
-      <div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div>
-      <ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
+    const bullets = formatDesc(v.data.desc), idx = lbIndex++;
+    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
   if (d.viewer360) {
-    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div>
-      <div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li><li>Complete site overview before arrival</li></ul>
-      <a class="btn-360" href="${d.viewer360}" target="_blank">↗ Launch 360° Viewer</a></div></div>`;
+    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div><div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li></ul><a class="btn-360" href="${d.viewer360}" target="_blank">↗ Launch 360° Viewer</a></div></div>`;
   }
   document.getElementById('panel-content').innerHTML = html;
 }
-
-// ── Load view ──────────────────────────────────────────────────────────────
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
-
   document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix));
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
-
   try {
-    dbg('Loading view: ' + viewSuffix + ' (' + hashedViewId.substring(0,8) + '...)', 'info');
+    dbg('Loading view: ' + viewSuffix, 'info');
     const res = await fetch(BASE_URL + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
-
-    // Resolve center coords — prefer stored lat/lng, fall back to map center
     const centerLat = d.lat || (map ? map.getCenter().lat() : 0);
     const centerLng = d.lng || (map ? map.getCenter().lng() : 0);
-
-    if (viewSuffix === 'security' && d.fr) {
-      buildSecurityPanel(d, centerLat, centerLng);
-    } else if (viewSuffix === 'wildfire' && d.wildfire) {
-      buildWildfirePanel(d, centerLat, centerLng);
-    } else if (d.fr || d.wildfire) {
-      clearMarkers();
-      document.getElementById('panel-content').innerHTML =
-        '<div class="panel-empty">No legacy view.<br>Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>';
-    } else {
-      buildPanel(d);
-    }
+    if (viewSuffix === 'security' && d.fr) { buildSecurityPanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d, centerLat, centerLng); }
+    else if (d.fr || d.wildfire) { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
+    else { buildPanel(d); }
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
     dbg('View load failed: ' + e.message, 'error');
     document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Failed to load: ' + e.message + '</div>';
   }
 }
-
-// ── Lightbox ───────────────────────────────────────────────────────────────
 function openLightbox(index) { lightboxIndex = index; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.addEventListener('keydown', lightboxKey); }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.removeEventListener('keydown', lightboxKey); }
 function lightboxKey(e) { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); }
@@ -871,13 +618,11 @@ function updateLightbox() {
   document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
   document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(b => '<li>' + b + '</li>').join('');
 }
-
-// ── Main load ──────────────────────────────────────────────────────────────
 async function loadPropertyData() {
   dbg(VERSION + ' — Property Intel loaded', 'ok');
-  const params       = new URLSearchParams(window.location.search);
+  const params = new URLSearchParams(window.location.search);
   const propertyHash = params.get('property');
-  const tabParam     = params.get('tab');
+  const tabParam = params.get('tab');
   if (!propertyHash) { showError('No property ID provided.'); return; }
   dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
@@ -886,34 +631,34 @@ async function loadPropertyData() {
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
     dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'ok');
-
     const entry = propertyIndex[propertyHash];
     if (!entry) { showError('Property not found.'); return; }
     dbg('Property found: ' + entry.name, 'ok');
-
     currentViews = entry.views;
     document.getElementById('property-name').textContent = entry.name;
-    document.getElementById('panel-title').textContent   = entry.name;
+    document.getElementById('panel-title').textContent = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-
     const firstView = (tabParam && entry.views[tabParam]) ? tabParam : VIEW_ORDER.find(v => entry.views[v]);
     if (!firstView) { showError('No views available.'); return; }
     dbg('Available views: ' + Object.keys(entry.views).join(', '), 'info');
-
     buildTabs(entry.views, firstView);
     setLoading('Loading ' + firstView + '...');
     await loadView(entry.views, firstView);
-
-    if (mapsApiReady) { resolveAndInitMap(entry); } else { pendingEntry = entry; }
+    // Pass stored parcel ring to map init — prevents adjacent parcel polygons
+    const storedRing = currentViewData && currentViewData.parcel_ring || null;
+    if (mapsApiReady) { resolveAndInitMap(entry, storedRing); }
+    else { pendingEntry = entry; }
   } catch(e) { showError('Failed to load property: ' + e.message); }
 }
-
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
-  if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
+  if (pendingEntry) {
+    const storedRing = currentViewData && currentViewData.parcel_ring || null;
+    resolveAndInitMap(pendingEntry, storedRing);
+    pendingEntry = null;
+  }
 };
-
 loadPropertyData();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
