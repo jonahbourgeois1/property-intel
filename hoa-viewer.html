@@ -615,6 +615,11 @@ function placePin(entry, lat, lng, bounds) {
     if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
     marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     activeMarker = marker;
+    // Zoom and center on selected property — same behaviour as dropdown
+    if (map) {
+      map.panTo({ lat: lat, lng: lng });
+      map.setZoom(18);
+    }
     // Sync dropdown label
     document.getElementById('panel-title').textContent = (entry.name || 'Property') + ' ▾';
     loadPropertyIntoPanel(entry);
