@@ -141,7 +141,25 @@
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
   }
-  .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
+  /* ── Property search dropdown ── */
+  #property-search-wrap { position: relative; display: flex; align-items: center; }
+  #property-search-btn { display: flex; align-items: center; gap: 7px; padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; white-space: nowrap; min-width: 140px; justify-content: space-between; }
+  #property-search-btn:hover { background: var(--surface); color: var(--text); border-color: rgba(255,255,255,0.2); }
+  #property-search-btn.open { border-color: var(--accent); color: var(--text); background: var(--surface); }
+  #property-search-btn .btn-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
+  #property-search-btn .btn-arrow { font-size: 9px; flex-shrink: 0; transition: transform 0.15s; }
+  #property-search-btn.open .btn-arrow { transform: rotate(180deg); }
+  #property-dropdown { position: absolute; top: calc(100% + 6px); right: 0; width: 260px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
+  #property-dropdown.open { display: flex; }
+  #property-search-input { width: 100%; padding: 10px 12px; background: var(--surface2); border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; }
+  #property-search-input::placeholder { color: var(--text3); }
+  #property-list { overflow-y: auto; max-height: 260px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .property-option { padding: 9px 12px; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.1s; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .property-option:last-child { border-bottom: none; }
+  .property-option:hover { background: var(--surface2); color: var(--text); }
+  .property-option.selected { color: var(--accent); background: rgba(59,130,246,0.08); }
+  .property-option-address { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+  #property-list-empty { padding: 16px 12px; font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; text-align: center; } border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
   .gm-style .gm-style-iw-d { overflow: hidden !important; }
   .gm-style .gm-style-iw-t::after { background: #12161b !important; }
   .gm-style .gm-style-iw-tc::after { background: #12161b !important; }
@@ -166,7 +184,17 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.0 — parcel ring</div>
+    <div id="version-badge">v2.3.0 — property search</div>
+    <div id="property-search-wrap">
+      <button id="property-search-btn" onclick="togglePropertyDropdown()" class="">
+        <span class="btn-label">Select Property</span>
+        <span class="btn-arrow">▼</span>
+      </button>
+      <div id="property-dropdown">
+        <input id="property-search-input" type="text" placeholder="Search by name..." oninput="filterPropertyList(this.value)" autocomplete="off">
+        <div id="property-list"><div id="property-list-empty">Loading...</div></div>
+      </div>
+    </div>
     <div id="hoa-name">Loading...</div>
   </div>
 </div>
@@ -219,7 +247,7 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.2.0';
+const VERSION      = 'v2.3.0';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -238,6 +266,7 @@ let intelMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
+let propertyRegistry = [];  // [{entry, marker, lat, lng}] — built as pins are placed
 const isMobile = () => window.innerWidth <= 768;
 const parcelCache = {};
 
@@ -259,6 +288,91 @@ function toggleDebug() {
   b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
 }
 function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
+
+// ── Property search dropdown ───────────────────────────────────────────────
+function togglePropertyDropdown() {
+  const btn      = document.getElementById('property-search-btn');
+  const dropdown = document.getElementById('property-dropdown');
+  const isOpen   = dropdown.classList.contains('open');
+  if (isOpen) {
+    closePropertyDropdown();
+  } else {
+    dropdown.classList.add('open');
+    btn.classList.add('open');
+    setTimeout(function() { document.getElementById('property-search-input').focus(); }, 50);
+    // Close when clicking outside
+    setTimeout(function() {
+      document.addEventListener('click', outsideDropdownClick);
+    }, 10);
+  }
+}
+function closePropertyDropdown() {
+  document.getElementById('property-dropdown').classList.remove('open');
+  document.getElementById('property-search-btn').classList.remove('open');
+  document.getElementById('property-search-input').value = '';
+  renderPropertyList(propertyRegistry);
+  document.removeEventListener('click', outsideDropdownClick);
+}
+function outsideDropdownClick(e) {
+  const wrap = document.getElementById('property-search-wrap');
+  if (wrap && !wrap.contains(e.target)) closePropertyDropdown();
+}
+function buildPropertyList(entries) {
+  // Sort alphabetically by name
+  propertyRegistry = entries.slice().sort(function(a, b) { return a.entry.name.localeCompare(b.entry.name); });
+  renderPropertyList(propertyRegistry);
+}
+function renderPropertyList(items) {
+  const list = document.getElementById('property-list');
+  if (!items || !items.length) {
+    list.innerHTML = '<div id="property-list-empty">No properties found</div>';
+    return;
+  }
+  list.innerHTML = items.map(function(item) {
+    const name    = item.entry.name || 'Unnamed';
+    const address = (item.entry.address || '').replace(/^\s+/, '');
+    const isSelected = activeMarker && activeMarker.getTitle() === name;
+    return '<div class="property-option' + (isSelected ? ' selected' : '') + '" onclick="selectPropertyFromDropdown(\'' + name.replace(/'/g, "\\'") + '\')">'
+      + '<div>' + name + '</div>'
+      + (address ? '<div class="property-option-address">' + address + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+function filterPropertyList(query) {
+  if (!query) { renderPropertyList(propertyRegistry); return; }
+  const q = query.toLowerCase();
+  const filtered = propertyRegistry.filter(function(item) {
+    return (item.entry.name || '').toLowerCase().includes(q) ||
+           (item.entry.address || '').toLowerCase().includes(q);
+  });
+  renderPropertyList(filtered);
+}
+function selectPropertyFromDropdown(name) {
+  const item = propertyRegistry.find(function(i) { return i.entry.name === name; });
+  if (!item) return;
+  closePropertyDropdown();
+  document.getElementById('property-search-btn').querySelector('.btn-label').textContent = name;
+
+  // Zoom map to property
+  if (map && item.lat && item.lng) {
+    map.panTo({ lat: item.lat, lng: item.lng });
+    map.setZoom(18);
+  }
+
+  // Simulate marker click — highlight pin and load panel
+  if (activeMarker) {
+    activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
+  }
+  if (item.marker) {
+    item.marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
+    item.marker.setAnimation(google.maps.Animation.BOUNCE);
+    setTimeout(function() { if (item.marker) item.marker.setAnimation(null); }, 700);
+    activeMarker = item.marker;
+  }
+  loadPropertyIntoPanel(item.entry);
+  if (!panelOpen) togglePanel();
+  dbg('Selected from dropdown: ' + name, 'ok');
+}
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -494,6 +608,9 @@ function placePin(entry, lat, lng, bounds) {
     if (!panelOpen) togglePanel();
   });
   allMarkers.push(marker);
+  // Update registry entry with marker reference and resolved coordinates
+  var regEntry = propertyRegistry.find(function(r) { return r.entry === entry; });
+  if (regEntry) { regEntry.marker = marker; regEntry.lat = lat; regEntry.lng = lng; }
   dbg('Pin placed: ' + entry.name, 'ok');
 }
 
@@ -701,6 +818,13 @@ async function loadHoaData() {
       .filter(Boolean);
     dbg('Matched ' + entries.length + ' properties', 'ok');
     document.getElementById('property-count').textContent = entries.length + ' properties in this community';
+
+    // Pre-populate dropdown with entries — markers fill in as pins are placed
+    propertyRegistry = entries.map(function(e) {
+      return { entry: e, marker: null, lat: e.lat || null, lng: e.lng || null };
+    }).sort(function(a, b) { return a.entry.name.localeCompare(b.entry.name); });
+    buildPropertyList(entries);
+
     hideLoading();
     if (mapsApiReady) { initMap(); dropAllPins(entries); }
     else { window._pendingEntries = entries; }
