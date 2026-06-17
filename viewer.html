@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.6 — ground view</div>
+    <div id="version-badge">v2.2.7 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -496,31 +496,28 @@ function initMap(lat, lng, storedRing) {
     flushPendingMapData();
 
     // ── Pegman intercept ──────────────────────────────────────────────────
-    // When the user drops the pegman, switch to Ground tab and hide pins
+    // When the user drops the pegman, switch to Ground tab and use same
+    // showStreetView() path as the panel button — consistent behaviour
     const sv = map.getStreetView();
     sv.addListener('visible_changed', function() {
       if (sv.getVisible()) {
-        // Pegman dropped — treat as entering Street View from Ground tab
         if (!streetViewActive && !matterportActive) {
-          // Switch to Ground tab if not already there
           if (currentViews && currentViews['tour']) {
             loadView(currentViews, 'tour').then(() => {
-              // After tab loads, mark street view active and hide pins
-              streetViewActive = true;
-              activeMarkers.forEach(m => m.setMap(null));
-              document.getElementById('map-controls').style.display = 'none';
-              // Highlight Street View button in panel
-              const btn = document.getElementById('panel-btn-streetview');
-              if (btn) btn.classList.add('active');
+              // Dismiss Google's built-in SV takeover — we render in our overlay
+              sv.setVisible(false);
+              map.setStreetView(null);
+              // Now launch via panel path so overlay + state are consistent
+              showStreetView();
               dbg('Pegman dropped — Ground tab activated', 'ok');
             });
           } else {
-            // No tour tab available, just hide pins
-            activeMarkers.forEach(m => m.setMap(null));
+            sv.setVisible(false);
+            map.setStreetView(null);
+            showStreetView();
           }
         }
       } else {
-        // Pegman returned — exit immersive cleanly if it was pegman-initiated
         if (streetViewActive) {
           exitImmersive();
           dbg('Pegman returned — exited ground view', 'info');
@@ -760,24 +757,19 @@ function showStreetView() {
   const d = currentViewData;
   if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
 
-  // If Street View is already active (pegman-initiated), just update panel state
-  // — don't reinitialize or it will reset the map back to satellite
-  if (streetViewActive) {
-    matterportActive = false;
-    buildInteriorPanel(d);
-    dbg('Street View already active', 'info');
-    return;
-  }
+  // If Matterport was active, clear it first
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
 
-  // Hide pins before Street View loads
+  // Hide pins and map controls
   activeMarkers.forEach(m => m.setMap(null));
   document.getElementById('map-controls').style.display = 'none';
 
+  // Show the immersive overlay with Street View div
+  document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('street-view-div').classList.add('visible');
-  document.getElementById('matterport-iframe').classList.remove('visible');
-  document.getElementById('matterport-iframe').src = '';
 
-  // Render into the street-view-div
+  // Render Street View panorama into overlay div
   const svDiv = document.getElementById('street-view-div');
   const panorama = new google.maps.StreetViewPanorama(svDiv, {
     position: { lat: d.lat, lng: d.lng },
@@ -788,9 +780,6 @@ function showStreetView() {
     motionTrackingControl: false
   });
   map.setStreetView(panorama);
-
-  // Show the immersive overlay frame
-  document.getElementById('immersive-overlay').classList.add('visible');
 
   matterportActive = false;
   streetViewActive = true;
