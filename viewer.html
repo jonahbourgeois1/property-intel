@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.3 — ground view</div>
+    <div id="version-badge">v2.2.4 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -681,6 +681,9 @@ function launchImmersive(mode) {
   const overlay = document.getElementById('immersive-overlay');
   overlay.classList.add('visible');
 
+  // Hide all intel pins from the map while immersive is active
+  activeMarkers.forEach(m => m.setMap(null));
+
   // Hide map controls while immersive is open
   document.getElementById('map-controls').style.display = 'none';
 
@@ -751,6 +754,9 @@ function exitImmersive() {
 
   // Restore map controls
   document.getElementById('map-controls').style.display = '';
+
+  // Restore intel pins to map
+  activeMarkers.forEach(m => m.setMap(map));
 
   matterportActive = false;
   streetViewActive = false;
