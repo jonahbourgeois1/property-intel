@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.5 — ground view</div>
+    <div id="version-badge">v2.2.6 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -732,6 +732,19 @@ function showMatterport() {
   const d = currentViewData;
   if (!d || !d.viewer360) { dbg('No Matterport URL available', 'warn'); return; }
 
+  // If Street View was active via pegman, dismiss it cleanly first
+  if (streetViewActive) {
+    const sv = map && map.getStreetView();
+    if (sv) sv.setVisible(false);
+    map.setStreetView(null);
+    document.getElementById('street-view-div').classList.remove('visible');
+  }
+
+  // Ensure overlay is visible and pins hidden
+  document.getElementById('immersive-overlay').classList.add('visible');
+  document.getElementById('map-controls').style.display = 'none';
+  activeMarkers.forEach(m => m.setMap(null));
+
   document.getElementById('matterport-iframe').src = d.viewer360;
   document.getElementById('matterport-iframe').classList.add('visible');
   document.getElementById('street-view-div').classList.remove('visible');
@@ -739,7 +752,6 @@ function showMatterport() {
   matterportActive = true;
   streetViewActive = false;
 
-  // Refresh panel to show active state and exit button
   buildInteriorPanel(d);
   dbg('Matterport tour loaded', 'ok');
 }
@@ -748,18 +760,22 @@ function showStreetView() {
   const d = currentViewData;
   if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
 
+  // If Street View is already active (pegman-initiated), just update panel state
+  // — don't reinitialize or it will reset the map back to satellite
+  if (streetViewActive) {
+    matterportActive = false;
+    buildInteriorPanel(d);
+    dbg('Street View already active', 'info');
+    return;
+  }
+
   // Hide pins before Street View loads
   activeMarkers.forEach(m => m.setMap(null));
+  document.getElementById('map-controls').style.display = 'none';
 
   document.getElementById('street-view-div').classList.add('visible');
   document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('matterport-iframe').src = '';
-
-  // Use the map's built-in Street View panorama so pegman stays in sync
-  const sv = map.getStreetView();
-  sv.setPosition({ lat: d.lat, lng: d.lng });
-  sv.setPov({ heading: 0, pitch: 0 });
-  sv.setOptions({ addressControl: false, fullscreenControl: false, motionTrackingControl: false });
 
   // Render into the street-view-div
   const svDiv = document.getElementById('street-view-div');
@@ -773,10 +789,12 @@ function showStreetView() {
   });
   map.setStreetView(panorama);
 
+  // Show the immersive overlay frame
+  document.getElementById('immersive-overlay').classList.add('visible');
+
   matterportActive = false;
   streetViewActive = true;
 
-  // Refresh panel to show active state and exit button
   buildInteriorPanel(d);
   dbg('Street View loaded at ' + d.lat.toFixed(5) + ',' + d.lng.toFixed(5), 'ok');
 }
