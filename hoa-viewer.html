@@ -364,19 +364,10 @@ function selectPropertyFromDropdown(name) {
   closePropertyDropdown();
   document.getElementById('panel-title').textContent = name + ' ▾';
 
-  // Zoom map and redraw only selected property's parcel boundary
+  // Zoom map to property
   if (map && item.lat && item.lng) {
     map.panTo({ lat: item.lat, lng: item.lng });
     map.setZoom(18);
-    allPolygons.forEach(function(p) { p.setMap(null); });
-    allPolygons = [];
-    var propId = item.entry.hash || (item.entry.views && (item.entry.views.security || item.entry.views.wildfire));
-    if (propId) {
-      fetch(BASE_URL + propId + '.json')
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(d) { drawParcelBoundaryForProperty(item.lat, item.lng, map, d && d.parcel_ring || null); })
-        .catch(function() { drawParcelBoundaryForProperty(item.lat, item.lng, map, null); });
-    }
   }
 
   // Highlight pin and load panel
@@ -609,22 +600,21 @@ function placePin(entry, lat, lng, bounds) {
     zIndex: 10
   });
   if (bounds) bounds.extend({ lat: lat, lng: lng });
-  // Parcel boundary drawn on selection only — not on initial pin placement
+  // Draw parcel boundary for every property on load
+  var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
+  if (propId) {
+    fetch(BASE_URL + propId + '.json')
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(d) { drawParcelBoundaryForProperty(lat, lng, map, d && d.parcel_ring || null); })
+      .catch(function() { drawParcelBoundaryForProperty(lat, lng, map, null); });
+  } else {
+    drawParcelBoundaryForProperty(lat, lng, map, null);
+  }
   marker.addListener('click', function() {
     dbg('Pin clicked: ' + entry.name, 'info');
     if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
     marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     activeMarker = marker;
-    // Clear all parcel polygons — redraw only selected property's boundary
-    allPolygons.forEach(function(p) { p.setMap(null); });
-    allPolygons = [];
-    var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
-    if (propId) {
-      fetch(BASE_URL + propId + '.json')
-        .then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(d) { drawParcelBoundaryForProperty(lat, lng, map, d && d.parcel_ring || null); })
-        .catch(function() { drawParcelBoundaryForProperty(lat, lng, map, null); });
-    }
     // Sync dropdown label
     document.getElementById('panel-title').textContent = (entry.name || 'Property') + ' ▾';
     loadPropertyIntoPanel(entry);
