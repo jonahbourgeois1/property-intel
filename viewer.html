@@ -174,11 +174,10 @@
   .interior-exit-btn:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
 
   /* ── Ground view active banner ── */
-  #ground-banner { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: rgba(205,51,51,0.08); border-bottom: 1px solid rgba(205,51,51,0.25); flex-shrink: 0; }
-  #ground-banner .ground-banner-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--red); display: flex; align-items: center; gap: 6px; }
-  #ground-banner .ground-banner-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block; animation: pulse 2s infinite; }
-  #ground-banner .ground-banner-exit { font-size: 11px; font-weight: 500; color: var(--red); cursor: pointer; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(205,51,51,0.4); background: transparent; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
-  #ground-banner .ground-banner-exit:hover { background: rgba(205,51,51,0.15); }
+  #ground-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(205,51,51,0.08); border-bottom: 1px solid rgba(205,51,51,0.25); flex-shrink: 0; gap: 12px; }
+  #ground-banner .ground-banner-label { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--red); font-weight: 500; }
+  #ground-banner .ground-banner-exit { display: flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
+  #ground-banner .ground-banner-exit:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
 
   @media (max-width: 768px) {
     #immersive-overlay { right: 0; }
@@ -195,7 +194,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.3.0 — ground view</div>
+    <div id="version-badge">v2.3.1 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -714,11 +713,6 @@ function buildInteriorPanel(d) {
 
   html += '</div></div>';
 
-  // Exit button — only shown when a view is active
-  if (isActive) {
-    html += `<button class="interior-exit-btn" onclick="exitImmersive()">✕ Exit Ground View</button>`;
-  }
-
   document.getElementById('panel-content').innerHTML = html;
 }
 
@@ -818,15 +812,25 @@ function exitImmersive() {
   // Restore map controls
   document.getElementById('map-controls').style.display = '';
 
-  // Restore intel pins to map
-  activeMarkers.forEach(m => m.setMap(map));
-
   matterportActive = false;
   streetViewActive = false;
 
-  // Hide ground banner and refresh panel
+  // Restore intel pins immediately now that immersive is inactive
+  activeMarkers.forEach(m => m.setMap(map));
+
+  // Hide ground banner
   updateGroundBanner();
-  if (currentViewData) buildInteriorPanel(currentViewData);
+
+  // Reload the currently active tab so panel content and pins are correct
+  const activeTab = document.querySelector('.view-tab.active');
+  const activeView = activeTab ? activeTab.getAttribute('data-view') : null;
+
+  if (activeView && activeView !== 'tour' && currentViews && currentViews[activeView]) {
+    loadView(currentViews, activeView);
+  } else {
+    // Fallback to Ground tab
+    if (currentViewData) buildInteriorPanel(currentViewData);
+  }
 
   dbg('Exited ground view', 'info');
 }
