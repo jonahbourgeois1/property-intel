@@ -261,8 +261,8 @@ const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER   = ['security','wildfire','interior','satellite','plane','drone'];
-const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', interior:'Interior', satellite:'Satellite', plane:'Plane', drone:'Drone' };
+const VIEW_ORDER   = ['security','wildfire','tour','satellite','plane','drone','interior'];
+const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', tour:'Interior', satellite:'Satellite', plane:'Plane', drone:'Drone', interior:'Interior' };
 
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
@@ -777,8 +777,8 @@ async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
 
-  // Exit immersive if switching away from interior
-  if (viewSuffix !== 'interior' && (matterportActive || streetViewActive)) {
+  // Exit immersive if switching away from tour tab
+  if (viewSuffix !== 'tour' && (matterportActive || streetViewActive)) {
     exitImmersive();
   }
 
@@ -793,11 +793,11 @@ async function loadView(views, viewSuffix) {
     const centerLat = d.lat || (map ? map.getCenter().lat() : 0);
     const centerLng = d.lng || (map ? map.getCenter().lng() : 0);
 
-    if (viewSuffix === 'security' && d.fr)          { buildSecurityPanel(d, centerLat, centerLng); }
-    else if (viewSuffix === 'wildfire' && d.wildfire){ buildWildfirePanel(d, centerLat, centerLng); }
-    else if (viewSuffix === 'interior')              { buildInteriorPanel(d); }
-    else if (d.fr || d.wildfire)                    { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
-    else                                             { buildPanel(d); }
+    if (viewSuffix === 'security' && d.fr)           { buildSecurityPanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'tour')                   { buildInteriorPanel(d); }
+    else if (d.fr || d.wildfire)                     { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
+    else                                              { buildPanel(d); }
 
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
@@ -837,11 +837,12 @@ async function loadPropertyData() {
     const propRes = await fetch(BASE_URL + propertyHash + '.json');
     const propData = propRes.ok ? await propRes.json() : null;
 
-    // Inject interior tab if viewer360 exists — points to same property JSON
+    // Use 'tour' key for the immersive Interior tab — avoids collision with
+    // existing 'interior' key that may point to old Plane/Drone/Interior sheet data
     const views = Object.assign({}, entry.views);
     if (propData && propData.viewer360) {
-      views.interior = propertyHash;
-      dbg('viewer360 found — Interior tab enabled', 'ok');
+      views['tour'] = propertyHash;
+      dbg('viewer360 found — Tour tab enabled', 'ok');
     }
     currentViews = views;
 
