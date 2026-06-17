@@ -170,8 +170,8 @@
   .interior-action-label { font-size: 12px; font-weight: 600; color: var(--text); }
   .interior-action-desc { font-size: 11px; color: var(--text3); margin-top: 1px; }
   .interior-action-arrow { font-size: 14px; color: var(--text3); }
-  .interior-exit-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 16px; padding: 9px 14px; border-radius: 7px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
-  .interior-exit-btn:hover { border-color: var(--red); color: var(--red); background: rgba(205,51,51,0.06); }
+  .interior-exit-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 16px; padding: 9px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .interior-exit-btn:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
 
   @media (max-width: 768px) {
     #immersive-overlay { right: 0; }
@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.1 — ground view</div>
+    <div id="version-badge">v2.2.3 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -246,8 +246,8 @@ const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER   = ['security','wildfire','tour','satellite','plane','drone','interior'];
-const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', tour:'Ground', satellite:'Satellite', plane:'Plane', drone:'Drone', interior:'Interior' };
+const VIEW_ORDER   = ['security','wildfire','plane','drone','tour'];
+const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone' };
 
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
