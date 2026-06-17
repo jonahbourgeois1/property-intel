@@ -24,8 +24,22 @@
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
   .header-right { display: flex; align-items: center; gap: 10px; }
-  #hoa-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  #hoa-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; user-select: none; transition: all 0.15s; }
+  #hoa-name:hover { border-color: var(--border2); color: var(--text); }
+  #hoa-name.open { border-color: var(--accent); color: var(--text); }
+  /* ── Property search dropdown ── */
+  #property-search-wrap { position: relative; display: flex; align-items: center; }
+  #property-dropdown { position: absolute; top: calc(100% + 6px); right: 0; width: 260px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
+  #property-dropdown.open { display: flex; }
+  #property-search-input { width: 100%; padding: 10px 12px; background: var(--surface2); border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; }
+  #property-search-input::placeholder { color: var(--text3); }
+  #property-list { overflow-y: auto; max-height: 260px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  .property-option { padding: 9px 12px; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.1s; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .property-option:last-child { border-bottom: none; }
+  .property-option:hover { background: var(--surface2); color: var(--text); }
+  .property-option.selected { color: var(--accent); background: rgba(59,130,246,0.08); }
+  .property-option-address { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
+  #property-list-empty { padding: 16px 12px; font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; text-align: center; }
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
   #map { flex: 1; background: var(--bg); min-width: 0; }
   #loading { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
@@ -185,18 +199,14 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.3.0 — property search</div>
+    <div id="version-badge">v2.3.1 — property search</div>
     <div id="property-search-wrap">
-      <button id="property-search-btn" onclick="togglePropertyDropdown()">
-        <span class="btn-label">Select Property</span>
-        <span class="btn-arrow">▼</span>
-      </button>
+      <div id="hoa-name" onclick="togglePropertyDropdown()">Select Property ▼</div>
       <div id="property-dropdown">
         <input id="property-search-input" type="text" placeholder="Search by name..." oninput="filterPropertyList(this.value)" autocomplete="off">
         <div id="property-list"><div id="property-list-empty">Loading...</div></div>
       </div>
     </div>
-    <div id="hoa-name">Loading...</div>
   </div>
 </div>
 <div id="main">
@@ -292,24 +302,21 @@ function clearDebug() { const l = document.getElementById('debug-log'); if (l) l
 
 // ── Property search dropdown ───────────────────────────────────────────────
 function togglePropertyDropdown() {
-  const btn      = document.getElementById('property-search-btn');
+  const trigger  = document.getElementById('hoa-name');
   const dropdown = document.getElementById('property-dropdown');
   const isOpen   = dropdown.classList.contains('open');
   if (isOpen) {
     closePropertyDropdown();
   } else {
     dropdown.classList.add('open');
-    btn.classList.add('open');
+    trigger.classList.add('open');
     setTimeout(function() { document.getElementById('property-search-input').focus(); }, 50);
-    // Close when clicking outside
-    setTimeout(function() {
-      document.addEventListener('click', outsideDropdownClick);
-    }, 10);
+    setTimeout(function() { document.addEventListener('click', outsideDropdownClick); }, 10);
   }
 }
 function closePropertyDropdown() {
   document.getElementById('property-dropdown').classList.remove('open');
-  document.getElementById('property-search-btn').classList.remove('open');
+  document.getElementById('hoa-name').classList.remove('open');
   document.getElementById('property-search-input').value = '';
   renderPropertyList(propertyRegistry);
   document.removeEventListener('click', outsideDropdownClick);
@@ -356,15 +363,24 @@ function selectPropertyFromDropdown(name) {
   const item = propertyRegistry.find(function(i) { return i.entry.name === name; });
   if (!item) return;
   closePropertyDropdown();
-  document.getElementById('property-search-btn').querySelector('.btn-label').textContent = name;
+  document.getElementById('hoa-name').textContent = name + ' ▼';
 
-  // Zoom map to property
+  // Zoom map and redraw only selected property's parcel boundary
   if (map && item.lat && item.lng) {
     map.panTo({ lat: item.lat, lng: item.lng });
     map.setZoom(18);
+    allPolygons.forEach(function(p) { p.setMap(null); });
+    allPolygons = [];
+    var propId = item.entry.hash || (item.entry.views && (item.entry.views.security || item.entry.views.wildfire));
+    if (propId) {
+      fetch(BASE_URL + propId + '.json')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { drawParcelBoundaryForProperty(item.lat, item.lng, map, d && d.parcel_ring || null); })
+        .catch(function() { drawParcelBoundaryForProperty(item.lat, item.lng, map, null); });
+    }
   }
 
-  // Simulate marker click — highlight pin and load panel
+  // Highlight pin and load panel
   if (activeMarker) {
     activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
   }
@@ -594,21 +610,24 @@ function placePin(entry, lat, lng, bounds) {
     zIndex: 10
   });
   if (bounds) bounds.extend({ lat: lat, lng: lng });
-  // Fetch property JSON to get stored parcel ring — avoids drawing adjacent parcels
-  var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
-  if (propId) {
-    fetch(BASE_URL + propId + '.json')
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(d) { drawParcelBoundaryForProperty(lat, lng, map, d && d.parcel_ring || null); })
-      .catch(function() { drawParcelBoundaryForProperty(lat, lng, map, null); });
-  } else {
-    drawParcelBoundaryForProperty(lat, lng, map, null);
-  }
+  // Parcel boundary drawn on selection only — not on initial pin placement
   marker.addListener('click', function() {
     dbg('Pin clicked: ' + entry.name, 'info');
     if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
     marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     activeMarker = marker;
+    // Clear all parcel polygons — redraw only selected property's boundary
+    allPolygons.forEach(function(p) { p.setMap(null); });
+    allPolygons = [];
+    var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
+    if (propId) {
+      fetch(BASE_URL + propId + '.json')
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(d) { drawParcelBoundaryForProperty(lat, lng, map, d && d.parcel_ring || null); })
+        .catch(function() { drawParcelBoundaryForProperty(lat, lng, map, null); });
+    }
+    // Sync dropdown label
+    document.getElementById('hoa-name').textContent = (entry.name || 'Property') + ' ▼';
     loadPropertyIntoPanel(entry);
     if (!panelOpen) togglePanel();
   });
