@@ -249,7 +249,7 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.2.0';
+const VERSION      = 'v2.3.1';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
@@ -263,6 +263,7 @@ let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
 let streetViewActive = false, matterportActive = false;
+let frMode = false;  // true when opened with ?mode=fr — hides tab bar, locks to single view
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
@@ -879,8 +880,10 @@ async function loadPropertyData() {
   dbg(VERSION + ' — Property Intel loaded', 'ok');
   const params = new URLSearchParams(window.location.search);
   const propertyHash = params.get('property');
-  const tabParam = params.get('tab');
+  const tabParam     = params.get('tab');
+  frMode             = params.get('mode') === 'fr';
   if (!propertyHash) { showError('No property ID provided.'); return; }
+  if (frMode) dbg('FR mode — single view, tabs hidden', 'info');
   dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
     setLoading('Loading property index...');
@@ -896,8 +899,7 @@ async function loadPropertyData() {
     const propRes = await fetch(BASE_URL + propertyHash + '.json');
     const propData = propRes.ok ? await propRes.json() : null;
 
-    // Use 'tour' key for the immersive Interior tab — avoids collision with
-    // existing 'interior' key that may point to old Plane/Drone/Interior sheet data
+    // Use 'tour' key for the immersive Interior tab
     const views = Object.assign({}, entry.views);
     if (propData && propData.viewer360) {
       views['tour'] = propertyHash;
@@ -906,12 +908,21 @@ async function loadPropertyData() {
     currentViews = views;
 
     document.getElementById('property-name').textContent = entry.name;
-    document.getElementById('panel-title').textContent = entry.name;
+    document.getElementById('panel-title').textContent   = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+
+    // FR mode: hide tab bar entirely — first responder sees only the linked view
+    if (frMode) {
+      document.getElementById('view-tabs').style.display = 'none';
+    }
+
     const firstView = (tabParam && views[tabParam]) ? tabParam : VIEW_ORDER.find(v => views[v]);
     if (!firstView) { showError('No views available.'); return; }
     dbg('Available views: ' + Object.keys(views).join(', '), 'info');
-    buildTabs(views, firstView);
+
+    // In FR mode skip buildTabs — tabs are hidden
+    if (!frMode) buildTabs(views, firstView);
+
     setLoading('Loading ' + firstView + '...');
     await loadView(views, firstView);
     // loadView complete — currentViewData now has parcel_ring if available
@@ -920,7 +931,7 @@ async function loadPropertyData() {
     if (mapsApiReady) {
       resolveAndInitMap(entry, storedRing);
     } else {
-      pendingEntry = entry;
+      pendingEntry     = entry;
       pendingStoredRing = storedRing;
     }
   } catch(e) { showError('Failed to load property: ' + e.message); }
