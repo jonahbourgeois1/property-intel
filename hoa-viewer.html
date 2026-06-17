@@ -24,12 +24,13 @@
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
   .header-right { display: flex; align-items: center; gap: 10px; }
-  #hoa-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; user-select: none; transition: all 0.15s; }
-  #hoa-name:hover { border-color: var(--border2); color: var(--text); }
-  #hoa-name.open { border-color: var(--accent); color: var(--text); }
+  #hoa-badge { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; user-select: none; transition: color 0.15s; display: inline-flex; align-items: center; gap: 5px; }
+  .panel-title:hover { color: var(--accent); }
+  .panel-title.open { color: var(--accent); }
   /* ── Property search dropdown ── */
-  #property-search-wrap { position: relative; display: flex; align-items: center; }
-  #property-dropdown { position: absolute; top: calc(100% + 6px); right: 0; width: 260px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
+  #property-search-wrap { position: relative; }
+  #property-dropdown { position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
   #property-dropdown.open { display: flex; }
   #property-search-input { width: 100%; padding: 10px 12px; background: var(--surface2); border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; }
   #property-search-input::placeholder { color: var(--text3); }
@@ -144,7 +145,7 @@
   #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
   #debug-clear:hover { color: var(--text2); }
   @media (max-width: 768px) {
-    #hoa-name { display: none; }
+    #hoa-badge { display: none; }
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
     #map { position: absolute; inset: 0; width: 100%; height: 100%; }
@@ -200,13 +201,7 @@
   </div>
   <div class="header-right">
     <div id="version-badge">v2.3.1 — property search</div>
-    <div id="property-search-wrap">
-      <div id="hoa-name" onclick="togglePropertyDropdown()">Select Property ▼</div>
-      <div id="property-dropdown">
-        <input id="property-search-input" type="text" placeholder="Search by name..." oninput="filterPropertyList(this.value)" autocomplete="off">
-        <div id="property-list"><div id="property-list-empty">Loading...</div></div>
-      </div>
-    </div>
+    <div id="hoa-badge">Loading...</div>
   </div>
 </div>
 <div id="main">
@@ -220,9 +215,13 @@
   <div id="error"><div class="error-icon">⚠</div><div class="error-title">Community not found</div><div class="error-msg" id="error-msg">No HOA data provided.</div></div>
   <div id="panel">
     <div class="panel-header">
-      <div>
-        <div class="panel-title" id="panel-title">Community Intel</div>
+      <div id="property-search-wrap" style="flex:1; min-width:0;">
+        <div class="panel-title" id="panel-title" onclick="togglePropertyDropdown()">Community Intel ▾</div>
         <div class="panel-address" id="panel-address"></div>
+        <div id="property-dropdown">
+          <input id="property-search-input" type="text" placeholder="Search by name..." oninput="filterPropertyList(this.value)" autocomplete="off">
+          <div id="property-list"><div id="property-list-empty">Loading...</div></div>
+        </div>
       </div>
       <button class="close-btn" onclick="togglePanel()">✕</button>
     </div>
@@ -302,7 +301,7 @@ function clearDebug() { const l = document.getElementById('debug-log'); if (l) l
 
 // ── Property search dropdown ───────────────────────────────────────────────
 function togglePropertyDropdown() {
-  const trigger  = document.getElementById('hoa-name');
+  const trigger  = document.getElementById('panel-title');
   const dropdown = document.getElementById('property-dropdown');
   const isOpen   = dropdown.classList.contains('open');
   if (isOpen) {
@@ -316,7 +315,7 @@ function togglePropertyDropdown() {
 }
 function closePropertyDropdown() {
   document.getElementById('property-dropdown').classList.remove('open');
-  document.getElementById('hoa-name').classList.remove('open');
+  document.getElementById('panel-title').classList.remove('open');
   document.getElementById('property-search-input').value = '';
   renderPropertyList(propertyRegistry);
   document.removeEventListener('click', outsideDropdownClick);
@@ -363,7 +362,7 @@ function selectPropertyFromDropdown(name) {
   const item = propertyRegistry.find(function(i) { return i.entry.name === name; });
   if (!item) return;
   closePropertyDropdown();
-  document.getElementById('hoa-name').textContent = name + ' ▼';
+  document.getElementById('panel-title').textContent = name + ' ▾';
 
   // Zoom map and redraw only selected property's parcel boundary
   if (map && item.lat && item.lng) {
@@ -627,7 +626,7 @@ function placePin(entry, lat, lng, bounds) {
         .catch(function() { drawParcelBoundaryForProperty(lat, lng, map, null); });
     }
     // Sync dropdown label
-    document.getElementById('hoa-name').textContent = (entry.name || 'Property') + ' ▼';
+    document.getElementById('panel-title').textContent = (entry.name || 'Property') + ' ▾';
     loadPropertyIntoPanel(entry);
     if (!panelOpen) togglePanel();
   });
@@ -782,7 +781,7 @@ async function loadPropertyIntoPanel(entry) {
   try {
     dbg('Loading panel for: ' + entry.name, 'info');
     currentViews = entry.views;
-    document.getElementById('panel-title').textContent = entry.name;
+    document.getElementById('panel-title').textContent = entry.name + ' ▾';
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
     const welcome = document.getElementById('welcome');
     if (welcome) welcome.style.display = 'none';
@@ -825,8 +824,8 @@ async function loadHoaData() {
     if (!hoaRes.ok) { showError('HOA not found: ' + hoaSlug); return; }
     hoaData = await hoaRes.json();
     dbg('HOA loaded: ' + hoaData.name + ' (' + hoaData.properties.length + ' properties)', 'ok');
-    document.getElementById('hoa-name').textContent = hoaData.name;
-    document.getElementById('panel-title').textContent = hoaData.name;
+    document.getElementById('hoa-badge').textContent = hoaData.name;
+    document.getElementById('panel-title').textContent = hoaData.name + ' — Select Property ▾';
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
