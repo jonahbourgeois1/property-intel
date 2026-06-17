@@ -145,6 +145,41 @@
   .rec-label.security { color: var(--green); }
   .rec-label.wildfire { color: var(--orange); }
   .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
+
+  /* ── Interior / Street View overlay ── */
+  #immersive-overlay { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; z-index: 30; display: none; flex-direction: column; background: var(--bg); }
+  #immersive-overlay.visible { display: flex; }
+  #immersive-toggle-bar { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .immersive-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; border: 1px solid var(--border2); background: var(--surface2); color: var(--text2); transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .immersive-btn:hover { background: var(--surface); color: var(--text); }
+  .immersive-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
+  .immersive-btn.exit { margin-left: auto; color: var(--text3); }
+  .immersive-btn.exit:hover { color: var(--red); border-color: var(--red); }
+  #immersive-frame { flex: 1; position: relative; background: #000; }
+  #matterport-iframe { width: 100%; height: 100%; border: none; display: none; }
+  #matterport-iframe.visible { display: block; }
+  #street-view-div { width: 100%; height: 100%; display: none; }
+  #street-view-div.visible { display: block; }
+  .immersive-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 13px; }
+  .immersive-placeholder-icon { font-size: 48px; opacity: 0.4; }
+
+  /* Interior panel content */
+  .interior-launch-card { margin: 16px; border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; background: var(--surface2); }
+  .interior-card-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .interior-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .interior-card-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .interior-card-actions { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; }
+  .interior-action-btn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 7px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .interior-action-btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .interior-action-icon { font-size: 18px; flex-shrink: 0; }
+  .interior-action-text { flex: 1; }
+  .interior-action-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .interior-action-desc { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .interior-action-arrow { font-size: 14px; color: var(--text3); }
+
+  @media (max-width: 768px) {
+    #immersive-overlay { right: 0; }
+  }
 </style>
 </head>
 <body>
@@ -157,12 +192,31 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.1.1 — parcel ring fix</div>
+    <div id="version-badge">v2.2.0 — interior view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
 <div id="main">
   <div id="map"></div>
+
+  <!-- Immersive overlay — sits above map, below panel -->
+  <div id="immersive-overlay">
+    <div id="immersive-toggle-bar">
+      <button class="immersive-btn" id="btn-street-view" onclick="showStreetView()">
+        🚶 Street View
+      </button>
+      <button class="immersive-btn" id="btn-matterport" onclick="showMatterport()">
+        🏠 Property Tour
+      </button>
+      <button class="immersive-btn exit" onclick="exitImmersive()">
+        ✕ Exit
+      </button>
+    </div>
+    <div id="immersive-frame">
+      <div id="street-view-div"></div>
+      <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking"></iframe>
+    </div>
+  </div>
   <div id="map-controls">
     <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()" title="Toggle nadir image overlay">
       <span class="ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
@@ -200,19 +254,20 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.1.0';
+const VERSION      = 'v2.2.0';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER   = ['security','wildfire','satellite','plane','drone','interior'];
-const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', satellite:'Satellite', plane:'Plane', drone:'Drone', interior:'Interior' };
+const VIEW_ORDER   = ['security','wildfire','interior','satellite','plane','drone'];
+const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', interior:'Interior', satellite:'Satellite', plane:'Plane', drone:'Drone' };
 
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
+let streetViewActive = false, matterportActive = false;
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
@@ -584,23 +639,166 @@ function buildPanel(d) {
   }
   document.getElementById('panel-content').innerHTML = html;
 }
+
+// ── Interior panel ─────────────────────────────────────────────────────────
+function buildInteriorPanel(d) {
+  clearMarkers();
+  if (groundOverlay) { groundOverlay.setMap(null); }
+
+  const hasMatterport = !!(d.viewer360);
+  const hasStreetView = !!(d.lat && d.lng);
+
+  let html = '<div class="interior-launch-card">';
+  html += '<div class="interior-card-header">';
+  html += '<div class="interior-card-title">Immersive Property Views</div>';
+  html += '<div class="interior-card-sub">Full 360° interior and exterior access</div>';
+  html += '</div><div class="interior-card-actions">';
+
+  if (hasMatterport) {
+    html += `<div class="interior-action-btn" onclick="launchImmersive('matterport')">
+      <div class="interior-action-icon">🏠</div>
+      <div class="interior-action-text">
+        <div class="interior-action-label">Property Tour</div>
+        <div class="interior-action-desc">Interior & exterior 360° walkthrough</div>
+      </div>
+      <div class="interior-action-arrow">›</div>
+    </div>`;
+  }
+
+  if (hasStreetView) {
+    html += `<div class="interior-action-btn" onclick="launchImmersive('streetview')">
+      <div class="interior-action-icon">🚶</div>
+      <div class="interior-action-text">
+        <div class="interior-action-label">Street View</div>
+        <div class="interior-action-desc">Google Street View approach & surroundings</div>
+      </div>
+      <div class="interior-action-arrow">›</div>
+    </div>`;
+  }
+
+  if (!hasMatterport && !hasStreetView) {
+    html += '<div class="panel-empty">No immersive views available for this property.</div>';
+  }
+
+  html += '</div></div>';
+  document.getElementById('panel-content').innerHTML = html;
+}
+
+// ── Immersive view controls ────────────────────────────────────────────────
+function launchImmersive(mode) {
+  const overlay = document.getElementById('immersive-overlay');
+  overlay.classList.add('visible');
+
+  // Hide map controls while immersive is open
+  document.getElementById('map-controls').style.display = 'none';
+
+  if (mode === 'matterport') {
+    showMatterport();
+  } else {
+    showStreetView();
+  }
+}
+
+function showMatterport() {
+  const d = currentViewData;
+  if (!d || !d.viewer360) { dbg('No Matterport URL available', 'warn'); return; }
+
+  document.getElementById('matterport-iframe').src = d.viewer360;
+  document.getElementById('matterport-iframe').classList.add('visible');
+  document.getElementById('street-view-div').classList.remove('visible');
+  document.getElementById('btn-matterport').classList.add('active');
+  document.getElementById('btn-street-view').classList.remove('active');
+
+  // Hide street view button if no coords
+  if (!d.lat || !d.lng) document.getElementById('btn-street-view').style.display = 'none';
+  matterportActive = true;
+  streetViewActive = false;
+  dbg('Matterport tour loaded', 'ok');
+}
+
+function showStreetView() {
+  const d = currentViewData;
+  if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
+
+  document.getElementById('street-view-div').classList.add('visible');
+  document.getElementById('matterport-iframe').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('btn-street-view').classList.add('active');
+  document.getElementById('btn-matterport').classList.remove('active');
+
+  // Hide Matterport button if no tour
+  if (!d.viewer360) document.getElementById('btn-matterport').style.display = 'none';
+
+  // Init Street View panorama at property coordinates
+  const svDiv = document.getElementById('street-view-div');
+  const panorama = new google.maps.StreetViewPanorama(svDiv, {
+    position: { lat: d.lat, lng: d.lng },
+    pov: { heading: 0, pitch: 0 },
+    zoom: 1,
+    addressControl: false,
+    fullscreenControl: false,
+    motionTrackingControl: false
+  });
+
+  // Link Street View to the main map
+  if (map) map.setStreetView(panorama);
+
+  matterportActive = false;
+  streetViewActive = true;
+  dbg('Street View loaded at ' + d.lat.toFixed(5) + ',' + d.lng.toFixed(5), 'ok');
+}
+
+function exitImmersive() {
+  const overlay = document.getElementById('immersive-overlay');
+  overlay.classList.remove('visible');
+
+  // Stop Matterport
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+
+  // Stop Street View
+  document.getElementById('street-view-div').classList.remove('visible');
+  if (map) map.setStreetView(null);
+
+  // Reset button states
+  document.getElementById('btn-matterport').classList.remove('active');
+  document.getElementById('btn-street-view').classList.remove('active');
+  document.getElementById('btn-matterport').style.display = '';
+  document.getElementById('btn-street-view').style.display = '';
+
+  // Restore map controls
+  document.getElementById('map-controls').style.display = '';
+
+  matterportActive = false;
+  streetViewActive = false;
+  dbg('Exited immersive view', 'info');
+}
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
+
+  // Exit immersive if switching away from interior
+  if (viewSuffix !== 'interior' && (matterportActive || streetViewActive)) {
+    exitImmersive();
+  }
+
   document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix));
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
   try {
-    dbg('Loading view: ' + viewSuffix, 'info');
+    dbg('Loading ' + viewSuffix + '...', 'info');
     const res = await fetch(BASE_URL + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
     const centerLat = d.lat || (map ? map.getCenter().lat() : 0);
     const centerLng = d.lng || (map ? map.getCenter().lng() : 0);
-    if (viewSuffix === 'security' && d.fr) { buildSecurityPanel(d, centerLat, centerLng); }
-    else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d, centerLat, centerLng); }
-    else if (d.fr || d.wildfire) { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
-    else { buildPanel(d); }
+
+    if (viewSuffix === 'security' && d.fr)          { buildSecurityPanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'wildfire' && d.wildfire){ buildWildfirePanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'interior')              { buildInteriorPanel(d); }
+    else if (d.fr || d.wildfire)                    { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
+    else                                             { buildPanel(d); }
+
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
     dbg('View load failed: ' + e.message, 'error');
@@ -634,24 +832,34 @@ async function loadPropertyData() {
     const entry = propertyIndex[propertyHash];
     if (!entry) { showError('Property not found.'); return; }
     dbg('Property found: ' + entry.name, 'ok');
-    currentViews = entry.views;
+
+    // Pre-fetch property JSON to check for viewer360 before building tabs
+    const propRes = await fetch(BASE_URL + propertyHash + '.json');
+    const propData = propRes.ok ? await propRes.json() : null;
+
+    // Inject interior tab if viewer360 exists — points to same property JSON
+    const views = Object.assign({}, entry.views);
+    if (propData && propData.viewer360) {
+      views.interior = propertyHash;
+      dbg('viewer360 found — Interior tab enabled', 'ok');
+    }
+    currentViews = views;
+
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-    const firstView = (tabParam && entry.views[tabParam]) ? tabParam : VIEW_ORDER.find(v => entry.views[v]);
+    const firstView = (tabParam && views[tabParam]) ? tabParam : VIEW_ORDER.find(v => views[v]);
     if (!firstView) { showError('No views available.'); return; }
-    dbg('Available views: ' + Object.keys(entry.views).join(', '), 'info');
-    buildTabs(entry.views, firstView);
+    dbg('Available views: ' + Object.keys(views).join(', '), 'info');
+    buildTabs(views, firstView);
     setLoading('Loading ' + firstView + '...');
-    await loadView(entry.views, firstView);
-    // loadView is now complete — currentViewData has parcel_ring if available.
-    // Always resolve map AFTER loadView so storedRing is populated.
+    await loadView(views, firstView);
+    // loadView complete — currentViewData now has parcel_ring if available
     const storedRing = currentViewData && currentViewData.parcel_ring || null;
     if (storedRing) dbg('Stored parcel ring found (' + storedRing.length + ' pts)', 'ok');
     if (mapsApiReady) {
       resolveAndInitMap(entry, storedRing);
     } else {
-      // Store both entry AND ring so initGoogleMaps can use the correct ring
       pendingEntry = entry;
       pendingStoredRing = storedRing;
     }
