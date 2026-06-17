@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.8 — ground view</div>
+    <div id="version-badge">v2.2.9 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -369,11 +369,14 @@ function makePinSvg(color, text) {
 }
 function dropPins(pins, color, hexColor) {
   if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
+  const immersiveActive = matterportActive || streetViewActive;
   pins.forEach((pin, i) => {
     const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
     const pinId = color + '-' + i;
     const marker = new google.maps.Marker({
-      position: { lat: pin.lat, lng: pin.lng }, map,
+      position: { lat: pin.lat, lng: pin.lng },
+      // Keep off map while immersive is active — restored by exitImmersive
+      map: immersiveActive ? null : map,
       icon: makePinSvg(hexColor, label), title: pin.label, zIndex: 10
     });
     marker._pinId = pinId; marker._label = label; marker._desc = pin.label; marker._hexColor = hexColor;
@@ -808,10 +811,8 @@ async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
 
-  // Exit immersive if switching away from tour tab
-  if (viewSuffix !== 'tour' && (matterportActive || streetViewActive)) {
-    exitImmersive();
-  }
+  // Never exit immersive on tab switch — ground view persists across all tabs
+  // Pins are suppressed while immersive is active (handled in dropPins)
 
   document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix));
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
