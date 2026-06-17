@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>HOA Intel — Vyanet</title>
+<title>Property Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="config.js"></script>
 <style>
@@ -14,7 +14,7 @@
     --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
     --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
     --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
-    --accent: #3b82f6; --green: #22c55e; --red: #cd3333;
+    --accent: #3b82f6; --green: #22c55e; --red: #ef4444;
     --orange: #f97316; --header-h: 52px;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
@@ -24,13 +24,13 @@
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
   .header-right { display: flex; align-items: center; gap: 10px; }
-  #hoa-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
-  #map { flex: 1; background: var(--bg); min-width: 0; }
-  #loading { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
+  #map { flex: 1; background: var(--bg); min-width: 0; position: relative; }
+  #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; pointer-events: all; }
   #loading.hidden { opacity: 0; pointer-events: none; }
-  #error { position: absolute; top: 0; left: 0; right: 680px; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
+  #error { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; pointer-events: all; }
   #error.visible { display: flex; }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -43,26 +43,18 @@
   .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
   .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
   .map-ctrl-btn .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  #overlay-btn { display: none; }
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
-  .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .panel-address { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: 'DM Mono', monospace; }
-  .close-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.15s; }
-  .close-btn:hover { background: var(--surface2); color: var(--text); }
-  #welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; padding: 32px; text-align: center; gap: 12px; }
-  .welcome-icon { width: 48px; height: 48px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 4px; }
-  .welcome-title { font-size: 15px; font-weight: 600; color: var(--text); }
-  .welcome-sub { font-size: 12px; color: var(--text3); line-height: 1.7; max-width: 260px; }
-  .property-count { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--accent); background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); padding: 4px 12px; border-radius: 999px; margin-top: 4px; }
-  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
+  .panel-address { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
+  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; margin-top: 12px; }
   #view-tabs::-webkit-scrollbar { display: none; }
-  .view-tab { padding: 10px 16px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
+  .view-tab { padding: 9px 14px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .view-tab[data-view="security"].active { color: var(--green); border-bottom-color: var(--green); }
-  .view-tab[data-view="wildfire"].active { color: var(--orange); border-bottom-color: var(--orange); }
+  .view-tab[data-view="security"].active  { color: var(--green);  border-bottom-color: var(--green); }
+  .view-tab[data-view="wildfire"].active  { color: var(--orange); border-bottom-color: var(--orange); }
   #panel-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
   .pin-group { padding: 14px 16px 6px; }
   .pin-group-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
@@ -70,8 +62,8 @@
   .pin-row:hover { background: var(--surface2); }
   .pin-row.active { background: var(--surface2); border-color: var(--border2); }
   .pin-badge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; margin-top: 1px; }
-  .pin-badge.green { background: var(--green); }
-  .pin-badge.red { background: var(--red); }
+  .pin-badge.green  { background: var(--green); }
+  .pin-badge.red    { background: var(--red); }
   .pin-badge.orange { background: var(--orange); }
   .pin-label { font-size: 12px; color: var(--text2); line-height: 1.5; flex: 1; padding-top: 2px; }
   .pin-row.active .pin-label { color: var(--text); }
@@ -80,7 +72,7 @@
   .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
   .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
-  .view-badge.nadir { background: #7c3aed; }
+  .view-badge.nadir  { background: #7c3aed; }
   .view-badge.deg360 { background: #059669; }
   .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
   .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
@@ -99,7 +91,7 @@
   .btn-360:hover { opacity: 0.85; }
   .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
   .panel-pending { padding: 12px 16px 16px; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
-  #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  #toggle-panel { position: absolute; bottom: 24px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -122,44 +114,25 @@
   #debug-toggle-btn { color: var(--accent); font-size: 10px; background: none; border: none; cursor: pointer; }
   #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
   .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
-  .debug-line.info { color: var(--text2); }
-  .debug-line.ok { color: var(--green); }
-  .debug-line.warn { color: #f59e0b; }
+  .debug-line.info  { color: var(--text2); }
+  .debug-line.ok    { color: var(--green); }
+  .debug-line.warn  { color: #f59e0b; }
   .debug-line.error { color: var(--red); }
   .debug-time { color: var(--text3); margin-right: 6px; }
   #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
   #debug-clear:hover { color: var(--text2); }
   @media (max-width: 768px) {
-    #hoa-name { display: none; }
+    #property-name { display: none; }
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
     #map { position: absolute; inset: 0; width: 100%; height: 100%; }
     #loading { right: 0; } #error { right: 0; }
     #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
     #panel.mobile-open { transform: translateY(0%) !important; }
-    .close-btn { display: none; }
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
   }
-  /* ── Property search dropdown ── */
-  #property-search-wrap { position: relative; display: flex; align-items: center; }
-  #property-search-btn { display: flex; align-items: center; gap: 7px; padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; white-space: nowrap; min-width: 140px; justify-content: space-between; }
-  #property-search-btn:hover { background: var(--surface); color: var(--text); border-color: rgba(255,255,255,0.2); }
-  #property-search-btn.open { border-color: var(--accent); color: var(--text); background: var(--surface); }
-  #property-search-btn .btn-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
-  #property-search-btn .btn-arrow { font-size: 9px; flex-shrink: 0; transition: transform 0.15s; }
-  #property-search-btn.open .btn-arrow { transform: rotate(180deg); }
-  #property-dropdown { position: absolute; top: calc(100% + 6px); right: 0; width: 260px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
-  #property-dropdown.open { display: flex; }
-  #property-search-input { width: 100%; padding: 10px 12px; background: var(--surface2); border: none; border-bottom: 1px solid var(--border); color: var(--text); font-size: 12px; font-family: 'DM Sans', sans-serif; outline: none; }
-  #property-search-input::placeholder { color: var(--text3); }
-  #property-list { overflow-y: auto; max-height: 260px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  .property-option { padding: 9px 12px; font-size: 12px; color: var(--text2); cursor: pointer; transition: background 0.1s; border-bottom: 1px solid rgba(255,255,255,0.03); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .property-option:last-child { border-bottom: none; }
-  .property-option:hover { background: var(--surface2); color: var(--text); }
-  .property-option.selected { color: var(--accent); background: rgba(59,130,246,0.08); }
-  .property-option-address { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
-  #property-list-empty { padding: 16px 12px; font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; text-align: center; } border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
+  .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
   .gm-style .gm-style-iw-d { overflow: hidden !important; }
   .gm-style .gm-style-iw-t::after { background: #12161b !important; }
   .gm-style .gm-style-iw-tc::after { background: #12161b !important; }
@@ -172,6 +145,43 @@
   .rec-label.security { color: var(--green); }
   .rec-label.wildfire { color: var(--orange); }
   .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
+
+  /* ── Interior / Street View overlay ── */
+  #immersive-overlay { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; z-index: 30; display: none; flex-direction: column; background: var(--bg); }
+  #immersive-overlay.visible { display: flex; }
+  #immersive-frame { flex: 1; position: relative; background: #000; }
+  #matterport-iframe { width: 100%; height: 100%; border: none; display: none; }
+  #matterport-iframe.visible { display: block; }
+  #street-view-div { width: 100%; height: 100%; display: none; }
+  #street-view-div.visible { display: block; }
+  .immersive-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 13px; }
+  .immersive-placeholder-icon { font-size: 48px; opacity: 0.4; }
+
+  /* Interior panel content */
+  .interior-launch-card { margin: 16px; border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; background: var(--surface2); }
+  .interior-card-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+  .interior-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .interior-card-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .interior-card-actions { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; }
+  .interior-action-btn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 7px; border: 1px solid var(--border2); background: var(--surface); cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .interior-action-btn:hover { background: var(--surface2); border-color: var(--accent); }
+  .interior-action-btn.active { background: rgba(59,130,246,0.12); border-color: var(--accent); }
+  .interior-action-text { flex: 1; }
+  .interior-action-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .interior-action-desc { font-size: 11px; color: var(--text3); margin-top: 1px; }
+  .interior-action-arrow { font-size: 14px; color: var(--text3); }
+  .interior-exit-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 16px; padding: 9px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
+  .interior-exit-btn:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
+
+  /* ── Ground view active banner ── */
+  #ground-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(205,51,51,0.08); border-bottom: 1px solid rgba(205,51,51,0.25); flex-shrink: 0; gap: 12px; }
+  #ground-banner .ground-banner-label { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--red); font-weight: 500; }
+  #ground-banner .ground-banner-exit { display: flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
+  #ground-banner .ground-banner-exit:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
+
+  @media (max-width: 768px) {
+    #immersive-overlay { right: 0; }
+  }
 </style>
 </head>
 <body>
@@ -180,50 +190,42 @@
     <div class="logo-mark">VI</div>
     <div>
       <div class="logo-text">Vyanet Intel</div>
-      <div class="logo-sub">HOA Community Portal</div>
+      <div class="logo-sub">First Responder Portal</div>
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.3.0 — property search</div>
-    <div id="property-search-wrap">
-      <button id="property-search-btn" onclick="togglePropertyDropdown()" class="">
-        <span class="btn-label">Select Property</span>
-        <span class="btn-arrow">▼</span>
-      </button>
-      <div id="property-dropdown">
-        <input id="property-search-input" type="text" placeholder="Search by name..." oninput="filterPropertyList(this.value)" autocomplete="off">
-        <div id="property-list"><div id="property-list-empty">Loading...</div></div>
-      </div>
-    </div>
-    <div id="hoa-name">Loading...</div>
+    <div id="version-badge">v2.3.1 — ground view</div>
+    <div id="property-name">Loading...</div>
   </div>
 </div>
 <div id="main">
   <div id="map"></div>
+
+  <!-- Immersive overlay — sits above map, below panel -->
+  <div id="immersive-overlay">
+    <div id="immersive-frame">
+      <div id="street-view-div"></div>
+      <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking"></iframe>
+    </div>
+  </div>
   <div id="map-controls">
     <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()" title="Toggle nadir image overlay">
       <span class="ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
     </button>
   </div>
-  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading community data...</div></div>
-  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Community not found</div><div class="error-msg" id="error-msg">No HOA data provided.</div></div>
+  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
+  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
   <div id="panel">
     <div class="panel-header">
-      <div>
-        <div class="panel-title" id="panel-title">Community Intel</div>
-        <div class="panel-address" id="panel-address"></div>
-      </div>
-      <button class="close-btn" onclick="togglePanel()">✕</button>
+      <div class="panel-title" id="panel-title">Property Details</div>
+      <div class="panel-address" id="panel-address"></div>
     </div>
     <div id="view-tabs"></div>
-    <div id="panel-content">
-      <div id="welcome">
-        <div class="welcome-icon">🏘</div>
-        <div class="welcome-title">Select a Property</div>
-        <div class="welcome-sub">Click any pin on the map to view detailed intel for that property.</div>
-        <div class="property-count" id="property-count">Loading properties...</div>
-      </div>
+    <div id="ground-banner" style="display:none;">
+      <span class="ground-banner-label">Ground View Active</span>
+      <button class="ground-banner-exit" onclick="exitImmersive()">✕ Exit Ground View</button>
     </div>
+    <div id="panel-content"></div>
   </div>
 </div>
 <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
@@ -247,28 +249,26 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.3.0';
+const VERSION      = 'v2.3.1';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
-const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER   = ['security','wildfire','plane','drone'];
-const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', plane:'Plane', drone:'Drone' };
+const VIEW_ORDER   = ['security','wildfire','plane','drone','tour'];
+const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone' };
 
 let map, panelOpen = false, mobileIntelOpen = false;
-let mapsApiReady = false, hoaData = null;
+let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
-let allMarkers = [], allPolygons = [], activeMarker = null;
-let intelMarkers = [], pendingPinSets = [], pendingOverlay = null;
+let streetViewActive = false, matterportActive = false;
+let frMode = false;  // true when opened with ?mode=fr — hides tab bar, locks to single view
+let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
-let propertyRegistry = [];  // [{entry, marker, lat, lng}] — built as pins are placed
 const isMobile = () => window.innerWidth <= 768;
-const parcelCache = {};
 
 function dbg(msg, type) {
   type = type || 'info';
@@ -288,123 +288,40 @@ function toggleDebug() {
   b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
 }
 function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
-
-// ── Property search dropdown ───────────────────────────────────────────────
-function togglePropertyDropdown() {
-  const btn      = document.getElementById('property-search-btn');
-  const dropdown = document.getElementById('property-dropdown');
-  const isOpen   = dropdown.classList.contains('open');
-  if (isOpen) {
-    closePropertyDropdown();
-  } else {
-    dropdown.classList.add('open');
-    btn.classList.add('open');
-    setTimeout(function() { document.getElementById('property-search-input').focus(); }, 50);
-    // Close when clicking outside
-    setTimeout(function() {
-      document.addEventListener('click', outsideDropdownClick);
-    }, 10);
-  }
-}
-function closePropertyDropdown() {
-  document.getElementById('property-dropdown').classList.remove('open');
-  document.getElementById('property-search-btn').classList.remove('open');
-  document.getElementById('property-search-input').value = '';
-  renderPropertyList(propertyRegistry);
-  document.removeEventListener('click', outsideDropdownClick);
-}
-function outsideDropdownClick(e) {
-  const wrap = document.getElementById('property-search-wrap');
-  if (wrap && !wrap.contains(e.target)) closePropertyDropdown();
-}
-function buildPropertyList(entries) {
-  // Sort alphabetically by name — guard against null/undefined names
-  propertyRegistry = entries.map(function(e) {
-    return { entry: e, marker: null, lat: e.lat || null, lng: e.lng || null };
-  }).sort(function(a, b) {
-    return (a.entry.name || '').localeCompare(b.entry.name || '');
-  });
-  renderPropertyList(propertyRegistry);
-}
-function renderPropertyList(items) {
-  const list = document.getElementById('property-list');
-  if (!items || !items.length) {
-    list.innerHTML = '<div id="property-list-empty">No properties found</div>';
-    return;
-  }
-  list.innerHTML = items.map(function(item) {
-    const name    = item.entry.name || 'Unnamed';
-    const address = (item.entry.address || '').replace(/^\s+/, '');
-    const isSelected = activeMarker && activeMarker.getTitle() === name;
-    return '<div class="property-option' + (isSelected ? ' selected' : '') + '" onclick="selectPropertyFromDropdown(\'' + name.replace(/'/g, "\\'") + '\')">'
-      + '<div>' + name + '</div>'
-      + (address ? '<div class="property-option-address">' + address + '</div>' : '')
-      + '</div>';
-  }).join('');
-}
-function filterPropertyList(query) {
-  if (!query) { renderPropertyList(propertyRegistry); return; }
-  const q = query.toLowerCase();
-  const filtered = propertyRegistry.filter(function(item) {
-    return (item.entry.name || '').toLowerCase().includes(q) ||
-           (item.entry.address || '').toLowerCase().includes(q);
-  });
-  renderPropertyList(filtered);
-}
-function selectPropertyFromDropdown(name) {
-  const item = propertyRegistry.find(function(i) { return i.entry.name === name; });
-  if (!item) return;
-  closePropertyDropdown();
-  document.getElementById('property-search-btn').querySelector('.btn-label').textContent = name;
-
-  // Zoom map to property
-  if (map && item.lat && item.lng) {
-    map.panTo({ lat: item.lat, lng: item.lng });
-    map.setZoom(18);
-  }
-
-  // Simulate marker click — highlight pin and load panel
-  if (activeMarker) {
-    activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
-  }
-  if (item.marker) {
-    item.marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
-    item.marker.setAnimation(google.maps.Animation.BOUNCE);
-    setTimeout(function() { if (item.marker) item.marker.setAnimation(null); }, 700);
-    activeMarker = item.marker;
-  }
-  loadPropertyIntoPanel(item.entry);
-  if (!panelOpen) togglePanel();
-  dbg('Selected from dropdown: ' + name, 'ok');
-}
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
-  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
+  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
 function mobileToggle() {
   mobileIntelOpen = !mobileIntelOpen;
   document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
   document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
-  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
+  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
 function showError(msg) { hideLoading(); document.getElementById('error').classList.add('visible'); document.getElementById('error-msg').textContent = msg; dbg('ERROR: ' + msg, 'error'); }
 function setLoading(msg) { const el = document.getElementById('loading-text'); if (el) el.textContent = msg; dbg(msg, 'info'); }
 function hideLoading() { const el = document.getElementById('loading'); if (el) el.classList.add('hidden'); }
 function formatDesc(desc) {
   if (!desc) return [];
-  return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
+  return desc.split('|').map(s => s.trim()).filter(s => s.length > 2);
 }
 function toggleSection(header) {
-  const body = header.nextElementSibling, chevron = header.querySelector('.chevron');
+  const body = header.nextElementSibling;
+  const chevron = header.querySelector('.chevron');
   body.classList.toggle('collapsed');
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {
-  const size = 640, pixelX = (xPct / 100) * size - size / 2, pixelY = (yPct / 100) * size - size / 2;
+  const size = 640;
+  const pixelX = (xPct / 100) * size - size / 2;
+  const pixelY = (yPct / 100) * size - size / 2;
   const mpp = (40075016.686 * Math.cos(centerLat * Math.PI / 180)) / (256 * Math.pow(2, zoom));
-  return { lat: centerLat - (pixelY * mpp) / 110574, lng: centerLng + (pixelX * mpp) / (111320 * Math.cos(centerLat * Math.PI / 180)) };
+  return {
+    lat: centerLat - (pixelY * mpp) / 110574,
+    lng: centerLng + (pixelX * mpp) / (111320 * Math.cos(centerLat * Math.PI / 180))
+  };
 }
 function extractZoom(url) {
   if (!url) return 19;
@@ -412,60 +329,80 @@ function extractZoom(url) {
   return m ? parseInt(m[1]) : 19;
 }
 function computeOverlayBounds(centerLat, centerLng, zoom) {
-  const tl = pixelToLatLng(centerLat, centerLng, zoom, 0, 0), br = pixelToLatLng(centerLat, centerLng, zoom, 100, 100);
+  const tl = pixelToLatLng(centerLat, centerLng, zoom, 0, 0);
+  const br = pixelToLatLng(centerLat, centerLng, zoom, 100, 100);
   return new google.maps.LatLngBounds({ lat: br.lat, lng: tl.lng }, { lat: tl.lat, lng: br.lng });
 }
 function normalizePins(field) {
   if (!field) return [];
   if (Array.isArray(field)) return field;
-  return field.split(';').map(function(s) { return { label: s.trim(), lat: null, lng: null }; }).filter(function(p) { return p.label.length > 0; });
+  return field.split(';').map(s => ({ label: s.trim(), lat: null, lng: null })).filter(p => p.label.length > 0);
 }
 function parsePinsFromUrl(url) {
   if (!url) return [];
-  const pins = [], re = /[&?]markers=([^&]+)/g;
+  const pins = [];
+  const re = /[&?]markers=([^&]+)/g;
   let m;
   while ((m = re.exec(url)) !== null) {
-    const seg = decodeURIComponent(m[1]), parts = seg.split('|'), coordPart = parts[parts.length - 1], coords = coordPart.split(',');
-    if (coords.length === 2) { const lat = parseFloat(coords[0]), lng = parseFloat(coords[1]); if (!isNaN(lat) && !isNaN(lng)) pins.push({ lat, lng }); }
+    const seg = decodeURIComponent(m[1]);
+    const parts = seg.split('|');
+    const coordPart = parts[parts.length - 1];
+    const coords = coordPart.split(',');
+    if (coords.length === 2) {
+      const lat = parseFloat(coords[0]), lng = parseFloat(coords[1]);
+      if (!isNaN(lat) && !isNaN(lng)) pins.push({ lat, lng });
+    }
   }
   return pins;
 }
 function mergePinsWithCoords(labels, urlPins, centerLat, centerLng) {
-  return labels.map(function(item, i) {
-    return { label: item.label, lat: (urlPins[i] ? urlPins[i].lat : null) || centerLat, lng: (urlPins[i] ? urlPins[i].lng : null) || centerLng };
-  });
+  return labels.map((item, i) => ({
+    label: item.label,
+    lat: (urlPins[i] ? urlPins[i].lat : null) || centerLat,
+    lng: (urlPins[i] ? urlPins[i].lng : null) || centerLng
+  }));
 }
-function clearIntelMarkers() {
-  intelMarkers.forEach(function(m) { m.setMap(null); });
-  intelMarkers = []; activePinId = null; pendingPinSets = []; pendingOverlay = null;
+function clearMarkers() {
+  activeMarkers.forEach(m => m.setMap(null));
+  activeMarkers = [];
+  activePinId = null;
+  pendingPinSets = [];
+  pendingOverlay = null;
   if (infoWindow) { infoWindow.close(); }
 }
 function makePinSvg(color, text) {
-  const c = encodeURIComponent(color), t = encodeURIComponent(text);
+  const c = encodeURIComponent(color);
   return {
-    url: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="' + c + '" stroke="%23fff" stroke-width="1.5"/><text x="14" y="17" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="9" font-weight="700" fill="white">' + t + '</text></svg>',
-    scaledSize: new google.maps.Size(28, 36), anchor: new google.maps.Point(14, 36)
+    url: `data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="${c}" stroke="%23fff" stroke-width="1.5"/><text x="14" y="17" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="9" font-weight="700" fill="white">${encodeURIComponent(text)}</text></svg>`,
+    scaledSize: new google.maps.Size(28, 36),
+    anchor: new google.maps.Point(14, 36)
   };
 }
 function dropPins(pins, color, hexColor) {
-  if (!map) { pendingPinSets.push({ pins: pins, color: color, hexColor: hexColor }); return; }
-  pins.forEach(function(pin, i) {
+  if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
+  const immersiveActive = matterportActive || streetViewActive;
+  pins.forEach((pin, i) => {
     const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
     const pinId = color + '-' + i;
-    const marker = new google.maps.Marker({ position: { lat: pin.lat, lng: pin.lng }, map: map, icon: makePinSvg(hexColor, label), title: pin.label, zIndex: 20 });
+    const marker = new google.maps.Marker({
+      position: { lat: pin.lat, lng: pin.lng },
+      // Keep off map while immersive is active — restored by exitImmersive
+      map: immersiveActive ? null : map,
+      icon: makePinSvg(hexColor, label), title: pin.label, zIndex: 10
+    });
     marker._pinId = pinId; marker._label = label; marker._desc = pin.label; marker._hexColor = hexColor;
-    marker.addListener('click', function() { activatePin(pinId, marker, true); });
-    intelMarkers.push(marker);
+    marker.addListener('click', () => activatePin(pinId, marker, true));
+    activeMarkers.push(marker);
   });
 }
 function activatePin(pinId, marker, fromMap) {
-  document.querySelectorAll('.pin-row.active').forEach(function(r) { r.classList.remove('active'); });
+  document.querySelectorAll('.pin-row.active').forEach(r => r.classList.remove('active'));
   activePinId = pinId;
   const row = document.querySelector('.pin-row[data-pin-id="' + pinId + '"]');
   if (row) { row.classList.add('active'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
   if (marker) {
     marker.setAnimation(google.maps.Animation.BOUNCE);
-    setTimeout(function() { marker.setAnimation(null); }, 700);
+    setTimeout(() => marker.setAnimation(null), 700);
     if (!fromMap) map.panTo(marker.getPosition());
     if (!infoWindow) {
       infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
@@ -476,31 +413,33 @@ function activatePin(pinId, marker, fromMap) {
       });
     }
     infoWindow.setContent(buildInfoWindowContent(marker._label, marker._desc, marker._hexColor));
-    infoWindow.open({ anchor: marker, map: map, shouldFocus: false });
+    infoWindow.open({ anchor: marker, map, shouldFocus: false });
   }
 }
 function buildInfoWindowContent(label, desc, hexColor) {
   return '<div style="font-family:sans-serif;background:#12161b;color:#f0f2f5;border-radius:8px;padding:9px 12px;min-width:140px;max-width:220px;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:20px;height:20px;border-radius:50%;background:' + hexColor + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;font-family:monospace;flex-shrink:0;">' + label + '</div><span style="font-size:12px;font-weight:600;color:#f0f2f5;line-height:1.3;">' + desc + '</span></div></div>';
 }
 function pinRowClick(pinId) {
-  const marker = intelMarkers.find(function(m) { return m._pinId === pinId; });
+  const marker = activeMarkers.find(m => m._pinId === pinId);
   activatePin(pinId, marker, false);
 }
 function setOverlay(imageUrl, centerLat, centerLng, zoom) {
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   if (!imageUrl) return;
-  if (!map) { pendingOverlay = { imageUrl: imageUrl, centerLat: centerLat, centerLng: centerLng, zoom: zoom }; return; }
+  if (!map) { pendingOverlay = { imageUrl, centerLat, centerLng, zoom }; return; }
   const bounds = computeOverlayBounds(centerLat, centerLng, zoom);
   groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
   if (overlayVisible) groundOverlay.setMap(map);
 }
 function flushPendingMapData() {
   if (pendingOverlay) {
-    const p = pendingOverlay; pendingOverlay = null;
-    setOverlay(p.imageUrl, p.centerLat, p.centerLng, p.zoom);
+    const { imageUrl, centerLat, centerLng, zoom } = pendingOverlay;
+    pendingOverlay = null;
+    setOverlay(imageUrl, centerLat, centerLng, zoom);
   }
-  const sets = pendingPinSets.slice(); pendingPinSets = [];
-  sets.forEach(function(s) { dropPins(s.pins, s.color, s.hexColor); });
+  const sets = pendingPinSets.slice();
+  pendingPinSets = [];
+  sets.forEach(({ pins, color, hexColor }) => dropPins(pins, color, hexColor));
 }
 function toggleOverlay() {
   overlayVisible = !overlayVisible;
@@ -509,130 +448,125 @@ function toggleOverlay() {
   else { btn.classList.remove('active'); lbl.textContent = 'Show Overlay'; if (groundOverlay) groundOverlay.setMap(null); }
 }
 function pointInPolygon(lat, lng, ring) {
-  var inside = false;
-  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
     if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
   }
   return inside;
 }
 function getParcelFile(lat, lng) {
-  var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
-  var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
+  const latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
+  const lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
 
 // ── Parcel boundary — uses stored ring if available, falls back to GeoJSON tile ──
-function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
+function drawParcelBoundary(lat, lng, storedRing) {
   if (storedRing && storedRing.length >= 3) {
     // New path: draw stored ring directly — no adjacent parcels rendered
-    var paths = storedRing.map(function(pt) { return { lat: pt.lat, lng: pt.lng }; });
-    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
-    allPolygons.push(polygon);
+    const paths = storedRing.map(pt => ({ lat: pt.lat, lng: pt.lng }));
+    new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
+    dbg('Parcel matched: stored ring (' + storedRing.length + ' pts)', 'ok');
     return;
   }
   // Fallback: fetch GeoJSON tile for older properties without stored ring
-  var filename = getParcelFile(lat, lng);
-  function renderPolygon(geojson) {
-    var matched = null;
-    for (var i = 0; i < geojson.features.length; i++) {
-      var f = geojson.features[i], coords = f.geometry && f.geometry.coordinates;
-      if (!coords || !coords[0]) continue;
-      if (pointInPolygon(lat, lng, coords[0])) { matched = f; break; }
-    }
-    if (!matched) return;
-    var paths = matched.geometry.coordinates.map(function(ring) { return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; }); });
-    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
-    allPolygons.push(polygon);
-  }
-  if (parcelCache[filename]) { renderPolygon(parcelCache[filename]); }
+  fetch(PARCEL_BASE + getParcelFile(lat, lng))
+    .then(r => r.ok ? r.json() : null)
+    .then(geojson => {
+      if (!geojson) return;
+      const matched = geojson.features.find(f => {
+        const c = f.geometry && f.geometry.coordinates;
+        return c && c[0] && pointInPolygon(lat, lng, c[0]);
+      });
+      if (!matched) { dbg('No parcel matched', 'warn'); return; }
+      dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'ok'), 'ok');
+      const paths = matched.geometry.coordinates.map(ring => ring.map(pt => ({ lat: pt[1], lng: pt[0] })));
+      new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
+    })
+    .catch(e => dbg('Parcel error: ' + e.message, 'error'));
+}
+
+function initMap(lat, lng, storedRing) {
+  try {
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat, lng }, zoom: 18,
+      mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+      mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
+      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+      streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+      fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+    });
+    new google.maps.Marker({
+      position: { lat, lng }, map,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#fff', fillOpacity: 0.9, strokeColor: '#3b82f6', strokeWeight: 2 },
+      zIndex: 1
+    });
+    drawParcelBoundary(lat, lng, storedRing || null);
+    hideLoading();
+    setTimeout(() => { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat, lng }); } }, 100);
+    if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
+    dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
+    flushPendingMapData();
+
+    // ── Pegman intercept ──────────────────────────────────────────────────
+    // Intercept pegman drop — dismiss Google's native SV immediately
+    // (synchronously before it renders) then launch our own overlay
+    const sv = map.getStreetView();
+    sv.addListener('visible_changed', function() {
+      if (sv.getVisible() && !streetViewActive && !matterportActive) {
+        // Dismiss native SV synchronously — prevents grey/white flash
+        sv.setVisible(false);
+        map.setStreetView(null);
+
+        // Switch to Ground tab then launch Street View in our overlay
+        if (currentViews && currentViews['tour']) {
+          loadView(currentViews, 'tour').then(() => {
+            showStreetView();
+            dbg('Pegman dropped — Ground tab activated', 'ok');
+          });
+        } else {
+          showStreetView();
+        }
+      }
+    });
+
+  } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
+}
+function resolveAndInitMap(entry, storedRing) {
+  if (entry.lat && entry.lng) { initMap(entry.lat, entry.lng, storedRing); }
   else {
-    fetch(PARCEL_BASE + filename)
-      .then(function(res) { return res.json(); })
-      .then(function(geojson) { parcelCache[filename] = geojson; renderPolygon(geojson); })
-      .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
-  }
-}
-
-function initMap() {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: 44.06, lng: -121.31 }, zoom: 13,
-    mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
-    mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
-  });
-  dbg('Map initialized', 'ok');
-  flushPendingMapData();
-}
-
-function dropAllPins(entries) {
-  var bounds = new google.maps.LatLngBounds(), geocodeQueue = [];
-  entries.forEach(function(entry) {
-    if (entry.lat && entry.lng) { placePin(entry, entry.lat, entry.lng, bounds); }
-    else { geocodeQueue.push(entry); }
-  });
-  if (!bounds.isEmpty()) {
-    map.fitBounds(bounds);
-    google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 16) map.setZoom(16); });
-  }
-  geocodeQueue.forEach(function(entry) {
+    setLoading('Locating property...');
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(entry.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
-      .then(function(res) { return res.json(); })
-      .then(function(data) { if (data.status === 'OK' && data.results[0]) { var loc = data.results[0].geometry.location; placePin(entry, loc.lat, loc.lng, null); } })
-      .catch(function(e) { dbg('Geocode failed: ' + entry.name + ': ' + e.message, 'warn'); });
-  });
-}
-
-function placePin(entry, lat, lng, bounds) {
-  var marker = new google.maps.Marker({
-    position: { lat: lat, lng: lng }, map: map, title: entry.name,
-    animation: google.maps.Animation.DROP,
-    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
-    zIndex: 10
-  });
-  if (bounds) bounds.extend({ lat: lat, lng: lng });
-  // Fetch property JSON to get stored parcel ring — avoids drawing adjacent parcels
-  var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
-  if (propId) {
-    fetch(BASE_URL + propId + '.json')
-      .then(function(r) { return r.ok ? r.json() : null; })
-      .then(function(d) { drawParcelBoundaryForProperty(lat, lng, map, d && d.parcel_ring || null); })
-      .catch(function() { drawParcelBoundaryForProperty(lat, lng, map, null); });
-  } else {
-    drawParcelBoundaryForProperty(lat, lng, map, null);
+      .then(r => r.json())
+      .then(data => {
+        if (data.status === 'OK' && data.results[0]) { const loc = data.results[0].geometry.location; initMap(loc.lat, loc.lng, storedRing); }
+        else { dbg('Geocode failed: ' + data.status, 'error'); hideLoading(); if (!isMobile() && !panelOpen) togglePanel(); }
+      })
+      .catch(e => { dbg('Geocode error: ' + e.message, 'error'); hideLoading(); });
   }
-  marker.addListener('click', function() {
-    dbg('Pin clicked: ' + entry.name, 'info');
-    if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
-    marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
-    activeMarker = marker;
-    loadPropertyIntoPanel(entry);
-    if (!panelOpen) togglePanel();
-  });
-  allMarkers.push(marker);
-  // Update registry entry with marker reference and resolved coordinates
-  var regEntry = propertyRegistry.find(function(r) { return r.entry === entry; });
-  if (regEntry) { regEntry.marker = marker; regEntry.lat = lat; regEntry.lng = lng; }
-  dbg('Pin placed: ' + entry.name, 'ok');
 }
-
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   tabsEl.innerHTML = '';
-  VIEW_ORDER.forEach(function(v) {
+  VIEW_ORDER.forEach(v => {
     if (!views[v]) return;
     const tab = document.createElement('div');
     tab.className = 'view-tab' + (v === activeView ? ' active' : '');
     tab.textContent = VIEW_LABELS[v] || v;
     tab.setAttribute('data-view', v);
-    tab.onclick = function() { loadView(currentViews, v); };
+    tab.onclick = () => loadView(currentViews, v);
     tabsEl.appendChild(tab);
   });
 }
+
+function updateGroundBanner() {
+  const banner = document.getElementById('ground-banner');
+  if (!banner) return;
+  banner.style.display = (matterportActive || streetViewActive) ? 'flex' : 'none';
+}
 function buildSecurityPanel(d, centerLat, centerLng) {
-  clearIntelMarkers();
+  clearMarkers();
   const fr = d.fr;
   if (!fr || !fr.nadir_url) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>'; return; }
   const zoom = extractZoom(fr.nadir_url);
@@ -651,25 +585,24 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   }
   setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
   dropPins(elements, 'green', '#22c55e');
-  dropPins(considerations, 'red', '#cd3333');
-  document.getElementById('overlay-btn').style.display = 'flex';
+  dropPins(considerations, 'red', '#ef4444');
   dbg('Security: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
   if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
   let html = '';
   if (elements.length > 0) {
     html += '<div class="pin-group"><div class="pin-group-label">Property Elements</div>';
-    elements.forEach(function(el, i) {
+    elements.forEach((el, i) => {
       const label = ELEMENT_LABELS[i] || String(i+1), pinId = 'green-' + i;
-      html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')"><div class="pin-badge green">' + label + '</div><div class="pin-label">' + el.label + '</div></div>';
+      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge green">${label}</div><div class="pin-label">${el.label}</div></div>`;
     });
     html += '</div>';
   }
   if (considerations.length > 0 && !(considerations.length === 1 && considerations[0].label === 'None Visible')) {
     if (elements.length > 0) html += '<div class="pin-group-divider"></div>';
     html += '<div class="pin-group"><div class="pin-group-label">Responder Considerations</div>';
-    considerations.forEach(function(el, i) {
+    considerations.forEach((el, i) => {
       const label = CONCERN_LABELS[i] || String(i+1), pinId = 'red-' + i;
-      html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')"><div class="pin-badge red">' + label + '</div><div class="pin-label">' + el.label + '</div></div>';
+      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge red">${label}</div><div class="pin-label">${el.label}</div></div>`;
     });
     html += '</div>';
   }
@@ -678,9 +611,10 @@ function buildSecurityPanel(d, centerLat, centerLng) {
     html += '<div class="rec-block"><div class="rec-label security">FR Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
+  updateGroundBanner();
 }
 function buildWildfirePanel(d, centerLat, centerLng) {
-  clearIntelMarkers();
+  clearMarkers();
   const wf = d.wildfire;
   if (!wf || !wf.nadir_url) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>'; return; }
   const zoom = extractZoom(wf.nadir_url);
@@ -695,15 +629,14 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   }
   setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
   dropPins(conditions, 'orange', '#f97316');
-  document.getElementById('overlay-btn').style.display = 'flex';
   dbg('Wildfire: ' + conditions.length + ' conditions', 'ok');
   if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
   let html = '';
   if (conditions.length > 0 && !(conditions.length === 1 && conditions[0].label === 'None Visible')) {
     html += '<div class="pin-group"><div class="pin-group-label">Wildfire Conditions</div>';
-    conditions.forEach(function(el, i) {
+    conditions.forEach((el, i) => {
       const label = ELEMENT_LABELS[i] || String(i+1), pinId = 'orange-' + i;
-      html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')"><div class="pin-badge orange">' + label + '</div><div class="pin-label">' + el.label + '</div></div>';
+      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge orange">${label}</div><div class="pin-label">${el.label}</div></div>`;
     });
     html += '</div>';
   } else { html = '<div class="panel-empty">No conditions identified.</div>'; }
@@ -711,10 +644,11 @@ function buildWildfirePanel(d, centerLat, centerLng) {
     html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Recommendations</div><div class="rec-text">' + wf.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
+  updateGroundBanner();
 }
 function buildPanel(d) {
-  clearIntelMarkers();
-  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
+  clearMarkers();
+  if (groundOverlay) { groundOverlay.setMap(null); }
   const views = [
     { label: 'Alpha', badge: 'A', cls: '', data: d.alpha },
     { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
@@ -723,64 +657,212 @@ function buildPanel(d) {
     { label: 'Nadir', badge: 'N', cls: 'nadir', data: d.nadir }
   ];
   lightboxViews = [];
-  views.forEach(function(v) { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
+  views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
   let html = '', lbIndex = 0;
-  views.forEach(function(v) {
+  views.forEach(v => {
     if (!v.data || !v.data.url) return;
     const bullets = formatDesc(v.data.desc), idx = lbIndex++;
-    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ' + v.cls + '">' + v.badge + '</div><div class="view-label">' + v.label + '</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(' + idx + ')"><img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">' + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('') + '</ul></div></div>';
+    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
   if (d.viewer360) {
-    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div><div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li></ul><a class="btn-360" href="' + d.viewer360 + '" target="_blank">↗ Launch 360° Viewer</a></div></div>';
+    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div><div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li></ul><a class="btn-360" href="${d.viewer360}" target="_blank">↗ Launch 360° Viewer</a></div></div>`;
   }
   document.getElementById('panel-content').innerHTML = html;
+  updateGroundBanner();
+}
+
+// ── Interior panel ─────────────────────────────────────────────────────────
+function buildInteriorPanel(d) {
+  clearMarkers();
+  if (groundOverlay) { groundOverlay.setMap(null); }
+
+  const hasMatterport = !!(d.viewer360);
+  const hasStreetView = !!(d.lat && d.lng);
+  const isActive = matterportActive || streetViewActive;
+
+  let html = '<div class="interior-launch-card">';
+  html += '<div class="interior-card-header">';
+  html += '<div class="interior-card-title">Ground Views</div>';
+  html += '<div class="interior-card-sub">360° property walkthrough & street context</div>';
+  html += '</div><div class="interior-card-actions">';
+
+  if (hasMatterport) {
+    const activeClass = matterportActive ? ' active' : '';
+    html += `<div class="interior-action-btn${activeClass}" id="panel-btn-matterport" onclick="launchImmersive('matterport')">
+      <div class="interior-action-text">
+        <div class="interior-action-label">Property Tour</div>
+        <div class="interior-action-desc">360° interior & exterior walkthrough</div>
+      </div>
+      <div class="interior-action-arrow">›</div>
+    </div>`;
+  }
+
+  if (hasStreetView) {
+    const activeClass = streetViewActive ? ' active' : '';
+    html += `<div class="interior-action-btn${activeClass}" id="panel-btn-streetview" onclick="launchImmersive('streetview')">
+      <div class="interior-action-text">
+        <div class="interior-action-label">Street View</div>
+        <div class="interior-action-desc">Approach routes & surroundings</div>
+      </div>
+      <div class="interior-action-arrow">›</div>
+    </div>`;
+  }
+
+  if (!hasMatterport && !hasStreetView) {
+    html += '<div class="panel-empty">No ground views available for this property.</div>';
+  }
+
+  html += '</div></div>';
+
+  document.getElementById('panel-content').innerHTML = html;
+}
+
+// ── Immersive view controls ────────────────────────────────────────────────
+function launchImmersive(mode) {
+  const overlay = document.getElementById('immersive-overlay');
+  overlay.classList.add('visible');
+
+  // Hide all intel pins from the map while immersive is active
+  activeMarkers.forEach(m => m.setMap(null));
+
+  // Hide map controls while immersive is open
+  document.getElementById('map-controls').style.display = 'none';
+
+  if (mode === 'matterport') {
+    showMatterport();
+  } else {
+    showStreetView();
+  }
+}
+
+function showMatterport() {
+  const d = currentViewData;
+  if (!d || !d.viewer360) { dbg('No Matterport URL available', 'warn'); return; }
+
+  // Ensure overlay is visible and pins hidden
+  document.getElementById('immersive-overlay').classList.add('visible');
+  document.getElementById('map-controls').style.display = 'none';
+  activeMarkers.forEach(m => m.setMap(null));
+
+  // Clear Street View if active
+  document.getElementById('street-view-div').classList.remove('visible');
+
+  document.getElementById('matterport-iframe').src = d.viewer360;
+  document.getElementById('matterport-iframe').classList.add('visible');
+
+  matterportActive = true;
+  streetViewActive = false;
+
+  updateGroundBanner();
+  buildInteriorPanel(d);
+  dbg('Matterport tour loaded', 'ok');
+}
+
+function showStreetView() {
+  const d = currentViewData;
+  if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
+
+  // If Matterport was active, clear it first
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+
+  // Hide pins and map controls
+  activeMarkers.forEach(m => m.setMap(null));
+  document.getElementById('map-controls').style.display = 'none';
+
+  // Show the immersive overlay with Street View div
+  document.getElementById('immersive-overlay').classList.add('visible');
+  document.getElementById('street-view-div').classList.add('visible');
+
+  // Render Street View panorama into overlay div
+  const svDiv = document.getElementById('street-view-div');
+  const panorama = new google.maps.StreetViewPanorama(svDiv, {
+    position: { lat: d.lat, lng: d.lng },
+    pov: { heading: 0, pitch: 0 },
+    zoom: 1,
+    addressControl: false,
+    fullscreenControl: false,
+    motionTrackingControl: false
+  });
+  map.setStreetView(panorama);
+
+  matterportActive = false;
+  streetViewActive = true;
+
+  updateGroundBanner();
+  buildInteriorPanel(d);
+  dbg('Street View loaded at ' + d.lat.toFixed(5) + ',' + d.lng.toFixed(5), 'ok');
+}
+
+function exitImmersive() {
+  const overlay = document.getElementById('immersive-overlay');
+  overlay.classList.remove('visible');
+
+  // Stop Matterport
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+
+  // Stop Street View — dismiss map's built-in SV so pegman retracts
+  document.getElementById('street-view-div').classList.remove('visible');
+  if (map) {
+    const sv = map.getStreetView();
+    if (sv) sv.setVisible(false);
+    map.setStreetView(null);
+  }
+
+  // Restore map controls
+  document.getElementById('map-controls').style.display = '';
+
+  matterportActive = false;
+  streetViewActive = false;
+
+  // Restore intel pins immediately now that immersive is inactive
+  activeMarkers.forEach(m => m.setMap(map));
+
+  // Hide ground banner
+  updateGroundBanner();
+
+  // Reload the currently active tab so panel content and pins are correct
+  const activeTab = document.querySelector('.view-tab.active');
+  const activeView = activeTab ? activeTab.getAttribute('data-view') : null;
+
+  if (activeView && activeView !== 'tour' && currentViews && currentViews[activeView]) {
+    loadView(currentViews, activeView);
+  } else {
+    // Fallback to Ground tab
+    if (currentViewData) buildInteriorPanel(currentViewData);
+  }
+
+  dbg('Exited ground view', 'info');
 }
 async function loadView(views, viewSuffix) {
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
-  document.querySelectorAll('.view-tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix); });
+
+  // Never exit immersive on tab switch — ground view persists across all tabs
+  // Pins are suppressed while immersive is active (handled in dropPins)
+
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix));
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
   try {
-    dbg('Loading view: ' + viewSuffix, 'info');
+    dbg('Loading ' + viewSuffix + '...', 'info');
     const res = await fetch(BASE_URL + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
     const centerLat = d.lat || (map ? map.getCenter().lat() : 0);
     const centerLng = d.lng || (map ? map.getCenter().lng() : 0);
-    if (viewSuffix === 'security' && d.fr) { buildSecurityPanel(d, centerLat, centerLng); }
+
+    if (viewSuffix === 'security' && d.fr)           { buildSecurityPanel(d, centerLat, centerLng); }
     else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d, centerLat, centerLng); }
-    else if (d.fr || d.wildfire) { clearIntelMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
-    else { buildPanel(d); }
+    else if (viewSuffix === 'tour')                   { buildInteriorPanel(d); }
+    else if (d.fr || d.wildfire)                     { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
+    else                                              { buildPanel(d); }
+
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) {
     dbg('View load failed: ' + e.message, 'error');
     document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Failed to load: ' + e.message + '</div>';
-  }
-}
-async function loadPropertyIntoPanel(entry) {
-  try {
-    dbg('Loading panel for: ' + entry.name, 'info');
-    currentViews = entry.views;
-    document.getElementById('panel-title').textContent = entry.name;
-    document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-    const welcome = document.getElementById('welcome');
-    if (welcome) welcome.style.display = 'none';
-    document.getElementById('view-tabs').style.display = 'flex';
-    clearIntelMarkers();
-    if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
-    overlayVisible = false;
-    document.getElementById('overlay-btn').classList.remove('active');
-    document.getElementById('overlay-label').textContent = 'Show Overlay';
-    document.getElementById('overlay-btn').style.display = 'none';
-    if (!entry.views) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>'; return; }
-    const firstView = VIEW_ORDER.find(function(v) { return entry.views[v]; });
-    if (!firstView) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>'; return; }
-    buildTabs(entry.views, firstView);
-    await loadView(entry.views, firstView);
-  } catch(e) {
-    dbg('loadPropertyIntoPanel error: ' + e.message, 'error');
-    document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Error: ' + e.message + '</div>';
   }
 }
 function openLightbox(index) { lightboxIndex = index; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.addEventListener('keydown', lightboxKey); }
@@ -792,52 +874,78 @@ function updateLightbox() {
   document.getElementById('lightbox-img').src = v.url;
   document.getElementById('lightbox-title').textContent = v.label;
   document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
-  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
+  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(b => '<li>' + b + '</li>').join('');
 }
-async function loadHoaData() {
-  dbg(VERSION + ' — HOA viewer loaded', 'ok');
-  const hoaSlug = new URLSearchParams(window.location.search).get('hoa');
-  if (!hoaSlug) { showError('No HOA specified.'); return; }
-  dbg('HOA slug: ' + hoaSlug, 'info');
+async function loadPropertyData() {
+  dbg(VERSION + ' — Property Intel loaded', 'ok');
+  const params = new URLSearchParams(window.location.search);
+  const propertyHash = params.get('property');
+  const tabParam     = params.get('tab');
+  frMode             = params.get('mode') === 'fr';
+  if (!propertyHash) { showError('No property ID provided.'); return; }
+  if (frMode) dbg('FR mode — single view, tabs hidden', 'info');
+  dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
-    setLoading('Loading community data...');
-    const hoaRes = await fetch(HOA_BASE_URL + hoaSlug + '.json');
-    if (!hoaRes.ok) { showError('HOA not found: ' + hoaSlug); return; }
-    hoaData = await hoaRes.json();
-    dbg('HOA loaded: ' + hoaData.name + ' (' + hoaData.properties.length + ' properties)', 'ok');
-    document.getElementById('hoa-name').textContent = hoaData.name;
-    document.getElementById('panel-title').textContent = hoaData.name;
     setLoading('Loading property index...');
     const indexRes = await fetch(BASE_URL + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
-    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' total properties', 'ok');
-    const entries = hoaData.properties
-      .map(function(hash) {
-        const entry = propertyIndex[hash];
-        if (!entry) { dbg('Hash not found: ' + hash.substring(0,8) + '...', 'warn'); return null; }
-        entry.hash = hash;
-        return entry;
-      })
-      .filter(Boolean);
-    dbg('Matched ' + entries.length + ' properties', 'ok');
-    document.getElementById('property-count').textContent = entries.length + ' properties in this community';
+    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'ok');
+    const entry = propertyIndex[propertyHash];
+    if (!entry) { showError('Property not found.'); return; }
+    dbg('Property found: ' + entry.name, 'ok');
 
-    // Pre-populate dropdown with entries — markers fill in as pins are placed
-    buildPropertyList(entries);
+    // Pre-fetch property JSON to check for viewer360 before building tabs
+    const propRes = await fetch(BASE_URL + propertyHash + '.json');
+    const propData = propRes.ok ? await propRes.json() : null;
 
-    hideLoading();
-    if (mapsApiReady) { initMap(); dropAllPins(entries); }
-    else { window._pendingEntries = entries; }
-    setTimeout(function() { if (!panelOpen) togglePanel(); }, 800);
-  } catch(e) { showError('Failed to load HOA: ' + e.message); }
+    // Use 'tour' key for the immersive Interior tab
+    const views = Object.assign({}, entry.views);
+    if (propData && propData.viewer360) {
+      views['tour'] = propertyHash;
+      dbg('viewer360 found — Tour tab enabled', 'ok');
+    }
+    currentViews = views;
+
+    document.getElementById('property-name').textContent = entry.name;
+    document.getElementById('panel-title').textContent   = entry.name;
+    document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+
+    // FR mode: hide tab bar entirely — first responder sees only the linked view
+    if (frMode) {
+      document.getElementById('view-tabs').style.display = 'none';
+    }
+
+    const firstView = (tabParam && views[tabParam]) ? tabParam : VIEW_ORDER.find(v => views[v]);
+    if (!firstView) { showError('No views available.'); return; }
+    dbg('Available views: ' + Object.keys(views).join(', '), 'info');
+
+    // In FR mode skip buildTabs — tabs are hidden
+    if (!frMode) buildTabs(views, firstView);
+
+    setLoading('Loading ' + firstView + '...');
+    await loadView(views, firstView);
+    // loadView complete — currentViewData now has parcel_ring if available
+    const storedRing = currentViewData && currentViewData.parcel_ring || null;
+    if (storedRing) dbg('Stored parcel ring found (' + storedRing.length + ' pts)', 'ok');
+    if (mapsApiReady) {
+      resolveAndInitMap(entry, storedRing);
+    } else {
+      pendingEntry     = entry;
+      pendingStoredRing = storedRing;
+    }
+  } catch(e) { showError('Failed to load property: ' + e.message); }
 }
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
-  if (window._pendingEntries) { initMap(); dropAllPins(window._pendingEntries); window._pendingEntries = null; }
+  if (pendingEntry) {
+    resolveAndInitMap(pendingEntry, pendingStoredRing || null);
+    pendingEntry = null;
+    pendingStoredRing = null;
+  }
 };
-loadHoaData();
+loadPropertyData();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
