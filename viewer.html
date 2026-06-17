@@ -173,6 +173,13 @@
   .interior-exit-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 16px; padding: 9px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
   .interior-exit-btn:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
 
+  /* ── Ground view active banner ── */
+  #ground-banner { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; background: rgba(205,51,51,0.08); border-bottom: 1px solid rgba(205,51,51,0.25); flex-shrink: 0; }
+  #ground-banner .ground-banner-label { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--red); display: flex; align-items: center; gap: 6px; }
+  #ground-banner .ground-banner-label::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block; animation: pulse 2s infinite; }
+  #ground-banner .ground-banner-exit { font-size: 11px; font-weight: 500; color: var(--red); cursor: pointer; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(205,51,51,0.4); background: transparent; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  #ground-banner .ground-banner-exit:hover { background: rgba(205,51,51,0.15); }
+
   @media (max-width: 768px) {
     #immersive-overlay { right: 0; }
   }
@@ -188,7 +195,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.9 — ground view</div>
+    <div id="version-badge">v2.3.0 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -215,6 +222,10 @@
       <div class="panel-address" id="panel-address"></div>
     </div>
     <div id="view-tabs"></div>
+    <div id="ground-banner" style="display:none;">
+      <span class="ground-banner-label">Ground View Active</span>
+      <button class="ground-banner-exit" onclick="exitImmersive()">✕ Exit Ground View</button>
+    </div>
     <div id="panel-content"></div>
   </div>
 </div>
@@ -548,6 +559,12 @@ function buildTabs(views, activeView) {
     tabsEl.appendChild(tab);
   });
 }
+
+function updateGroundBanner() {
+  const banner = document.getElementById('ground-banner');
+  if (!banner) return;
+  banner.style.display = (matterportActive || streetViewActive) ? 'flex' : 'none';
+}
 function buildSecurityPanel(d, centerLat, centerLng) {
   clearMarkers();
   const fr = d.fr;
@@ -594,6 +611,7 @@ function buildSecurityPanel(d, centerLat, centerLng) {
     html += '<div class="rec-block"><div class="rec-label security">FR Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
+  updateGroundBanner();
 }
 function buildWildfirePanel(d, centerLat, centerLng) {
   clearMarkers();
@@ -626,6 +644,7 @@ function buildWildfirePanel(d, centerLat, centerLng) {
     html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Recommendations</div><div class="rec-text">' + wf.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
+  updateGroundBanner();
 }
 function buildPanel(d) {
   clearMarkers();
@@ -649,6 +668,7 @@ function buildPanel(d) {
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div><div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li></ul><a class="btn-360" href="${d.viewer360}" target="_blank">↗ Launch 360° Viewer</a></div></div>`;
   }
   document.getElementById('panel-content').innerHTML = html;
+  updateGroundBanner();
 }
 
 // ── Interior panel ─────────────────────────────────────────────────────────
@@ -738,6 +758,7 @@ function showMatterport() {
   matterportActive = true;
   streetViewActive = false;
 
+  updateGroundBanner();
   buildInteriorPanel(d);
   dbg('Matterport tour loaded', 'ok');
 }
@@ -773,6 +794,7 @@ function showStreetView() {
   matterportActive = false;
   streetViewActive = true;
 
+  updateGroundBanner();
   buildInteriorPanel(d);
   dbg('Street View loaded at ' + d.lat.toFixed(5) + ',' + d.lng.toFixed(5), 'ok');
 }
@@ -802,7 +824,8 @@ function exitImmersive() {
   matterportActive = false;
   streetViewActive = false;
 
-  // Refresh panel to clear active states and hide exit button
+  // Hide ground banner and refresh panel
+  updateGroundBanner();
   if (currentViewData) buildInteriorPanel(currentViewData);
 
   dbg('Exited ground view', 'info');
