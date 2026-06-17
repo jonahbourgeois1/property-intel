@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.7 — ground view</div>
+    <div id="version-badge">v2.2.8 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -496,31 +496,23 @@ function initMap(lat, lng, storedRing) {
     flushPendingMapData();
 
     // ── Pegman intercept ──────────────────────────────────────────────────
-    // When the user drops the pegman, switch to Ground tab and use same
-    // showStreetView() path as the panel button — consistent behaviour
+    // Intercept pegman drop — dismiss Google's native SV immediately
+    // (synchronously before it renders) then launch our own overlay
     const sv = map.getStreetView();
     sv.addListener('visible_changed', function() {
-      if (sv.getVisible()) {
-        if (!streetViewActive && !matterportActive) {
-          if (currentViews && currentViews['tour']) {
-            loadView(currentViews, 'tour').then(() => {
-              // Dismiss Google's built-in SV takeover — we render in our overlay
-              sv.setVisible(false);
-              map.setStreetView(null);
-              // Now launch via panel path so overlay + state are consistent
-              showStreetView();
-              dbg('Pegman dropped — Ground tab activated', 'ok');
-            });
-          } else {
-            sv.setVisible(false);
-            map.setStreetView(null);
+      if (sv.getVisible() && !streetViewActive && !matterportActive) {
+        // Dismiss native SV synchronously — prevents grey/white flash
+        sv.setVisible(false);
+        map.setStreetView(null);
+
+        // Switch to Ground tab then launch Street View in our overlay
+        if (currentViews && currentViews['tour']) {
+          loadView(currentViews, 'tour').then(() => {
             showStreetView();
-          }
-        }
-      } else {
-        if (streetViewActive) {
-          exitImmersive();
-          dbg('Pegman returned — exited ground view', 'info');
+            dbg('Pegman dropped — Ground tab activated', 'ok');
+          });
+        } else {
+          showStreetView();
         }
       }
     });
@@ -729,22 +721,16 @@ function showMatterport() {
   const d = currentViewData;
   if (!d || !d.viewer360) { dbg('No Matterport URL available', 'warn'); return; }
 
-  // If Street View was active via pegman, dismiss it cleanly first
-  if (streetViewActive) {
-    const sv = map && map.getStreetView();
-    if (sv) sv.setVisible(false);
-    map.setStreetView(null);
-    document.getElementById('street-view-div').classList.remove('visible');
-  }
-
   // Ensure overlay is visible and pins hidden
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('map-controls').style.display = 'none';
   activeMarkers.forEach(m => m.setMap(null));
 
+  // Clear Street View if active
+  document.getElementById('street-view-div').classList.remove('visible');
+
   document.getElementById('matterport-iframe').src = d.viewer360;
   document.getElementById('matterport-iframe').classList.add('visible');
-  document.getElementById('street-view-div').classList.remove('visible');
 
   matterportActive = true;
   streetViewActive = false;
