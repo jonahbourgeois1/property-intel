@@ -143,11 +143,11 @@
   }
   /* ── Property search dropdown ── */
   #property-search-wrap { position: relative; display: flex; align-items: center; }
-  #property-search-btn { display: flex; align-items: center; gap: 7px; padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border2); border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; white-space: nowrap; min-width: 140px; justify-content: space-between; }
-  #property-search-btn:hover { background: var(--surface); color: var(--text); border-color: rgba(255,255,255,0.2); }
-  #property-search-btn.open { border-color: var(--accent); color: var(--text); background: var(--surface); }
-  #property-search-btn .btn-label { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; }
-  #property-search-btn .btn-arrow { font-size: 9px; flex-shrink: 0; transition: transform 0.15s; }
+  #property-search-btn { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; white-space: nowrap; max-width: 200px; }
+  #property-search-btn:hover { border-color: var(--border2); color: var(--text); }
+  #property-search-btn.open { border-color: var(--accent); color: var(--text); }
+  #property-search-btn .btn-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+  #property-search-btn .btn-arrow { font-size: 9px; flex-shrink: 0; transition: transform 0.15s; opacity: 0.5; }
   #property-search-btn.open .btn-arrow { transform: rotate(180deg); }
   #property-dropdown { position: absolute; top: calc(100% + 6px); right: 0; width: 260px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
   #property-dropdown.open { display: flex; }
@@ -159,7 +159,8 @@
   .property-option:hover { background: var(--surface2); color: var(--text); }
   .property-option.selected { color: var(--accent); background: rgba(59,130,246,0.08); }
   .property-option-address { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
-  #property-list-empty { padding: 16px 12px; font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; text-align: center; } border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
+  #property-list-empty { padding: 16px 12px; font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; text-align: center; }
+  .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
   .gm-style .gm-style-iw-d { overflow: hidden !important; }
   .gm-style .gm-style-iw-t::after { background: #12161b !important; }
   .gm-style .gm-style-iw-tc::after { background: #12161b !important; }
@@ -186,7 +187,7 @@
   <div class="header-right">
     <div id="version-badge">v2.3.0 — property search</div>
     <div id="property-search-wrap">
-      <button id="property-search-btn" onclick="togglePropertyDropdown()" class="">
+      <button id="property-search-btn" onclick="togglePropertyDropdown()">
         <span class="btn-label">Select Property</span>
         <span class="btn-arrow">▼</span>
       </button>
