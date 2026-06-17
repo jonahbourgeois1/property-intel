@@ -318,8 +318,12 @@ function outsideDropdownClick(e) {
   if (wrap && !wrap.contains(e.target)) closePropertyDropdown();
 }
 function buildPropertyList(entries) {
-  // Sort alphabetically by name
-  propertyRegistry = entries.slice().sort(function(a, b) { return a.entry.name.localeCompare(b.entry.name); });
+  // Sort alphabetically by name — guard against null/undefined names
+  propertyRegistry = entries.map(function(e) {
+    return { entry: e, marker: null, lat: e.lat || null, lng: e.lng || null };
+  }).sort(function(a, b) {
+    return (a.entry.name || '').localeCompare(b.entry.name || '');
+  });
   renderPropertyList(propertyRegistry);
 }
 function renderPropertyList(items) {
@@ -820,9 +824,6 @@ async function loadHoaData() {
     document.getElementById('property-count').textContent = entries.length + ' properties in this community';
 
     // Pre-populate dropdown with entries — markers fill in as pins are placed
-    propertyRegistry = entries.map(function(e) {
-      return { entry: e, marker: null, lat: e.lat || null, lng: e.lng || null };
-    }).sort(function(a, b) { return a.entry.name.localeCompare(b.entry.name); });
     buildPropertyList(entries);
 
     hideLoading();
