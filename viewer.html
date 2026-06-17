@@ -188,7 +188,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.2.4 — ground view</div>
+    <div id="version-badge">v2.2.5 — ground view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -494,6 +494,40 @@ function initMap(lat, lng, storedRing) {
     if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
     dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
     flushPendingMapData();
+
+    // ── Pegman intercept ──────────────────────────────────────────────────
+    // When the user drops the pegman, switch to Ground tab and hide pins
+    const sv = map.getStreetView();
+    sv.addListener('visible_changed', function() {
+      if (sv.getVisible()) {
+        // Pegman dropped — treat as entering Street View from Ground tab
+        if (!streetViewActive && !matterportActive) {
+          // Switch to Ground tab if not already there
+          if (currentViews && currentViews['tour']) {
+            loadView(currentViews, 'tour').then(() => {
+              // After tab loads, mark street view active and hide pins
+              streetViewActive = true;
+              activeMarkers.forEach(m => m.setMap(null));
+              document.getElementById('map-controls').style.display = 'none';
+              // Highlight Street View button in panel
+              const btn = document.getElementById('panel-btn-streetview');
+              if (btn) btn.classList.add('active');
+              dbg('Pegman dropped — Ground tab activated', 'ok');
+            });
+          } else {
+            // No tour tab available, just hide pins
+            activeMarkers.forEach(m => m.setMap(null));
+          }
+        }
+      } else {
+        // Pegman returned — exit immersive cleanly if it was pegman-initiated
+        if (streetViewActive) {
+          exitImmersive();
+          dbg('Pegman returned — exited ground view', 'info');
+        }
+      }
+    });
+
   } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
 }
 function resolveAndInitMap(entry, storedRing) {
@@ -714,11 +748,20 @@ function showStreetView() {
   const d = currentViewData;
   if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
 
+  // Hide pins before Street View loads
+  activeMarkers.forEach(m => m.setMap(null));
+
   document.getElementById('street-view-div').classList.add('visible');
   document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('matterport-iframe').src = '';
 
-  // Init Street View panorama at property coordinates
+  // Use the map's built-in Street View panorama so pegman stays in sync
+  const sv = map.getStreetView();
+  sv.setPosition({ lat: d.lat, lng: d.lng });
+  sv.setPov({ heading: 0, pitch: 0 });
+  sv.setOptions({ addressControl: false, fullscreenControl: false, motionTrackingControl: false });
+
+  // Render into the street-view-div
   const svDiv = document.getElementById('street-view-div');
   const panorama = new google.maps.StreetViewPanorama(svDiv, {
     position: { lat: d.lat, lng: d.lng },
@@ -728,9 +771,7 @@ function showStreetView() {
     fullscreenControl: false,
     motionTrackingControl: false
   });
-
-  // Link Street View to the main map
-  if (map) map.setStreetView(panorama);
+  map.setStreetView(panorama);
 
   matterportActive = false;
   streetViewActive = true;
@@ -748,9 +789,13 @@ function exitImmersive() {
   document.getElementById('matterport-iframe').src = '';
   document.getElementById('matterport-iframe').classList.remove('visible');
 
-  // Stop Street View
+  // Stop Street View — dismiss map's built-in SV so pegman retracts
   document.getElementById('street-view-div').classList.remove('visible');
-  if (map) map.setStreetView(null);
+  if (map) {
+    const sv = map.getStreetView();
+    if (sv) sv.setVisible(false);
+    map.setStreetView(null);
+  }
 
   // Restore map controls
   document.getElementById('map-controls').style.display = '';
