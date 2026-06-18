@@ -194,7 +194,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.3.1 — ground view</div>
+    <div id="version-badge">v2.4.0 — drone 3D view</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -262,7 +262,7 @@ const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', tour:'Ground', 
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
-let streetViewActive = false, matterportActive = false;
+let streetViewActive = false, matterportActive = false, djiViewerActive = false;
 let frMode = false;  // true when opened with ?mode=fr — hides tab bar, locks to single view
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
@@ -380,7 +380,7 @@ function makePinSvg(color, text) {
 }
 function dropPins(pins, color, hexColor) {
   if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
-  const immersiveActive = matterportActive || streetViewActive;
+  const immersiveActive = matterportActive || streetViewActive || djiViewerActive;
   pins.forEach((pin, i) => {
     const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
     const pinId = color + '-' + i;
@@ -665,7 +665,25 @@ function buildPanel(d) {
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
   if (d.viewer360) {
-    html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge deg360">360</div><div class="view-label">360° Aerial View</div><div class="chevron">▼</div></div><div class="view-body"><ul class="view-bullets"><li>Full interactive drone flyover</li><li>Pan, tilt, and zoom to explore every angle</li></ul><a class="btn-360" href="${d.viewer360}" target="_blank">↗ Launch 360° Viewer</a></div></div>`;
+    const isActive = djiViewerActive;
+    html += `<div class="interior-launch-card">
+      <div class="interior-card-header">
+        <div class="interior-card-title">3D Aerial View</div>
+        <div class="interior-card-sub">Interactive drone model</div>
+      </div>
+      <div class="interior-card-actions">
+        <div class="interior-action-btn${isActive ? ' active' : ''}" id="panel-btn-dji" onclick="showDjiViewer()">
+          <div class="interior-action-text">
+            <div class="interior-action-label">Launch 3D Viewer</div>
+            <div class="interior-action-desc">Full interactive drone flyover</div>
+          </div>
+          <div class="interior-action-arrow">›</div>
+        </div>
+      </div>
+    </div>`;
+    if (isActive) {
+      html += `<button class="interior-exit-btn" onclick="exitDjiViewer()">✕ Exit 3D View</button>`;
+    }
   }
   document.getElementById('panel-content').innerHTML = html;
   updateGroundBanner();
@@ -721,6 +739,13 @@ function buildInteriorPanel(d) {
 function launchImmersive(mode) {
   const overlay = document.getElementById('immersive-overlay');
   overlay.classList.add('visible');
+
+  // Clear DJI viewer if switching from drone to ground view
+  if (djiViewerActive) {
+    document.getElementById('matterport-iframe').src = '';
+    document.getElementById('matterport-iframe').classList.remove('visible');
+    djiViewerActive = false;
+  }
 
   // Hide all intel pins from the map while immersive is active
   activeMarkers.forEach(m => m.setMap(null));
@@ -815,6 +840,7 @@ function exitImmersive() {
 
   matterportActive = false;
   streetViewActive = false;
+  djiViewerActive = false;
 
   // Restore intel pins immediately now that immersive is inactive
   activeMarkers.forEach(m => m.setMap(map));
@@ -835,7 +861,44 @@ function exitImmersive() {
 
   dbg('Exited ground view', 'info');
 }
-async function loadView(views, viewSuffix) {
+
+// ── DJI 3D Viewer ──────────────────────────────────────────────────────────
+function showDjiViewer() {
+  const d = currentViewData;
+  if (!d || !d.viewer360) { dbg('No DJI viewer URL available', 'warn'); return; }
+
+  // Reuse the immersive overlay — hide map, show DJI iframe
+  document.getElementById('immersive-overlay').classList.add('visible');
+  document.getElementById('map-controls').style.display = 'none';
+  document.getElementById('matterport-iframe').src = d.viewer360;
+  document.getElementById('matterport-iframe').classList.add('visible');
+  document.getElementById('street-view-div').classList.remove('visible');
+
+  // Hide intel pins while viewer is active
+  activeMarkers.forEach(m => m.setMap(null));
+
+  djiViewerActive = true;
+
+  // Refresh panel to show active state and exit button
+  buildPanel(d);
+  dbg('DJI 3D viewer loaded', 'ok');
+}
+
+function exitDjiViewer() {
+  document.getElementById('immersive-overlay').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+  document.getElementById('map-controls').style.display = '';
+
+  // Restore pins
+  activeMarkers.forEach(m => m.setMap(map));
+
+  djiViewerActive = false;
+
+  // Reload drone/plane panel
+  if (currentViewData) buildPanel(currentViewData);
+  dbg('Exited DJI 3D viewer', 'info');
+}
   const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
 
