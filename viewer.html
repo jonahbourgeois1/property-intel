@@ -147,8 +147,9 @@
   .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
 
   /* ── Interior / Street View overlay ── */
-  #immersive-overlay { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; z-index: 30; display: none; flex-direction: column; background: var(--bg); }
+  #immersive-overlay { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; z-index: 30; display: none; flex-direction: column; background: var(--bg); transition: right 0.3s ease; }
   #immersive-overlay.visible { display: flex; }
+  #immersive-overlay.panel-hidden { right: 0; }
   #immersive-frame { flex: 1; position: relative; background: #000; }
   #matterport-iframe { width: 100%; height: 100%; border: none; display: none; }
   #matterport-iframe.visible { display: block; }
@@ -281,12 +282,16 @@ function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
   document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
+  const overlay = document.getElementById('immersive-overlay');
+  if (overlay) overlay.classList.toggle('panel-hidden', !panelOpen);
   setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
 function mobileToggle() {
   mobileIntelOpen = !mobileIntelOpen;
   document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
   document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
+  const overlay = document.getElementById('immersive-overlay');
+  if (overlay) overlay.classList.toggle('panel-hidden', !mobileIntelOpen);
   setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
 }
 function showError(msg) { hideLoading(); document.getElementById('error').classList.add('visible'); document.getElementById('error-msg').textContent = msg; dbg('ERROR: ' + msg, 'error'); }
@@ -632,9 +637,6 @@ function buildPanel(d) {
         </div>
       </div>
     </div>`;
-    if (djiViewerActive) {
-      html += `<button class="interior-exit-btn" onclick="exitDjiViewer()">✕ Exit 3D View</button>`;
-    }
   }
 
   // Static image views below
@@ -676,8 +678,13 @@ function updateGroundBanner() {
     b.style.display = 'none';
   }
 }
+function syncOverlayWidth() {
+  const overlay = document.getElementById('immersive-overlay');
+  if (overlay) overlay.classList.toggle('panel-hidden', !panelOpen);
+}
 function launchImmersive(mode) {
   document.getElementById('immersive-overlay').classList.add('visible');
+  syncOverlayWidth();
   if (djiViewerActive) { document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible'); djiViewerActive = false; }
   activeMarkers.forEach(m => m.setMap(null));
   document.getElementById('map-controls').style.display = 'none';
@@ -729,8 +736,8 @@ function showDjiViewer() {
   const d = currentViewData;
   if (!d || !d.viewer360) { dbg('No DJI viewer URL', 'warn'); return; }
   document.getElementById('immersive-overlay').classList.add('visible');
+  syncOverlayWidth();
   document.getElementById('map-controls').style.display = 'none';
-  document.getElementById('matterport-iframe').src = d.viewer360;
   document.getElementById('matterport-iframe').classList.add('visible');
   document.getElementById('street-view-div').classList.remove('visible');
   activeMarkers.forEach(m => m.setMap(null));
