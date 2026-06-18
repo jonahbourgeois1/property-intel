@@ -608,7 +608,7 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   }
   if (!html) html = '<div class="panel-empty">No elements identified.</div>';
   if (!hasError && fr.recommendations && fr.recommendations.length > 0) {
-    html += '<div class="rec-block"><div class="rec-label security">FR Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
+    html += '<div class="rec-block"><div class="rec-label security">First Responder Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
   updateGroundBanner();
@@ -899,7 +899,8 @@ function exitDjiViewer() {
   if (currentViewData) buildPanel(currentViewData);
   dbg('Exited DJI 3D viewer', 'info');
 }
-  const hashedViewId = views[viewSuffix];
+
+async function loadView(views, viewSuffix) {
   if (!hashedViewId) return;
 
   // Never exit immersive on tab switch — ground view persists across all tabs
