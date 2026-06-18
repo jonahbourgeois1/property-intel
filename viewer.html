@@ -733,6 +733,7 @@ function exitImmersive() {
   dbg('Exited ground view', 'info');
 }
 function showDjiViewer() {
+  if (djiViewerActive) return;  // already active — prevent double-fire
   const d = currentViewData;
   if (!d || !d.viewer360) { dbg('No DJI viewer URL', 'warn'); return; }
   document.getElementById('immersive-overlay').classList.add('visible');
@@ -749,12 +750,20 @@ function showDjiViewer() {
 }
 function exitDjiViewer() {
   document.getElementById('immersive-overlay').classList.remove('visible');
-  document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('map-controls').style.display = '';
   activeMarkers.forEach(m => m.setMap(map));
   djiViewerActive = false;
   updateGroundBanner();
-  if (currentViewData) buildPanel(currentViewData);
+  // Reload whichever tab is currently active — not always the drone panel
+  const activeTab = document.querySelector('.view-tab.active');
+  const activeView = activeTab ? activeTab.getAttribute('data-view') : null;
+  if (activeView && currentViews && currentViews[activeView]) {
+    loadView(currentViews, activeView);
+  } else if (currentViewData) {
+    buildPanel(currentViewData);
+  }
   dbg('Exited DJI 3D viewer', 'info');
 }
 async function loadView(views, viewSuffix) {
