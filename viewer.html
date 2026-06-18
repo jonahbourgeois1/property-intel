@@ -154,10 +154,6 @@
   #matterport-iframe.visible { display: block; }
   #street-view-div { width: 100%; height: 100%; display: none; }
   #street-view-div.visible { display: block; }
-  .immersive-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 16px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 13px; }
-  .immersive-placeholder-icon { font-size: 48px; opacity: 0.4; }
-
-  /* Interior panel content */
   .interior-launch-card { margin: 16px; border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; background: var(--surface2); }
   .interior-card-header { padding: 14px 16px; border-bottom: 1px solid var(--border); }
   .interior-card-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
@@ -172,16 +168,11 @@
   .interior-action-arrow { font-size: 14px; color: var(--text3); }
   .interior-exit-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 16px; padding: 9px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; }
   .interior-exit-btn:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
-
-  /* ── Ground view active banner ── */
   #ground-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(205,51,51,0.08); border-bottom: 1px solid rgba(205,51,51,0.25); flex-shrink: 0; gap: 12px; }
   #ground-banner .ground-banner-label { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--red); font-weight: 500; }
   #ground-banner .ground-banner-exit { display: flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
   #ground-banner .ground-banner-exit:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
-
-  @media (max-width: 768px) {
-    #immersive-overlay { right: 0; }
-  }
+  @media (max-width: 768px) { #immersive-overlay { right: 0; } }
 </style>
 </head>
 <body>
@@ -200,8 +191,6 @@
 </div>
 <div id="main">
   <div id="map"></div>
-
-  <!-- Immersive overlay — sits above map, below panel -->
   <div id="immersive-overlay">
     <div id="immersive-frame">
       <div id="street-view-div"></div>
@@ -249,7 +238,7 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.3.1';
+const VERSION      = 'v2.4.0';
 const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
@@ -263,7 +252,7 @@ let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
 let streetViewActive = false, matterportActive = false, djiViewerActive = false;
-let frMode = false;  // true when opened with ?mode=fr — hides tab bar, locks to single view
+let frMode = false;
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
@@ -386,7 +375,6 @@ function dropPins(pins, color, hexColor) {
     const pinId = color + '-' + i;
     const marker = new google.maps.Marker({
       position: { lat: pin.lat, lng: pin.lng },
-      // Keep off map while immersive is active — restored by exitImmersive
       map: immersiveActive ? null : map,
       icon: makePinSvg(hexColor, label), title: pin.label, zIndex: 10
     });
@@ -508,29 +496,6 @@ function initMap(lat, lng, storedRing) {
     if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
     dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
     flushPendingMapData();
-
-    // ── Pegman intercept ──────────────────────────────────────────────────
-    // Intercept pegman drop — dismiss Google's native SV immediately
-    // (synchronously before it renders) then launch our own overlay
-    const sv = map.getStreetView();
-    sv.addListener('visible_changed', function() {
-      if (sv.getVisible() && !streetViewActive && !matterportActive) {
-        // Dismiss native SV synchronously — prevents grey/white flash
-        sv.setVisible(false);
-        map.setStreetView(null);
-
-        // Switch to Ground tab then launch Street View in our overlay
-        if (currentViews && currentViews['tour']) {
-          loadView(currentViews, 'tour').then(() => {
-            showStreetView();
-            dbg('Pegman dropped — Ground tab activated', 'ok');
-          });
-        } else {
-          showStreetView();
-        }
-      }
-    });
-
   } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
 }
 function resolveAndInitMap(entry, storedRing) {
@@ -558,12 +523,6 @@ function buildTabs(views, activeView) {
     tab.onclick = () => loadView(currentViews, v);
     tabsEl.appendChild(tab);
   });
-}
-
-function updateGroundBanner() {
-  const banner = document.getElementById('ground-banner');
-  if (!banner) return;
-  banner.style.display = (matterportActive || streetViewActive) ? 'flex' : 'none';
 }
 function buildSecurityPanel(d, centerLat, centerLng) {
   clearMarkers();
@@ -608,10 +567,9 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   }
   if (!html) html = '<div class="panel-empty">No elements identified.</div>';
   if (!hasError && fr.recommendations && fr.recommendations.length > 0) {
-    html += '<div class="rec-block"><div class="rec-label security">First Responder Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
+    html += '<div class="rec-block"><div class="rec-label security">FR Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
-  updateGroundBanner();
 }
 function buildWildfirePanel(d, centerLat, centerLng) {
   clearMarkers();
@@ -644,16 +602,13 @@ function buildWildfirePanel(d, centerLat, centerLng) {
     html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Recommendations</div><div class="rec-text">' + wf.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
-  updateGroundBanner();
 }
 function buildPanel(d) {
   clearMarkers();
   if (groundOverlay) { groundOverlay.setMap(null); }
   const views = [
-    { label: 'Alpha', badge: 'A', cls: '', data: d.alpha },
-    { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
-    { label: 'Charlie', badge: 'C', cls: '', data: d.charlie },
-    { label: 'Delta', badge: 'D', cls: '', data: d.delta },
+    { label: 'Alpha', badge: 'A', cls: '', data: d.alpha }, { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie', badge: 'C', cls: '', data: d.charlie }, { label: 'Delta', badge: 'D', cls: '', data: d.delta },
     { label: 'Nadir', badge: 'N', cls: 'nadir', data: d.nadir }
   ];
   lightboxViews = [];
@@ -665,247 +620,100 @@ function buildPanel(d) {
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
   if (d.viewer360) {
-    const isActive = djiViewerActive;
-    html += `<div class="interior-launch-card">
-      <div class="interior-card-header">
-        <div class="interior-card-title">3D Aerial View</div>
-        <div class="interior-card-sub">Interactive drone model</div>
-      </div>
-      <div class="interior-card-actions">
-        <div class="interior-action-btn${isActive ? ' active' : ''}" id="panel-btn-dji" onclick="showDjiViewer()">
-          <div class="interior-action-text">
-            <div class="interior-action-label">Launch 3D Viewer</div>
-            <div class="interior-action-desc">Full interactive drone flyover</div>
-          </div>
-          <div class="interior-action-arrow">›</div>
-        </div>
-      </div>
-    </div>`;
-    if (isActive) {
-      html += `<button class="interior-exit-btn" onclick="exitDjiViewer()">✕ Exit 3D View</button>`;
-    }
+    html += `<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">3D Aerial View</div><div class="interior-card-sub">Interactive drone model</div></div><div class="interior-card-actions"><div class="interior-action-btn${djiViewerActive?' active':''}" onclick="showDjiViewer()"><div class="interior-action-text"><div class="interior-action-label">Launch 3D Viewer</div><div class="interior-action-desc">Full interactive drone flyover</div></div><div class="interior-action-arrow">›</div></div></div></div>`;
+    if (djiViewerActive) html += `<button class="interior-exit-btn" onclick="exitDjiViewer()">✕ Exit 3D View</button>`;
   }
   document.getElementById('panel-content').innerHTML = html;
   updateGroundBanner();
 }
-
-// ── Interior panel ─────────────────────────────────────────────────────────
 function buildInteriorPanel(d) {
   clearMarkers();
   if (groundOverlay) { groundOverlay.setMap(null); }
-
-  const hasMatterport = !!(d.viewer360);
-  const hasStreetView = !!(d.lat && d.lng);
-  const isActive = matterportActive || streetViewActive;
-
-  let html = '<div class="interior-launch-card">';
-  html += '<div class="interior-card-header">';
-  html += '<div class="interior-card-title">Ground Views</div>';
-  html += '<div class="interior-card-sub">360° property walkthrough & street context</div>';
-  html += '</div><div class="interior-card-actions">';
-
-  if (hasMatterport) {
-    const activeClass = matterportActive ? ' active' : '';
-    html += `<div class="interior-action-btn${activeClass}" id="panel-btn-matterport" onclick="launchImmersive('matterport')">
-      <div class="interior-action-text">
-        <div class="interior-action-label">Property Tour</div>
-        <div class="interior-action-desc">360° interior & exterior walkthrough</div>
-      </div>
-      <div class="interior-action-arrow">›</div>
-    </div>`;
-  }
-
-  if (hasStreetView) {
-    const activeClass = streetViewActive ? ' active' : '';
-    html += `<div class="interior-action-btn${activeClass}" id="panel-btn-streetview" onclick="launchImmersive('streetview')">
-      <div class="interior-action-text">
-        <div class="interior-action-label">Street View</div>
-        <div class="interior-action-desc">Approach routes & surroundings</div>
-      </div>
-      <div class="interior-action-arrow">›</div>
-    </div>`;
-  }
-
-  if (!hasMatterport && !hasStreetView) {
-    html += '<div class="panel-empty">No ground views available for this property.</div>';
-  }
-
+  const hasMatterport = !!(d.viewer360), hasStreetView = !!(d.lat && d.lng);
+  let html = '<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">Ground Views</div><div class="interior-card-sub">360° property walkthrough & street context</div></div><div class="interior-card-actions">';
+  if (hasMatterport) html += `<div class="interior-action-btn${matterportActive?' active':''}" id="panel-btn-matterport" onclick="launchImmersive('matterport')"><div class="interior-action-text"><div class="interior-action-label">Property Tour</div><div class="interior-action-desc">360° interior & exterior walkthrough</div></div><div class="interior-action-arrow">›</div></div>`;
+  if (hasStreetView) html += `<div class="interior-action-btn${streetViewActive?' active':''}" id="panel-btn-streetview" onclick="launchImmersive('streetview')"><div class="interior-action-text"><div class="interior-action-label">Street View</div><div class="interior-action-desc">Approach routes & surroundings</div></div><div class="interior-action-arrow">›</div></div>`;
+  if (!hasMatterport && !hasStreetView) html += '<div class="panel-empty">No ground views available.</div>';
   html += '</div></div>';
-
   document.getElementById('panel-content').innerHTML = html;
 }
-
-// ── Immersive view controls ────────────────────────────────────────────────
-function launchImmersive(mode) {
-  const overlay = document.getElementById('immersive-overlay');
-  overlay.classList.add('visible');
-
-  // Clear DJI viewer if switching from drone to ground view
-  if (djiViewerActive) {
-    document.getElementById('matterport-iframe').src = '';
-    document.getElementById('matterport-iframe').classList.remove('visible');
-    djiViewerActive = false;
-  }
-
-  // Hide all intel pins from the map while immersive is active
-  activeMarkers.forEach(m => m.setMap(null));
-
-  // Hide map controls while immersive is open
-  document.getElementById('map-controls').style.display = 'none';
-
-  if (mode === 'matterport') {
-    showMatterport();
-  } else {
-    showStreetView();
-  }
+function updateGroundBanner() {
+  const b = document.getElementById('ground-banner');
+  if (b) b.style.display = (matterportActive || streetViewActive) ? 'flex' : 'none';
 }
-
+function launchImmersive(mode) {
+  document.getElementById('immersive-overlay').classList.add('visible');
+  if (djiViewerActive) { document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible'); djiViewerActive = false; }
+  activeMarkers.forEach(m => m.setMap(null));
+  document.getElementById('map-controls').style.display = 'none';
+  if (mode === 'matterport') { showMatterport(); } else { showStreetView(); }
+}
 function showMatterport() {
   const d = currentViewData;
-  if (!d || !d.viewer360) { dbg('No Matterport URL available', 'warn'); return; }
-
-  // Ensure overlay is visible and pins hidden
+  if (!d || !d.viewer360) { dbg('No Matterport URL', 'warn'); return; }
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('map-controls').style.display = 'none';
   activeMarkers.forEach(m => m.setMap(null));
-
-  // Clear Street View if active
   document.getElementById('street-view-div').classList.remove('visible');
-
   document.getElementById('matterport-iframe').src = d.viewer360;
   document.getElementById('matterport-iframe').classList.add('visible');
-
-  matterportActive = true;
-  streetViewActive = false;
-
-  updateGroundBanner();
-  buildInteriorPanel(d);
+  matterportActive = true; streetViewActive = false;
+  updateGroundBanner(); buildInteriorPanel(d);
   dbg('Matterport tour loaded', 'ok');
 }
-
 function showStreetView() {
   const d = currentViewData;
   if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
-
-  // If Matterport was active, clear it first
-  document.getElementById('matterport-iframe').src = '';
-  document.getElementById('matterport-iframe').classList.remove('visible');
-
-  // Hide pins and map controls
+  document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible');
   activeMarkers.forEach(m => m.setMap(null));
   document.getElementById('map-controls').style.display = 'none';
-
-  // Show the immersive overlay with Street View div
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('street-view-div').classList.add('visible');
-
-  // Render Street View panorama into overlay div
-  const svDiv = document.getElementById('street-view-div');
-  const panorama = new google.maps.StreetViewPanorama(svDiv, {
-    position: { lat: d.lat, lng: d.lng },
-    pov: { heading: 0, pitch: 0 },
-    zoom: 1,
-    addressControl: false,
-    fullscreenControl: false,
-    motionTrackingControl: false
-  });
+  const panorama = new google.maps.StreetViewPanorama(document.getElementById('street-view-div'), { position: { lat: d.lat, lng: d.lng }, pov: { heading: 0, pitch: 0 }, zoom: 1, addressControl: false, fullscreenControl: false, motionTrackingControl: false });
   map.setStreetView(panorama);
-
-  matterportActive = false;
-  streetViewActive = true;
-
-  updateGroundBanner();
-  buildInteriorPanel(d);
+  matterportActive = false; streetViewActive = true;
+  updateGroundBanner(); buildInteriorPanel(d);
   dbg('Street View loaded at ' + d.lat.toFixed(5) + ',' + d.lng.toFixed(5), 'ok');
 }
-
 function exitImmersive() {
-  const overlay = document.getElementById('immersive-overlay');
-  overlay.classList.remove('visible');
-
-  // Stop Matterport
-  document.getElementById('matterport-iframe').src = '';
-  document.getElementById('matterport-iframe').classList.remove('visible');
-
-  // Stop Street View — dismiss map's built-in SV so pegman retracts
+  document.getElementById('immersive-overlay').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('street-view-div').classList.remove('visible');
-  if (map) {
-    const sv = map.getStreetView();
-    if (sv) sv.setVisible(false);
-    map.setStreetView(null);
-  }
-
-  // Restore map controls
+  if (map) { const sv = map.getStreetView(); if (sv) sv.setVisible(false); map.setStreetView(null); }
   document.getElementById('map-controls').style.display = '';
-
-  matterportActive = false;
-  streetViewActive = false;
-  djiViewerActive = false;
-
-  // Restore intel pins immediately now that immersive is inactive
+  matterportActive = false; streetViewActive = false; djiViewerActive = false;
   activeMarkers.forEach(m => m.setMap(map));
-
-  // Hide ground banner
   updateGroundBanner();
-
-  // Reload the currently active tab so panel content and pins are correct
   const activeTab = document.querySelector('.view-tab.active');
   const activeView = activeTab ? activeTab.getAttribute('data-view') : null;
-
-  if (activeView && activeView !== 'tour' && currentViews && currentViews[activeView]) {
-    loadView(currentViews, activeView);
-  } else {
-    // Fallback to Ground tab
-    if (currentViewData) buildInteriorPanel(currentViewData);
-  }
-
+  if (activeView && activeView !== 'tour' && currentViews && currentViews[activeView]) { loadView(currentViews, activeView); }
+  else if (currentViewData) { buildInteriorPanel(currentViewData); }
   dbg('Exited ground view', 'info');
 }
-
-// ── DJI 3D Viewer ──────────────────────────────────────────────────────────
 function showDjiViewer() {
   const d = currentViewData;
-  if (!d || !d.viewer360) { dbg('No DJI viewer URL available', 'warn'); return; }
-
-  // Reuse the immersive overlay — hide map, show DJI iframe
+  if (!d || !d.viewer360) { dbg('No DJI viewer URL', 'warn'); return; }
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('map-controls').style.display = 'none';
   document.getElementById('matterport-iframe').src = d.viewer360;
   document.getElementById('matterport-iframe').classList.add('visible');
   document.getElementById('street-view-div').classList.remove('visible');
-
-  // Hide intel pins while viewer is active
   activeMarkers.forEach(m => m.setMap(null));
-
-  djiViewerActive = true;
-
-  // Refresh panel to show active state and exit button
-  buildPanel(d);
+  djiViewerActive = true; buildPanel(d);
   dbg('DJI 3D viewer loaded', 'ok');
 }
-
 function exitDjiViewer() {
   document.getElementById('immersive-overlay').classList.remove('visible');
-  document.getElementById('matterport-iframe').src = '';
-  document.getElementById('matterport-iframe').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('map-controls').style.display = '';
-
-  // Restore pins
   activeMarkers.forEach(m => m.setMap(map));
-
   djiViewerActive = false;
-
-  // Reload drone/plane panel
   if (currentViewData) buildPanel(currentViewData);
   dbg('Exited DJI 3D viewer', 'info');
 }
-
 async function loadView(views, viewSuffix) {
+  const hashedViewId = views[viewSuffix];
   if (!hashedViewId) return;
-
-  // Never exit immersive on tab switch — ground view persists across all tabs
-  // Pins are suppressed while immersive is active (handled in dropPins)
-
   document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-view') === viewSuffix));
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
   try {
@@ -916,18 +724,13 @@ async function loadView(views, viewSuffix) {
     currentViewData = d;
     const centerLat = d.lat || (map ? map.getCenter().lat() : 0);
     const centerLng = d.lng || (map ? map.getCenter().lng() : 0);
-
-    if (viewSuffix === 'security' && d.fr)           { buildSecurityPanel(d, centerLat, centerLng); }
-    else if (viewSuffix === 'wildfire' && d.wildfire) { buildWildfirePanel(d, centerLat, centerLng); }
-    else if (viewSuffix === 'tour')                   { buildInteriorPanel(d); }
-    else if (d.fr || d.wildfire)                     { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
-    else                                              { buildPanel(d); }
-
+    if (viewSuffix === 'security' && d.fr)            { buildSecurityPanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'wildfire' && d.wildfire)  { buildWildfirePanel(d, centerLat, centerLng); }
+    else if (viewSuffix === 'tour')                    { buildInteriorPanel(d); }
+    else if (d.fr || d.wildfire)                      { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
+    else                                               { buildPanel(d); }
     dbg('View loaded: ' + viewSuffix, 'ok');
-  } catch(e) {
-    dbg('View load failed: ' + e.message, 'error');
-    document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Failed to load: ' + e.message + '</div>';
-  }
+  } catch(e) { dbg('View load failed: ' + e.message, 'error'); document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Failed to load: ' + e.message + '</div>'; }
 }
 function openLightbox(index) { lightboxIndex = index; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.addEventListener('keydown', lightboxKey); }
 function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.removeEventListener('keydown', lightboxKey); }
@@ -943,9 +746,8 @@ function updateLightbox() {
 async function loadPropertyData() {
   dbg(VERSION + ' — Property Intel loaded', 'ok');
   const params = new URLSearchParams(window.location.search);
-  const propertyHash = params.get('property');
-  const tabParam     = params.get('tab');
-  frMode             = params.get('mode') === 'fr';
+  const propertyHash = params.get('property'), tabParam = params.get('tab');
+  frMode = params.get('mode') === 'fr';
   if (!propertyHash) { showError('No property ID provided.'); return; }
   if (frMode) dbg('FR mode — single view, tabs hidden', 'info');
   dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
@@ -958,56 +760,31 @@ async function loadPropertyData() {
     const entry = propertyIndex[propertyHash];
     if (!entry) { showError('Property not found.'); return; }
     dbg('Property found: ' + entry.name, 'ok');
-
-    // Pre-fetch property JSON to check for viewer360 before building tabs
     const propRes = await fetch(BASE_URL + propertyHash + '.json');
     const propData = propRes.ok ? await propRes.json() : null;
-
-    // Use 'tour' key for the immersive Interior tab
     const views = Object.assign({}, entry.views);
-    if (propData && propData.viewer360) {
-      views['tour'] = propertyHash;
-      dbg('viewer360 found — Tour tab enabled', 'ok');
-    }
+    if (propData && propData.viewer360) { views['tour'] = propertyHash; dbg('viewer360 found — Tour tab enabled', 'ok'); }
     currentViews = views;
-
     document.getElementById('property-name').textContent = entry.name;
-    document.getElementById('panel-title').textContent   = entry.name;
+    document.getElementById('panel-title').textContent = entry.name;
     document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
-
-    // FR mode: hide tab bar entirely — first responder sees only the linked view
-    if (frMode) {
-      document.getElementById('view-tabs').style.display = 'none';
-    }
-
+    if (frMode) document.getElementById('view-tabs').style.display = 'none';
     const firstView = (tabParam && views[tabParam]) ? tabParam : VIEW_ORDER.find(v => views[v]);
     if (!firstView) { showError('No views available.'); return; }
     dbg('Available views: ' + Object.keys(views).join(', '), 'info');
-
-    // In FR mode skip buildTabs — tabs are hidden
     if (!frMode) buildTabs(views, firstView);
-
     setLoading('Loading ' + firstView + '...');
     await loadView(views, firstView);
-    // loadView complete — currentViewData now has parcel_ring if available
     const storedRing = currentViewData && currentViewData.parcel_ring || null;
     if (storedRing) dbg('Stored parcel ring found (' + storedRing.length + ' pts)', 'ok');
-    if (mapsApiReady) {
-      resolveAndInitMap(entry, storedRing);
-    } else {
-      pendingEntry     = entry;
-      pendingStoredRing = storedRing;
-    }
+    if (mapsApiReady) { resolveAndInitMap(entry, storedRing); }
+    else { pendingEntry = entry; pendingStoredRing = storedRing; }
   } catch(e) { showError('Failed to load property: ' + e.message); }
 }
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
-  if (pendingEntry) {
-    resolveAndInitMap(pendingEntry, pendingStoredRing || null);
-    pendingEntry = null;
-    pendingStoredRing = null;
-  }
+  if (pendingEntry) { resolveAndInitMap(pendingEntry, pendingStoredRing || null); pendingEntry = null; pendingStoredRing = null; }
 };
 loadPropertyData();
 </script>
