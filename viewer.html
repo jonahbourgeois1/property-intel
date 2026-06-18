@@ -195,7 +195,7 @@
   <div id="immersive-overlay">
     <div id="immersive-frame">
       <div id="street-view-div"></div>
-      <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking"></iframe>
+      <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
     </div>
   </div>
   <div id="map-controls">
@@ -738,12 +738,14 @@ function showDjiViewer() {
   document.getElementById('immersive-overlay').classList.add('visible');
   syncOverlayWidth();
   document.getElementById('map-controls').style.display = 'none';
-  document.getElementById('matterport-iframe').classList.add('visible');
   document.getElementById('street-view-div').classList.remove('visible');
+  const iframe = document.getElementById('matterport-iframe');
+  iframe.src = d.viewer360;
+  iframe.classList.add('visible');
   activeMarkers.forEach(m => m.setMap(null));
   djiViewerActive = true; buildPanel(d);
   updateGroundBanner();
-  dbg('DJI 3D viewer loaded', 'ok');
+  dbg('DJI 3D viewer loaded: ' + d.viewer360, 'ok');
 }
 function exitDjiViewer() {
   document.getElementById('immersive-overlay').classList.remove('visible');
