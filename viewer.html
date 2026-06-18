@@ -613,16 +613,38 @@ function buildPanel(d) {
   ];
   lightboxViews = [];
   views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
-  let html = '', lbIndex = 0;
+  let html = '';
+
+  // 3D viewer card — always at top when viewer360 exists
+  if (d.viewer360) {
+    html += `<div class="interior-launch-card">
+      <div class="interior-card-header">
+        <div class="interior-card-title">3D Aerial View</div>
+        <div class="interior-card-sub">Interactive drone model</div>
+      </div>
+      <div class="interior-card-actions">
+        <div class="interior-action-btn${djiViewerActive ? ' active' : ''}" onclick="showDjiViewer()">
+          <div class="interior-action-text">
+            <div class="interior-action-label">Launch 3D Viewer</div>
+            <div class="interior-action-desc">Full interactive drone flyover</div>
+          </div>
+          <div class="interior-action-arrow">›</div>
+        </div>
+      </div>
+    </div>`;
+    if (djiViewerActive) {
+      html += `<button class="interior-exit-btn" onclick="exitDjiViewer()">✕ Exit 3D View</button>`;
+    }
+  }
+
+  // Static image views below
+  let lbIndex = 0;
   views.forEach(v => {
     if (!v.data || !v.data.url) return;
     const bullets = formatDesc(v.data.desc), idx = lbIndex++;
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
-  if (d.viewer360) {
-    html += `<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">3D Aerial View</div><div class="interior-card-sub">Interactive drone model</div></div><div class="interior-card-actions"><div class="interior-action-btn${djiViewerActive?' active':''}" onclick="showDjiViewer()"><div class="interior-action-text"><div class="interior-action-label">Launch 3D Viewer</div><div class="interior-action-desc">Full interactive drone flyover</div></div><div class="interior-action-arrow">›</div></div></div></div>`;
-    if (djiViewerActive) html += `<button class="interior-exit-btn" onclick="exitDjiViewer()">✕ Exit 3D View</button>`;
-  }
+
   document.getElementById('panel-content').innerHTML = html;
   updateGroundBanner();
 }
@@ -639,7 +661,20 @@ function buildInteriorPanel(d) {
 }
 function updateGroundBanner() {
   const b = document.getElementById('ground-banner');
-  if (b) b.style.display = (matterportActive || streetViewActive) ? 'flex' : 'none';
+  if (!b) return;
+  if (matterportActive || streetViewActive) {
+    b.style.display = 'flex';
+    b.querySelector('.ground-banner-label').textContent = 'Ground View Active';
+    b.querySelector('.ground-banner-exit').textContent = '✕ Exit Ground View';
+    b.querySelector('.ground-banner-exit').onclick = exitImmersive;
+  } else if (djiViewerActive) {
+    b.style.display = 'flex';
+    b.querySelector('.ground-banner-label').textContent = '3D View Active';
+    b.querySelector('.ground-banner-exit').textContent = '✕ Exit 3D View';
+    b.querySelector('.ground-banner-exit').onclick = exitDjiViewer;
+  } else {
+    b.style.display = 'none';
+  }
 }
 function launchImmersive(mode) {
   document.getElementById('immersive-overlay').classList.add('visible');
@@ -700,6 +735,7 @@ function showDjiViewer() {
   document.getElementById('street-view-div').classList.remove('visible');
   activeMarkers.forEach(m => m.setMap(null));
   djiViewerActive = true; buildPanel(d);
+  updateGroundBanner();
   dbg('DJI 3D viewer loaded', 'ok');
 }
 function exitDjiViewer() {
@@ -708,6 +744,7 @@ function exitDjiViewer() {
   document.getElementById('map-controls').style.display = '';
   activeMarkers.forEach(m => m.setMap(map));
   djiViewerActive = false;
+  updateGroundBanner();
   if (currentViewData) buildPanel(currentViewData);
   dbg('Exited DJI 3D viewer', 'info');
 }
