@@ -28,7 +28,6 @@
   .panel-title { font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; user-select: none; transition: color 0.15s; display: inline-flex; align-items: center; gap: 5px; }
   .panel-title:hover { color: var(--accent); }
   .panel-title.open { color: var(--accent); }
-  /* ── Property search dropdown ── */
   #property-search-wrap { position: relative; }
   #property-dropdown { position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 200; display: none; flex-direction: column; overflow: hidden; }
   #property-dropdown.open { display: flex; }
@@ -156,7 +155,6 @@
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
   }
-  /* ── Property search dropdown ── */
   #property-search-wrap { position: relative; display: flex; align-items: center; }
   #property-search-btn { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: 'DM Mono', monospace; transition: all 0.15s; white-space: nowrap; max-width: 200px; }
   #property-search-btn:hover { border-color: var(--border2); color: var(--text); }
@@ -257,8 +255,9 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.3.0';
-const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/satellite/';
+const VERSION      = 'v2.3.1';
+const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/satellite/';
+const DATA_ROOT    = 'https://jonahbourgeois1.github.io/property-intel/data/';
 const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
@@ -268,6 +267,13 @@ const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const VIEW_ORDER   = ['security','wildfire','plane','drone'];
 const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', plane:'Plane', drone:'Drone' };
 
+// Maps each view suffix to the subfolder its JSON lives in
+function viewBaseUrl(viewSuffix) {
+  const subfolders = { drone: 'drone', plane: 'plane', interior: 'interior' };
+  const sub = subfolders[viewSuffix];
+  return sub ? DATA_ROOT + sub + '/' : BASE_URL;
+}
+
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, hoaData = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
@@ -276,7 +282,7 @@ let intelMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
-let propertyRegistry = [];  // [{entry, marker, lat, lng}] — built as pins are placed
+let propertyRegistry = [];
 const isMobile = () => window.innerWidth <= 768;
 const parcelCache = {};
 
@@ -299,7 +305,6 @@ function toggleDebug() {
 }
 function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
 
-// ── Property search dropdown ───────────────────────────────────────────────
 function togglePropertyDropdown() {
   const trigger  = document.getElementById('panel-title');
   const dropdown = document.getElementById('property-dropdown');
@@ -325,7 +330,6 @@ function outsideDropdownClick(e) {
   if (wrap && !wrap.contains(e.target)) closePropertyDropdown();
 }
 function buildPropertyList(entries) {
-  // Sort alphabetically by name — guard against null/undefined names
   propertyRegistry = entries.map(function(e) {
     return { entry: e, marker: null, lat: e.lat || null, lng: e.lng || null };
   }).sort(function(a, b) {
@@ -363,17 +367,8 @@ function selectPropertyFromDropdown(name) {
   if (!item) return;
   closePropertyDropdown();
   document.getElementById('panel-title').textContent = name + ' ▾';
-
-  // Zoom map to property
-  if (map && item.lat && item.lng) {
-    map.panTo({ lat: item.lat, lng: item.lng });
-    map.setZoom(18);
-  }
-
-  // Highlight pin and load panel
-  if (activeMarker) {
-    activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
-  }
+  if (map && item.lat && item.lng) { map.panTo({ lat: item.lat, lng: item.lng }); map.setZoom(18); }
+  if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
   if (item.marker) {
     item.marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     item.marker.setAnimation(google.maps.Animation.BOUNCE);
@@ -528,17 +523,13 @@ function getParcelFile(lat, lng) {
   var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
-
-// ── Parcel boundary — uses stored ring if available, falls back to GeoJSON tile ──
 function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
   if (storedRing && storedRing.length >= 3) {
-    // New path: draw stored ring directly — no adjacent parcels rendered
     var paths = storedRing.map(function(pt) { return { lat: pt.lat, lng: pt.lng }; });
     var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
     allPolygons.push(polygon);
     return;
   }
-  // Fallback: fetch GeoJSON tile for older properties without stored ring
   var filename = getParcelFile(lat, lng);
   function renderPolygon(geojson) {
     var matched = null;
@@ -560,7 +551,6 @@ function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
       .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
   }
 }
-
 function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: 44.06, lng: -121.31 }, zoom: 13,
@@ -573,7 +563,6 @@ function initMap() {
   dbg('Map initialized', 'ok');
   flushPendingMapData();
 }
-
 function dropAllPins(entries) {
   var bounds = new google.maps.LatLngBounds(), geocodeQueue = [];
   entries.forEach(function(entry) {
@@ -591,7 +580,6 @@ function dropAllPins(entries) {
       .catch(function(e) { dbg('Geocode failed: ' + entry.name + ': ' + e.message, 'warn'); });
   });
 }
-
 function placePin(entry, lat, lng, bounds) {
   var marker = new google.maps.Marker({
     position: { lat: lat, lng: lng }, map: map, title: entry.name,
@@ -600,7 +588,6 @@ function placePin(entry, lat, lng, bounds) {
     zIndex: 10
   });
   if (bounds) bounds.extend({ lat: lat, lng: lng });
-  // Draw parcel boundary for every property on load
   var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
   if (propId) {
     fetch(BASE_URL + propId + '.json')
@@ -615,23 +602,16 @@ function placePin(entry, lat, lng, bounds) {
     if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
     marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     activeMarker = marker;
-    // Zoom and center on selected property — same behaviour as dropdown
-    if (map) {
-      map.panTo({ lat: lat, lng: lng });
-      map.setZoom(18);
-    }
-    // Sync dropdown label
+    if (map) { map.panTo({ lat: lat, lng: lng }); map.setZoom(18); }
     document.getElementById('panel-title').textContent = (entry.name || 'Property') + ' ▾';
     loadPropertyIntoPanel(entry);
     if (!panelOpen) togglePanel();
   });
   allMarkers.push(marker);
-  // Update registry entry with marker reference and resolved coordinates
   var regEntry = propertyRegistry.find(function(r) { return r.entry === entry; });
   if (regEntry) { regEntry.marker = marker; regEntry.lat = lat; regEntry.lng = lng; }
   dbg('Pin placed: ' + entry.name, 'ok');
 }
-
 function buildTabs(views, activeView) {
   const tabsEl = document.getElementById('view-tabs');
   tabsEl.innerHTML = '';
@@ -756,7 +736,7 @@ async function loadView(views, viewSuffix) {
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
   try {
     dbg('Loading view: ' + viewSuffix, 'info');
-    const res = await fetch(BASE_URL + hashedViewId + '.json');
+    const res = await fetch(viewBaseUrl(viewSuffix) + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
@@ -822,7 +802,7 @@ async function loadHoaData() {
     document.getElementById('hoa-badge').textContent = hoaData.name;
     document.getElementById('panel-title').textContent = hoaData.name + ' — Select Property ▾';
     setLoading('Loading property index...');
-    const indexRes = await fetch(BASE_URL + 'index.json');
+    const indexRes = await fetch(DATA_ROOT + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
     dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' total properties', 'ok');
@@ -836,10 +816,7 @@ async function loadHoaData() {
       .filter(Boolean);
     dbg('Matched ' + entries.length + ' properties', 'ok');
     document.getElementById('property-count').textContent = entries.length + ' properties in this community';
-
-    // Pre-populate dropdown with entries — markers fill in as pins are placed
     buildPropertyList(entries);
-
     hideLoading();
     if (mapsApiReady) { initMap(); dropAllPins(entries); }
     else { window._pendingEntries = entries; }
