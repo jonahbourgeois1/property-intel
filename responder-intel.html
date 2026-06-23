@@ -63,280 +63,303 @@
   .page { display: none; }
   .page.active { display: block; }
 
-  /* ── LANDING PAGE ── */
-  #page-landing {
-    min-height: calc(100vh - 49px);
+  /* ══════════════════════════════════════
+     LANDING PAGE — matches email design
+  ══════════════════════════════════════ */
+  #page-landing { background: #f0eeea; }
+
+  /* ① Hero aerial photo block */
+  .hero-img-block {
+    width: 100%;
+    background: #1c2414;
+    overflow: hidden;
+  }
+  .hero-img-inner {
+    width: 100%;
+    height: 280px;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.4) 100%),
+      linear-gradient(135deg, #1c2a14 0%, #0e1a0a 35%, #141e10 60%, #1a1c10 100%);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-img-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 30% 40%, rgba(80,100,50,0.35) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 40% at 70% 60%, rgba(40,60,30,0.3) 0%, transparent 60%);
+  }
+  .hero-img-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.2);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
   }
 
-  .landing-hero {
-    padding: 64px 24px 48px;
-    text-align: center;
-    border-bottom: 1px solid var(--light-gray);
-  }
-
-  .vyanet-logo {
-    display: inline-flex;
+  /* ② Black logo bar */
+  .black-logo-bar {
+    background: #111111;
+    display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 52px;
+    padding: 18px 24px;
   }
-  .logo-img {
-    height: 80px;
+  .black-bar-logo {
+    height: 48px;
     width: auto;
+    filter: brightness(0) invert(1);
   }
 
-  .hero-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--red);
-    margin-bottom: 16px;
+  /* ③ Intro card: image left + headline right */
+  .intro-card-wrap {
+    background: #ffffff;
+    display: flex;
+    align-items: stretch;
+    max-width: 640px;
+    margin: 0 auto;
+    border-bottom: 1px solid #e4e2dd;
   }
-  .hero-heading {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(28px, 4vw, 44px);
-    font-weight: 700;
-    color: var(--dark);
-    line-height: 1.2;
-    max-width: 700px;
-    margin: 0 auto 20px;
+  .intro-card-img {
+    width: 180px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: #1a1f1a;
   }
-  .hero-rule {
-    width: 72px;
-    height: 2px;
-    background: var(--red);
-    margin: 0 auto 24px;
+  .intro-card-img-inner {
+    width: 100%;
+    height: 100%;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(160deg, #111a0e 0%, #0a1208 100%);
   }
-  .hero-body {
-    font-size: 15px;
-    color: var(--text2);
-    line-height: 1.8;
-    max-width: 560px;
-    margin: 0 auto 40px;
+  .intro-card-text {
+    flex: 1;
+    padding: 28px 24px;
   }
-  .hero-cta-group {
+  .intro-card-heading {
+    font-size: clamp(20px, 3.5vw, 28px);
+    font-weight: 800;
+    color: #111111;
+    line-height: 1.15;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+  }
+  .intro-card-body {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.75;
+  }
+  .red-highlight { color: var(--red); font-weight: 600; }
+
+  /* Divider */
+  .section-divider {
+    height: 1px;
+    background: #d8d5cf;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ④ Why heading */
+  .why-heading {
+    font-size: clamp(18px, 3vw, 24px);
+    font-weight: 800;
+    color: #111111;
+    text-align: center;
+    padding: 32px 24px 20px;
+    background: #ffffff;
+    letter-spacing: -0.01em;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* ⑤ Feature section */
+  .features-wrap {
+    display: flex;
+    align-items: flex-start;
+    max-width: 640px;
+    margin: 0 auto;
+    background: #ffffff;
+    padding: 0 0 8px;
+    border-bottom: 1px solid #e4e2dd;
+  }
+
+  /* Left: nadir image + 3D block */
+  .features-left {
+    width: 180px;
+    flex-shrink: 0;
+    padding: 0 0 16px;
+  }
+  .features-left-img {
+    width: 100%;
+    height: 160px;
+    background: #1a2010;
+    overflow: hidden;
+  }
+  .features-left-img-inner {
+    width: 100%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
-  }
-  .btn-primary {
-    display: inline-flex;
-    align-items: center;
     justify-content: center;
+    background: linear-gradient(160deg, #1c2a14 0%, #0e1508 100%);
+  }
+  .features-3d-block {
+    display: flex;
     gap: 8px;
-    padding: 14px 36px;
-    background: var(--accent-dark);
-    color: var(--white);
+    padding: 12px 12px 4px;
+  }
+  .features-3d-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .features-3d-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 4px;
+  }
+  .features-3d-desc {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.6;
+  }
+
+  /* Right: 2-col feature grid */
+  .features-right {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 8px 16px 8px 8px;
+  }
+  .feat-item {
+    padding: 12px 10px;
+  }
+  .feat-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+  .feat-desc {
+    font-size: 11px;
+    color: #666;
+    line-height: 1.65;
+  }
+
+  /* ⑥ CTA block */
+  .cta-block {
+    background: #ffffff;
+    padding: 32px 24px 36px;
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #e4e2dd;
+  }
+  .cta-pill {
+    display: inline-block;
+    padding: 14px 40px;
+    background: #111111;
+    color: #ffffff;
     border-radius: 999px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    text-decoration: none;
     border: none;
     cursor: pointer;
-    transition: opacity 0.15s, transform 0.15s;
+    transition: opacity 0.15s;
     font-family: 'DM Sans', sans-serif;
-    min-width: 260px;
+    min-width: 240px;
   }
-  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
-  .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 13px 36px;
+  .cta-pill:hover { opacity: 0.82; }
+  .cta-pill-outline {
+    display: inline-block;
+    padding: 13px 40px;
     background: transparent;
-    color: var(--accent-dark);
+    color: #111111;
     border-radius: 999px;
     font-size: 11px;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     text-decoration: none;
-    border: 1.5px solid var(--accent-dark);
+    border: 2px solid #111111;
     cursor: pointer;
     transition: all 0.15s;
     font-family: 'DM Sans', sans-serif;
-    min-width: 260px;
+    min-width: 240px;
+    text-align: center;
   }
-  .btn-secondary:hover { background: var(--accent-dark); color: var(--white); transform: translateY(-1px); }
-  .btn-hint {
+  .cta-pill-outline:hover { background: #111; color: #fff; }
+  .cta-hint {
     font-size: 11px;
-    color: var(--mid-gray);
-    line-height: 1.6;
-    max-width: 380px;
-    text-align: center;
-    margin-top: 2px;
+    color: #999;
+    line-height: 1.5;
+    max-width: 340px;
   }
 
-  /* ── What is Property Intel ── */
-  .what-section {
-    padding: 64px 24px;
-    max-width: 860px;
-    margin: 0 auto;
-  }
-  .section-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--red);
-    margin-bottom: 12px;
-  }
-  .section-heading {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(22px, 3vw, 32px);
-    font-weight: 700;
-    color: var(--dark);
-    margin-bottom: 16px;
-    line-height: 1.3;
-  }
-  .section-rule {
-    width: 48px;
-    height: 2px;
-    background: var(--red);
-    margin-bottom: 24px;
-  }
-  .section-body {
-    font-size: 15px;
-    color: var(--text2);
-    line-height: 1.8;
-    margin-bottom: 40px;
-  }
-
-  .intel-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 24px;
-    margin-top: 8px;
-  }
-  .intel-card {
-    background: var(--off-white);
-    border-radius: 10px;
-    padding: 24px;
-    border: 1px solid var(--light-gray);
-  }
-  .intel-card-icon {
-    font-size: 22px;
-    margin-bottom: 12px;
-  }
-  .intel-card-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 6px;
-    letter-spacing: 0.02em;
-  }
-  .intel-card-desc {
-    font-size: 12px;
-    color: var(--text2);
-    line-height: 1.7;
-  }
-
-  /* ── Portal CTA banner ── */
-  .portal-section {
-    background: var(--dark);
-    padding: 64px 24px;
+  /* ⑦ Red footer */
+  .red-footer {
+    background: #c0392b;
+    padding: 28px 24px 24px;
     text-align: center;
   }
-  .portal-eyebrow {
-    font-family: 'DM Mono', monospace;
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--red);
-    margin-bottom: 16px;
-  }
-  .portal-heading {
-    font-family: 'Playfair Display', serif;
-    font-size: clamp(24px, 3.5vw, 38px);
-    font-weight: 700;
-    color: var(--white);
-    line-height: 1.25;
-    max-width: 600px;
-    margin: 0 auto 16px;
-  }
-  .portal-rule {
-    width: 48px;
-    height: 2px;
-    background: var(--red);
-    margin: 0 auto 24px;
-  }
-  .portal-body {
-    font-size: 15px;
-    color: rgba(255,255,255,0.55);
-    line-height: 1.8;
-    max-width: 500px;
-    margin: 0 auto 36px;
-  }
-  .portal-features {
+  .footer-socials {
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 36px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-  }
-  .portal-feature-chip {
-    padding: 6px 14px;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 999px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.65);
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
-  }
-  .btn-portal {
-    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 15px 40px;
-    background: var(--red);
-    color: var(--white);
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+  .footer-socials a {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
     text-decoration: none;
-    border: none;
-    cursor: pointer;
-    transition: opacity 0.15s, transform 0.15s;
-    font-family: 'DM Sans', sans-serif;
+    transition: border-color 0.15s, background 0.15s;
   }
-  .btn-portal:hover { opacity: 0.88; transform: translateY(-1px); }
-  .portal-sub {
+  .footer-socials a:hover { border-color: #fff; background: rgba(255,255,255,0.15); }
+  .footer-logo {
+    height: 36px;
+    width: auto;
+    filter: brightness(0) invert(1);
+    display: block;
+    margin: 0 auto 14px;
+  }
+  .footer-copy {
     font-size: 11px;
-    color: rgba(255,255,255,0.3);
-    margin-top: 14px;
-    font-family: 'DM Mono', monospace;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.7;
   }
+  .footer-copy a { color: rgba(255,255,255,0.9); text-decoration: underline; }
 
-  /* ── Footer ── */
-  .landing-footer {
-    padding: 32px 24px;
-    text-align: center;
-    border-top: 1px solid var(--light-gray);
+  @media (max-width: 560px) {
+    .intro-card-wrap, .features-wrap { flex-direction: column; }
+    .intro-card-img { width: 100%; height: 140px; }
+    .features-left { width: 100%; }
+    .features-right { grid-template-columns: 1fr; }
+    .cta-block { padding: 28px 20px; }
   }
-  .footer-text {
-    font-size: 11px;
-    color: var(--mid-gray);
-    font-family: 'DM Mono', monospace;
-    letter-spacing: 0.04em;
-  }
-  .footer-text a { color: var(--red); text-decoration: none; }
-  .footer-text a:hover { text-decoration: underline; }
 
   /* ── VIEWER PAGE ── */
   #page-viewer {
@@ -611,124 +634,116 @@
 ════════════════════════════════════════ -->
 <div id="page-landing" class="page active">
 
-  <!-- Hero -->
-  <section class="landing-hero">
-    <!-- Vyanet Logo -->
-    <div class="vyanet-logo">
-      <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="logo-img">
+  <!-- ① Full-bleed aerial hero photo -->
+  <div class="hero-img-block">
+    <div class="hero-img-inner">
+      <span class="hero-img-label">Aerial nadir imagery</span>
     </div>
+  </div>
 
-    <div class="hero-eyebrow">Nadir Property Intelligence</div>
-    <h1 class="hero-heading">See what responders see before they arrive.</h1>
-    <div class="hero-rule"></div>
-    <p class="hero-body">
-      Vyanet converts straight-down aerial imagery into structured responder intelligence — property elements, access considerations, and wildfire conditions — mapped and ready before any unit arrives on scene.
-    </p>
-    <div class="hero-cta-group">
-      <button class="btn-primary" onclick="showTab('viewer')">↗ Open Responder Viewer</button>
-      <p class="btn-hint">View imagery, access considerations, and wildfire conditions for this property.</p>
-      <a class="btn-secondary" href="https://www.vyanet.com" target="_blank">Join the Customer Portal</a>
-      <p class="btn-hint">Property owners — enroll to get a full Property Intel report delivered to your local fire agency.</p>
-    </div>
-  </section>
+  <!-- ② Black logo bar -->
+  <div class="black-logo-bar">
+    <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="black-bar-logo">
+  </div>
 
-  <!-- What is Property Intel -->
-  <section class="what-section">
-    <div class="section-eyebrow">How it works</div>
-    <h2 class="section-heading">Overhead imagery turned into operational intelligence.</h2>
-    <div class="section-rule"></div>
-    <p class="section-body">
-      The Nadir Property Intelligence system analyzes straight-down aerial imagery and extracts two categories of structured data: <strong>Property Elements</strong> — the physical features visible on the property — and <strong>Responder Considerations</strong> — site characteristics that affect access, movement, visibility, staging, and operations. The objective is situational awareness, not inspection or assessment.
-    </p>
-    <div class="intel-grid">
-      <div class="intel-card">
-        <div class="intel-card-icon">🛰</div>
-        <div class="intel-card-title">Nadir Aerial Imagery</div>
-        <div class="intel-card-desc">Straight-down overhead imagery captured from drone, satellite, or orthographic aerial photography — optimized to show the full property footprint at the right zoom level.</div>
-      </div>
-      <div class="intel-card">
-        <div class="intel-card-icon">📍</div>
-        <div class="intel-card-title">Property Elements</div>
-        <div class="intel-card-desc">Clearly visible physical features — buildings, driveways, parking areas, storage, fencing, pools, and more — labeled from an approved vocabulary and geo-pinned on the map.</div>
-      </div>
-      <div class="intel-card">
-        <div class="intel-card-icon">🚒</div>
-        <div class="intel-card-title">Responder Considerations</div>
-        <div class="intel-card-desc">Observable site characteristics that affect access, navigation, visibility, and staging — single access points, dense vegetation, outdoor storage, limited rear access, and similar conditions.</div>
-      </div>
-      <div class="intel-card">
-        <div class="intel-card-icon">🔥</div>
-        <div class="intel-card-title">Wildfire Conditions</div>
-        <div class="intel-card-desc">Fuel continuity, defensible space, vegetation adjacent to structures, and access route conditions — identified from imagery and mapped for suppression and evacuation planning.</div>
+  <!-- ③ Intro card: image left, headline right -->
+  <div class="intro-card-wrap">
+    <div class="intro-card-img">
+      <div class="intro-card-img-inner">
+        <span style="font-size:32px;">🚁</span>
       </div>
     </div>
-  </section>
+    <div class="intro-card-text">
+      <h1 class="intro-card-heading">ELEVATE YOUR<br>SITUATIONAL<br>AWARENESS.</h1>
+      <p class="intro-card-body">Included with your property enrollment, complimentary <span class="red-highlight">drone-assisted property mapping</span> gives first responders a bird's-eye view of your property — <span class="red-highlight">revealing access points, site features, and wildfire conditions</span> that may otherwise go unknown.</p>
+    </div>
+  </div>
 
-  <!-- Who it serves -->
-  <section style="background: var(--off-white); padding: 56px 24px; border-top: 1px solid var(--light-gray); border-bottom: 1px solid var(--light-gray);">
-    <div style="max-width: 860px; margin: 0 auto;">
-      <div class="section-eyebrow">Who it serves</div>
-      <h2 class="section-heading">Built for the people who respond first.</h2>
-      <div class="section-rule"></div>
-      <p class="section-body" style="margin-bottom: 28px;">
-        Property Intel is designed for the agencies and professionals who need to understand a property before reaching it. The system does not estimate value, assess maintenance conditions, evaluate code compliance, or predict hazards. It answers one question: <em>what would a responder see from above?</em>
-      </p>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
-        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
-          <div style="font-size: 20px; margin-bottom: 8px;">🚒</div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Fire Responders</div>
+  <div class="section-divider"></div>
+
+  <!-- ④ Why heading -->
+  <h2 class="why-heading">Why Get Your Property Mapped?</h2>
+
+  <!-- ⑤ Feature section: left nadir + 3D viz, right 2-col feature grid -->
+  <div class="features-wrap">
+
+    <!-- Left: imagery column -->
+    <div class="features-left">
+      <div class="features-left-img">
+        <div class="features-left-img-inner">
+          <span style="font-size:40px; display:block; margin-bottom:8px;">🛰</span>
+          <span style="font-size:11px; color:rgba(255,255,255,0.5); font-family:'DM Mono',monospace; letter-spacing:0.08em; text-transform:uppercase;">Nadir overhead view</span>
         </div>
-        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
-          <div style="font-size: 20px; margin-bottom: 8px;">🚑</div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">EMS Personnel</div>
-        </div>
-        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
-          <div style="font-size: 20px; margin-bottom: 8px;">🚔</div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Law Enforcement</div>
-        </div>
-        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
-          <div style="font-size: 20px; margin-bottom: 8px;">📋</div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Emergency Managers</div>
-        </div>
-        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
-          <div style="font-size: 20px; margin-bottom: 8px;">🏡</div>
-          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Property Owners</div>
+      </div>
+      <div class="features-3d-block">
+        <div class="features-3d-icon">🚁</div>
+        <div class="features-3d-content">
+          <div class="features-3d-title">3D Property Visualization:</div>
+          <div class="features-3d-desc">Explore your property from every angle with detailed, interactive drone models — Alpha, Bravo, Charlie, and Delta perspectives plus a full overhead view.</div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!-- Portal CTA -->
-  <section class="portal-section">
-    <div class="portal-eyebrow">Vyanet Customer Portal</div>
-    <h2 class="portal-heading">Get your property into the system.</h2>
-    <div class="portal-rule"></div>
-    <p class="portal-body">
-      Property owners enroll through the Vyanet Customer Portal. Vyanet captures aerial imagery, runs the Nadir Property Intelligence analysis, and delivers your completed report directly to your local responding agency — so it's there when it's needed.
-    </p>
-    <div class="portal-features">
-      <span class="portal-feature-chip">Drone aerial capture</span>
-      <span class="portal-feature-chip">Property element mapping</span>
-      <span class="portal-feature-chip">Wildfire conditions report</span>
-      <span class="portal-feature-chip">Responder considerations</span>
-      <span class="portal-feature-chip">HOA community plans</span>
-      <span class="portal-feature-chip">Agency delivery</span>
+    <!-- Right: 2-column feature grid -->
+    <div class="features-right">
+      <div class="feat-item">
+        <div class="feat-title">Identify Access Points &amp; Site Features:</div>
+        <div class="feat-desc">Reveal structures, driveways, storage, and entry routes that may be hidden from traditional ground-level views.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-title">Strengthen Protection:</div>
+        <div class="feat-desc">Get a clearer understanding of access points, fence lines, gates, and potential entry routes.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-title">Mitigate Wildfire Risks:</div>
+        <div class="feat-desc">Identify fuel continuity, defensible space, and access route conditions with high-resolution aerial assessments.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-title">Help First Responders:</div>
+        <div class="feat-desc">Provide critical property intelligence to fire, EMS, and law enforcement when every second counts.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-title">Geo-Pinned Intelligence:</div>
+        <div class="feat-desc">Property elements and responder considerations are pinned directly onto a live satellite map — click any pin to see what it is.</div>
+      </div>
+      <div class="feat-item">
+        <div class="feat-title">Always Current:</div>
+        <div class="feat-desc">See your property as it exists today — not as it appeared the last time satellite imagery was updated.</div>
+      </div>
     </div>
-    <a class="btn-portal" href="https://www.vyanet.com" target="_blank">Enroll in the Customer Portal →</a>
-    <div class="portal-sub">vyanet.com — Nadir Property Intelligence for the Pacific Northwest</div>
-  </section>
 
-  <!-- Footer -->
-  <footer class="landing-footer">
-    <div class="footer-text">
-      © 2026 Vyanet — <a href="https://www.vyanet.com" target="_blank">vyanet.com</a>
+  </div>
+
+  <!-- ⑥ CTA buttons — centered, stacked -->
+  <div class="cta-block">
+    <button class="cta-pill" onclick="showTab('viewer')">OPEN RESPONDER VIEWER</button>
+    <div class="cta-hint">View aerial imagery, access considerations &amp; wildfire conditions for this property.</div>
+    <a class="cta-pill-outline" href="https://www.vyanet.com" target="_blank">JOIN THE CUSTOMER PORTAL</a>
+    <div class="cta-hint">Property owners — enroll to get your report delivered to your local fire agency.</div>
+  </div>
+
+  <!-- ⑦ Red footer: social + logo + copyright -->
+  <footer class="red-footer">
+    <div class="footer-socials">
+      <a href="https://www.facebook.com/vyanet" target="_blank" aria-label="Facebook">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+      </a>
+      <a href="https://www.instagram.com/vyanet" target="_blank" aria-label="Instagram">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      </a>
+      <a href="https://twitter.com/vyanet" target="_blank" aria-label="X">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      </a>
+    </div>
+    <img src="Vyanet_Responder_Intel.png" alt="Vyanet" class="footer-logo">
+    <div class="footer-copy">
+      Copyright © 2026 Vyanet. All rights reserved.<br>
+      <a href="https://www.vyanet.com" target="_blank">vyanet.com</a>
     </div>
   </footer>
+
 </div>
 
-<!-- ════════════════════════════════════════
-     VIEWER PAGE
-════════════════════════════════════════ -->
 <div id="page-viewer" class="page">
   <!-- viewer sub-header -->
   <div id="viewer-topbar">
