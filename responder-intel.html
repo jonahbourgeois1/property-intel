@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>{{CLIENT_NAME}} — Responder Intel</title>
+<title>Responder Intel — Vyanet</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -25,23 +26,28 @@
   .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
   .logo-sub { font-size: 11px; color: var(--text3); }
   .header-right { display: flex; align-items: center; gap: 10px; }
-  #client-name-badge { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
 
   /* ── Main layout ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
 
-  /* ── 3D Viewer pane (left/main area) ── */
+  /* ── 3D viewer pane ── */
   #viewer-pane { flex: 1; background: #000; min-width: 0; position: relative; }
   #dji-iframe { width: 100%; height: 100%; border: none; display: block; }
-  #viewer-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text3); font-size: 13px; font-family: 'DM Mono', monospace; }
+  #viewer-placeholder { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text3); font-size: 13px; font-family: 'DM Mono', monospace; }
 
-  /* ── Loading / error overlays ── */
+  /* ── Loading / error ── */
   #loading { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; }
   #loading.hidden { opacity: 0; pointer-events: none; }
+  #error { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; }
+  #error.visible { display: flex; }
   .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .error-icon { font-size: 32px; color: var(--red); }
+  .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
+  .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
 
   /* ── Panel ── */
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
@@ -56,11 +62,13 @@
   .view-tab { padding: 9px 14px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
   .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .view-tab[data-view="intel"].active { color: var(--orange); border-bottom-color: var(--orange); }
-  .view-tab[data-view="feedback"].active { color: var(--green); border-bottom-color: var(--green); }
+  .view-tab[data-tab="intel"].active { color: var(--orange); border-bottom-color: var(--orange); }
+  .view-tab[data-tab="feedback"].active { color: var(--green); border-bottom-color: var(--green); }
 
   /* ── Panel content ── */
   #panel-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
+  #panel-content::-webkit-scrollbar { width: 4px; }
+  #panel-content::-webkit-scrollbar-thumb { background: var(--border2); }
 
   /* ── View sections (image cards) ── */
   .view-section { margin: 14px 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
@@ -82,7 +90,7 @@
   .view-bullets li:last-child { border-bottom: none; }
   .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
 
-  /* ── Intel tab blocks (considerations / clarifications) ── */
+  /* ── Intel tab blocks ── */
   .rec-block { margin: 14px 16px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; }
   .rec-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 7px; }
   .rec-label.orange { color: var(--orange); }
@@ -90,13 +98,14 @@
   .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
 
   /* ── Feedback tab ── */
-  #feedback-pane { display: flex; flex-direction: column; flex: 1; height: 100%; }
-  #feedback-pane iframe { flex: 1; width: 100%; border: none; min-height: 0; }
+  #tab-feedback { display: none; flex-direction: column; flex: 1; height: 100%; }
+  #tab-feedback.active { display: flex; }
+  #tab-feedback iframe { flex: 1; width: 100%; border: none; min-height: 0; }
 
-  /* ── Panel empty / pending ── */
+  /* ── Panel empty ── */
   .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
 
-  /* ── Toggle panel button ── */
+  /* ── Toggle panel ── */
   #toggle-panel { position: absolute; bottom: 24px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
@@ -126,20 +135,18 @@
   #debug-toggle-btn { color: var(--accent); font-size: 10px; background: none; border: none; cursor: pointer; }
   #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
   .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
-  .debug-line.info { color: var(--text2); }
-  .debug-line.ok { color: var(--green); }
-  .debug-line.warn { color: #f59e0b; }
-  .debug-line.error { color: var(--red); }
+  .debug-line.info { color: var(--text2); } .debug-line.ok { color: var(--green); }
+  .debug-line.warn { color: #f59e0b; } .debug-line.error { color: var(--red); }
   .debug-time { color: var(--text3); margin-right: 6px; }
   #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
   #debug-clear:hover { color: var(--text2); }
 
   /* ── Responsive ── */
   @media (max-width: 768px) {
-    #client-name-badge { display: none; }
+    #property-name { display: none; }
     #toggle-panel { display: none; }
     #mobile-toggle { display: flex; }
-    #loading { right: 0; }
+    #loading { right: 0; } #error { right: 0; }
     #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
     #panel.mobile-open { transform: translateY(0%) !important; }
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
@@ -158,143 +165,39 @@
   </div>
   <div class="header-right">
     <div id="version-badge">v1.0.0 — responder intel</div>
-    <div id="client-name-badge">{{CLIENT_NAME}}</div>
+    <div id="property-name">Loading...</div>
   </div>
 </div>
 
 <div id="main">
 
-  <!-- 3D viewer pane -->
   <div id="viewer-pane">
-    <iframe id="dji-iframe" src="{{DJI_LINK}}" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
-    <div id="viewer-placeholder" style="display:none;">
-      <span>3D viewer not available for this property.</span>
+    <iframe id="dji-iframe" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
+    <div id="viewer-placeholder"><span>3D viewer not available for this property.</span></div>
+  </div>
+
+  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading intel...</div></div>
+  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
+
+  <div id="panel">
+    <div class="panel-header">
+      <div class="panel-title" id="panel-title">Responder Intel</div>
+      <div class="panel-address" id="panel-address"></div>
+    </div>
+    <div id="view-tabs">
+      <div class="view-tab active" data-tab="imagery" onclick="switchTab('imagery')">Imagery</div>
+      <div class="view-tab" data-tab="intel" onclick="switchTab('intel')">Intel</div>
+      <div class="view-tab" data-tab="feedback" onclick="switchTab('feedback')">Feedback</div>
+    </div>
+    <div id="panel-content">
+      <!-- populated by JS -->
+    </div>
+    <div id="tab-feedback">
+      <iframe src="https://survey.zohopublic.com/zs/U4C5oA" allow="geolocation" loading="lazy" title="Property Intel Feedback"></iframe>
     </div>
   </div>
 
-  <div id="loading"><div class="spinner"></div><div class="loading-text">Loading intel...</div></div>
-
-  <!-- Panel -->
-  <div id="panel">
-    <div class="panel-header">
-      <div class="panel-title" id="panel-title">{{CLIENT_NAME}}</div>
-      <div class="panel-address" id="panel-address">{{PROPERTY_ADDRESS}}</div>
-    </div>
-    <div id="view-tabs">
-      <div class="view-tab active" data-view="imagery" onclick="switchTab('imagery')">Imagery</div>
-      <div class="view-tab" data-view="intel" onclick="switchTab('intel')">Intel</div>
-      <div class="view-tab" data-view="feedback" onclick="switchTab('feedback')">Feedback</div>
-    </div>
-    <div id="panel-content">
-
-      <!-- IMAGERY TAB (default) -->
-      <div id="tab-imagery">
-
-        <div class="view-section">
-          <div class="view-header" onclick="toggleSection(this)">
-            <div class="view-badge nadir">N</div>
-            <div class="view-label">Overhead View</div>
-            <div class="chevron">▼</div>
-          </div>
-          <div class="view-body">
-            <div class="view-img-wrap" onclick="openLightbox(0)">
-              <img class="view-img" src="{{IMG_OVERHEAD}}" alt="Overhead" loading="lazy">
-              <div class="zoom-hint">🔍 Tap to enlarge</div>
-            </div>
-            <ul class="view-bullets"><li>{{DESC_OVERHEAD}}</li></ul>
-          </div>
-        </div>
-
-        <div class="view-section">
-          <div class="view-header" onclick="toggleSection(this)">
-            <div class="view-badge">A</div>
-            <div class="view-label">Alpha Side</div>
-            <div class="chevron">▼</div>
-          </div>
-          <div class="view-body">
-            <div class="view-img-wrap" onclick="openLightbox(1)">
-              <img class="view-img" src="{{IMG_ALPHA}}" alt="Alpha" loading="lazy">
-              <div class="zoom-hint">🔍 Tap to enlarge</div>
-            </div>
-            <ul class="view-bullets"><li>{{DESC_ALPHA}}</li></ul>
-          </div>
-        </div>
-
-        <div class="view-section">
-          <div class="view-header" onclick="toggleSection(this)">
-            <div class="view-badge">B</div>
-            <div class="view-label">Bravo Side</div>
-            <div class="chevron">▼</div>
-          </div>
-          <div class="view-body">
-            <div class="view-img-wrap" onclick="openLightbox(2)">
-              <img class="view-img" src="{{IMG_BRAVO}}" alt="Bravo" loading="lazy">
-              <div class="zoom-hint">🔍 Tap to enlarge</div>
-            </div>
-            <ul class="view-bullets"><li>{{DESC_BRAVO}}</li></ul>
-          </div>
-        </div>
-
-        <div class="view-section">
-          <div class="view-header" onclick="toggleSection(this)">
-            <div class="view-badge">C</div>
-            <div class="view-label">Charlie Side</div>
-            <div class="chevron">▼</div>
-          </div>
-          <div class="view-body">
-            <div class="view-img-wrap" onclick="openLightbox(3)">
-              <img class="view-img" src="{{IMG_CHARLIE}}" alt="Charlie" loading="lazy">
-              <div class="zoom-hint">🔍 Tap to enlarge</div>
-            </div>
-            <ul class="view-bullets"><li>{{DESC_CHARLIE}}</li></ul>
-          </div>
-        </div>
-
-        <div class="view-section">
-          <div class="view-header" onclick="toggleSection(this)">
-            <div class="view-badge">D</div>
-            <div class="view-label">Delta Side</div>
-            <div class="chevron">▼</div>
-          </div>
-          <div class="view-body">
-            <div class="view-img-wrap" onclick="openLightbox(4)">
-              <img class="view-img" src="{{IMG_DELTA}}" alt="Delta" loading="lazy">
-              <div class="zoom-hint">🔍 Tap to enlarge</div>
-            </div>
-            <ul class="view-bullets"><li>{{DESC_DELTA}}</li></ul>
-          </div>
-        </div>
-
-      </div><!-- /tab-imagery -->
-
-      <!-- INTEL TAB -->
-      <div id="tab-intel" style="display:none;">
-        <div class="rec-block">
-          <div class="rec-label orange">Responder Considerations</div>
-          <div class="rec-text">{{CONSIDERATIONS}}</div>
-        </div>
-        <div class="rec-block">
-          <div class="rec-label red">Information Needing Clarification</div>
-          <div class="rec-text">{{CLARIFICATIONS}}</div>
-        </div>
-      </div><!-- /tab-intel -->
-
-      <!-- FEEDBACK TAB -->
-      <div id="tab-feedback" style="display:none; height:100%;">
-        <div id="feedback-pane">
-          <iframe
-            src="https://survey.zohopublic.com/zs/U4C5oA"
-            allow="geolocation"
-            loading="lazy"
-            title="Property Intel Feedback">
-          </iframe>
-        </div>
-      </div><!-- /tab-feedback -->
-
-    </div><!-- /panel-content -->
-  </div><!-- /panel -->
-
-</div><!-- /main -->
+</div>
 
 <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
 <button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
@@ -305,7 +208,6 @@
   <button id="debug-clear" onclick="clearDebug()">clear log</button>
 </div>
 
-<!-- Lightbox -->
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
@@ -321,19 +223,11 @@
 </div>
 
 <script>
-const VERSION = 'v1.0.0';
-
-// ── Lightbox data — populated from template tokens ──────────────────────────
-const LIGHTBOX_VIEWS = [
-  { label: 'Overhead View', url: '{{IMG_OVERHEAD}}', desc: '{{DESC_OVERHEAD}}' },
-  { label: 'Alpha Side',    url: '{{IMG_ALPHA}}',    desc: '{{DESC_ALPHA}}' },
-  { label: 'Bravo Side',    url: '{{IMG_BRAVO}}',    desc: '{{DESC_BRAVO}}' },
-  { label: 'Charlie Side',  url: '{{IMG_CHARLIE}}',  desc: '{{DESC_CHARLIE}}' },
-  { label: 'Delta Side',    url: '{{IMG_DELTA}}',    desc: '{{DESC_DELTA}}' },
-];
+const VERSION  = 'v1.0.0';
+const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/drone/';
 
 let panelOpen = false, mobileIntelOpen = false;
-let lightboxIndex = 0;
+let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
 
 // ── Debug ────────────────────────────────────────────────────────────────────
@@ -354,9 +248,9 @@ function toggleDebug() {
   p.classList.toggle('collapsed');
   b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
 }
-function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
+function clearDebug() { document.getElementById('debug-log').innerHTML = ''; }
 
-// ── Panel toggle ─────────────────────────────────────────────────────────────
+// ── Panel / mobile ───────────────────────────────────────────────────────────
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -368,42 +262,44 @@ function mobileToggle() {
   document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
 }
 
-// ── Tab switching ────────────────────────────────────────────────────────────
-function switchTab(name) {
-  // Update tab button states
-  document.querySelectorAll('.view-tab').forEach(t => {
-    t.classList.toggle('active', t.getAttribute('data-view') === name);
-  });
-  // Show/hide tab content panels
-  document.getElementById('tab-imagery').style.display  = name === 'imagery'  ? 'block' : 'none';
-  document.getElementById('tab-intel').style.display    = name === 'intel'    ? 'block' : 'none';
-  document.getElementById('tab-feedback').style.display = name === 'feedback' ? 'block' : 'none';
-  // Feedback iframe needs height:100% on the panel-content container
-  document.getElementById('panel-content').style.display        = 'flex';
-  document.getElementById('panel-content').style.flexDirection  = 'column';
-  if (name === 'feedback') {
-    document.getElementById('panel-content').style.overflow = 'hidden';
-  } else {
-    document.getElementById('panel-content').style.overflow = 'auto';
-  }
-  // Ensure panel is open when switching
-  if (!panelOpen && !isMobile()) togglePanel();
-  if (!mobileIntelOpen && isMobile()) mobileToggle();
-  dbg('Tab: ' + name, 'info');
+// ── Loading / error ──────────────────────────────────────────────────────────
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+function showError(msg) {
+  hideLoading();
+  document.getElementById('error').classList.add('visible');
+  document.getElementById('error-msg').textContent = msg;
+  dbg('ERROR: ' + msg, 'error');
 }
 
-// ── Section collapse (same as viewer.html) ───────────────────────────────────
+// ── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  const content  = document.getElementById('panel-content');
+  const feedback = document.getElementById('tab-feedback');
+  if (name === 'feedback') {
+    content.style.display  = 'none';
+    feedback.classList.add('active');
+  } else {
+    content.style.display  = '';
+    feedback.classList.remove('active');
+    document.querySelectorAll('.tab-section').forEach(s => {
+      s.style.display = s.dataset.tab === name ? 'block' : 'none';
+    });
+  }
+  if (!panelOpen && !isMobile()) togglePanel();
+  if (!mobileIntelOpen && isMobile()) mobileToggle();
+}
+
+// ── Section collapse ─────────────────────────────────────────────────────────
 function toggleSection(header) {
-  const body = header.nextElementSibling;
-  const chevron = header.querySelector('.chevron');
+  const body = header.nextElementSibling, chevron = header.querySelector('.chevron');
   body.classList.toggle('collapsed');
   chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
 // ── Lightbox ─────────────────────────────────────────────────────────────────
 function openLightbox(index) {
-  lightboxIndex = index;
-  updateLightbox();
+  lightboxIndex = index; updateLightbox();
   document.getElementById('lightbox').classList.add('open');
   document.addEventListener('keydown', lightboxKey);
 }
@@ -417,40 +313,119 @@ function lightboxKey(e) {
   if (e.key === 'ArrowRight') lightboxNav(1);
 }
 function lightboxNav(dir) {
-  lightboxIndex = (lightboxIndex + dir + LIGHTBOX_VIEWS.length) % LIGHTBOX_VIEWS.length;
+  lightboxIndex = (lightboxIndex + dir + lightboxViews.length) % lightboxViews.length;
   updateLightbox();
 }
 function updateLightbox() {
-  const v = LIGHTBOX_VIEWS[lightboxIndex];
+  const v = lightboxViews[lightboxIndex];
   document.getElementById('lightbox-img').src = v.url;
   document.getElementById('lightbox-title').textContent = v.label;
-  document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + LIGHTBOX_VIEWS.length;
-  document.getElementById('lightbox-bullets').innerHTML = '<li>' + v.desc + '</li>';
+  document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
+  document.getElementById('lightbox-bullets').innerHTML = formatDesc(v.desc).map(b => '<li>' + b + '</li>').join('');
 }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
-  dbg(VERSION + ' — Responder Intel loaded', 'ok');
-  dbg('Client: {{CLIENT_NAME}}', 'info');
-  dbg('Address: {{PROPERTY_ADDRESS}}', 'info');
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function formatDesc(desc) {
+  if (!desc) return [];
+  return desc.split('|').map(s => s.trim()).filter(s => s.length > 2);
+}
 
-  // Check DJI iframe
-  const iframe = document.getElementById('dji-iframe');
-  if (!iframe.src || iframe.src === window.location.href) {
-    iframe.style.display = 'none';
-    document.getElementById('viewer-placeholder').style.display = 'flex';
-    dbg('No DJI link — placeholder shown', 'warn');
-  } else {
-    dbg('DJI viewer: {{DJI_LINK}}', 'ok');
+// ── Build panel content ───────────────────────────────────────────────────────
+function buildImageryTab(d) {
+  const views = [
+    { label: 'Overhead View', badge: 'N', cls: 'nadir', data: d.nadir },
+    { label: 'Alpha Side',    badge: 'A', cls: '',      data: d.alpha },
+    { label: 'Bravo Side',    badge: 'B', cls: '',      data: d.bravo },
+    { label: 'Charlie Side',  badge: 'C', cls: '',      data: d.charlie },
+    { label: 'Delta Side',    badge: 'D', cls: '',      data: d.delta },
+  ];
+
+  lightboxViews = [];
+  views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, desc: v.data.desc }); });
+
+  let html = '<div class="tab-section" data-tab="imagery">';
+  let lbIdx = 0;
+  views.forEach(v => {
+    if (!v.data || !v.data.url) return;
+    const bullets = formatDesc(v.data.desc);
+    const idx = lbIdx++;
+    html += '<div class="view-section">'
+      + '<div class="view-header" onclick="toggleSection(this)">'
+      + '<div class="view-badge ' + v.cls + '">' + v.badge + '</div>'
+      + '<div class="view-label">' + v.label + '</div>'
+      + '<div class="chevron">▼</div>'
+      + '</div>'
+      + '<div class="view-body">'
+      + '<div class="view-img-wrap" onclick="openLightbox(' + idx + ')">'
+      + '<img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy">'
+      + '<div class="zoom-hint">🔍 Tap to enlarge</div>'
+      + '</div>'
+      + '<ul class="view-bullets">' + bullets.map(b => '<li>' + b + '</li>').join('') + '</ul>'
+      + '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+function buildIntelTab(d) {
+  let html = '<div class="tab-section" data-tab="intel" style="display:none;">';
+  if (d.considerations) {
+    html += '<div class="rec-block"><div class="rec-label orange">Responder Considerations</div>'
+      + '<div class="rec-text">' + d.considerations + '</div></div>';
   }
+  if (d.clarifications) {
+    html += '<div class="rec-block"><div class="rec-label red">Information Needing Clarification</div>'
+      + '<div class="rec-text">' + d.clarifications + '</div></div>';
+  }
+  if (!d.considerations && !d.clarifications) {
+    html += '<div class="panel-empty">No intel data available.</div>';
+  }
+  html += '</div>';
+  return html;
+}
 
-  // Hide loading
-  document.getElementById('loading').classList.add('hidden');
+// ── Main data load ────────────────────────────────────────────────────────────
+async function loadData() {
+  dbg(VERSION + ' — Responder Intel loaded', 'ok');
+  const params = new URLSearchParams(window.location.search);
+  const hash   = params.get('property');
+  if (!hash) { showError('No property ID provided.'); return; }
+  dbg('Hash: ' + hash.substring(0, 12) + '...', 'info');
 
-  // Auto-open panel on desktop
-  if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 400);
-});
+  try {
+    const res = await fetch(BASE_URL + hash + '.json');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const d = await res.json();
+    dbg('Data loaded: ' + d.name, 'ok');
+
+    // Header
+    document.getElementById('property-name').textContent = d.name || '';
+    document.getElementById('panel-title').textContent   = d.name || 'Responder Intel';
+    document.getElementById('panel-address').textContent = (d.address || '').replace(/^\s+/, '');
+    document.title = (d.name || 'Responder Intel') + ' — Vyanet';
+
+    // DJI viewer
+    const iframe = document.getElementById('dji-iframe');
+    if (d.viewer360) {
+      iframe.src = d.viewer360;
+      dbg('DJI viewer loaded', 'ok');
+    } else {
+      iframe.style.display = 'none';
+      document.getElementById('viewer-placeholder').style.display = 'flex';
+      dbg('No 360 link — placeholder shown', 'warn');
+    }
+
+    // Panel content
+    document.getElementById('panel-content').innerHTML = buildImageryTab(d) + buildIntelTab(d);
+
+    hideLoading();
+    if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 400);
+    dbg('Ready', 'ok');
+
+  } catch(e) { showError('Failed to load property: ' + e.message); }
+}
+
+loadData();
 </script>
-
 </body>
 </html>
