@@ -2,219 +2,786 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>Responder Intel — Vyanet</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="config.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vyanet Responder Intel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   :root {
-    --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
-    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
-    --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
-    --accent: #3b82f6; --green: #22c55e; --red: #cd3333;
-    --orange: #f97316; --header-h: 52px;
+    --white: #ffffff;
+    --off-white: #f5f4f1;
+    --light-gray: #e8e6e1;
+    --mid-gray: #9a9590;
+    --dark: #1a1a1a;
+    --text: #2c2c2c;
+    --text2: #6b6460;
+    --red: #c0392b;
+    --red-light: #e8d5d3;
+    --accent-dark: #1a1a1a;
   }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
 
-  /* ── Header ── */
-  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
-  .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
-  .logo-sub { font-size: 11px; color: var(--text3); }
-  .header-right { display: flex; align-items: center; gap: 10px; }
-  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--white);
+    color: var(--text);
+    min-height: 100vh;
+  }
 
-  /* ── Main layout ── */
-  #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
+  /* ── Tab navigation ── */
+  #tab-nav {
+    position: sticky;
+    top: 0;
+    background: var(--white);
+    border-bottom: 1px solid var(--light-gray);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+  }
+  .tab-btn {
+    padding: 14px 28px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mid-gray);
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: 'DM Sans', sans-serif;
+    position: relative;
+    top: 1px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
 
-  /* ── 3D viewer pane ── */
-  #viewer-pane { flex: 1; background: #000; min-width: 0; position: relative; }
-  #dji-iframe { width: 100%; height: 100%; border: none; display: block; }
-  #viewer-placeholder { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text3); font-size: 13px; font-family: 'DM Mono', monospace; }
+  /* ── Page sections ── */
+  .page { display: none; }
+  .page.active { display: block; }
 
-  /* ── Loading / error ── */
-  #loading { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; }
-  #loading.hidden { opacity: 0; pointer-events: none; }
-  #error { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; }
-  #error.visible { display: flex; }
-  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  /* ── LANDING PAGE ── */
+  #page-landing {
+    min-height: calc(100vh - 49px);
+  }
+
+  .landing-hero {
+    padding: 64px 24px 48px;
+    text-align: center;
+    border-bottom: 1px solid var(--light-gray);
+  }
+
+  .vyanet-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 52px;
+  }
+  .logo-img {
+    height: 80px;
+    width: auto;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 16px;
+  }
+  .hero-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.2;
+    max-width: 700px;
+    margin: 0 auto 20px;
+  }
+  .hero-rule {
+    width: 72px;
+    height: 2px;
+    background: var(--red);
+    margin: 0 auto 24px;
+  }
+  .hero-body {
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.8;
+    max-width: 560px;
+    margin: 0 auto 40px;
+  }
+  .hero-cta-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 36px;
+    background: var(--accent-dark);
+    color: var(--white);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    min-width: 260px;
+  }
+  .btn-primary:hover { opacity: 0.85; transform: translateY(-1px); }
+  .btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 36px;
+    background: transparent;
+    color: var(--accent-dark);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1.5px solid var(--accent-dark);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+    min-width: 260px;
+  }
+  .btn-secondary:hover { background: var(--accent-dark); color: var(--white); transform: translateY(-1px); }
+  .btn-hint {
+    font-size: 11px;
+    color: var(--mid-gray);
+    line-height: 1.6;
+    max-width: 380px;
+    text-align: center;
+    margin-top: 2px;
+  }
+
+  /* ── What is Property Intel ── */
+  .what-section {
+    padding: 64px 24px;
+    max-width: 860px;
+    margin: 0 auto;
+  }
+  .section-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 12px;
+  }
+  .section-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 3vw, 32px);
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 16px;
+    line-height: 1.3;
+  }
+  .section-rule {
+    width: 48px;
+    height: 2px;
+    background: var(--red);
+    margin-bottom: 24px;
+  }
+  .section-body {
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.8;
+    margin-bottom: 40px;
+  }
+
+  .intel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+    margin-top: 8px;
+  }
+  .intel-card {
+    background: var(--off-white);
+    border-radius: 10px;
+    padding: 24px;
+    border: 1px solid var(--light-gray);
+  }
+  .intel-card-icon {
+    font-size: 22px;
+    margin-bottom: 12px;
+  }
+  .intel-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 6px;
+    letter-spacing: 0.02em;
+  }
+  .intel-card-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  /* ── Portal CTA banner ── */
+  .portal-section {
+    background: var(--dark);
+    padding: 64px 24px;
+    text-align: center;
+  }
+  .portal-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 16px;
+  }
+  .portal-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(24px, 3.5vw, 38px);
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.25;
+    max-width: 600px;
+    margin: 0 auto 16px;
+  }
+  .portal-rule {
+    width: 48px;
+    height: 2px;
+    background: var(--red);
+    margin: 0 auto 24px;
+  }
+  .portal-body {
+    font-size: 15px;
+    color: rgba(255,255,255,0.55);
+    line-height: 1.8;
+    max-width: 500px;
+    margin: 0 auto 36px;
+  }
+  .portal-features {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 36px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .portal-feature-chip {
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.65);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .btn-portal {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 15px 40px;
+    background: var(--red);
+    color: var(--white);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-portal:hover { opacity: 0.88; transform: translateY(-1px); }
+  .portal-sub {
+    font-size: 11px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 14px;
+    font-family: 'DM Mono', monospace;
+  }
+
+  /* ── Footer ── */
+  .landing-footer {
+    padding: 32px 24px;
+    text-align: center;
+    border-top: 1px solid var(--light-gray);
+  }
+  .footer-text {
+    font-size: 11px;
+    color: var(--mid-gray);
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.04em;
+  }
+  .footer-text a { color: var(--red); text-decoration: none; }
+  .footer-text a:hover { text-decoration: underline; }
+
+  /* ── VIEWER PAGE ── */
+  #page-viewer {
+    height: calc(100vh - 49px);
+    display: none;
+    flex-direction: column;
+    background: #0a0c0f;
+  }
+  #page-viewer.active { display: flex; }
+
+  /* viewer sub-header */
+  #viewer-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 48px;
+    background: #12161b;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  #viewer-property-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: #8a93a2;
+    font-family: 'DM Mono', monospace;
+    background: #1a1f27;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.08);
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #viewer-version {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: #555f6e;
+    background: #1a1f27;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 3px 8px;
+    border-radius: 4px;
+  }
+
+  /* viewer main layout */
+  #viewer-main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+  }
+  #viewer-map { flex: 1; background: #0a0c0f; min-width: 0; position: relative; }
+  #viewer-loading {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: #0a0c0f; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px; z-index: 500;
+    transition: opacity 0.3s ease; pointer-events: all;
+  }
+  #viewer-loading.hidden { opacity: 0; pointer-events: none; }
+  #viewer-error {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: #0a0c0f; display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    z-index: 500; padding: 32px; text-align: center;
+  }
+  #viewer-error.visible { display: flex; }
+  .v-spinner { width: 28px; height: 28px; border: 2px solid rgba(255,255,255,0.14); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
-  .error-icon { font-size: 32px; color: var(--red); }
-  .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
-  .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
+  .v-loading-text { font-size: 12px; color: #555f6e; font-family: 'DM Mono', monospace; }
+  .v-error-icon { font-size: 28px; color: #ef4444; }
+  .v-error-title { font-size: 15px; font-weight: 600; color: #f0f2f5; }
+  .v-error-msg { font-size: 12px; color: #555f6e; max-width: 280px; line-height: 1.6; }
+  .v-error-back {
+    margin-top: 8px; padding: 9px 20px; background: #12161b;
+    border: 1px solid rgba(255,255,255,0.14); border-radius: 6px;
+    color: #8a93a2; font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .v-error-back:hover { background: #1a1f27; color: #f0f2f5; }
 
-  /* ── Panel ── */
-  #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
-  #panel.hidden { transform: translateX(360px); width: 0; }
-  .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
-  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .panel-address { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
+  #viewer-map-controls {
+    position: absolute; bottom: 20px; left: 16px; z-index: 10;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .v-map-btn {
+    display: flex; align-items: center; gap: 7px; padding: 8px 12px;
+    background: #12161b; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 7px; font-size: 11px; font-weight: 500; color: #8a93a2;
+    cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em;
+  }
+  .v-map-btn:hover { background: #1a1f27; color: #f0f2f5; }
+  .v-map-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: #3b82f6; }
+  .v-ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 
-  /* ── Tabs ── */
-  #view-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; margin-top: 12px; }
-  #view-tabs::-webkit-scrollbar { display: none; }
-  .view-tab { padding: 9px 14px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
-  .view-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
-  .view-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .view-tab[data-tab="intel"].active { color: var(--orange); border-bottom-color: var(--orange); }
-  .view-tab[data-tab="feedback"].active { color: var(--green); border-bottom-color: var(--green); }
-
-  /* ── Panel content ── */
-  #panel-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  #panel-content::-webkit-scrollbar { width: 4px; }
-  #panel-content::-webkit-scrollbar-thumb { background: var(--border2); }
-
-  /* ── View sections (image cards) ── */
-  .view-section { margin: 14px 16px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface2); }
-  .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; user-select: none; transition: background 0.15s; }
+  /* viewer panel */
+  #viewer-panel {
+    width: 360px; background: #12161b; border-left: 1px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0;
+    transition: transform 0.3s ease, width 0.3s ease;
+  }
+  #viewer-panel.hidden { transform: translateX(360px); width: 0; }
+  .vp-header { padding: 14px 16px 0; flex-shrink: 0; }
+  .vp-title { font-size: 14px; font-weight: 600; color: #f0f2f5; }
+  .vp-address { font-size: 11px; color: #555f6e; margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
+  #vp-tabs {
+    display: flex; border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0; overflow-x: auto; scrollbar-width: none; margin-top: 12px;
+  }
+  #vp-tabs::-webkit-scrollbar { display: none; }
+  .vp-tab {
+    padding: 9px 14px; font-size: 12px; font-weight: 500; color: #555f6e;
+    cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .vp-tab:hover { color: #8a93a2; background: rgba(255,255,255,0.02); }
+  .vp-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
+  .vp-tab[data-view="security"].active { color: #22c55e; border-bottom-color: #22c55e; }
+  .vp-tab[data-view="wildfire"].active { color: #f97316; border-bottom-color: #f97316; }
+  #vp-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.14) transparent; }
+  .vp-empty { padding: 40px 24px; text-align: center; color: #555f6e; font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
+  .vp-pending { padding: 12px 16px 16px; font-size: 11px; color: #555f6e; font-family: 'DM Mono', monospace; }
+  .pin-group { padding: 14px 16px 6px; }
+  .pin-group-label { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .pin-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 10px; border-radius: 6px; cursor: pointer; transition: background 0.12s; margin-bottom: 3px; border: 1px solid transparent; }
+  .pin-row:hover { background: #1a1f27; }
+  .pin-row.active { background: #1a1f27; border-color: rgba(255,255,255,0.14); }
+  .pin-badge { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; margin-top: 1px; }
+  .pin-badge.green { background: #22c55e; }
+  .pin-badge.red { background: #ef4444; }
+  .pin-badge.orange { background: #f97316; }
+  .pin-label { font-size: 12px; color: #8a93a2; line-height: 1.5; flex: 1; padding-top: 2px; }
+  .pin-row.active .pin-label { color: #f0f2f5; }
+  .pin-group-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 8px 16px; }
+  .view-section { margin: 14px 16px; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; background: #1a1f27; }
+  .view-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none; transition: background 0.15s; }
   .view-header:hover { background: rgba(255,255,255,0.03); }
-  .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
+  .view-badge { width: 22px; height: 22px; border-radius: 5px; background: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
   .view-badge.nadir { background: #7c3aed; }
-  .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
-  .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
+  .view-label { font-size: 12px; font-weight: 500; color: #f0f2f5; flex: 1; }
+  .chevron { font-size: 10px; color: #555f6e; transition: transform 0.2s; }
   .view-body { display: block; }
   .view-body.collapsed { display: none; }
   .view-img-wrap { position: relative; cursor: zoom-in; overflow: hidden; }
-  .view-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: var(--surface); transition: transform 0.2s ease; }
+  .view-img { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #12161b; transition: transform 0.2s ease; }
   .view-img-wrap:hover .view-img { transform: scale(1.02); }
   .zoom-hint { position: absolute; bottom: 8px; right: 8px; background: rgba(0,0,0,0.6); color: white; font-size: 10px; padding: 3px 7px; border-radius: 4px; pointer-events: none; opacity: 0; transition: opacity 0.2s; }
   .view-img-wrap:hover .zoom-hint { opacity: 1; }
   .view-bullets { padding: 10px 14px; list-style: none; }
-  .view-bullets li { font-size: 12px; color: var(--text2); padding: 4px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .view-bullets li { font-size: 12px; color: #8a93a2; padding: 4px 0; display: flex; align-items: flex-start; gap: 8px; line-height: 1.6; border-bottom: 1px solid rgba(255,255,255,0.03); }
   .view-bullets li:last-child { border-bottom: none; }
-  .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 7px; }
+  .view-bullets li::before { content: ''; width: 4px; height: 4px; border-radius: 50%; background: #3b82f6; flex-shrink: 0; margin-top: 7px; }
+  .rec-block { margin: 0 16px 14px; padding: 12px 14px; background: #12161b; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; }
+  .rec-label { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 7px; }
+  .rec-label.security { color: #22c55e; }
+  .rec-label.wildfire { color: #f97316; }
+  .rec-text { font-size: 12px; color: #8a93a2; line-height: 1.7; }
+  .intel-block { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .intel-block-label { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .intel-block-text { font-size: 12px; color: #8a93a2; line-height: 1.7; }
+  .feedback-section { padding: 20px 16px; }
+  .feedback-heading { font-size: 13px; font-weight: 600; color: #f0f2f5; margin-bottom: 6px; }
+  .feedback-sub { font-size: 12px; color: #555f6e; line-height: 1.6; margin-bottom: 16px; }
+  .btn-feedback {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 11px 20px; background: rgba(59,130,246,0.12);
+    border: 1px solid rgba(59,130,246,0.3); border-radius: 7px;
+    color: #3b82f6; font-size: 12px; font-weight: 500;
+    text-decoration: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+  }
+  .btn-feedback:hover { background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.5); }
 
-  /* ── Intel tab blocks ── */
-  .rec-block { margin: 14px 16px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; }
-  .rec-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 7px; }
-  .rec-label.orange { color: var(--orange); }
-  .rec-label.red { color: var(--red); }
-  .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
-
-  /* ── Feedback tab ── */
-  #tab-feedback { display: none; flex-direction: column; flex: 1; height: 100%; }
-  #tab-feedback.active { display: flex; }
-  #tab-feedback iframe { flex: 1; width: 100%; border: none; min-height: 0; }
-
-  /* ── Panel empty ── */
-  .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
-
-  /* ── Toggle panel ── */
-  #toggle-panel { position: absolute; bottom: 24px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-  #toggle-panel:hover { background: var(--surface2); }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  #viewer-toggle-panel {
+    position: absolute; bottom: 20px; right: 20px; z-index: 50;
+    background: #12161b; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; font-weight: 500; color: #f0f2f5;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  #viewer-toggle-panel:hover { background: #1a1f27; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
-  /* ── Mobile toggle ── */
-  #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  #viewer-ground-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(205,51,51,0.08); border-bottom: 1px solid rgba(205,51,51,0.25); flex-shrink: 0; gap: 12px; }
+  #viewer-ground-banner .ground-label { font-size: 12px; font-family: 'DM Mono', monospace; color: #ef4444; font-weight: 500; }
+  #viewer-ground-banner .ground-exit { display: flex; align-items: center; justify-content: center; padding: 7px 12px; border-radius: 6px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: #ef4444; cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; }
+  #viewer-ground-banner .ground-exit:hover { border-color: #ef4444; background: rgba(205,51,51,0.18); }
 
-  /* ── Lightbox ── */
+  /* immersive overlay */
+  #immersive-overlay { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; z-index: 30; display: none; flex-direction: column; background: #0a0c0f; transition: right 0.3s ease; }
+  #immersive-overlay.visible { display: flex; }
+  #immersive-overlay.panel-hidden { right: 0; }
+  #immersive-frame { flex: 1; position: relative; background: #000; }
+  #matterport-iframe { width: 100%; height: 100%; border: none; display: none; }
+  #matterport-iframe.visible { display: block; }
+  #street-view-div { width: 100%; height: 100%; display: none; }
+  #street-view-div.visible { display: block; }
+  .interior-launch-card { margin: 16px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; overflow: hidden; background: #1a1f27; }
+  .interior-card-header { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .interior-card-title { font-size: 13px; font-weight: 600; color: #f0f2f5; margin-bottom: 3px; }
+  .interior-card-sub { font-size: 11px; color: #555f6e; font-family: 'DM Mono', monospace; }
+  .interior-card-actions { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; }
+  .interior-action-btn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 7px; border: 1px solid rgba(255,255,255,0.14); background: #12161b; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+  .interior-action-btn:hover { background: #1a1f27; border-color: #3b82f6; }
+  .interior-action-btn.active { background: rgba(59,130,246,0.12); border-color: #3b82f6; }
+  .interior-action-text { flex: 1; }
+  .interior-action-label { font-size: 12px; font-weight: 600; color: #f0f2f5; }
+  .interior-action-desc { font-size: 11px; color: #555f6e; margin-top: 1px; }
+  .interior-action-arrow { font-size: 14px; color: #555f6e; }
+
+  /* debug */
+  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 320px; max-height: 200px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: none; flex-direction: column; }
+  #debug-panel.show { display: flex; }
+  #debug-panel.collapsed #debug-log { display: none; }
+  #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
+  #debug-header span { color: #3b82f6; font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
+  #debug-toggle-btn { color: #3b82f6; font-size: 10px; background: none; border: none; cursor: pointer; }
+  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 160px; scrollbar-width: thin; }
+  .debug-line { padding: 2px 0; line-height: 1.5; }
+  .debug-line.info { color: #8a93a2; }
+  .debug-line.ok { color: #22c55e; }
+  .debug-line.error { color: #ef4444; }
+  .debug-time { color: #555f6e; margin-right: 6px; }
+  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: #555f6e; font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
+
+  /* lightbox */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
   #lightbox.open { display: flex; }
   #lightbox-img { max-width: 100%; max-height: 75vh; object-fit: contain; border-radius: 8px; }
   #lightbox-caption { margin-top: 16px; text-align: center; }
-  #lightbox-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  #lightbox-title { font-size: 14px; font-weight: 600; color: #f0f2f5; margin-bottom: 4px; }
   #lightbox-bullets { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 8px; max-width: 700px; }
-  #lightbox-bullets li { font-size: 11px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); padding: 3px 10px; border-radius: 999px; }
-  #lightbox-close { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #lightbox-bullets li { font-size: 11px; color: #8a93a2; background: #1a1f27; border: 1px solid rgba(255,255,255,0.08); padding: 3px 10px; border-radius: 999px; }
+  #lightbox-close { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border-radius: 50%; background: #12161b; border: 1px solid rgba(255,255,255,0.14); color: #f0f2f5; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lightbox-nav { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
-  .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
+  .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: #12161b; border: 1px solid rgba(255,255,255,0.14); color: #f0f2f5; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  #lightbox-counter { font-size: 12px; color: #555f6e; font-family: 'DM Mono', monospace; }
 
-  /* ── Debug console ── */
-  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
-  #debug-panel.collapsed #debug-log { display: none; }
-  #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
-  #debug-header span { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
-  #debug-toggle-btn { color: var(--accent); font-size: 10px; background: none; border: none; cursor: pointer; }
-  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
-  .debug-line.info { color: var(--text2); } .debug-line.ok { color: var(--green); }
-  .debug-line.warn { color: #f59e0b; } .debug-line.error { color: var(--red); }
-  .debug-time { color: var(--text3); margin-right: 6px; }
-  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
-  #debug-clear:hover { color: var(--text2); }
+  /* gm overrides */
+  .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
+  .gm-style .gm-style-iw-d { overflow: hidden !important; }
+  .gm-style .gm-style-iw-t::after { background: #12161b !important; }
+  .gm-style .gm-style-iw-tc::after { background: #12161b !important; }
+  .gm-style-iw-chr { background: #12161b !important; border-radius: 10px 10px 0 0 !important; height: 0 !important; padding: 0 !important; }
+  .gm-style-iw-chr button { filter: invert(1) !important; opacity: 0.6 !important; }
+  .gm-style-iw-chr button.gm-ui-hover-effect { display: none !important; }
 
-  /* ── Responsive ── */
+  /* mobile */
   @media (max-width: 768px) {
-    #property-name { display: none; }
-    #toggle-panel { display: none; }
-    #mobile-toggle { display: flex; }
-    #loading { right: 0; } #error { right: 0; }
-    #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
-    #panel.mobile-open { transform: translateY(0%) !important; }
-    #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
+    .intel-grid { grid-template-columns: 1fr; }
+    .portal-features { gap: 8px; }
+    #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: 97px; width: 100% !important; height: calc(100vh - 97px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
+    #viewer-panel.mobile-open { transform: translateY(0%) !important; }
+    #viewer-toggle-panel { display: none; }
+    #immersive-overlay { right: 0; }
   }
 </style>
+<script src="config.js"></script>
 </head>
 <body>
 
-<div id="header">
-  <div class="logo">
-    <div class="logo-mark">VI</div>
-    <div>
-      <div class="logo-text">Vyanet Intel</div>
-      <div class="logo-sub">Responder Intel Portal</div>
+<!-- ── Tab navigation ── -->
+<nav id="tab-nav">
+  <button class="tab-btn active" onclick="showTab('landing')">Property Intel</button>
+  <button class="tab-btn" onclick="showTab('viewer')">Responder Viewer</button>
+</nav>
+
+<!-- ════════════════════════════════════════
+     LANDING PAGE
+════════════════════════════════════════ -->
+<div id="page-landing" class="page active">
+
+  <!-- Hero -->
+  <section class="landing-hero">
+    <!-- Vyanet Logo -->
+    <div class="vyanet-logo">
+      <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="logo-img">
     </div>
-  </div>
-  <div class="header-right">
-    <div id="version-badge">v1.0.0 — responder intel</div>
-    <div id="property-name">Loading...</div>
-  </div>
+
+    <div class="hero-eyebrow">Nadir Property Intelligence</div>
+    <h1 class="hero-heading">See what responders see before they arrive.</h1>
+    <div class="hero-rule"></div>
+    <p class="hero-body">
+      Vyanet converts straight-down aerial imagery into structured responder intelligence — property elements, access considerations, and wildfire conditions — mapped and ready before any unit arrives on scene.
+    </p>
+    <div class="hero-cta-group">
+      <button class="btn-primary" onclick="showTab('viewer')">↗ Open Responder Viewer</button>
+      <p class="btn-hint">View imagery, access considerations, and wildfire conditions for this property.</p>
+      <a class="btn-secondary" href="https://www.vyanet.com" target="_blank">Join the Customer Portal</a>
+      <p class="btn-hint">Property owners — enroll to get a full Property Intel report delivered to your local fire agency.</p>
+    </div>
+  </section>
+
+  <!-- What is Property Intel -->
+  <section class="what-section">
+    <div class="section-eyebrow">How it works</div>
+    <h2 class="section-heading">Overhead imagery turned into operational intelligence.</h2>
+    <div class="section-rule"></div>
+    <p class="section-body">
+      The Nadir Property Intelligence system analyzes straight-down aerial imagery and extracts two categories of structured data: <strong>Property Elements</strong> — the physical features visible on the property — and <strong>Responder Considerations</strong> — site characteristics that affect access, movement, visibility, staging, and operations. The objective is situational awareness, not inspection or assessment.
+    </p>
+    <div class="intel-grid">
+      <div class="intel-card">
+        <div class="intel-card-icon">🛰</div>
+        <div class="intel-card-title">Nadir Aerial Imagery</div>
+        <div class="intel-card-desc">Straight-down overhead imagery captured from drone, satellite, or orthographic aerial photography — optimized to show the full property footprint at the right zoom level.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-card-icon">📍</div>
+        <div class="intel-card-title">Property Elements</div>
+        <div class="intel-card-desc">Clearly visible physical features — buildings, driveways, parking areas, storage, fencing, pools, and more — labeled from an approved vocabulary and geo-pinned on the map.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-card-icon">🚒</div>
+        <div class="intel-card-title">Responder Considerations</div>
+        <div class="intel-card-desc">Observable site characteristics that affect access, navigation, visibility, and staging — single access points, dense vegetation, outdoor storage, limited rear access, and similar conditions.</div>
+      </div>
+      <div class="intel-card">
+        <div class="intel-card-icon">🔥</div>
+        <div class="intel-card-title">Wildfire Conditions</div>
+        <div class="intel-card-desc">Fuel continuity, defensible space, vegetation adjacent to structures, and access route conditions — identified from imagery and mapped for suppression and evacuation planning.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Who it serves -->
+  <section style="background: var(--off-white); padding: 56px 24px; border-top: 1px solid var(--light-gray); border-bottom: 1px solid var(--light-gray);">
+    <div style="max-width: 860px; margin: 0 auto;">
+      <div class="section-eyebrow">Who it serves</div>
+      <h2 class="section-heading">Built for the people who respond first.</h2>
+      <div class="section-rule"></div>
+      <p class="section-body" style="margin-bottom: 28px;">
+        Property Intel is designed for the agencies and professionals who need to understand a property before reaching it. The system does not estimate value, assess maintenance conditions, evaluate code compliance, or predict hazards. It answers one question: <em>what would a responder see from above?</em>
+      </p>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px;">
+        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
+          <div style="font-size: 20px; margin-bottom: 8px;">🚒</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Fire Responders</div>
+        </div>
+        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
+          <div style="font-size: 20px; margin-bottom: 8px;">🚑</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">EMS Personnel</div>
+        </div>
+        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
+          <div style="font-size: 20px; margin-bottom: 8px;">🚔</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Law Enforcement</div>
+        </div>
+        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
+          <div style="font-size: 20px; margin-bottom: 8px;">📋</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Emergency Managers</div>
+        </div>
+        <div style="padding: 16px; background: var(--white); border: 1px solid var(--light-gray); border-radius: 8px; text-align: center;">
+          <div style="font-size: 20px; margin-bottom: 8px;">🏡</div>
+          <div style="font-size: 12px; font-weight: 600; color: var(--dark);">Property Owners</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Portal CTA -->
+  <section class="portal-section">
+    <div class="portal-eyebrow">Vyanet Customer Portal</div>
+    <h2 class="portal-heading">Get your property into the system.</h2>
+    <div class="portal-rule"></div>
+    <p class="portal-body">
+      Property owners enroll through the Vyanet Customer Portal. Vyanet captures aerial imagery, runs the Nadir Property Intelligence analysis, and delivers your completed report directly to your local responding agency — so it's there when it's needed.
+    </p>
+    <div class="portal-features">
+      <span class="portal-feature-chip">Drone aerial capture</span>
+      <span class="portal-feature-chip">Property element mapping</span>
+      <span class="portal-feature-chip">Wildfire conditions report</span>
+      <span class="portal-feature-chip">Responder considerations</span>
+      <span class="portal-feature-chip">HOA community plans</span>
+      <span class="portal-feature-chip">Agency delivery</span>
+    </div>
+    <a class="btn-portal" href="https://www.vyanet.com" target="_blank">Enroll in the Customer Portal →</a>
+    <div class="portal-sub">vyanet.com — Nadir Property Intelligence for the Pacific Northwest</div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <div class="footer-text">
+      © 2026 Vyanet — <a href="https://www.vyanet.com" target="_blank">vyanet.com</a>
+    </div>
+  </footer>
 </div>
 
-<div id="main">
-
-  <div id="viewer-pane">
-    <iframe id="dji-iframe" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
-    <div id="viewer-placeholder"><span>3D viewer not available for this property.</span></div>
+<!-- ════════════════════════════════════════
+     VIEWER PAGE
+════════════════════════════════════════ -->
+<div id="page-viewer" class="page">
+  <!-- viewer sub-header -->
+  <div id="viewer-topbar">
+    <div id="viewer-property-name">Loading...</div>
+    <div id="viewer-version">v2.4.0 — Responder Intel</div>
   </div>
-
-  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading intel...</div></div>
-  <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
-
-  <div id="panel">
-    <div class="panel-header">
-      <div class="panel-title" id="panel-title">Responder Intel</div>
-      <div class="panel-address" id="panel-address"></div>
+  <!-- viewer body -->
+  <div id="viewer-main">
+    <div id="viewer-map"></div>
+    <div id="immersive-overlay">
+      <div id="immersive-frame">
+        <div id="street-view-div"></div>
+        <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
+      </div>
     </div>
-    <div id="view-tabs">
-      <div class="view-tab active" data-tab="imagery" onclick="switchTab('imagery')">Imagery</div>
-      <div class="view-tab" data-tab="intel" onclick="switchTab('intel')">Intel</div>
-      <div class="view-tab" data-tab="feedback" onclick="switchTab('feedback')">Feedback</div>
+    <div id="viewer-map-controls">
+      <button class="v-map-btn" id="overlay-btn" onclick="toggleOverlay()">
+        <span class="v-ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
+      </button>
     </div>
-    <div id="panel-content">
-      <!-- populated by JS -->
+    <div id="viewer-loading"><div class="v-spinner"></div><div class="v-loading-text" id="viewer-loading-text">Loading property data...</div></div>
+    <div id="viewer-error">
+      <div class="v-error-icon">⚠</div>
+      <div class="v-error-title">Property not found</div>
+      <div class="v-error-msg" id="viewer-error-msg">No property ID in URL.</div>
+      <button class="v-error-back" onclick="showTab('landing')">← Back to Property Intel</button>
     </div>
-    <div id="tab-feedback">
-      <iframe src="https://survey.zohopublic.com/zs/U4C5oA" allow="geolocation" loading="lazy" title="Property Intel Feedback"></iframe>
+    <div id="viewer-panel">
+      <div class="vp-header">
+        <div class="vp-title" id="vp-title">Property Details</div>
+        <div class="vp-address" id="vp-address"></div>
+      </div>
+      <div id="vp-tabs"></div>
+      <div id="viewer-ground-banner" style="display:none;">
+        <span class="ground-label">Ground View Active</span>
+        <button class="ground-exit" onclick="exitImmersive()">✕ Exit</button>
+      </div>
+      <div id="vp-content"></div>
     </div>
   </div>
-
+  <button id="viewer-toggle-panel" onclick="toggleViewerPanel()"><div class="status-dot"></div><span id="viewer-toggle-label">View Intel</span></button>
 </div>
 
-<button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-<button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
-
-<div id="debug-panel" class="collapsed">
-  <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▲</button></div>
+<!-- Debug + Lightbox -->
+<div id="debug-panel">
+  <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
   <div id="debug-log"></div>
   <button id="debug-clear" onclick="clearDebug()">clear log</button>
 </div>
-
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
-  <div id="lightbox-caption">
-    <div id="lightbox-title"></div>
-    <ul id="lightbox-bullets"></ul>
-  </div>
+  <div id="lightbox-caption"><div id="lightbox-title"></div><ul id="lightbox-bullets"></ul></div>
   <div id="lightbox-nav">
     <button class="nav-btn" onclick="lightboxNav(-1)">&#8592;</button>
     <span id="lightbox-counter"></span>
@@ -223,20 +790,50 @@
 </div>
 
 <script>
-const VERSION  = 'v1.0.0';
-const BASE_URL = 'https://jonahbourgeois1.github.io/property-intel/data/drone/';
+// ── Constants ──────────────────────────────────────────────────────────────
+const VERSION      = 'v2.4.0';
+const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/drone/';
+const DATA_ROOT    = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
+const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
+const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
+const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
+const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const VIEW_ORDER   = ['imagery','intel','feedback'];
+const SURVEY_URL   = 'https://survey.zohopublic.com/zs/U4C5oA';
 
-let panelOpen = false, mobileIntelOpen = false;
+// ── State ──────────────────────────────────────────────────────────────────
+let map, viewerPanelOpen = false, mapsApiReady = false, pendingEntry = null;
+let currentData = null, streetViewActive = false, matterportActive = false, djiViewerActive = false;
+let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
+let groundOverlay = null, overlayVisible = false;
+let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
+let viewerInitialised = false;
 const isMobile = () => window.innerWidth <= 768;
 
-// ── Debug ────────────────────────────────────────────────────────────────────
+// ── Tab switching ──────────────────────────────────────────────────────────
+function showTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b, i) {
+    b.classList.toggle('active', (i === 0 && tab === 'landing') || (i === 1 && tab === 'viewer'));
+  });
+  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
+  document.getElementById('page-' + tab).classList.add('active');
+  if (tab === 'viewer' && !viewerInitialised) { initViewer(); viewerInitialised = true; }
+  if (tab === 'viewer') {
+    document.getElementById('debug-panel').classList.add('show');
+  } else {
+    document.getElementById('debug-panel').classList.remove('show');
+  }
+}
+
+// ── Debug ──────────────────────────────────────────────────────────────────
 function dbg(msg, type) {
   type = type || 'info';
   const log = document.getElementById('debug-log');
   if (!log) return;
   const now = new Date();
-  const t = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()].map(function(n) { return String(n).padStart(2,'0'); }).join(':');
   const line = document.createElement('div');
   line.className = 'debug-line ' + type;
   line.innerHTML = '<span class="debug-time">' + t + '</span>' + msg;
@@ -248,184 +845,340 @@ function toggleDebug() {
   p.classList.toggle('collapsed');
   b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
 }
-function clearDebug() { document.getElementById('debug-log').innerHTML = ''; }
+function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
 
-// ── Panel / mobile ───────────────────────────────────────────────────────────
-function togglePanel() {
-  panelOpen = !panelOpen;
-  document.getElementById('panel').classList.toggle('hidden', !panelOpen);
-  document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
-}
-function mobileToggle() {
-  mobileIntelOpen = !mobileIntelOpen;
-  document.getElementById('panel').classList.toggle('mobile-open', mobileIntelOpen);
-  document.getElementById('mobile-label').textContent = mobileIntelOpen ? 'Show Map' : 'Show Intel';
+// ── Viewer panel ───────────────────────────────────────────────────────────
+function toggleViewerPanel() {
+  viewerPanelOpen = !viewerPanelOpen;
+  document.getElementById('viewer-panel').classList.toggle('hidden', !viewerPanelOpen);
+  document.getElementById('viewer-toggle-label').textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
+  const ov = document.getElementById('immersive-overlay');
+  if (ov) ov.classList.toggle('panel-hidden', !viewerPanelOpen);
+  setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
 
-// ── Loading / error ──────────────────────────────────────────────────────────
-function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
-function showError(msg) {
-  hideLoading();
-  document.getElementById('error').classList.add('visible');
-  document.getElementById('error-msg').textContent = msg;
+function showViewerError(msg) {
+  document.getElementById('viewer-loading').classList.add('hidden');
+  const el = document.getElementById('viewer-error');
+  el.classList.add('visible');
+  document.getElementById('viewer-error-msg').textContent = msg;
   dbg('ERROR: ' + msg, 'error');
 }
+function setViewerLoading(msg) {
+  const el = document.getElementById('viewer-loading-text');
+  if (el) el.textContent = msg;
+  dbg(msg, 'info');
+}
+function hideViewerLoading() {
+  const el = document.getElementById('viewer-loading');
+  if (el) el.classList.add('hidden');
+}
 
-// ── Tab switching ────────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.view-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-  const content  = document.getElementById('panel-content');
-  const feedback = document.getElementById('tab-feedback');
-  if (name === 'feedback') {
-    content.style.display  = 'none';
-    feedback.classList.add('active');
-  } else {
-    content.style.display  = '';
-    feedback.classList.remove('active');
-    document.querySelectorAll('.tab-section').forEach(s => {
-      s.style.display = s.dataset.tab === name ? 'block' : 'none';
-    });
+// ── Map & parcel helpers ───────────────────────────────────────────────────
+function pixelToLatLng(cLat, cLng, zoom, xPct, yPct) {
+  const size = 640, px = (xPct/100)*size - size/2, py = (yPct/100)*size - size/2;
+  const mpp = (40075016.686 * Math.cos(cLat * Math.PI / 180)) / (256 * Math.pow(2, zoom));
+  return { lat: cLat - (py * mpp) / 110574, lng: cLng + (px * mpp) / (111320 * Math.cos(cLat * Math.PI / 180)) };
+}
+function extractZoom(url) {
+  if (!url) return 19;
+  const m = url.match(/[&?]zoom=(\d+)/);
+  return m ? parseInt(m[1]) : 19;
+}
+function computeOverlayBounds(cLat, cLng, zoom) {
+  const tl = pixelToLatLng(cLat, cLng, zoom, 0, 0), br = pixelToLatLng(cLat, cLng, zoom, 100, 100);
+  return new google.maps.LatLngBounds({ lat: br.lat, lng: tl.lng }, { lat: tl.lat, lng: br.lng });
+}
+function pointInPolygon(lat, lng, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi)) inside = !inside;
   }
-  if (!panelOpen && !isMobile()) togglePanel();
-  if (!mobileIntelOpen && isMobile()) mobileToggle();
+  return inside;
+}
+function getParcelFile(lat, lng) {
+  const lc = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
+  const lnc = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
+  return 'deschutes_' + lc.toFixed(2) + '_' + lnc.toFixed(2) + '.geojson';
+}
+function drawParcelBoundary(lat, lng, storedRing) {
+  if (storedRing && storedRing.length >= 3) {
+    const paths = storedRing.map(function(pt) { return { lat: pt.lat, lng: pt.lng }; });
+    new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: map });
+    dbg('Parcel ring drawn (' + storedRing.length + ' pts)', 'ok');
+    return;
+  }
+  fetch(PARCEL_BASE + getParcelFile(lat, lng))
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(geo) {
+      if (!geo) return;
+      const matched = geo.features.find(function(f) {
+        const c = f.geometry && f.geometry.coordinates;
+        return c && c[0] && pointInPolygon(lat, lng, c[0]);
+      });
+      if (!matched) return;
+      const paths = matched.geometry.coordinates.map(function(ring) { return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; }); });
+      new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: map });
+    })
+    .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
+}
+function initMapAt(lat, lng, storedRing) {
+  map = new google.maps.Map(document.getElementById('viewer-map'), {
+    center: { lat: lat, lng: lng }, zoom: 18,
+    mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+    mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
+    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+  });
+  new google.maps.Marker({
+    position: { lat: lat, lng: lng }, map: map,
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#fff', fillOpacity: 0.9, strokeColor: '#3b82f6', strokeWeight: 2 },
+    zIndex: 1
+  });
+  drawParcelBoundary(lat, lng, storedRing || null);
+  hideViewerLoading();
+  setTimeout(function() { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat: lat, lng: lng }); } }, 100);
+  if (!isMobile() && !viewerPanelOpen) setTimeout(toggleViewerPanel, 700);
+  dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
+  flushPendingMapData();
+}
+function resolveAndInitMap(d) {
+  const storedRing = d.parcel_ring || null;
+  if (d.lat && d.lng) { initMapAt(d.lat, d.lng, storedRing); }
+  else {
+    fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(d.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.status === 'OK' && data.results[0]) {
+          const loc = data.results[0].geometry.location;
+          initMapAt(loc.lat, loc.lng, storedRing);
+        } else { hideViewerLoading(); }
+      })
+      .catch(function(e) { hideViewerLoading(); dbg('Geocode error: ' + e.message, 'error'); });
+  }
 }
 
-// ── Section collapse ─────────────────────────────────────────────────────────
-function toggleSection(header) {
-  const body = header.nextElementSibling, chevron = header.querySelector('.chevron');
-  body.classList.toggle('collapsed');
-  chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
+// ── Pins & overlay ─────────────────────────────────────────────────────────
+function makePinSvg(color, text) {
+  const c = encodeURIComponent(color);
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path d="M14 0C6.27 0 0 6.27 0 14c0 9.33 14 22 14 22S28 23.33 28 14C28 6.27 21.73 0 14 0z" fill="' + c + '" stroke="%23fff" stroke-width="1.5"/><text x="14" y="17" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="9" font-weight="700" fill="white">' + encodeURIComponent(text) + '</text></svg>',
+    scaledSize: new google.maps.Size(28, 36), anchor: new google.maps.Point(14, 36)
+  };
+}
+function clearMarkers() {
+  activeMarkers.forEach(function(m) { m.setMap(null); });
+  activeMarkers = []; activePinId = null; pendingPinSets = []; pendingOverlay = null;
+  if (infoWindow) infoWindow.close();
+}
+function dropPins(pins, color, hexColor) {
+  if (!map) { pendingPinSets.push({ pins: pins, color: color, hexColor: hexColor }); return; }
+  pins.forEach(function(pin, i) {
+    if (!pin.lat || !pin.lng) return;
+    const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
+    const pinId = color + '-' + i;
+    const marker = new google.maps.Marker({ position: { lat: pin.lat, lng: pin.lng }, map: map, icon: makePinSvg(hexColor, label), title: pin.label, zIndex: 10 });
+    marker._pinId = pinId; marker._label = label; marker._desc = pin.label; marker._hexColor = hexColor;
+    marker.addListener('click', function() { activatePin(pinId, marker, true); });
+    activeMarkers.push(marker);
+  });
+}
+function activatePin(pinId, marker, fromMap) {
+  document.querySelectorAll('.pin-row.active').forEach(function(r) { r.classList.remove('active'); });
+  activePinId = pinId;
+  const row = document.querySelector('.pin-row[data-pin-id="' + pinId + '"]');
+  if (row) { row.classList.add('active'); row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+  if (marker) {
+    marker.setAnimation(google.maps.Animation.BOUNCE);
+    setTimeout(function() { marker.setAnimation(null); }, 700);
+    if (!fromMap) map.panTo(marker.getPosition());
+    if (!infoWindow) infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
+    infoWindow.setContent('<div style="font-family:sans-serif;background:#12161b;color:#f0f2f5;border-radius:8px;padding:9px 12px;min-width:140px;max-width:220px;"><div style="display:flex;align-items:center;gap:8px;"><div style="width:20px;height:20px;border-radius:50%;background:' + marker._hexColor + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:white;font-family:monospace;flex-shrink:0;">' + marker._label + '</div><span style="font-size:12px;font-weight:600;color:#f0f2f5;line-height:1.3;">' + marker._desc + '</span></div></div>');
+    infoWindow.open({ anchor: marker, map: map, shouldFocus: false });
+  }
+}
+function pinRowClick(pinId) {
+  const marker = activeMarkers.find(function(m) { return m._pinId === pinId; });
+  activatePin(pinId, marker, false);
+}
+function setOverlay(imageUrl, cLat, cLng, zoom) {
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
+  if (!imageUrl || !map) { if (!map) pendingOverlay = { imageUrl: imageUrl, centerLat: cLat, centerLng: cLng, zoom: zoom }; return; }
+  groundOverlay = new google.maps.GroundOverlay(imageUrl, computeOverlayBounds(cLat, cLng, zoom), { opacity: 0.75 });
+  if (overlayVisible) groundOverlay.setMap(map);
+}
+function flushPendingMapData() {
+  if (pendingOverlay) { const p = pendingOverlay; pendingOverlay = null; setOverlay(p.imageUrl, p.centerLat, p.centerLng, p.zoom); }
+  const sets = pendingPinSets.slice(); pendingPinSets = [];
+  sets.forEach(function(s) { dropPins(s.pins, s.color, s.hexColor); });
+}
+function toggleOverlay() {
+  overlayVisible = !overlayVisible;
+  const btn = document.getElementById('overlay-btn'), lbl = document.getElementById('overlay-label');
+  if (overlayVisible) { btn.classList.add('active'); lbl.textContent = 'Hide Overlay'; if (groundOverlay) groundOverlay.setMap(map); }
+  else { btn.classList.remove('active'); lbl.textContent = 'Show Overlay'; if (groundOverlay) groundOverlay.setMap(null); }
 }
 
-// ── Lightbox ─────────────────────────────────────────────────────────────────
-function openLightbox(index) {
-  lightboxIndex = index; updateLightbox();
-  document.getElementById('lightbox').classList.add('open');
-  document.addEventListener('keydown', lightboxKey);
+// ── Immersive overlay ──────────────────────────────────────────────────────
+function updateGroundBanner() {
+  const b = document.getElementById('viewer-ground-banner');
+  if (!b) return;
+  if (matterportActive || streetViewActive || djiViewerActive) {
+    b.style.display = 'flex';
+    b.querySelector('.ground-label').textContent = djiViewerActive ? '3D View Active' : 'Ground View Active';
+    b.querySelector('.ground-exit').onclick = djiViewerActive ? exitDjiViewer : exitImmersive;
+  } else { b.style.display = 'none'; }
 }
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
-  document.removeEventListener('keydown', lightboxKey);
+function exitImmersive() {
+  document.getElementById('immersive-overlay').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+  document.getElementById('street-view-div').classList.remove('visible');
+  if (map) { const sv = map.getStreetView(); if (sv) sv.setVisible(false); map.setStreetView(null); }
+  activeMarkers.forEach(function(m) { m.setMap(map); });
+  matterportActive = false; streetViewActive = false; djiViewerActive = false;
+  updateGroundBanner();
 }
-function lightboxKey(e) {
-  if (e.key === 'Escape') closeLightbox();
-  if (e.key === 'ArrowLeft') lightboxNav(-1);
-  if (e.key === 'ArrowRight') lightboxNav(1);
+function exitDjiViewer() {
+  document.getElementById('immersive-overlay').classList.remove('visible');
+  document.getElementById('matterport-iframe').src = '';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+  activeMarkers.forEach(function(m) { m.setMap(map); });
+  djiViewerActive = false; updateGroundBanner();
 }
-function lightboxNav(dir) {
-  lightboxIndex = (lightboxIndex + dir + lightboxViews.length) % lightboxViews.length;
-  updateLightbox();
-}
-function updateLightbox() {
-  const v = lightboxViews[lightboxIndex];
-  document.getElementById('lightbox-img').src = v.url;
-  document.getElementById('lightbox-title').textContent = v.label;
-  document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
-  document.getElementById('lightbox-bullets').innerHTML = formatDesc(v.desc).map(b => '<li>' + b + '</li>').join('');
+function showDjiViewer() {
+  if (!currentData || !currentData.viewer360) return;
+  document.getElementById('immersive-overlay').classList.add('visible');
+  document.getElementById('immersive-overlay').classList.toggle('panel-hidden', !viewerPanelOpen);
+  document.getElementById('matterport-iframe').src = currentData.viewer360;
+  document.getElementById('matterport-iframe').classList.add('visible');
+  document.getElementById('street-view-div').classList.remove('visible');
+  activeMarkers.forEach(function(m) { m.setMap(null); });
+  djiViewerActive = true; updateGroundBanner();
+  dbg('DJI viewer loaded', 'ok');
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function formatDesc(desc) {
-  if (!desc) return [];
-  return desc.split('|').map(s => s.trim()).filter(s => s.length > 2);
+// ── Panel builder ──────────────────────────────────────────────────────────
+function buildTabs(d) {
+  const tabsEl = document.getElementById('vp-tabs');
+  tabsEl.innerHTML = '';
+  const tabs = [{ id: 'imagery', label: 'Imagery' }, { id: 'intel', label: 'Intel' }, { id: 'feedback', label: 'Feedback' }];
+  tabs.forEach(function(t) {
+    const tab = document.createElement('div');
+    tab.className = 'vp-tab' + (t.id === 'imagery' ? ' active' : '');
+    tab.textContent = t.label;
+    tab.setAttribute('data-view', t.id);
+    tab.onclick = function() { buildTabContent(d, t.id); };
+    tabsEl.appendChild(tab);
+  });
 }
+function buildTabContent(d, tabId) {
+  document.querySelectorAll('.vp-tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-view') === tabId); });
+  clearMarkers();
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; overlayVisible = false; document.getElementById('overlay-btn').classList.remove('active'); document.getElementById('overlay-label').textContent = 'Show Overlay'; }
 
-// ── Build panel content ───────────────────────────────────────────────────────
+  if (tabId === 'imagery') { buildImageryTab(d); }
+  else if (tabId === 'intel') { buildIntelTab(d); }
+  else if (tabId === 'feedback') { buildFeedbackTab(d); }
+}
 function buildImageryTab(d) {
   const views = [
     { label: 'Overhead View', badge: 'N', cls: 'nadir', data: d.nadir },
     { label: 'Alpha Side',    badge: 'A', cls: '',      data: d.alpha },
     { label: 'Bravo Side',    badge: 'B', cls: '',      data: d.bravo },
     { label: 'Charlie Side',  badge: 'C', cls: '',      data: d.charlie },
-    { label: 'Delta Side',    badge: 'D', cls: '',      data: d.delta },
+    { label: 'Delta Side',    badge: 'D', cls: '',      data: d.delta }
   ];
-
   lightboxViews = [];
-  views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, desc: v.data.desc }); });
-
-  let html = '<div class="tab-section" data-tab="imagery">';
+  views.forEach(function(v) { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
+  let html = '';
+  if (d.viewer360) {
+    html += '<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">3D Aerial View</div><div class="interior-card-sub">Interactive drone model</div></div><div class="interior-card-actions"><div class="interior-action-btn' + (djiViewerActive ? ' active' : '') + '" onclick="showDjiViewer()"><div class="interior-action-text"><div class="interior-action-label">Launch 3D Viewer</div><div class="interior-action-desc">Full interactive drone flyover</div></div><div class="interior-action-arrow">›</div></div></div></div>';
+  }
   let lbIdx = 0;
-  views.forEach(v => {
+  views.forEach(function(v) {
     if (!v.data || !v.data.url) return;
-    const bullets = formatDesc(v.data.desc);
-    const idx = lbIdx++;
-    html += '<div class="view-section">'
-      + '<div class="view-header" onclick="toggleSection(this)">'
-      + '<div class="view-badge ' + v.cls + '">' + v.badge + '</div>'
-      + '<div class="view-label">' + v.label + '</div>'
-      + '<div class="chevron">▼</div>'
-      + '</div>'
-      + '<div class="view-body">'
-      + '<div class="view-img-wrap" onclick="openLightbox(' + idx + ')">'
-      + '<img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy">'
-      + '<div class="zoom-hint">🔍 Tap to enlarge</div>'
-      + '</div>'
-      + '<ul class="view-bullets">' + bullets.map(b => '<li>' + b + '</li>').join('') + '</ul>'
-      + '</div></div>';
+    const bullets = formatDesc(v.data.desc), idx = lbIdx++;
+    html += '<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ' + v.cls + '">' + v.badge + '</div><div class="view-label">' + v.label + '</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(' + idx + ')"><img class="view-img" src="' + v.data.url + '" alt="' + v.label + '" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">' + bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('') + '</ul></div></div>';
   });
-  html += '</div>';
-  return html;
+  if (!html) html = '<div class="vp-empty">No imagery available.</div>';
+  document.getElementById('vp-content').innerHTML = html;
 }
-
 function buildIntelTab(d) {
-  let html = '<div class="tab-section" data-tab="intel" style="display:none;">';
+  let html = '';
   if (d.considerations) {
-    html += '<div class="rec-block"><div class="rec-label orange">Responder Considerations</div>'
-      + '<div class="rec-text">' + d.considerations + '</div></div>';
+    html += '<div class="intel-block"><div class="intel-block-label">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
   }
   if (d.clarifications) {
-    html += '<div class="rec-block"><div class="rec-label red">Information Needing Clarification</div>'
-      + '<div class="rec-text">' + d.clarifications + '</div></div>';
+    html += '<div class="intel-block"><div class="intel-block-label">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
   }
-  if (!d.considerations && !d.clarifications) {
-    html += '<div class="panel-empty">No intel data available.</div>';
-  }
-  html += '</div>';
-  return html;
+  if (!html) html = '<div class="vp-empty">No responder intel available for this property.</div>';
+  document.getElementById('vp-content').innerHTML = html;
+}
+function buildFeedbackTab(d) {
+  const html = '<div class="feedback-section"><div class="feedback-heading">Submit Feedback</div><div class="feedback-sub">Help us improve this report. Your feedback is reviewed by the Vyanet team and used to update this property\'s intel.</div><a class="btn-feedback" href="' + SURVEY_URL + '" target="_blank">↗ Open Feedback Form</a></div>';
+  document.getElementById('vp-content').innerHTML = html;
+}
+function formatDesc(desc) {
+  if (!desc) return [];
+  return desc.split('|').map(function(s) { return s.trim(); }).filter(function(s) { return s.length > 2; });
+}
+function toggleSection(header) {
+  const body = header.nextElementSibling, chevron = header.querySelector('.chevron');
+  body.classList.toggle('collapsed');
+  chevron.style.transform = body.classList.contains('collapsed') ? 'rotate(-90deg)' : '';
 }
 
-// ── Main data load ────────────────────────────────────────────────────────────
-async function loadData() {
+// ── Lightbox ───────────────────────────────────────────────────────────────
+function openLightbox(index) { lightboxIndex = index; updateLightbox(); document.getElementById('lightbox').classList.add('open'); document.addEventListener('keydown', lightboxKey); }
+function closeLightbox() { document.getElementById('lightbox').classList.remove('open'); document.removeEventListener('keydown', lightboxKey); }
+function lightboxKey(e) { if (e.key === 'Escape') closeLightbox(); if (e.key === 'ArrowLeft') lightboxNav(-1); if (e.key === 'ArrowRight') lightboxNav(1); }
+function lightboxNav(dir) { lightboxIndex = (lightboxIndex + dir + lightboxViews.length) % lightboxViews.length; updateLightbox(); }
+function updateLightbox() {
+  const v = lightboxViews[lightboxIndex];
+  document.getElementById('lightbox-img').src = v.url;
+  document.getElementById('lightbox-title').textContent = v.label;
+  document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
+  document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
+}
+
+// ── Main viewer init ───────────────────────────────────────────────────────
+async function initViewer() {
   dbg(VERSION + ' — Responder Intel loaded', 'ok');
   const params = new URLSearchParams(window.location.search);
-  const hash   = params.get('property');
-  if (!hash) { showError('No property ID provided.'); return; }
-  dbg('Hash: ' + hash.substring(0, 12) + '...', 'info');
-
+  const hash = params.get('property');
+  if (!hash) { showViewerError('No property ID in URL. Use a direct link from your Responder Intel report.'); return; }
+  dbg('Property hash: ' + hash.substring(0,12) + '...', 'info');
   try {
+    setViewerLoading('Loading property data...');
     const res = await fetch(BASE_URL + hash + '.json');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) { showViewerError('Property not found. (' + hash.substring(0,8) + '...)'); return; }
     const d = await res.json();
-    dbg('Data loaded: ' + d.name, 'ok');
-
-    // Header
-    document.getElementById('property-name').textContent = d.name || '';
-    document.getElementById('panel-title').textContent   = d.name || 'Responder Intel';
-    document.getElementById('panel-address').textContent = (d.address || '').replace(/^\s+/, '');
-    document.title = (d.name || 'Responder Intel') + ' — Vyanet';
-
-    // DJI viewer
-    const iframe = document.getElementById('dji-iframe');
-    if (d.viewer360) {
-      iframe.src = d.viewer360;
-      dbg('DJI viewer loaded', 'ok');
-    } else {
-      iframe.style.display = 'none';
-      document.getElementById('viewer-placeholder').style.display = 'flex';
-      dbg('No 360 link — placeholder shown', 'warn');
-    }
-
-    // Panel content
-    document.getElementById('panel-content').innerHTML = buildImageryTab(d) + buildIntelTab(d);
-
-    hideLoading();
-    if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 400);
-    dbg('Ready', 'ok');
-
-  } catch(e) { showError('Failed to load property: ' + e.message); }
+    currentData = d;
+    dbg('Property loaded: ' + (d.name || hash), 'ok');
+    document.getElementById('viewer-property-name').textContent = d.name || '';
+    document.getElementById('vp-title').textContent = d.name || 'Property Details';
+    document.getElementById('vp-address').textContent = (d.address || '').replace(/^\s+/, '');
+    buildTabs(d);
+    buildTabContent(d, 'imagery');
+    if (mapsApiReady) { resolveAndInitMap(d); }
+    else { pendingEntry = d; }
+  } catch(e) { showViewerError('Failed to load: ' + e.message); }
 }
 
-loadData();
+window.initGoogleMaps = function() {
+  mapsApiReady = true;
+  dbg('Google Maps API ready', 'ok');
+  if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
+};
+
+// ── Auto-open viewer tab if ?property= is in URL ───────────────────────────
+if (new URLSearchParams(window.location.search).get('property')) {
+  document.addEventListener('DOMContentLoaded', function() { showTab('viewer'); });
+}
 </script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
 </html>
