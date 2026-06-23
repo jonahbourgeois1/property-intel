@@ -145,8 +145,6 @@
   .rec-label.security { color: var(--green); }
   .rec-label.wildfire { color: var(--orange); }
   .rec-text { font-size: 12px; color: var(--text2); line-height: 1.7; }
-
-  /* ── Interior / Street View overlay ── */
   #immersive-overlay { position: absolute; top: 0; left: 0; right: 360px; bottom: 0; z-index: 30; display: none; flex-direction: column; background: var(--bg); transition: right 0.3s ease; }
   #immersive-overlay.visible { display: flex; }
   #immersive-overlay.panel-hidden { right: 0; }
@@ -239,16 +237,23 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.4.0';
-const BASE_URL     = 'https://jonahbourgeois1.github.io/property-intel/data/satellite/';
-const INDEX_URL    = 'https://jonahbourgeois1.github.io/property-intel/data/';
-const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
-const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
+const VERSION     = 'v2.4.0';
+const BASE_URL    = 'https://jonahbourgeois1.github.io/property-intel/data/satellite/';
+const DATA_ROOT   = 'https://jonahbourgeois1.github.io/property-intel/data/';
+const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
+const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER   = ['security','wildfire','plane','drone','tour'];
-const VIEW_LABELS  = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone' };
+const VIEW_ORDER  = ['security','wildfire','plane','drone','tour'];
+const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone' };
+
+// Maps each view suffix to the subfolder its JSON lives in
+function viewBaseUrl(viewSuffix) {
+  const subfolders = { drone: 'drone', plane: 'plane', interior: 'interior' };
+  const sub = subfolders[viewSuffix];
+  return sub ? DATA_ROOT + sub + '/' : BASE_URL;
+}
 
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
@@ -454,17 +459,13 @@ function getParcelFile(lat, lng) {
   const lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
-
-// ── Parcel boundary — uses stored ring if available, falls back to GeoJSON tile ──
 function drawParcelBoundary(lat, lng, storedRing) {
   if (storedRing && storedRing.length >= 3) {
-    // New path: draw stored ring directly — no adjacent parcels rendered
     const paths = storedRing.map(pt => ({ lat: pt.lat, lng: pt.lng }));
     new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
     dbg('Parcel matched: stored ring (' + storedRing.length + ' pts)', 'ok');
     return;
   }
-  // Fallback: fetch GeoJSON tile for older properties without stored ring
   fetch(PARCEL_BASE + getParcelFile(lat, lng))
     .then(r => r.ok ? r.json() : null)
     .then(geojson => {
@@ -480,7 +481,6 @@ function drawParcelBoundary(lat, lng, storedRing) {
     })
     .catch(e => dbg('Parcel error: ' + e.message, 'error'));
 }
-
 function initMap(lat, lng, storedRing) {
   try {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -620,34 +620,15 @@ function buildPanel(d) {
   lightboxViews = [];
   views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
   let html = '';
-
-  // 3D viewer card — always at top when viewer360 exists
   if (d.viewer360) {
-    html += `<div class="interior-launch-card">
-      <div class="interior-card-header">
-        <div class="interior-card-title">3D Aerial View</div>
-        <div class="interior-card-sub">Interactive drone model</div>
-      </div>
-      <div class="interior-card-actions">
-        <div class="interior-action-btn${djiViewerActive ? ' active' : ''}" onclick="showDjiViewer()">
-          <div class="interior-action-text">
-            <div class="interior-action-label">Launch 3D Viewer</div>
-            <div class="interior-action-desc">Full interactive drone flyover</div>
-          </div>
-          <div class="interior-action-arrow">›</div>
-        </div>
-      </div>
-    </div>`;
+    html += `<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">3D Aerial View</div><div class="interior-card-sub">Interactive drone model</div></div><div class="interior-card-actions"><div class="interior-action-btn${djiViewerActive ? ' active' : ''}" onclick="showDjiViewer()"><div class="interior-action-text"><div class="interior-action-label">Launch 3D Viewer</div><div class="interior-action-desc">Full interactive drone flyover</div></div><div class="interior-action-arrow">›</div></div></div></div>`;
   }
-
-  // Static image views below
   let lbIndex = 0;
   views.forEach(v => {
     if (!v.data || !v.data.url) return;
     const bullets = formatDesc(v.data.desc), idx = lbIndex++;
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
-
   document.getElementById('panel-content').innerHTML = html;
   updateGroundBanner();
 }
@@ -734,7 +715,7 @@ function exitImmersive() {
   dbg('Exited ground view', 'info');
 }
 function showDjiViewer() {
-  if (djiViewerActive) return;  // already active — prevent double-fire
+  if (djiViewerActive) return;
   const d = currentViewData;
   if (!d || !d.viewer360) { dbg('No DJI viewer URL', 'warn'); return; }
   document.getElementById('immersive-overlay').classList.add('visible');
@@ -757,14 +738,10 @@ function exitDjiViewer() {
   activeMarkers.forEach(m => m.setMap(map));
   djiViewerActive = false;
   updateGroundBanner();
-  // Reload whichever tab is currently active — not always the drone panel
   const activeTab = document.querySelector('.view-tab.active');
   const activeView = activeTab ? activeTab.getAttribute('data-view') : null;
-  if (activeView && currentViews && currentViews[activeView]) {
-    loadView(currentViews, activeView);
-  } else if (currentViewData) {
-    buildPanel(currentViewData);
-  }
+  if (activeView && currentViews && currentViews[activeView]) { loadView(currentViews, activeView); }
+  else if (currentViewData) { buildPanel(currentViewData); }
   dbg('Exited DJI 3D viewer', 'info');
 }
 async function loadView(views, viewSuffix) {
@@ -774,7 +751,7 @@ async function loadView(views, viewSuffix) {
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
   try {
     dbg('Loading ' + viewSuffix + '...', 'info');
-    const res = await fetch(BASE_URL + hashedViewId + '.json');
+    const res = await fetch(viewBaseUrl(viewSuffix) + hashedViewId + '.json');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
@@ -809,7 +786,7 @@ async function loadPropertyData() {
   dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
     setLoading('Loading property index...');
-    const indexRes = await fetch('https://jonahbourgeois1.github.io/property-intel/data/index.json');
+    const indexRes = await fetch(DATA_ROOT + 'index.json');
     if (!indexRes.ok) { showError('Index not found.'); return; }
     propertyIndex = await indexRes.json();
     dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'ok');
