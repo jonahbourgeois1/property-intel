@@ -4,277 +4,135 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vyanet Responder Intel</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,700;1,600&display=swap" rel="stylesheet">
+<script src="config.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --white: #ffffff;
-    --off-white: #f5f4f1;
-    --light-gray: #e8e6e1;
-    --mid-gray: #9a9590;
-    --dark: #1a1a1a;
-    --text: #2c2c2c;
-    --text2: #6b6460;
     --red: #c0392b;
-    --red-light: #e8d5d3;
-    --accent-dark: #1a1a1a;
+    --dark: #111111;
+    --text: #2c2c2c;
+    --text2: #5a5550;
+    --mid: #9a9590;
+    --cream: #faf8f4;
+    --warm: #f0ede6;
+    --border: #ddd9d0;
+    --border2: #e6e3dc;
   }
 
-  body {
-    font-family: 'DM Sans', sans-serif;
-    background: var(--white);
-    color: var(--text);
-    min-height: 100vh;
-  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); }
+
+  /* ── Shared page system ── */
+  .page { display: none; }
+  .page.active { display: block; }
+  #page-viewer { display: none; }
+  #page-viewer.active { display: flex; }
 
   /* ── Tab navigation ── */
   #tab-nav {
     position: sticky;
     top: 0;
-    background: var(--white);
-    border-bottom: 1px solid var(--light-gray);
+    background: var(--cream);
+    border-bottom: 1px solid var(--border);
     z-index: 100;
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 0;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 56px;
   }
+  .nav-logo { height: 34px; flex-shrink: 0; }
+  .nav-tabs { display: flex; }
   .tab-btn {
-    padding: 14px 28px;
+    padding: 0 22px;
+    height: 56px;
+    display: flex;
+    align-items: center;
     font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--mid-gray);
+    color: var(--mid);
     cursor: pointer;
     border: none;
     background: none;
     border-bottom: 2px solid transparent;
-    transition: all 0.2s;
+    transition: all 0.15s;
     font-family: 'DM Sans', sans-serif;
     position: relative;
     top: 1px;
   }
-  .tab-btn:hover { color: var(--text); }
+  .tab-btn:hover { color: var(--dark); }
   .tab-btn.active { color: var(--red); border-bottom-color: var(--red); }
 
-  /* ── Page sections ── */
-  .page { display: none; }
-  .page.active { display: block; }
-
   /* ══════════════════════════════════════
-     LANDING PAGE — matches email design
+     LANDING PAGE — Option 3: Intel Brief
   ══════════════════════════════════════ */
-  #page-landing { background: #f0eeea; }
+  #page-landing { background: var(--cream); }
 
-  /* ① Hero aerial photo block */
-  .hero-img-block {
-    width: 100%;
-    background: #1c2414;
-    overflow: hidden;
+  /* Hero — centered, cream, Playfair + italic subline, red rule */
+  .hero {
+    padding: 80px 40px 72px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    max-width: 860px;
+    margin: 0 auto;
   }
-  .hero-img-inner {
-    width: 100%;
-    height: 280px;
-    background:
-      linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.4) 100%),
-      linear-gradient(135deg, #1c2a14 0%, #0e1a0a 35%, #141e10 60%, #1a1c10 100%);
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 20px;
-    position: relative;
-    overflow: hidden;
+  .hero-logo {
+    height: 64px;
+    margin: 0 auto 44px;
+    display: block;
   }
-  .hero-img-inner::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background:
-      radial-gradient(ellipse 70% 50% at 30% 40%, rgba(80,100,50,0.35) 0%, transparent 65%),
-      radial-gradient(ellipse 50% 40% at 70% 60%, rgba(40,60,30,0.3) 0%, transparent 60%);
-  }
-  .hero-img-label {
-    font-size: 10px;
-    color: rgba(255,255,255,0.2);
+  .hero-eyebrow {
     font-family: 'DM Mono', monospace;
-    letter-spacing: 0.14em;
+    font-size: 10px;
+    color: var(--red);
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    position: relative;
-    z-index: 1;
+    margin-bottom: 20px;
   }
-
-  /* ② Black logo bar */
-  .black-logo-bar {
-    background: #111111;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 18px 24px;
-  }
-  .black-bar-logo {
-    height: 48px;
-    width: auto;
-    filter: brightness(0) invert(1);
-  }
-
-  /* ③ Intro card: image left + headline right */
-  .intro-card-wrap {
-    background: #ffffff;
-    display: flex;
-    align-items: stretch;
-    max-width: 640px;
-    margin: 0 auto;
-    border-bottom: 1px solid #e4e2dd;
-  }
-  .intro-card-img {
-    width: 180px;
-    flex-shrink: 0;
-    overflow: hidden;
-    background: #1a1f1a;
-  }
-  .intro-card-img-inner {
-    width: 100%;
-    height: 100%;
-    min-height: 160px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(160deg, #111a0e 0%, #0a1208 100%);
-  }
-  .intro-card-text {
-    flex: 1;
-    padding: 28px 24px;
-  }
-  .intro-card-heading {
-    font-size: clamp(20px, 3.5vw, 28px);
-    font-weight: 800;
-    color: #111111;
-    line-height: 1.15;
-    margin-bottom: 12px;
+  .hero-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 5vw, 54px);
+    font-weight: 700;
+    color: var(--dark);
+    line-height: 1.1;
+    margin-bottom: 6px;
     letter-spacing: -0.01em;
   }
-  .intro-card-body {
-    font-size: 13px;
-    color: #555;
-    line-height: 1.75;
+  .hero-heading-italic {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(28px, 4.5vw, 48px);
+    font-style: italic;
+    font-weight: 600;
+    color: var(--text2);
+    line-height: 1.1;
+    margin-bottom: 28px;
   }
-  .red-highlight { color: var(--red); font-weight: 600; }
-
-  /* Divider */
-  .section-divider {
-    height: 1px;
-    background: #d8d5cf;
-    max-width: 640px;
-    margin: 0 auto;
+  .hero-rule {
+    width: 64px;
+    height: 3px;
+    background: var(--red);
+    margin: 0 auto 28px;
   }
-
-  /* ④ Why heading */
-  .why-heading {
-    font-size: clamp(18px, 3vw, 24px);
-    font-weight: 800;
-    color: #111111;
-    text-align: center;
-    padding: 32px 24px 20px;
-    background: #ffffff;
-    letter-spacing: -0.01em;
-    max-width: 640px;
-    margin: 0 auto;
+  .hero-body {
+    font-size: 16px;
+    color: var(--text2);
+    line-height: 1.8;
+    max-width: 520px;
+    margin: 0 auto 40px;
   }
-
-  /* ⑤ Feature section */
-  .features-wrap {
-    display: flex;
-    align-items: flex-start;
-    max-width: 640px;
-    margin: 0 auto;
-    background: #ffffff;
-    padding: 0 0 8px;
-    border-bottom: 1px solid #e4e2dd;
-  }
-
-  /* Left: nadir image + 3D block */
-  .features-left {
-    width: 180px;
-    flex-shrink: 0;
-    padding: 0 0 16px;
-  }
-  .features-left-img {
-    width: 100%;
-    height: 160px;
-    background: #1a2010;
-    overflow: hidden;
-  }
-  .features-left-img-inner {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(160deg, #1c2a14 0%, #0e1508 100%);
-  }
-  .features-3d-block {
-    display: flex;
-    gap: 8px;
-    padding: 12px 12px 4px;
-  }
-  .features-3d-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-  .features-3d-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #111;
-    margin-bottom: 4px;
-  }
-  .features-3d-desc {
-    font-size: 11px;
-    color: #666;
-    line-height: 1.6;
-  }
-
-  /* Right: 2-col feature grid */
-  .features-right {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0;
-    padding: 8px 16px 8px 8px;
-  }
-  .feat-item {
-    padding: 12px 10px;
-  }
-  .feat-title {
-    font-size: 12px;
-    font-weight: 700;
-    color: #111;
-    margin-bottom: 5px;
-    line-height: 1.3;
-  }
-  .feat-desc {
-    font-size: 11px;
-    color: #666;
-    line-height: 1.65;
-  }
-
-  /* ⑥ CTA block */
-  .cta-block {
-    background: #ffffff;
-    padding: 32px 24px 36px;
-    text-align: center;
-    max-width: 640px;
-    margin: 0 auto;
+  .hero-btns {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    border-bottom: 1px solid #e4e2dd;
   }
-  .cta-pill {
-    display: inline-block;
-    padding: 14px 40px;
-    background: #111111;
-    color: #ffffff;
+  .btn-dark {
+    padding: 15px 44px;
+    background: var(--dark);
+    color: #fff;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 700;
@@ -282,46 +140,190 @@
     text-transform: uppercase;
     border: none;
     cursor: pointer;
-    transition: opacity 0.15s;
     font-family: 'DM Sans', sans-serif;
-    min-width: 240px;
-  }
-  .cta-pill:hover { opacity: 0.82; }
-  .cta-pill-outline {
+    transition: opacity 0.15s;
+    text-decoration: none;
     display: inline-block;
-    padding: 13px 40px;
+    min-width: 280px;
+    text-align: center;
+  }
+  .btn-dark:hover { opacity: 0.82; }
+  .btn-outline {
+    padding: 14px 44px;
     background: transparent;
-    color: #111111;
+    color: var(--dark);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border: 1.5px solid var(--dark);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-block;
+    min-width: 280px;
+    text-align: center;
+  }
+  .btn-outline:hover { background: var(--dark); color: #fff; }
+  .btn-hint {
+    font-size: 11px;
+    color: var(--mid);
+    line-height: 1.5;
+    max-width: 320px;
+    margin-top: -2px;
+  }
+
+  /* Brief section — warm bg, left-border red cards */
+  .brief {
+    padding: 72px 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .section-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--red);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .section-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 3vw, 32px);
+    color: var(--dark);
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+  .section-rule { width: 40px; height: 2px; background: var(--red); margin-bottom: 24px; }
+  .section-body {
+    font-size: 15px;
+    color: var(--text2);
+    line-height: 1.8;
+    max-width: 560px;
+    margin-bottom: 40px;
+  }
+  .brief-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .brief-card {
+    background: var(--warm);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .brief-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 3px;
+    background: var(--red);
+  }
+  .brief-card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--red);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .brief-card-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+  .brief-card-desc {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  /* Who it serves — warm bg band */
+  .who {
+    background: var(--warm);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 56px 40px;
+    text-align: center;
+  }
+  .who-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(20px, 3vw, 28px);
+    color: var(--dark);
+    margin-bottom: 8px;
+  }
+  .who-rule { width: 40px; height: 2px; background: var(--red); margin: 12px auto 28px; }
+  .who-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+  .who-chip {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 9px 22px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--dark);
+  }
+
+  /* Portal CTA — dark */
+  .portal {
+    background: var(--dark);
+    padding: 72px 40px;
+    text-align: center;
+  }
+  .portal-heading {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(26px, 4vw, 40px);
+    color: #fff;
+    font-weight: 700;
+    line-height: 1.2;
+    max-width: 500px;
+    margin: 0 auto 10px;
+  }
+  .portal-rule { width: 40px; height: 2px; background: var(--red); margin: 16px auto 20px; }
+  .portal-body {
+    font-size: 15px;
+    color: rgba(255,255,255,0.5);
+    max-width: 420px;
+    margin: 0 auto 36px;
+    line-height: 1.8;
+  }
+  .btn-portal {
+    padding: 15px 44px;
+    background: var(--red);
+    color: #fff;
     border-radius: 999px;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
     text-decoration: none;
-    border: 2px solid #111111;
-    cursor: pointer;
-    transition: all 0.15s;
+    display: inline-block;
+    transition: opacity 0.15s;
     font-family: 'DM Sans', sans-serif;
-    min-width: 240px;
-    text-align: center;
   }
-  .cta-pill-outline:hover { background: #111; color: #fff; }
-  .cta-hint {
-    font-size: 11px;
-    color: #999;
-    line-height: 1.5;
-    max-width: 340px;
-  }
+  .btn-portal:hover { opacity: 0.85; }
 
-  /* ⑦ Red footer */
-  .red-footer {
-    background: #c0392b;
-    padding: 28px 24px 24px;
+  /* Footer — red, logo, social */
+  .landing-footer {
+    background: var(--red);
+    padding: 32px 40px;
     text-align: center;
   }
   .footer-socials {
     display: flex;
-    align-items: center;
     justify-content: center;
     gap: 12px;
     margin-bottom: 18px;
@@ -330,40 +332,41 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.6);
+    border: 1px solid rgba(255,255,255,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    color: #fff;
     text-decoration: none;
-    transition: border-color 0.15s, background 0.15s;
+    transition: all 0.15s;
   }
-  .footer-socials a:hover { border-color: #fff; background: rgba(255,255,255,0.15); }
+  .footer-socials a:hover { background: rgba(255,255,255,0.15); border-color: #fff; }
   .footer-logo {
     height: 36px;
-    width: auto;
     filter: brightness(0) invert(1);
     display: block;
-    margin: 0 auto 14px;
+    margin: 0 auto 12px;
   }
   .footer-copy {
     font-size: 11px;
-    color: rgba(255,255,255,0.75);
+    color: rgba(255,255,255,0.65);
     line-height: 1.7;
   }
-  .footer-copy a { color: rgba(255,255,255,0.9); text-decoration: underline; }
+  .footer-copy a { color: rgba(255,255,255,0.85); }
 
-  @media (max-width: 560px) {
-    .intro-card-wrap, .features-wrap { flex-direction: column; }
-    .intro-card-img { width: 100%; height: 140px; }
-    .features-left { width: 100%; }
-    .features-right { grid-template-columns: 1fr; }
-    .cta-block { padding: 28px 20px; }
+  @media (max-width: 640px) {
+    #tab-nav { padding: 0 16px; }
+    .nav-logo { height: 28px; }
+    .hero { padding: 56px 20px 52px; }
+    .brief { padding: 48px 20px; }
+    .brief-grid { grid-template-columns: 1fr; }
+    .who { padding: 40px 20px; }
+    .portal { padding: 52px 20px; }
   }
 
   /* ── VIEWER PAGE ── */
   #page-viewer {
-    height: calc(100vh - 49px);
+    height: calc(100vh - 57px);
     display: none;
     flex-direction: column;
     background: #0a0c0f;
@@ -618,127 +621,108 @@
     #viewer-toggle-panel { display: none; }
     #immersive-overlay { right: 0; }
   }
+
 </style>
-<script src="config.js"></script>
 </head>
 <body>
 
-<!-- ── Tab navigation ── -->
+<!-- ── Navigation ── -->
 <nav id="tab-nav">
-  <button class="tab-btn active" onclick="showTab('landing')">Property Intel</button>
-  <button class="tab-btn" onclick="showTab('viewer')">Responder Viewer</button>
+  <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="nav-logo">
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="showTab('landing')">Property Intel</button>
+    <button class="tab-btn" onclick="showTab('viewer')">Responder Viewer</button>
+  </div>
 </nav>
 
 <!-- ════════════════════════════════════════
-     LANDING PAGE
+     LANDING PAGE — Option 3: Intel Brief
 ════════════════════════════════════════ -->
 <div id="page-landing" class="page active">
 
-  <!-- ① Full-bleed aerial hero photo -->
-  <div class="hero-img-block">
-    <div class="hero-img-inner">
-      <span class="hero-img-label">Aerial nadir imagery</span>
+  <!-- Hero -->
+  <section class="hero">
+    <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="hero-logo">
+    <div class="hero-eyebrow">Nadir Property Intelligence</div>
+    <h1 class="hero-heading">Know the property.</h1>
+    <div class="hero-heading-italic">Before you arrive.</div>
+    <div class="hero-rule"></div>
+    <p class="hero-body">Straight-down aerial imagery converted into structured responder intelligence — property elements, access considerations, and wildfire conditions mapped before any unit reaches the scene.</p>
+    <div class="hero-btns">
+      <button class="btn-dark" onclick="showTab('viewer')">Open Responder Viewer</button>
+      <div class="btn-hint">View aerial imagery and intelligence for this property.</div>
+      <a class="btn-outline" href="https://www.vyanet.com" target="_blank">Join the Customer Portal</a>
+      <div class="btn-hint">Property owners — enroll to get your report delivered to your fire agency.</div>
     </div>
-  </div>
+  </section>
 
-  <!-- ② Black logo bar -->
-  <div class="black-logo-bar">
-    <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="black-bar-logo">
-  </div>
-
-  <!-- ③ Intro card: image left, headline right -->
-  <div class="intro-card-wrap">
-    <div class="intro-card-img">
-      <div class="intro-card-img-inner">
-        <span style="font-size:32px;">🚁</span>
+  <!-- What your report contains -->
+  <section class="brief">
+    <div class="section-eyebrow">What your report contains</div>
+    <h2 class="section-heading">Overhead imagery turned into operational intelligence.</h2>
+    <div class="section-rule"></div>
+    <p class="section-body">Every Vyanet property report extracts two structured data categories: what exists on the property and what first responders need to know. The objective is situational awareness — not inspection or assessment.</p>
+    <div class="brief-grid">
+      <div class="brief-card">
+        <div class="brief-card-label">Imagery</div>
+        <div class="brief-card-title">Nadir Aerial View</div>
+        <div class="brief-card-desc">Straight-down drone imagery optimized for the property footprint — every structure, driveway, and access point visible from above.</div>
       </div>
-    </div>
-    <div class="intro-card-text">
-      <h1 class="intro-card-heading">ELEVATE YOUR<br>SITUATIONAL<br>AWARENESS.</h1>
-      <p class="intro-card-body">Included with your property enrollment, complimentary <span class="red-highlight">drone-assisted property mapping</span> gives first responders a bird's-eye view of your property — <span class="red-highlight">revealing access points, site features, and wildfire conditions</span> that may otherwise go unknown.</p>
-    </div>
-  </div>
-
-  <div class="section-divider"></div>
-
-  <!-- ④ Why heading -->
-  <h2 class="why-heading">Why Get Your Property Mapped?</h2>
-
-  <!-- ⑤ Feature section: left nadir + 3D viz, right 2-col feature grid -->
-  <div class="features-wrap">
-
-    <!-- Left: imagery column -->
-    <div class="features-left">
-      <div class="features-left-img">
-        <div class="features-left-img-inner">
-          <span style="font-size:40px; display:block; margin-bottom:8px;">🛰</span>
-          <span style="font-size:11px; color:rgba(255,255,255,0.5); font-family:'DM Mono',monospace; letter-spacing:0.08em; text-transform:uppercase;">Nadir overhead view</span>
-        </div>
+      <div class="brief-card">
+        <div class="brief-card-label">Elements</div>
+        <div class="brief-card-title">Property Elements</div>
+        <div class="brief-card-desc">Buildings, driveways, fencing, pools, storage — labeled from an approved vocabulary and geo-pinned on a live satellite map.</div>
       </div>
-      <div class="features-3d-block">
-        <div class="features-3d-icon">🚁</div>
-        <div class="features-3d-content">
-          <div class="features-3d-title">3D Property Visualization:</div>
-          <div class="features-3d-desc">Explore your property from every angle with detailed, interactive drone models — Alpha, Bravo, Charlie, and Delta perspectives plus a full overhead view.</div>
-        </div>
+      <div class="brief-card">
+        <div class="brief-card-label">Access</div>
+        <div class="brief-card-title">Responder Considerations</div>
+        <div class="brief-card-desc">Observable site conditions affecting access, navigation, visibility, and staging — single access points, dense vegetation, limited rear access.</div>
+      </div>
+      <div class="brief-card">
+        <div class="brief-card-label">Wildfire</div>
+        <div class="brief-card-title">Wildfire Conditions</div>
+        <div class="brief-card-desc">Fuel continuity, defensible space, and vegetation adjacent to structures — mapped for suppression and evacuation planning.</div>
       </div>
     </div>
+  </section>
 
-    <!-- Right: 2-column feature grid -->
-    <div class="features-right">
-      <div class="feat-item">
-        <div class="feat-title">Identify Access Points &amp; Site Features:</div>
-        <div class="feat-desc">Reveal structures, driveways, storage, and entry routes that may be hidden from traditional ground-level views.</div>
-      </div>
-      <div class="feat-item">
-        <div class="feat-title">Strengthen Protection:</div>
-        <div class="feat-desc">Get a clearer understanding of access points, fence lines, gates, and potential entry routes.</div>
-      </div>
-      <div class="feat-item">
-        <div class="feat-title">Mitigate Wildfire Risks:</div>
-        <div class="feat-desc">Identify fuel continuity, defensible space, and access route conditions with high-resolution aerial assessments.</div>
-      </div>
-      <div class="feat-item">
-        <div class="feat-title">Help First Responders:</div>
-        <div class="feat-desc">Provide critical property intelligence to fire, EMS, and law enforcement when every second counts.</div>
-      </div>
-      <div class="feat-item">
-        <div class="feat-title">Geo-Pinned Intelligence:</div>
-        <div class="feat-desc">Property elements and responder considerations are pinned directly onto a live satellite map — click any pin to see what it is.</div>
-      </div>
-      <div class="feat-item">
-        <div class="feat-title">Always Current:</div>
-        <div class="feat-desc">See your property as it exists today — not as it appeared the last time satellite imagery was updated.</div>
-      </div>
+  <!-- Who it serves -->
+  <section class="who">
+    <h2 class="who-heading">Built for the people who respond first.</h2>
+    <div class="who-rule"></div>
+    <div class="who-row">
+      <span class="who-chip">🚒 Fire Responders</span>
+      <span class="who-chip">🚑 EMS Personnel</span>
+      <span class="who-chip">🚔 Law Enforcement</span>
+      <span class="who-chip">📋 Emergency Managers</span>
+      <span class="who-chip">🏡 Property Owners</span>
     </div>
+  </section>
 
-  </div>
+  <!-- Portal CTA -->
+  <section class="portal">
+    <h2 class="portal-heading">Get your property into the system.</h2>
+    <div class="portal-rule"></div>
+    <p class="portal-body">Property owners enroll through the Vyanet Customer Portal. We capture the imagery, run the analysis, and deliver the report to your local responding agency.</p>
+    <a class="btn-portal" href="https://www.vyanet.com" target="_blank">Enroll in the Customer Portal</a>
+  </section>
 
-  <!-- ⑥ CTA buttons — centered, stacked -->
-  <div class="cta-block">
-    <button class="cta-pill" onclick="showTab('viewer')">OPEN RESPONDER VIEWER</button>
-    <div class="cta-hint">View aerial imagery, access considerations &amp; wildfire conditions for this property.</div>
-    <a class="cta-pill-outline" href="https://www.vyanet.com" target="_blank">JOIN THE CUSTOMER PORTAL</a>
-    <div class="cta-hint">Property owners — enroll to get your report delivered to your local fire agency.</div>
-  </div>
-
-  <!-- ⑦ Red footer: social + logo + copyright -->
-  <footer class="red-footer">
+  <!-- Footer -->
+  <footer class="landing-footer">
     <div class="footer-socials">
-      <a href="https://www.facebook.com/vyanet" target="_blank" aria-label="Facebook">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
+      <a href="https://www.facebook.com/vyanet" target="_blank" title="Facebook">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
       </a>
-      <a href="https://www.instagram.com/vyanet" target="_blank" aria-label="Instagram">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+      <a href="https://www.instagram.com/vyanet" target="_blank" title="Instagram">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
       </a>
-      <a href="https://twitter.com/vyanet" target="_blank" aria-label="X">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      <a href="https://twitter.com/vyanet" target="_blank" title="X">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       </a>
     </div>
     <img src="Vyanet_Responder_Intel.png" alt="Vyanet" class="footer-logo">
     <div class="footer-copy">
-      Copyright © 2026 Vyanet. All rights reserved.<br>
-      <a href="https://www.vyanet.com" target="_blank">vyanet.com</a>
+      © 2026 Vyanet. All rights reserved. &nbsp;·&nbsp; <a href="https://www.vyanet.com" target="_blank">vyanet.com</a>
     </div>
   </footer>
 
@@ -1195,5 +1179,6 @@ if (new URLSearchParams(window.location.search).get('property')) {
 }
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
+
 </body>
 </html>
