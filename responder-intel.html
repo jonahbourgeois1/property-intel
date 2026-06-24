@@ -320,43 +320,62 @@
   }
   .btn-portal:hover { opacity: 0.85; }
 
-  /* Footer — red, logo, social */
+  /* ── Company footer ── */
   .landing-footer {
-    background: var(--red);
-    padding: 32px 40px;
-    text-align: center;
+    background: #2a2a27;
+    padding: 0;
   }
-  .footer-socials {
+  .footer-top {
     display: flex;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 18px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 48px 60px 36px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
   }
-  .footer-socials a {
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid rgba(255,255,255,0.5);
+  .footer-top-logo { height: 44px; width: auto; filter: brightness(0) invert(1); }
+  .footer-partner { text-align: right; }
+  .footer-partner-name { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 0.05em; }
+  .footer-partner-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
+  .footer-cols {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 40px;
+    padding: 40px 60px 48px;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .footer-col-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+  .footer-col-body { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.9; }
+  .footer-col-body a { color: rgba(255,255,255,0.5); text-decoration: none; display: block; transition: color 0.15s; }
+  .footer-col-body a:hover { color: rgba(255,255,255,0.85); }
+  .footer-col-body a.underline { text-decoration: underline; text-underline-offset: 3px; }
+  .footer-bottom {
+    padding: 18px 60px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
-    text-decoration: none;
-    transition: all 0.15s;
+    gap: 8px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.4);
   }
-  .footer-socials a:hover { background: rgba(255,255,255,0.15); border-color: #fff; }
-  .footer-logo {
-    height: 36px;
-    filter: brightness(0) invert(1);
-    display: block;
-    margin: 0 auto 12px;
+  .footer-bottom a { color: rgba(255,255,255,0.4); text-decoration: none; }
+  .footer-bottom a:hover { color: rgba(255,255,255,0.7); }
+  .footer-bottom-sep { color: rgba(255,255,255,0.2); }
+
+  @media (max-width: 768px) {
+    .footer-top { padding: 32px 24px; }
+    .footer-cols { grid-template-columns: 1fr 1fr; gap: 28px; padding: 32px 24px; }
+    .footer-bottom { padding: 16px 24px; flex-wrap: wrap; text-align: center; }
   }
-  .footer-copy {
-    font-size: 11px;
-    color: rgba(255,255,255,0.65);
-    line-height: 1.7;
+  @media (max-width: 480px) {
+    .footer-cols { grid-template-columns: 1fr; }
   }
-  .footer-copy a { color: rgba(255,255,255,0.85); }
 
   @media (max-width: 640px) {
     #tab-nav { padding: 0 16px; }
@@ -717,20 +736,63 @@
 
   <!-- Footer -->
   <footer class="landing-footer">
-    <div class="footer-socials">
-      <a href="https://www.facebook.com/vyanet" target="_blank" title="Facebook">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z"/></svg>
-      </a>
-      <a href="https://www.instagram.com/vyanet" target="_blank" title="Instagram">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
-      </a>
-      <a href="https://twitter.com/vyanet" target="_blank" title="X">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      </a>
+    <div class="footer-top">
+      <img src="Vyanet_Responder_Intel.png" alt="Vyanet" class="footer-top-logo">
+      <div class="footer-partner">
+        <div class="footer-partner-name">FIRST ALERT</div>
+        <div class="footer-partner-sub">Premier Pro Partner</div>
+      </div>
     </div>
-    <img src="Vyanet_Responder_Intel.png" alt="Vyanet" class="footer-logo">
-    <div class="footer-copy">
-      © 2026 Vyanet. All rights reserved. &nbsp;·&nbsp; <a href="https://www.vyanet.com" target="_blank">vyanet.com</a>
+    <div class="footer-cols">
+      <div>
+        <div class="footer-col-heading">Our Address</div>
+        <div class="footer-col-body">
+          410 SW Columbia St. Suite 120<br>
+          Bend, Oregon &nbsp;97702<br><br>
+          Phone: 855-855-0101<br>
+          Monitoring: 541-241-1800<br>
+          <a href="mailto:connect@vyanet.com">connect@vyanet.com</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-heading">Quick Links</div>
+        <div class="footer-col-body">
+          <a href="https://vyanet.com/contact/" target="_blank">Contact Us</a>
+          <a href="https://vyanet.com/home-security/" target="_blank">Home Security</a>
+          <a href="https://vyanet.com/business-security-systems/" target="_blank">Business Security</a>
+          <a href="https://vyanet.com/verified-video/" target="_blank">Verified Video</a>
+          <br>
+          <a href="https://vyanet.com/locations" target="_blank" class="underline">Areas We Serve</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-heading">Get a Free Quote</div>
+        <div class="footer-col-body">
+          <a href="https://vyanet.com/free-consultation" target="_blank">For Your Home</a>
+          <a href="https://vyanet.com/free-consultation" target="_blank">For Your Business</a>
+          <a href="https://vyanet.com/free-consultation" target="_blank">Custom Security</a>
+        </div>
+      </div>
+      <div>
+        <div class="footer-col-heading">Customer Resources</div>
+        <div class="footer-col-body">
+          <a href="https://comms.vyanet.com/portal" target="_blank">Payment Portal</a>
+          <a href="https://vyanet.com/request-service/" target="_blank">Request Service</a>
+          <a href="https://vyanet.com/monitoring-support/" target="_blank">Monitoring Support</a>
+          <a href="https://vyanet.com/customer-apps" target="_blank">Apps</a>
+          <a href="https://vyanet.com/update-qa/" target="_blank">QA Update Form</a>
+          <a href="https://vyanet.com/reviews/" target="_blank">Leave Us Feedback</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Vyanet Operating Group, All Rights Reserved.</span>
+      <span class="footer-bottom-sep">|</span>
+      <a href="https://vyanet.com/terms-of-use" target="_blank">Terms of Use</a>
+      <span class="footer-bottom-sep">|</span>
+      <a href="https://vyanet.com/vyanet-privacy-policy" target="_blank">Privacy Policy</a>
+      <span class="footer-bottom-sep">|</span>
+      <a href="https://vyanet.com/licenses" target="_blank">Licenses</a>
     </div>
   </footer>
 
