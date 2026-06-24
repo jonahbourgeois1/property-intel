@@ -23,10 +23,10 @@
 
   body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); }
 
-  /* ── Shared page system ── */
-  .page { display: none !important; }
-  .page.active { display: block !important; }
-  #page-viewer.active { display: flex !important; }
+  /* ── Page system ── */
+  #page-landing { display: block; }
+  #page-viewer  { display: none; flex-direction: column; background: #0a0c0f; }
+  #page-update  { display: none; flex-direction: column; background: var(--cream); }
 
   /* ── Tab navigation ── */
   #tab-nav {
@@ -371,8 +371,6 @@
   /* ── VIEWER PAGE ── */
   #page-viewer {
     height: calc(100vh - 65px);
-    flex-direction: column;
-    background: #0a0c0f;
   }
 
   /* viewer sub-header */
@@ -582,11 +580,7 @@
   /* ── Client Update page ── */
   #page-update {
     height: calc(100vh - 65px);
-    display: none;
-    flex-direction: column;
-    background: var(--cream);
   }
-  #page-update.active { display: flex !important; flex-direction: column; }
   .update-header-bar {
     padding: 20px 40px 16px;
     border-bottom: 1px solid var(--border);
@@ -637,14 +631,6 @@
 </style>
 </head>
 <body>
-<script>
-// Force landing tab synchronously before any async scripts run
-document.addEventListener('DOMContentLoaded', function() {
-  var hasProperty = new URLSearchParams(window.location.search).get('property');
-  showTab(hasProperty ? 'viewer' : 'landing');
-});
-</script>
-
 <!-- ── Navigation ── -->
 <nav id="tab-nav">
   <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="nav-logo">
@@ -658,7 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- ════════════════════════════════════════
      LANDING PAGE — Option 3: Intel Brief
 ════════════════════════════════════════ -->
-<div id="page-landing" class="page active">
+<div id="page-landing">
 
   <!-- Hero -->
   <section class="hero">
@@ -747,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </div>
 
-<div id="page-viewer" class="page">
+<div id="page-viewer">
   <!-- viewer sub-header -->
   <div id="viewer-topbar">
     <div id="viewer-property-name">Loading...</div>
@@ -786,7 +772,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Client Update Page -->
-<div id="page-update" class="page">
+<div id="page-update">
   <div class="update-header-bar">
     <div class="section-eyebrow">Client Update</div>
     <h2 class="section-heading">Submit a Property Update</h2>
@@ -834,14 +820,20 @@ let viewerInitialised = false;
 const isMobile = () => window.innerWidth <= 768;
 
 // ── Tab switching ──────────────────────────────────────────────────────────
-const FLEX_PAGES = ['viewer', 'update'];
 function showTab(tab) {
-  const tabOrder = ['landing', 'viewer', 'update'];
+  // Hide all pages
+  document.getElementById('page-landing').style.display = 'none';
+  document.getElementById('page-viewer').style.display  = 'none';
+  document.getElementById('page-update').style.display  = 'none';
+  // Show requested page
+  var flexPages = ['viewer', 'update'];
+  document.getElementById('page-' + tab).style.display = flexPages.indexOf(tab) >= 0 ? 'flex' : 'block';
+  // Update tab buttons
+  var tabOrder = ['landing', 'viewer', 'update'];
   document.querySelectorAll('.tab-btn').forEach(function(b, i) {
     b.classList.toggle('active', tabOrder[i] === tab);
   });
-  document.querySelectorAll('.page').forEach(function(p) { p.classList.remove('active'); });
-  document.getElementById('page-' + tab).classList.add('active');
+  // Init viewer lazily
   if (tab === 'viewer' && !viewerInitialised) { initViewer(); viewerInitialised = true; }
 }
 
@@ -1184,7 +1176,13 @@ window.initGoogleMaps = function() {
   if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
 };
 
-// ── Default tab handled by inline script above ────────────────────────────
+// ── On load: default to landing unless ?property= in URL ─────────────────
+window.addEventListener('load', function() {
+  if (new URLSearchParams(window.location.search).get('property')) {
+    showTab('viewer');
+  }
+  // No else needed — landing is already visible via CSS default
+});
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 
