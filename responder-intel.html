@@ -688,14 +688,13 @@
 
   <!-- Who it serves -->
   <section class="who">
-    <h2 class="who-heading">Built for the people who respond first.</h2>
+    <h2 class="who-heading">Intelligence for all agents.</h2>
     <div class="who-rule"></div>
     <div class="who-row">
-      <span class="who-chip">🚒 Fire Responders</span>
-      <span class="who-chip">🚑 EMS Personnel</span>
-      <span class="who-chip">🚔 Law Enforcement</span>
-      <span class="who-chip">📋 Emergency Managers</span>
-      <span class="who-chip">🏡 Property Owners</span>
+      <span class="who-chip">Fire Responders</span>
+      <span class="who-chip">EMS Personnel</span>
+      <span class="who-chip">Law Enforcement</span>
+      <span class="who-chip">Property Owners</span>
     </div>
   </section>
 
@@ -1066,7 +1065,7 @@ function buildTabs(d) {
   const tabs = [{ id: 'imagery', label: 'Imagery' }, { id: 'intel', label: 'Intel' }, { id: 'feedback', label: 'Feedback' }];
   tabs.forEach(function(t) {
     const tab = document.createElement('div');
-    tab.className = 'vp-tab' + (t.id === 'imagery' ? ' active' : '');
+    tab.className = 'vp-tab' + (t.id === 'intel' ? ' active' : '');
     tab.textContent = t.label;
     tab.setAttribute('data-view', t.id);
     tab.onclick = function() { buildTabContent(d, t.id); };
@@ -1161,7 +1160,7 @@ async function initViewer() {
     document.getElementById('vp-title').textContent = d.name || 'Property Details';
     document.getElementById('vp-address').textContent = (d.address || '').replace(/^\s+/, '');
     buildTabs(d);
-    buildTabContent(d, 'imagery');
+    buildTabContent(d, 'intel');
     if (mapsApiReady) { resolveAndInitMap(d); }
     else { pendingEntry = d; }
   } catch(e) { showViewerError('Failed to load: ' + e.message); }
