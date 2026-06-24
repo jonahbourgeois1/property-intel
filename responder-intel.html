@@ -523,8 +523,10 @@
   .rec-label.wildfire { color: #f97316; }
   .rec-text { font-size: 12px; color: #8a93a2; line-height: 1.7; }
   .intel-block { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-  .intel-block-label { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
-  .intel-block-text { font-size: 12px; color: #8a93a2; line-height: 1.7; }
+  .intel-block-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; }
+  .intel-block-label.considerations { color: #22c55e; background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); }
+  .intel-block-label.clarifications { color: #f97316; background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); }
+  .intel-block-text { font-size: 12px; color: #8a93a2; line-height: 1.7; margin-top: 8px; }
   .feedback-section { padding: 20px 16px; }
   .feedback-heading { font-size: 13px; font-weight: 600; color: #f0f2f5; margin-bottom: 6px; }
   .feedback-sub { font-size: 12px; color: #555f6e; line-height: 1.6; margin-bottom: 16px; }
@@ -737,11 +739,6 @@
         <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
       </div>
     </div>
-    <div id="viewer-map-controls">
-      <button class="v-map-btn" id="overlay-btn" onclick="toggleOverlay()">
-        <span class="v-ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
-      </button>
-    </div>
     <div id="viewer-loading"><div class="v-spinner"></div><div class="v-loading-text" id="viewer-loading-text">Loading property data...</div></div>
     <div id="viewer-error">
       <div class="v-error-icon">⚠</div>
@@ -781,6 +778,7 @@
 </div>
 
 <!-- Lightbox -->
+<div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
   <div id="lightbox-caption"><div id="lightbox-title"></div><ul id="lightbox-bullets"></ul></div>
@@ -1008,9 +1006,8 @@ function flushPendingMapData() {
 }
 function toggleOverlay() {
   overlayVisible = !overlayVisible;
-  const btn = document.getElementById('overlay-btn'), lbl = document.getElementById('overlay-label');
-  if (overlayVisible) { btn.classList.add('active'); lbl.textContent = 'Hide Overlay'; if (groundOverlay) groundOverlay.setMap(map); }
-  else { btn.classList.remove('active'); lbl.textContent = 'Show Overlay'; if (groundOverlay) groundOverlay.setMap(null); }
+  if (overlayVisible) { if (groundOverlay) groundOverlay.setMap(map); }
+  else { if (groundOverlay) groundOverlay.setMap(null); }
 }
 
 // ── Immersive overlay ──────────────────────────────────────────────────────
@@ -1069,7 +1066,7 @@ function buildTabs(d) {
 function buildTabContent(d, tabId) {
   document.querySelectorAll('.vp-tab').forEach(function(t) { t.classList.toggle('active', t.getAttribute('data-view') === tabId); });
   clearMarkers();
-  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; overlayVisible = false; document.getElementById('overlay-btn').classList.remove('active'); document.getElementById('overlay-label').textContent = 'Show Overlay'; }
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; overlayVisible = false; }
 
   if (tabId === 'imagery') { buildImageryTab(d); }
   else if (tabId === 'intel') { buildIntelTab(d); }
@@ -1100,10 +1097,10 @@ function buildImageryTab(d) {
 function buildIntelTab(d) {
   let html = '';
   if (d.considerations) {
-    html += '<div class="intel-block"><div class="intel-block-label">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
+    html += '<div class="intel-block"><div class="intel-block-label considerations">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
   }
   if (d.clarifications) {
-    html += '<div class="intel-block"><div class="intel-block-label">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
+    html += '<div class="intel-block"><div class="intel-block-label clarifications">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
   }
   if (!html) html = '<div class="vp-empty">No responder intel available for this property.</div>';
   document.getElementById('vp-content').innerHTML = html;
@@ -1165,10 +1162,14 @@ window.initGoogleMaps = function() {
   if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
 };
 
-// ── Auto-open viewer tab if ?property= is in URL ───────────────────────────
-if (new URLSearchParams(window.location.search).get('property')) {
-  document.addEventListener('DOMContentLoaded', function() { showTab('viewer'); });
-}
+// ── Default to landing; auto-open viewer only if ?property= in URL ──────────
+document.addEventListener('DOMContentLoaded', function() {
+  if (new URLSearchParams(window.location.search).get('property')) {
+    showTab('viewer');
+  } else {
+    showTab('landing');
+  }
+});
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 
