@@ -332,7 +332,9 @@
     padding: 48px 60px 36px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
   }
-  .footer-top-logo { height: 44px; width: auto; filter: brightness(0) invert(1); }
+  .footer-top-wordmark { display: flex; flex-direction: column; justify-content: center; }
+  .footer-wordmark-main { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: 0.18em; line-height: 1; font-family: 'DM Sans', sans-serif; }
+  .footer-wordmark-sub { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.45); letter-spacing: 0.22em; text-transform: uppercase; margin-top: 4px; font-family: 'DM Sans', sans-serif; }
   .footer-partner { text-align: right; }
   .footer-partner-name { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 0.05em; }
   .footer-partner-sub { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 3px; }
@@ -737,7 +739,10 @@
   <!-- Footer -->
   <footer class="landing-footer">
     <div class="footer-top">
-      <img src="Vyanet_Responder_Intel.png" alt="Vyanet" class="footer-top-logo">
+      <div class="footer-top-wordmark">
+        <div class="footer-wordmark-main">VYANET</div>
+        <div class="footer-wordmark-sub">OPERATING GROUP, INC.</div>
+      </div>
       <div class="footer-partner">
         <div class="footer-partner-name">FIRST ALERT</div>
         <div class="footer-partner-sub">Premier Pro Partner</div>
@@ -1135,7 +1140,7 @@ function buildTabs(d) {
   const tabs = [{ id: 'imagery', label: 'Imagery' }, { id: 'intel', label: 'Intel' }];
   tabs.forEach(function(t) {
     const tab = document.createElement('div');
-    tab.className = 'vp-tab' + (t.id === 'intel' ? ' active' : '');
+    tab.className = 'vp-tab' + (t.id === 'imagery' ? ' active' : '');
     tab.textContent = t.label;
     tab.setAttribute('data-view', t.id);
     tab.onclick = function() { buildTabContent(d, t.id); };
@@ -1229,7 +1234,7 @@ async function initViewer() {
     document.getElementById('vp-title').textContent = d.name || 'Property Details';
     document.getElementById('vp-address').textContent = (d.address || '').replace(/^\s+/, '');
     buildTabs(d);
-    buildTabContent(d, 'intel');
+    buildTabContent(d, 'imagery');
     if (mapsApiReady) { resolveAndInitMap(d); }
     else { pendingEntry = d; }
   } catch(e) { showViewerError('Failed to load: ' + e.message); }
@@ -1241,13 +1246,8 @@ window.initGoogleMaps = function() {
   if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
 };
 
-// ── Open viewer only if ?property= in URL, after all scripts parsed ──────
-(function() {
-  if (new URLSearchParams(window.location.search).get('property')) {
-    // Wait for showTab to be defined (it's in this same script block above)
-    showTab('viewer');
-  }
-})();
+// ── Always start on landing page — viewer loads lazily on tab click ───────
+// (property hash is preserved in URL for when user clicks Responder Viewer tab)
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 
