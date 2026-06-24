@@ -24,10 +24,9 @@
   body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); }
 
   /* ── Shared page system ── */
-  .page { display: none; }
-  .page.active { display: block; }
-  #page-viewer { display: none; }
-  #page-viewer.active { display: flex; }
+  .page { display: none !important; }
+  .page.active { display: block !important; }
+  #page-viewer.active { display: flex !important; }
 
   /* ── Tab navigation ── */
   #tab-nav {
@@ -367,11 +366,9 @@
   /* ── VIEWER PAGE ── */
   #page-viewer {
     height: calc(100vh - 65px);
-    display: none;
     flex-direction: column;
     background: #0a0c0f;
   }
-  #page-viewer.active { display: flex; }
 
   /* viewer sub-header */
   #viewer-topbar {
@@ -578,13 +575,25 @@
   .interior-action-arrow { font-size: 14px; color: #555f6e; }
 
   /* ── Client Update page ── */
-  #page-update { background: var(--cream); min-height: calc(100vh - 65px); }
-  .update-wrap { max-width: 860px; margin: 0 auto; padding: 64px 40px 80px; }
-  .update-header { margin-bottom: 40px; }
-  .update-body { font-size: 15px; color: var(--text2); line-height: 1.8; max-width: 520px; margin-top: 8px; }
-  .update-frame-wrap { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-  .update-iframe { width: 100%; height: 780px; display: block; border: none; }
-  @media (max-width: 640px) { .update-wrap { padding: 40px 20px; } .update-iframe { height: 600px; } }
+  #page-update {
+    height: calc(100vh - 65px);
+    display: none;
+    flex-direction: column;
+    background: var(--cream);
+  }
+  #page-update.active { display: flex !important; flex-direction: column; }
+  .update-header-bar {
+    padding: 20px 40px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--cream);
+    flex-shrink: 0;
+  }
+  .update-header-bar .section-eyebrow { margin-bottom: 4px; }
+  .update-header-bar .section-heading { font-size: 22px; margin-bottom: 4px; }
+  .update-body { font-size: 14px; color: var(--text2); line-height: 1.6; margin-top: 4px; }
+  .update-frame-wrap { flex: 1; overflow: hidden; }
+  .update-iframe { width: 100%; height: 100%; display: block; border: none; }
+  @media (max-width: 640px) { .update-header-bar { padding: 16px 20px 12px; } }
 
   /* lightbox */
   #lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 1000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
@@ -764,16 +773,13 @@
 
 <!-- Client Update Page -->
 <div id="page-update" class="page">
-  <div class="update-wrap">
-    <div class="update-header">
-      <div class="section-eyebrow">Client Update</div>
-      <h2 class="section-heading">Submit a Property Update</h2>
-      <div class="section-rule"></div>
-      <p class="update-body">Use this form to submit feedback, flag outdated information, or request a re-capture for this property. Your submission is reviewed by the Vyanet team.</p>
-    </div>
-    <div class="update-frame-wrap">
-      <iframe src="https://survey.zohopublic.com/zs/U4C5oA" class="update-iframe" frameborder="0" allowfullscreen></iframe>
-    </div>
+  <div class="update-header-bar">
+    <div class="section-eyebrow">Client Update</div>
+    <h2 class="section-heading">Submit a Property Update</h2>
+    <p class="update-body">Use this form to submit feedback, flag outdated information, or request a re-capture. Reviewed by the Vyanet team.</p>
+  </div>
+  <div class="update-frame-wrap">
+    <iframe src="https://survey.zohopublic.com/zs/U4C5oA" class="update-iframe" frameborder="0" allowfullscreen></iframe>
   </div>
 </div>
 
@@ -813,6 +819,7 @@ let viewerInitialised = false;
 const isMobile = () => window.innerWidth <= 768;
 
 // ── Tab switching ──────────────────────────────────────────────────────────
+const FLEX_PAGES = ['viewer', 'update'];
 function showTab(tab) {
   const tabOrder = ['landing', 'viewer', 'update'];
   document.querySelectorAll('.tab-btn').forEach(function(b, i) {
