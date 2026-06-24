@@ -587,6 +587,9 @@
     background: var(--cream);
     flex-shrink: 0;
     text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
   }
   .update-header-bar .section-eyebrow { margin-bottom: 4px; }
   .update-header-bar .section-heading { font-size: 22px; margin-bottom: 4px; }
@@ -1176,13 +1179,13 @@ window.initGoogleMaps = function() {
   if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
 };
 
-// ── On load: default to landing unless ?property= in URL ─────────────────
-window.addEventListener('load', function() {
+// ── Open viewer only if ?property= in URL, after all scripts parsed ──────
+(function() {
   if (new URLSearchParams(window.location.search).get('property')) {
+    // Wait for showTab to be defined (it's in this same script block above)
     showTab('viewer');
   }
-  // No else needed — landing is already visible via CSS default
-});
+})();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 
