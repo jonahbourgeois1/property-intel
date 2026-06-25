@@ -493,10 +493,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 20px;
+    padding: 0 16px;
     height: 48px;
     background: #12161b;
     border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  #viewer-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     flex-shrink: 0;
   }
   #viewer-property-name {
@@ -655,13 +662,22 @@
   .btn-feedback:hover { background: rgba(59,130,246,0.2); border-color: rgba(59,130,246,0.5); }
 
   #viewer-toggle-panel {
-    position: absolute; bottom: 20px; right: 20px; z-index: 50;
-    background: #12161b; border: 1px solid rgba(255,255,255,0.14); border-radius: 8px;
-    padding: 10px 14px; font-size: 12px; font-weight: 500; color: #f0f2f5;
-    cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #f0f2f5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
   }
-  #viewer-toggle-panel:hover { background: #1a1f27; }
+  #viewer-toggle-panel:hover { background: rgba(255,255,255,0.1); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 
@@ -741,8 +757,46 @@
     .portal-features { gap: 8px; }
     #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: 104px; width: 100% !important; height: calc(100vh - 104px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
     #viewer-panel.mobile-open { transform: translateY(0%) !important; }
-    #viewer-toggle-panel { display: none; }
-    #viewer-mobile-toggle { display: flex !important; align-items: center; justify-content: center; }
+    #viewer-toggle-panel { display: none !important; }
+    #viewer-mobile-toggle {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 50;
+      background: #12161b;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 12px 28px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #f0f2f5;
+      cursor: pointer;
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+      font-family: 'DM Sans', sans-serif;
+      white-space: nowrap;
+    }
+    #viewer-mobile-toggle.panel-open {
+      bottom: auto;
+      top: 64px;
+      left: 0;
+      right: 0;
+      transform: none;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      background: #1a1f27;
+      padding: 10px 20px;
+      font-size: 12px;
+      box-shadow: none;
+      justify-content: center;
+    }
     #immersive-overlay { right: 0; }
   }
 
@@ -901,7 +955,13 @@
   <!-- viewer sub-header -->
   <div id="viewer-topbar">
     <div id="viewer-property-name">Loading...</div>
-    <div id="viewer-version">v2.4.0 — Responder Intel</div>
+    <div id="viewer-topbar-right">
+      <button id="viewer-toggle-panel" onclick="toggleViewerPanel()">
+        <div class="status-dot"></div>
+        <span id="viewer-toggle-label">View Intel</span>
+      </button>
+      <div id="viewer-version">v2.4.0 — Responder Intel</div>
+    </div>
   </div>
   <!-- viewer body -->
   <div id="viewer-main">
@@ -932,8 +992,7 @@
       <div id="vp-content"></div>
     </div>
   </div>
-  <button id="viewer-mobile-toggle" onclick="toggleViewerPanel()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:50;align-items:center;justify-content:center;background:#12161b;border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:500;color:#f0f2f5;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:'DM Sans',sans-serif;">View Intel</button>
-<button id="viewer-toggle-panel" onclick="toggleViewerPanel()"><div class="status-dot"></div><span id="viewer-toggle-label">View Intel</span></button>
+  <button id="viewer-mobile-toggle" onclick="toggleViewerPanel()">View Intel</button>
 </div>
 
 <!-- Client Update Page -->
@@ -1014,7 +1073,15 @@ function showTab(tab) {
   });
   // Mobile: show/hide View Intel button
   var mobileBtn = document.getElementById('viewer-mobile-toggle');
-  if (mobileBtn) mobileBtn.style.display = (tab === 'viewer' && window.innerWidth <= 768) ? 'flex' : 'none';
+  if (mobileBtn) {
+    if (tab === 'viewer' && window.innerWidth <= 768) {
+      mobileBtn.style.display = 'flex';
+      mobileBtn.textContent = '☰ View Intel';
+      mobileBtn.classList.remove('panel-open');
+    } else {
+      mobileBtn.style.display = 'none';
+    }
+  }
   // Init viewer lazily
   if (tab === 'viewer' && !viewerInitialised) { initViewer(); viewerInitialised = true; }
 }
@@ -1037,17 +1104,20 @@ function dbg(msg, type) {
 function toggleViewerPanel() {
   viewerPanelOpen = !viewerPanelOpen;
   var panel = document.getElementById('viewer-panel');
+  var mbl   = document.getElementById('viewer-mobile-toggle');
+  var lbl   = document.getElementById('viewer-toggle-label');
+  var ov    = document.getElementById('immersive-overlay');
   if (isMobile()) {
     panel.classList.toggle('mobile-open', viewerPanelOpen);
     panel.classList.remove('hidden');
+    if (mbl) {
+      mbl.textContent = viewerPanelOpen ? '✕ Hide Intel' : '☰ View Intel';
+      mbl.classList.toggle('panel-open', viewerPanelOpen);
+    }
   } else {
     panel.classList.toggle('hidden', !viewerPanelOpen);
+    if (lbl) lbl.textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
   }
-  var lbl = document.getElementById('viewer-toggle-label');
-  if (lbl) lbl.textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
-  var mbl = document.getElementById('viewer-mobile-toggle');
-  if (mbl) mbl.textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
-  var ov = document.getElementById('immersive-overlay');
   if (ov) ov.classList.toggle('panel-hidden', !viewerPanelOpen);
   setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
