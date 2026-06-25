@@ -742,6 +742,7 @@
     #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: 104px; width: 100% !important; height: calc(100vh - 104px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
     #viewer-panel.mobile-open { transform: translateY(0%) !important; }
     #viewer-toggle-panel { display: none; }
+    #viewer-mobile-toggle { display: flex !important; align-items: center; justify-content: center; }
     #immersive-overlay { right: 0; }
   }
 
@@ -931,7 +932,7 @@
       <div id="vp-content"></div>
     </div>
   </div>
-  <button id="viewer-mobile-toggle" onclick="toggleViewerPanel()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:50;background:#12161b;border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:500;color:#f0f2f5;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:'DM Sans',sans-serif;">View Intel</button>
+  <button id="viewer-mobile-toggle" onclick="toggleViewerPanel()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:50;align-items:center;justify-content:center;background:#12161b;border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:500;color:#f0f2f5;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:'DM Sans',sans-serif;">View Intel</button>
 <button id="viewer-toggle-panel" onclick="toggleViewerPanel()"><div class="status-dot"></div><span id="viewer-toggle-label">View Intel</span></button>
 </div>
 
@@ -986,17 +987,34 @@ const isMobile = () => window.innerWidth <= 768;
 // ── Tab switching ──────────────────────────────────────────────────────────
 function showTab(tab) {
   // Hide all pages
-  document.getElementById('page-landing').style.display = 'none';
-  document.getElementById('page-viewer').style.display  = 'none';
-  document.getElementById('page-update').style.display  = 'none';
-  // Show requested page
-  var flexPages = ['viewer', 'update'];
-  document.getElementById('page-' + tab).style.display = flexPages.indexOf(tab) >= 0 ? 'flex' : 'block';
+  var landing = document.getElementById('page-landing');
+  var viewer  = document.getElementById('page-viewer');
+  var update  = document.getElementById('page-update');
+  landing.style.display = 'none';
+  viewer.style.display  = 'none';
+  update.style.display  = 'none';
+  // Show requested page with correct display + flex-direction
+  if (tab === 'landing') {
+    landing.style.display = 'block';
+  } else if (tab === 'viewer') {
+    viewer.style.display       = 'flex';
+    viewer.style.flexDirection = 'column';
+    viewer.style.height        = 'calc(100vh - 64px)';
+    viewer.style.overflow      = 'hidden';
+  } else if (tab === 'update') {
+    update.style.display       = 'flex';
+    update.style.flexDirection = 'column';
+    update.style.height        = 'calc(100vh - 64px)';
+    update.style.overflow      = 'hidden';
+  }
   // Update tab buttons
   var tabOrder = ['landing', 'viewer', 'update'];
   document.querySelectorAll('.tab-btn').forEach(function(b, i) {
     b.classList.toggle('active', tabOrder[i] === tab);
   });
+  // Mobile: show/hide View Intel button
+  var mobileBtn = document.getElementById('viewer-mobile-toggle');
+  if (mobileBtn) mobileBtn.style.display = (tab === 'viewer' && window.innerWidth <= 768) ? 'flex' : 'none';
   // Init viewer lazily
   if (tab === 'viewer' && !viewerInitialised) { initViewer(); viewerInitialised = true; }
 }
@@ -1018,9 +1036,18 @@ function dbg(msg, type) {
 // ── Viewer panel ───────────────────────────────────────────────────────────
 function toggleViewerPanel() {
   viewerPanelOpen = !viewerPanelOpen;
-  document.getElementById('viewer-panel').classList.toggle('hidden', !viewerPanelOpen);
-  document.getElementById('viewer-toggle-label').textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
-  const ov = document.getElementById('immersive-overlay');
+  var panel = document.getElementById('viewer-panel');
+  if (isMobile()) {
+    panel.classList.toggle('mobile-open', viewerPanelOpen);
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.toggle('hidden', !viewerPanelOpen);
+  }
+  var lbl = document.getElementById('viewer-toggle-label');
+  if (lbl) lbl.textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
+  var mbl = document.getElementById('viewer-mobile-toggle');
+  if (mbl) mbl.textContent = viewerPanelOpen ? 'Hide Intel' : 'View Intel';
+  var ov = document.getElementById('immersive-overlay');
   if (ov) ov.classList.toggle('panel-hidden', !viewerPanelOpen);
   setTimeout(function() { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
 }
