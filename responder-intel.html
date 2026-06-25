@@ -328,17 +328,16 @@
   @media (max-width: 1320px) { .landing-footer { padding: 0 40px; } }
   @media (max-width: 900px)  { .landing-footer { padding: 0 24px; } }
   .footer-top {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 48px;
+    display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 52px 0 40px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     max-width: 1200px;
     margin: 0 auto;
   }
-  .footer-top-wordmark { grid-column: 1; }
-  .footer-partner { grid-column: 4; text-align: right; }
+  .footer-top-wordmark { flex: 0 0 auto; }
+  .footer-partner { flex: 0 0 auto; text-align: right; }
   .footer-top-wordmark { display: flex; flex-direction: column; justify-content: center; }
   .footer-wordmark-main { font-size: 24px; font-weight: 800; color: #fff; letter-spacing: 0.22em; line-height: 1; font-family: 'DM Sans', sans-serif; }
   .footer-wordmark-sub { font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.45); letter-spacing: 0.22em; text-transform: uppercase; margin-top: 4px; font-family: 'DM Sans', sans-serif; }
@@ -428,12 +427,9 @@
     /* Footer */
     .landing-footer { padding: 0 20px; }
     .footer-top {
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
       padding: 32px 0 28px;
     }
-    .footer-top-wordmark { grid-column: 1; }
-    .footer-partner { grid-column: 2; }
+    .footer-wordmark-main { font-size: 18px; }
     .footer-wordmark-main { font-size: 18px; }
     .footer-cols {
       grid-template-columns: 1fr 1fr;
@@ -479,8 +475,8 @@
 
     /* Footer */
     .landing-footer { padding: 0 16px; }
-    .footer-top { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; }
-    .footer-partner { grid-column: 1; text-align: left; margin-top: 8px; }
+    .footer-top { flex-direction: column; align-items: flex-start; gap: 16px; padding: 28px 0; }
+    .footer-partner { text-align: left; }
     .footer-cols { grid-template-columns: 1fr; gap: 24px; }
     .footer-col-heading { margin-bottom: 10px; }
 
@@ -697,22 +693,21 @@
 
   /* ── Client Update page ── */
   #page-update {
-    height: calc(100vh - 65px);
+    height: calc(100vh - 64px);
+    overflow: hidden;
   }
   .update-header-bar {
     padding: 20px 40px 16px;
     border-bottom: 1px solid var(--border);
     background: var(--cream);
     text-align: center;
-    position: static !important;
-    top: auto !important;
-    z-index: auto !important;
+    flex-shrink: 0;
   }
   .update-header-bar .section-eyebrow { margin-bottom: 4px; }
   .update-header-bar .section-heading { font-size: 22px; margin-bottom: 4px; }
   .update-header-bar .section-rule { margin: 12px auto 0; }
   .update-body { font-size: 14px; color: var(--text2); line-height: 1.6; margin-top: 8px; }
-  .update-frame-wrap { flex: 1; overflow: hidden; }
+  .update-frame-wrap { flex: 1; overflow: hidden; min-height: 0; }
   .update-iframe { width: 100%; height: 100%; display: block; border: none; }
   @media (max-width: 640px) { .update-header-bar { padding: 16px 20px 12px; } }
 
