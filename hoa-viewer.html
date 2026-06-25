@@ -113,7 +113,7 @@
   .btn-360:hover { opacity: 0.85; }
   .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
   .panel-pending { padding: 12px 16px 16px; font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; }
-  #toggle-panel { position: absolute; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
+  #toggle-panel { background: rgba(255,255,255,0.06); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
@@ -199,6 +199,7 @@
   </div>
   <div class="header-right">
     <div id="version-badge">v2.3.1 — property search</div>
+    <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
     <div id="hoa-badge">Loading...</div>
   </div>
 </div>
@@ -234,7 +235,6 @@
     </div>
   </div>
 </div>
-<button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
 <button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
 <div id="debug-panel">
   <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
