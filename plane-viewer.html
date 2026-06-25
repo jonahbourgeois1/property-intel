@@ -16,8 +16,6 @@
     --orange: #f97316; --header-h: 52px;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-
-  /* ── Header ── */
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
@@ -30,12 +28,8 @@
   #toggle-panel:hover { background: var(--surface2); }
   .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  /* ── Main layout ── */
   #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
   #map { flex: 1; background: var(--bg); min-width: 0; position: relative; }
-
-  /* ── Loading / error ── */
   #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; }
   #loading.hidden { opacity: 0; pointer-events: none; }
   #error { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; }
@@ -47,15 +41,11 @@
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 340px; line-height: 1.6; }
   .error-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 4px; }
-
-  /* ── Map controls ── */
   #map-controls { position: absolute; bottom: 24px; left: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
   .map-ctrl-btn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
   .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
   .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
   .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-
-  /* Opacity slider control */
   #opacity-control { display: none; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.5); min-width: 180px; }
   #opacity-control.visible { display: flex; }
   .opacity-label { display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 0.06em; }
@@ -63,8 +53,6 @@
   #opacity-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 3px; background: var(--border2); border-radius: 2px; outline: none; cursor: pointer; }
   #opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); }
   #opacity-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); }
-
-  /* ── Side panel ── */
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
   .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
@@ -76,22 +64,16 @@
   .panel-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
   .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
   #panel-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-
-  /* Panel content blocks */
   .info-block { padding: 14px 16px; border-bottom: 1px solid var(--border); }
   .info-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
   .info-label.ortho { color: var(--accent); }
-  .info-label.intel { color: var(--green); }
   .info-label.meta { color: var(--text3); }
   .info-value { font-size: 12px; color: var(--text2); line-height: 1.7; }
-  .info-value strong { color: var(--text); font-weight: 500; }
   .meta-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11px; }
   .meta-row:last-child { border-bottom: none; }
   .meta-key { color: var(--text3); font-family: 'DM Mono', monospace; }
   .meta-val { color: var(--text2); font-family: 'DM Mono', monospace; text-align: right; }
   .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
-
-  /* Tile status indicator */
   #tile-status { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; margin: 14px 16px 0; font-size: 11px; font-family: 'DM Mono', monospace; }
   #tile-status.loaded { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); }
   #tile-status.error { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
@@ -99,15 +81,11 @@
   #tile-status.loaded .tile-dot { background: var(--green); }
   #tile-status.error .tile-dot { background: var(--red); }
   #tile-status-text { color: var(--text2); flex: 1; }
-
-  /* Intel tab content */
   .intel-block { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .intel-block-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; }
   .intel-block-label.considerations { color: var(--green); background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); }
   .intel-block-label.clarifications { color: var(--orange); background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); }
   .intel-block-text { font-size: 12px; color: var(--text2); line-height: 1.7; margin-top: 8px; }
-
-  /* Mobile */
   #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
   @media (max-width: 768px) {
     #toggle-panel { display: none; }
@@ -118,24 +96,6 @@
     #panel.mobile-open { transform: translateY(0%) !important; }
     #map-controls { bottom: 70px; }
   }
-
-  /* ── Debug panel ── */
-  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 380px; max-height: 240px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
-  #debug-panel.collapsed #debug-log { display: none; }
-  #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
-  #debug-header span { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
-  #debug-toggle-btn { color: var(--accent); font-size: 10px; background: none; border: none; cursor: pointer; font-family: 'DM Mono', monospace; }
-  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 200px; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; word-break: break-all; }
-  .debug-line.info  { color: var(--text2); }
-  .debug-line.ok    { color: var(--green); }
-  .debug-line.warn  { color: #f59e0b; }
-  .debug-line.error { color: var(--red); }
-  .debug-time { color: var(--text3); margin-right: 6px; }
-  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; cursor: pointer; text-align: left; width: 100%; }
-  #debug-clear:hover { color: var(--text2); }
-
-  /* GM overrides */
   .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
   .gm-style .gm-style-iw-d { overflow: hidden !important; }
   .gm-style .gm-style-iw-t::after { background: #12161b !important; }
@@ -145,7 +105,6 @@
 </style>
 </head>
 <body>
-
 <div id="header">
   <div class="logo">
     <div class="logo-mark">VI</div>
@@ -160,11 +119,8 @@
     <div id="property-name">Loading...</div>
   </div>
 </div>
-
 <div id="main">
   <div id="map"></div>
-
-  <!-- Map controls -->
   <div id="map-controls">
     <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()">
       <span class="ctrl-dot"></span><span id="overlay-label">Show Ortho</span>
@@ -173,11 +129,10 @@
       <div class="opacity-label">ORTHO OPACITY <span id="opacity-val">80%</span></div>
       <input type="range" id="opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)">
     </div>
-    <button class="map-ctrl-btn" id="bounds-btn" onclick="fitToBounds()" title="Zoom to ortho coverage area">
+    <button class="map-ctrl-btn" id="bounds-btn" onclick="fitToBounds()">
       <span class="ctrl-dot"></span><span>Fit to Ortho</span>
     </button>
   </div>
-
   <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading plane data...</div></div>
   <div id="error">
     <div class="error-icon">⚠</div>
@@ -185,8 +140,6 @@
     <div class="error-msg" id="error-msg">No tile source available.</div>
     <div class="error-sub" id="error-sub"></div>
   </div>
-
-  <!-- Side panel -->
   <div id="panel">
     <div class="panel-header">
       <div class="panel-title" id="panel-title">Plane Details</div>
@@ -198,13 +151,10 @@
     </div>
     <div id="panel-content">
       <div id="tab-ortho">
-        <!-- Tile status badge -->
         <div id="tile-status">
           <div class="tile-dot"></div>
           <div id="tile-status-text">Connecting to tile source...</div>
         </div>
-
-        <!-- Ortho controls mirror -->
         <div class="info-block" style="margin-top:14px;">
           <div class="info-label ortho">Orthophoto Overlay</div>
           <div class="info-value">DJI Terra photogrammetry output rendered as a georeferenced tile layer on top of the satellite basemap.</div>
@@ -217,87 +167,46 @@
             <input type="range" id="panel-opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)" style="-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;">
           </div>
         </div>
-
-        <!-- Flight metadata -->
         <div class="info-block">
           <div class="info-label meta">Flight Metadata</div>
           <div id="meta-rows"></div>
         </div>
-
-        <!-- Bounds info -->
         <div class="info-block">
           <div class="info-label meta">Coverage Bounds</div>
           <div id="bounds-rows"></div>
         </div>
       </div>
-
       <div id="tab-intel" style="display:none;">
         <div id="intel-content" class="panel-empty">No intel data available.</div>
       </div>
     </div>
   </div>
 </div>
-
 <button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
-
-<div id="debug-panel">
-  <div id="debug-header" onclick="toggleDebug()"><span>DEBUG — PLANE VIEWER</span><button id="debug-toggle-btn">▼</button></div>
-  <div id="debug-log"></div>
-  <button id="debug-clear" onclick="clearDebug()">clear log</button>
-</div>
-
 <script>
-// ── Constants ─────────────────────────────────────────────────────────────
-const VERSION    = 'v1.0.0';
+const VERSION = 'v1.0.0';
 const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
-
-// ── State ─────────────────────────────────────────────────────────────────
 let map, panelOpen = false, mobileOpen = false;
 let mapsApiReady = false, pendingInit = null;
 let orthoLayer = null, orthoVisible = false;
 let currentOpacity = 0.80;
 let propertyData = null;
-let tileBounds = null; // google.maps.LatLngBounds
-
+let tileBounds = null;
 const isMobile = () => window.innerWidth <= 768;
 
-// ── Debug ─────────────────────────────────────────────────────────────────
-function dbg(msg, type) {
-  type = type || 'info';
-  const log = document.getElementById('debug-log');
-  if (!log) return;
-  const now = new Date();
-  const t = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
-  const line = document.createElement('div');
-  line.className = 'debug-line ' + type;
-  line.innerHTML = '<span class="debug-time">' + t + '</span>' + msg;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
-}
-function toggleDebug() {
-  const p = document.getElementById('debug-panel'), b = document.getElementById('debug-toggle-btn');
-  p.classList.toggle('collapsed');
-  b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
-}
-function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
-
-// ── URL param helpers ─────────────────────────────────────────────────────
 function getParams() {
   const p = new URLSearchParams(window.location.search);
   return {
-    // Direct URL params (for standalone testing)
-    tilesUrl:  p.get('tiles'),      // base URL of XYZ tile folder
-    metaUrl:   p.get('meta'),       // URL of meta.json (optional, overrides tiles param)
-    // Property Intel integration
-    property:  p.get('property'),   // hash → fetch data/plane/{hash}.json
-    lat:       parseFloat(p.get('lat')  || '0'),
-    lng:       parseFloat(p.get('lng')  || '0'),
-    name:      p.get('name')  || '',
-    address:   p.get('address') || ''
+    tilesUrl: p.get('tiles'),
+    metaUrl:  p.get('meta'),
+    property: p.get('property'),
+    lat:      parseFloat(p.get('lat') || '0'),
+    lng:      parseFloat(p.get('lng') || '0'),
+    name:     p.get('name') || '',
+    address:  p.get('address') || ''
   };
 }
 
-// ── Panel / UI ────────────────────────────────────────────────────────────
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -329,360 +238,157 @@ function setTileStatus(state, text) {
   el.className = state === 'loaded' ? 'loaded' : state === 'error' ? 'error' : '';
   document.getElementById('tile-status-text').textContent = text;
 }
-
-// ── Opacity control ───────────────────────────────────────────────────────
 function setOpacity(val) {
   currentOpacity = val / 100;
   document.getElementById('opacity-val').textContent = val + '%';
   document.getElementById('panel-opacity-val').textContent = val + '%';
   document.getElementById('opacity-slider').value = val;
   document.getElementById('panel-opacity-slider').value = val;
-  if (orthoLayer && orthoVisible) {
-    orthoLayer.setOpacity(currentOpacity);
-    dbg('Opacity set to ' + val + '%', 'info');
-  }
+  if (orthoLayer && orthoVisible) orthoLayer.setOpacity(currentOpacity);
 }
-
-// ── Overlay toggle ────────────────────────────────────────────────────────
 function toggleOverlay() {
   orthoVisible = !orthoVisible;
   const btn = document.getElementById('overlay-btn');
   const lbl = document.getElementById('overlay-label');
   const pbtn = document.getElementById('panel-overlay-btn');
   const opCtrl = document.getElementById('opacity-control');
-
   if (orthoVisible) {
-    btn.classList.add('active');
-    lbl.textContent = 'Hide Ortho';
-    pbtn.textContent = 'Hide Ortho';
+    btn.classList.add('active'); lbl.textContent = 'Hide Ortho'; pbtn.textContent = 'Hide Ortho';
     opCtrl.classList.add('visible');
     if (orthoLayer && map) {
-      if (map.overlayMapTypes.getLength() === 0) {
-        map.overlayMapTypes.push(orthoLayer);
-        dbg('Ortho layer pushed to overlayMapTypes', 'ok');
-      }
+      if (map.overlayMapTypes.getLength() === 0) map.overlayMapTypes.push(orthoLayer);
       orthoLayer.setOpacity(currentOpacity);
     }
   } else {
-    btn.classList.remove('active');
-    lbl.textContent = 'Show Ortho';
-    pbtn.textContent = 'Show Ortho';
+    btn.classList.remove('active'); lbl.textContent = 'Show Ortho'; pbtn.textContent = 'Show Ortho';
     opCtrl.classList.remove('visible');
-    if (map) {
-      map.overlayMapTypes.clear();
-      dbg('Ortho layer removed', 'info');
-    }
+    if (map) map.overlayMapTypes.clear();
   }
 }
-
-// ── Fit to bounds ─────────────────────────────────────────────────────────
 function fitToBounds() {
   if (!map || !tileBounds) return;
   map.fitBounds(tileBounds);
 }
-
-// ── Build XYZ tile layer ──────────────────────────────────────────────────
-// DJI Terra tile scheme: map/{z}/{x}/{y}.png
-// Google Maps uses {zoom}/{x}/{y} natively via ImageMapType
 function buildTileLayer(tilesBaseUrl) {
-  // Normalize: strip trailing slash
   const base = tilesBaseUrl.replace(/\/$/, '');
-
-  const tileOpts = {
-    getTileUrl: function(coord, zoom) {
-      return base + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png';
-    },
+  return new google.maps.ImageMapType({
+    getTileUrl: function(coord, zoom) { return base + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png'; },
     tileSize: new google.maps.Size(256, 256),
-    minZoom: 12,
-    maxZoom: 21,
-    name: 'Ortho',
-    opacity: currentOpacity
-  };
-
-  return new google.maps.ImageMapType(tileOpts);
+    minZoom: 12, maxZoom: 21, name: 'Ortho', opacity: currentOpacity
+  });
 }
-
-// ── Bounds from meta ──────────────────────────────────────────────────────
-function boundsFromMeta(meta) {
-  if (meta.bounds) {
-    return new google.maps.LatLngBounds(
-      { lat: meta.bounds.south, lng: meta.bounds.west },
-      { lat: meta.bounds.north, lng: meta.bounds.east }
-    );
-  }
-  if (meta.gps_corner) {
-    return new google.maps.LatLngBounds(
-      { lat: meta.gps_corner.bottom_right_lat, lng: meta.gps_corner.top_left_lon },
-      { lat: meta.gps_corner.top_left_lat,     lng: meta.gps_corner.bottom_right_lon }
-    );
-  }
-  return null;
-}
-
-// ── Populate meta panel ───────────────────────────────────────────────────
 function populateMeta(meta) {
   const metaRows = document.getElementById('meta-rows');
   const boundsRows = document.getElementById('bounds-rows');
-
   const fields = [];
-  if (meta.fly_altitude)    fields.push(['Altitude',   Math.round(meta.fly_altitude) + ' m (' + Math.round(meta.fly_altitude * 3.28084) + ' ft)']);
-  if (meta.gsd)             fields.push(['GSD',        meta.gsd + ' cm/px']);
-  if (meta.covered_area)    fields.push(['Area',       (meta.covered_area * 100).toFixed(3) + ' ha']);
-  if (meta.min_zoom)        fields.push(['Zoom range', meta.min_zoom + ' – ' + meta.max_zoom]);
-  if (meta.image_count)     fields.push(['Images',     meta.image_count]);
-  if (meta.capture_date)    fields.push(['Captured',   meta.capture_date]);
-
+  if (meta.fly_altitude) fields.push(['Altitude', Math.round(meta.fly_altitude) + ' m (' + Math.round(meta.fly_altitude * 3.28084) + ' ft)']);
+  if (meta.gsd)          fields.push(['GSD', meta.gsd + ' cm/px']);
+  if (meta.covered_area) fields.push(['Area', (meta.covered_area * 100).toFixed(3) + ' ha']);
+  if (meta.min_zoom)     fields.push(['Zoom range', meta.min_zoom + ' - ' + meta.max_zoom]);
+  if (meta.image_count)  fields.push(['Images', meta.image_count]);
+  if (meta.capture_date) fields.push(['Captured', meta.capture_date]);
   metaRows.innerHTML = fields.length
-    ? fields.map(([k,v]) => `<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val">${v}</span></div>`).join('')
+    ? fields.map(([k,v]) => '<div class="meta-row"><span class="meta-key">' + k + '</span><span class="meta-val">' + v + '</span></div>').join('')
     : '<div class="info-value" style="color:var(--text3);font-size:11px;font-family:\'DM Mono\',monospace;">No metadata available</div>';
-
-  const b = meta.bounds || (meta.gps_corner ? {
-    north: meta.gps_corner.top_left_lat,
-    south: meta.gps_corner.bottom_right_lat,
-    west:  meta.gps_corner.top_left_lon,
-    east:  meta.gps_corner.bottom_right_lon
-  } : null);
-
+  const b = meta.bounds || (meta.gps_corner ? { north: meta.gps_corner.top_left_lat, south: meta.gps_corner.bottom_right_lat, west: meta.gps_corner.top_left_lon, east: meta.gps_corner.bottom_right_lon } : null);
   if (b) {
-    boundsRows.innerHTML = [
-      ['N', b.north.toFixed(6)], ['S', b.south.toFixed(6)],
-      ['W', b.west.toFixed(6)],  ['E', b.east.toFixed(6)]
-    ].map(([k,v]) => `<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val">${v}</span></div>`).join('');
+    boundsRows.innerHTML = [['N', b.north.toFixed(6)],['S', b.south.toFixed(6)],['W', b.west.toFixed(6)],['E', b.east.toFixed(6)]].map(([k,v]) => '<div class="meta-row"><span class="meta-key">' + k + '</span><span class="meta-val">' + v + '</span></div>').join('');
   } else {
     boundsRows.innerHTML = '<div class="info-value" style="color:var(--text3);font-size:11px;font-family:\'DM Mono\',monospace;">No bounds available</div>';
   }
 }
-
-// ── Intel tab content ─────────────────────────────────────────────────────
 function populateIntel(d) {
   const el = document.getElementById('intel-content');
-  if (!d || (!d.considerations && !d.clarifications)) {
-    el.className = 'panel-empty';
-    el.innerHTML = 'No responder intel available for this property.';
-    return;
-  }
+  if (!d || (!d.considerations && !d.clarifications)) { el.className = 'panel-empty'; el.innerHTML = 'No responder intel available for this property.'; return; }
   el.className = '';
   let html = '';
-  if (d.considerations) {
-    html += '<div class="intel-block"><div class="intel-block-label considerations">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
-  }
-  if (d.clarifications) {
-    html += '<div class="intel-block"><div class="intel-block-label clarifications">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
-  }
+  if (d.considerations) html += '<div class="intel-block"><div class="intel-block-label considerations">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
+  if (d.clarifications) html += '<div class="intel-block"><div class="intel-block-label clarifications">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
   el.innerHTML = html;
 }
-
-// ── Initialize map ────────────────────────────────────────────────────────
 function initMapAt(lat, lng, meta, tilesBaseUrl) {
   map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat, lng },
-    zoom: 18,
-    mapTypeId: google.maps.MapTypeId.SATELLITE,
-    tilt: 0,
-    mapTypeControl: true,
-    mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-    zoomControl: true,
-    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: false,
-    fullscreenControl: true,
-    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+    center: { lat, lng }, zoom: 18, mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+    mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
+    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: false, fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
   });
-
-  // Build tile layer
   if (tilesBaseUrl) {
-    dbg('Building tile layer from: ' + tilesBaseUrl, 'info');
     orthoLayer = buildTileLayer(tilesBaseUrl);
-    dbg('ImageMapType created OK', 'ok');
-
-    // Probe a known tile to verify tiles actually exist
-    const testZoom = 18;
-    // Derive a tile coordinate near center from the bounds
     if (meta && (meta.bounds || meta.gps_corner)) {
-      const b = meta.bounds || {
-        north: meta.gps_corner.top_left_lat,
-        south: meta.gps_corner.bottom_right_lat,
-        west:  meta.gps_corner.top_left_lon,
-        east:  meta.gps_corner.bottom_right_lon
-      };
-      tileBounds = new google.maps.LatLngBounds(
-        { lat: b.south, lng: b.west },
-        { lat: b.north, lng: b.east }
-      );
-      // Compute center tile at zoom 18 for probe
-      const cLat = (b.north + b.south) / 2;
-      const cLng = (b.east  + b.west)  / 2;
-      const n = Math.pow(2, testZoom);
+      const b = meta.bounds || { north: meta.gps_corner.top_left_lat, south: meta.gps_corner.bottom_right_lat, west: meta.gps_corner.top_left_lon, east: meta.gps_corner.bottom_right_lon };
+      tileBounds = new google.maps.LatLngBounds({ lat: b.south, lng: b.west }, { lat: b.north, lng: b.east });
+      const cLat = (b.north + b.south) / 2, cLng = (b.east + b.west) / 2;
+      const n = Math.pow(2, 18);
       const tx = Math.floor((cLng + 180) / 360 * n);
       const latRad = cLat * Math.PI / 180;
       const ty = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
-      const probeUrl = tilesBaseUrl.replace(/\/$/, '') + '/' + testZoom + '/' + tx + '/' + ty + '.png';
-
-      fetch(probeUrl, { method: 'HEAD' })
-        .then(r => {
-          if (r.ok) {
-            dbg('Tile probe OK (' + r.status + '): ' + probeUrl.split('/').slice(-3).join('/'), 'ok');
-            setTileStatus('loaded', 'Tile source connected — ' + tilesBaseUrl.split('/').pop());
-          } else {
-            dbg('Tile probe FAILED (' + r.status + '): ' + probeUrl, 'error');
-            setTileStatus('error', 'Tiles not reachable (HTTP ' + r.status + ')');
-          }
-        })
-        .catch(e => {
-          dbg('Tile probe CORS/network error: ' + e.message, 'error');
-          setTileStatus('error', 'Tiles not reachable — check URL and CORS');
-        });
+      fetch(tilesBaseUrl.replace(/\/$/, '') + '/18/' + tx + '/' + ty + '.png', { method: 'HEAD' })
+        .then(r => setTileStatus(r.ok ? 'loaded' : 'error', r.ok ? 'Tile source connected' : 'Tiles not reachable (HTTP ' + r.status + ')'))
+        .catch(() => setTileStatus('error', 'Tiles not reachable — check CORS'));
     } else {
       setTileStatus('', 'Tile source set — no bounds to verify');
     }
   }
-
-  // Fit to bounds if available
   if (tileBounds) {
     map.fitBounds(tileBounds);
-    google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
-      if (map.getZoom() > 20) map.setZoom(20);
-    });
+    google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 20) map.setZoom(20); });
   }
-
   hideLoading();
-  dbg('Map initialized at zoom ' + map.getZoom(), 'ok');
-
-  // Auto-open panel on desktop
   if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 600);
 }
-
-// ── Main loader ───────────────────────────────────────────────────────────
 async function loadViewer() {
-  dbg('Plane viewer ' + VERSION + ' starting', 'ok');
   const params = getParams();
-  dbg('URL params: tiles=' + (params.tilesUrl||'none') + ' property=' + (params.property||'none') + ' lat=' + params.lat + ' lng=' + params.lng, 'info');
-  let tilesBaseUrl = null;
-  let meta = {};
-  let centerLat = null, centerLng = null;
+  let tilesBaseUrl = null, meta = {}, centerLat = null, centerLng = null;
   let name = params.name, address = params.address;
-
-  // ── Path 1: ?property= (Property Intel integration) ──────────────────
   if (params.property) {
     setLoading('Loading property data...');
     try {
-      const DATA_ROOT = 'https://jonahbourgeois1.github.io/property-intel/data/';
-      const res = await fetch(DATA_ROOT + 'plane/' + params.property + '.json');
+      const res = await fetch('https://jonahbourgeois1.github.io/property-intel/data/plane/' + params.property + '.json');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
-      propertyData = d;
-      name    = d.name    || name;
-      address = d.address || address;
-      tilesBaseUrl  = d.tiles_url  || null;
-      const metaUrl = d.meta_url   || null;
-
-      if (metaUrl) {
-        const mr = await fetch(metaUrl);
-        if (mr.ok) meta = await mr.json();
-      }
-      // Inline meta from JSON
-      if (d.fly_altitude)  meta.fly_altitude  = meta.fly_altitude  || d.fly_altitude;
-      if (d.gsd)           meta.gsd           = meta.gsd           || d.gsd;
-      if (d.covered_area)  meta.covered_area  = meta.covered_area  || d.covered_area;
-      if (d.bounds)        meta.bounds        = meta.bounds        || d.bounds;
-      if (d.min_zoom)      meta.min_zoom      = meta.min_zoom      || d.min_zoom;
-      if (d.max_zoom)      meta.max_zoom      = meta.max_zoom      || d.max_zoom;
-      if (d.lat && d.lng)  { centerLat = d.lat; centerLng = d.lng; }
-
+      propertyData = d; name = d.name || name; address = d.address || address;
+      tilesBaseUrl = d.tiles_url || null;
+      if (d.meta_url) { const mr = await fetch(d.meta_url); if (mr.ok) meta = await mr.json(); }
+      if (d.fly_altitude) meta.fly_altitude = meta.fly_altitude || d.fly_altitude;
+      if (d.gsd)          meta.gsd          = meta.gsd          || d.gsd;
+      if (d.covered_area) meta.covered_area  = meta.covered_area  || d.covered_area;
+      if (d.bounds)       meta.bounds        = meta.bounds        || d.bounds;
+      if (d.min_zoom)     meta.min_zoom      = meta.min_zoom      || d.min_zoom;
+      if (d.max_zoom)     meta.max_zoom      = meta.max_zoom      || d.max_zoom;
+      if (d.lat && d.lng) { centerLat = d.lat; centerLng = d.lng; }
       populateIntel(d);
-    } catch(e) {
-      showError('Property not found', 'Could not load plane data for this property.', e.message);
-      return;
-    }
+    } catch(e) { showError('Property not found', 'Could not load plane data for this property.', e.message); return; }
   }
-
-  // ── Path 2: ?tiles= (direct / testing) ───────────────────────────────
-  if (!tilesBaseUrl && params.tilesUrl) {
-    tilesBaseUrl = params.tilesUrl;
-    dbg('Tiles URL from param: ' + tilesBaseUrl, 'ok');
-  }
-
-  // ── Path 3: ?meta= (load meta.json directly) ─────────────────────────
-  if (params.metaUrl) {
-    try {
-      const mr = await fetch(params.metaUrl);
-      if (mr.ok) meta = await mr.json();
-    } catch(e) { /* non-fatal */ }
-  }
-
-  if (!tilesBaseUrl) {
-    dbg('No tile source found — showing error', 'error');
-    showError(
-      'No tile source',
-      'Pass ?tiles=URL or ?property=HASH to load orthophoto tiles.',
-      'Example: plane-viewer.html?tiles=http://localhost:8000/map'
-    );
-    return;
-  }
-
-  // ── Resolve center ────────────────────────────────────────────────────
+  if (!tilesBaseUrl && params.tilesUrl) tilesBaseUrl = params.tilesUrl;
+  if (params.metaUrl) { try { const mr = await fetch(params.metaUrl); if (mr.ok) meta = await mr.json(); } catch(e) {} }
+  if (!tilesBaseUrl) { showError('No tile source', 'Pass ?tiles=URL or ?property=HASH to load orthophoto tiles.', 'Example: plane-viewer.html?tiles=http://localhost:8000/map'); return; }
   if (!centerLat || !centerLng) {
-    if (meta.bounds) {
-      centerLat = (meta.bounds.north + meta.bounds.south) / 2;
-      centerLng = (meta.bounds.east  + meta.bounds.west)  / 2;
-      dbg('Center from meta.bounds: ' + centerLat.toFixed(5) + ',' + centerLng.toFixed(5), 'ok');
-    } else if (meta.gps_corner) {
-      centerLat = (meta.gps_corner.top_left_lat    + meta.gps_corner.bottom_right_lat) / 2;
-      centerLng = (meta.gps_corner.top_left_lon    + meta.gps_corner.bottom_right_lon) / 2;
-      dbg('Center from meta.gps_corner: ' + centerLat.toFixed(5) + ',' + centerLng.toFixed(5), 'ok');
-    } else if (params.lat && params.lng) {
-      centerLat = params.lat;
-      centerLng = params.lng;
-      dbg('Center from URL params: ' + centerLat.toFixed(5) + ',' + centerLng.toFixed(5), 'ok');
-    }
+    if (meta.bounds) { centerLat = (meta.bounds.north + meta.bounds.south) / 2; centerLng = (meta.bounds.east + meta.bounds.west) / 2; }
+    else if (meta.gps_corner) { centerLat = (meta.gps_corner.top_left_lat + meta.gps_corner.bottom_right_lat) / 2; centerLng = (meta.gps_corner.top_left_lon + meta.gps_corner.bottom_right_lon) / 2; }
+    else if (params.lat && params.lng) { centerLat = params.lat; centerLng = params.lng; }
   }
-
-  // ── Populate UI ───────────────────────────────────────────────────────
   document.getElementById('property-name').textContent = name || 'Plane View';
   document.getElementById('panel-title').textContent   = name || 'Plane View';
   document.getElementById('panel-address').textContent = address.replace(/^\s+/, '');
   populateMeta(meta);
-
-  // ── Geocode fallback if still no center ───────────────────────────────
   if ((!centerLat || !centerLng) && address && GEOCODE_KEY) {
     setLoading('Locating property...');
     try {
       const gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(address) + '&key=' + GEOCODE_KEY);
       const gd = await gr.json();
-      if (gd.status === 'OK' && gd.results[0]) {
-        centerLat = gd.results[0].geometry.location.lat;
-        centerLng = gd.results[0].geometry.location.lng;
-      }
-    } catch(e) { /* non-fatal */ }
+      if (gd.status === 'OK' && gd.results[0]) { centerLat = gd.results[0].geometry.location.lat; centerLng = gd.results[0].geometry.location.lng; }
+    } catch(e) {}
   }
-
-  if (!centerLat || !centerLng) {
-    // Fall back to Bend, OR area if truly nothing
-    centerLat = 44.058;
-    centerLng = -121.315;
-  }
-
-  // ── Init map ──────────────────────────────────────────────────────────
+  if (!centerLat || !centerLng) { centerLat = 44.058; centerLng = -121.315; }
   setLoading('Initializing map...');
-  dbg('Final tiles URL: ' + tilesBaseUrl, 'info');
-  dbg('Center: ' + (centerLat||'?') + ',' + (centerLng||'?'), 'info');
-  dbg('Meta keys: ' + Object.keys(meta).join(', '), 'info');
-  if (mapsApiReady) {
-    initMapAt(centerLat, centerLng, meta, tilesBaseUrl);
-  } else {
-    pendingInit = { lat: centerLat, lng: centerLng, meta, tilesBaseUrl };
-  }
+  if (mapsApiReady) { initMapAt(centerLat, centerLng, meta, tilesBaseUrl); }
+  else { pendingInit = { lat: centerLat, lng: centerLng, meta, tilesBaseUrl }; }
 }
-
 window.initGoogleMaps = function() {
   mapsApiReady = true;
-  dbg('Google Maps API ready', 'ok');
-  if (pendingInit) {
-    const { lat, lng, meta, tilesBaseUrl } = pendingInit;
-    pendingInit = null;
-    initMapAt(lat, lng, meta, tilesBaseUrl);
-  }
+  if (pendingInit) { const { lat, lng, meta, tilesBaseUrl } = pendingInit; pendingInit = null; initMapAt(lat, lng, meta, tilesBaseUrl); }
 };
-
 loadViewer();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
