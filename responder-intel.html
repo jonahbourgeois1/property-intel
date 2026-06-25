@@ -444,8 +444,6 @@
       gap: 6px;
     }
 
-    /* Client Assessment */
-    .update-header-bar { padding: 16px 20px 14px; }
 
   }
 
@@ -708,34 +706,16 @@
   .interior-action-desc { font-size: 11px; color: #555f6e; margin-top: 1px; }
   .interior-action-arrow { font-size: 14px; color: #555f6e; }
 
-  /* ── Client Update page ── */
+  /* ── Client Assessment page ── */
   #page-update {
-    position: relative;
     height: calc(100vh - 64px);
     overflow: hidden;
   }
-  .update-header-bar {
-    position: relative;
-    z-index: 2;
-    padding: 20px 40px 16px;
-    border-bottom: 1px solid var(--border);
-    background: var(--cream);
-    text-align: center;
-  }
-  .update-header-bar .section-eyebrow { margin-bottom: 4px; }
-  .update-header-bar .section-heading { font-size: 22px; margin-bottom: 4px; }
-  .update-header-bar .section-rule { margin: 12px auto 0; }
-  .update-body { font-size: 14px; color: var(--text2); line-height: 1.6; margin-top: 8px; }
-  .update-frame-wrap {
-    position: absolute;
-    top: var(--update-header-h, 130px);
-    left: 0; right: 0; bottom: 0;
-    overflow: hidden;
-  }
-  .update-iframe { width: 100%; height: 100%; display: block; border: none; }
-  @media (max-width: 640px) {
-    .update-header-bar { padding: 16px 20px 12px; }
-    .update-frame-wrap { top: var(--update-header-h, 120px); }
+  .update-iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: none;
   }
 
   /* lightbox */
@@ -1004,17 +984,9 @@
   <button id="viewer-mobile-toggle" onclick="toggleViewerPanel()">View Intel</button>
 </div>
 
-<!-- Client Update Page -->
+<!-- Client Assessment Page -->
 <div id="page-update">
-  <div class="update-header-bar">
-    <div class="section-eyebrow">Client Assessment</div>
-    <h2 class="section-heading">Submit a Property Assessment</h2>
-    <div class="section-rule"></div>
-    <p class="update-body">Submit your property profile for first responders — including your relationship to the property, size, access codes, roof type, pool or water features, vegetation issues, and occupant considerations.</p>
-  </div>
-  <div class="update-frame-wrap">
-    <iframe src="https://survey.zohopublic.com/zs/U4C5oA" class="update-iframe" frameborder="0" allowfullscreen></iframe>
-  </div>
+  <iframe src="https://survey.zohopublic.com/zs/U4C5oA" class="update-iframe" frameborder="0" allowfullscreen></iframe>
 </div>
 
 <!-- Lightbox -->
@@ -1071,17 +1043,8 @@ function showTab(tab) {
     viewer.style.overflow      = 'hidden';
   } else if (tab === 'update') {
     update.style.display  = 'block';
-    update.style.position = 'relative';
     update.style.height   = 'calc(100vh - 64px)';
     update.style.overflow = 'hidden';
-    // Measure header height and set frame top dynamically
-    setTimeout(function() {
-      var hdr = document.querySelector('.update-header-bar');
-      var wrap = document.querySelector('.update-frame-wrap');
-      if (hdr && wrap) {
-        wrap.style.top = hdr.offsetHeight + 'px';
-      }
-    }, 0);
   }
   // Update tab buttons
   var tabOrder = ['landing', 'viewer', 'update'];
