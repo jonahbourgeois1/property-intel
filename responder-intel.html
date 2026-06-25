@@ -390,14 +390,100 @@
     .footer-cols { grid-template-columns: 1fr; }
   }
 
-  @media (max-width: 640px) {
-    #tab-nav { padding: 0 16px; }
+  /* ══════════════════════════════
+     MOBILE — 768px and below
+  ══════════════════════════════ */
+  @media (max-width: 768px) {
+
+    /* Nav */
+    #tab-nav { padding: 0 16px; height: 56px; }
     .nav-logo { height: 36px; }
-    .hero { padding: 56px 20px 52px; }
+    .tab-btn { padding: 0 12px; font-size: 11px; letter-spacing: 0.05em; height: 56px; }
+
+    /* Hero */
+    .hero { padding: 48px 20px 44px; }
+    .hero-logo { width: clamp(220px, 70vw, 360px); margin-bottom: 32px; }
+    .hero-heading { font-size: clamp(28px, 7vw, 40px); }
+    .hero-heading-italic { font-size: clamp(24px, 6vw, 36px); }
+    .hero-body { font-size: 15px; }
+    .btn-dark, .btn-outline { min-width: 0; width: 100%; max-width: 340px; padding: 14px 24px; }
+
+    /* Brief cards */
     .brief { padding: 48px 20px; }
-    .brief-grid { grid-template-columns: 1fr; }
+    .section-heading { font-size: clamp(20px, 5vw, 28px); }
+    .brief-grid { grid-template-columns: 1fr; gap: 12px; }
+
+    /* Who chips */
     .who { padding: 40px 20px; }
+    .who-heading { font-size: clamp(18px, 5vw, 24px); }
+    .who-row { gap: 8px; }
+    .who-chip { font-size: 12px; padding: 8px 16px; }
+
+    /* Portal */
     .portal { padding: 52px 20px; }
+    .portal-heading { font-size: clamp(22px, 6vw, 32px); }
+    .portal-body { font-size: 14px; }
+    .btn-portal { padding: 13px 32px; width: 100%; max-width: 320px; }
+
+    /* Footer */
+    .landing-footer { padding: 0 20px; }
+    .footer-top {
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      padding: 32px 0 28px;
+    }
+    .footer-top-wordmark { grid-column: 1; }
+    .footer-partner { grid-column: 2; }
+    .footer-wordmark-main { font-size: 18px; }
+    .footer-cols {
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      padding: 28px 0 36px;
+    }
+    .footer-bottom {
+      padding: 16px 0;
+      flex-wrap: wrap;
+      justify-content: center;
+      text-align: center;
+      gap: 6px;
+    }
+
+    /* Client Assessment */
+    .update-header-bar { padding: 16px 20px 14px; }
+
+  }
+
+  /* ══════════════════════════════
+     SMALL MOBILE — 480px and below
+  ══════════════════════════════ */
+  @media (max-width: 480px) {
+
+    /* Nav — hide middle tab on very small screens */
+    .tab-btn { padding: 0 10px; font-size: 10px; }
+
+    /* Hero */
+    .hero { padding: 36px 16px 36px; }
+    .hero-rule { width: 48px; }
+    .hero-btns { width: 100%; }
+    .btn-dark, .btn-outline { max-width: 100%; }
+
+    /* Brief */
+    .brief { padding: 36px 16px; }
+    .brief-card { padding: 20px 18px; }
+
+    /* Who */
+    .who { padding: 32px 16px; }
+
+    /* Portal */
+    .portal { padding: 40px 16px; }
+
+    /* Footer */
+    .landing-footer { padding: 0 16px; }
+    .footer-top { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; }
+    .footer-partner { grid-column: 1; text-align: left; margin-top: 8px; }
+    .footer-cols { grid-template-columns: 1fr; gap: 24px; }
+    .footer-col-heading { margin-bottom: 10px; }
+
   }
 
   /* ── VIEWER PAGE ── */
@@ -656,7 +742,7 @@
   @media (max-width: 768px) {
     .intel-grid { grid-template-columns: 1fr; }
     .portal-features { gap: 8px; }
-    #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: 113px; width: 100% !important; height: calc(100vh - 113px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
+    #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: 104px; width: 100% !important; height: calc(100vh - 104px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
     #viewer-panel.mobile-open { transform: translateY(0%) !important; }
     #viewer-toggle-panel { display: none; }
     #immersive-overlay { right: 0; }
@@ -848,7 +934,8 @@
       <div id="vp-content"></div>
     </div>
   </div>
-  <button id="viewer-toggle-panel" onclick="toggleViewerPanel()"><div class="status-dot"></div><span id="viewer-toggle-label">View Intel</span></button>
+  <button id="viewer-mobile-toggle" onclick="toggleViewerPanel()" style="display:none;position:fixed;bottom:20px;right:20px;z-index:50;background:#12161b;border:1px solid rgba(255,255,255,0.14);border-radius:8px;padding:10px 14px;font-size:12px;font-weight:500;color:#f0f2f5;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.4);font-family:'DM Sans',sans-serif;">View Intel</button>
+<button id="viewer-toggle-panel" onclick="toggleViewerPanel()"><div class="status-dot"></div><span id="viewer-toggle-label">View Intel</span></button>
 </div>
 
 <!-- Client Update Page -->
