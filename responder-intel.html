@@ -21,7 +21,7 @@
     --border2: #e6e3dc;
   }
 
-  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); overflow: hidden; height: 100vh; }
 
   /* ── Page system ── */
   #page-landing { display: block; }
@@ -72,7 +72,7 @@
   /* ══════════════════════════════════════
      LANDING PAGE — Option 3: Intel Brief
   ══════════════════════════════════════ */
-  #page-landing { background: var(--cream); }
+  #page-landing { background: var(--cream); height: calc(100vh - 64px); overflow-y: auto; }
 
   /* Hero — centered, cream, Playfair + italic subline, red rule */
   .hero {
@@ -484,7 +484,8 @@
 
   /* ── VIEWER PAGE ── */
   #page-viewer {
-    height: calc(100vh - 65px);
+    height: calc(100vh - 64px);
+    overflow: hidden;
   }
 
   /* viewer sub-header */
@@ -695,6 +696,7 @@
   #page-update {
     height: calc(100vh - 64px);
     overflow: hidden;
+    max-height: calc(100vh - 64px);
   }
   .update-header-bar {
     padding: 20px 40px 16px;
