@@ -138,7 +138,105 @@
   /* GM overrides */
   .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
   .gm-style .gm-style-iw-d { overflow: hidden !important; }
-@@ -224,6 +240,12 @@
+  .gm-style .gm-style-iw-t::after { background: #12161b !important; }
+  .gm-style-iw-chr { background: #12161b !important; border-radius: 10px 10px 0 0 !important; height: 0 !important; padding: 0 !important; }
+  .gm-style-iw-chr button { filter: invert(1) !important; opacity: 0.6 !important; }
+  .gm-style-iw-chr button.gm-ui-hover-effect { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <div class="logo">
+    <div class="logo-mark">VI</div>
+    <div>
+      <div class="logo-text">Vyanet Intel</div>
+      <div class="logo-sub">Plane Viewer</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
+    <div id="version-badge">v1.0.0 — ortho tiles</div>
+    <div id="property-name">Loading...</div>
+  </div>
+</div>
+
+<div id="main">
+  <div id="map"></div>
+
+  <!-- Map controls -->
+  <div id="map-controls">
+    <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()">
+      <span class="ctrl-dot"></span><span id="overlay-label">Show Ortho</span>
+    </button>
+    <div id="opacity-control">
+      <div class="opacity-label">ORTHO OPACITY <span id="opacity-val">80%</span></div>
+      <input type="range" id="opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)">
+    </div>
+    <button class="map-ctrl-btn" id="bounds-btn" onclick="fitToBounds()" title="Zoom to ortho coverage area">
+      <span class="ctrl-dot"></span><span>Fit to Ortho</span>
+    </button>
+  </div>
+
+  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading plane data...</div></div>
+  <div id="error">
+    <div class="error-icon">⚠</div>
+    <div class="error-title" id="error-title">Could not load plane data</div>
+    <div class="error-msg" id="error-msg">No tile source available.</div>
+    <div class="error-sub" id="error-sub"></div>
+  </div>
+
+  <!-- Side panel -->
+  <div id="panel">
+    <div class="panel-header">
+      <div class="panel-title" id="panel-title">Plane Details</div>
+      <div class="panel-address" id="panel-address"></div>
+    </div>
+    <div id="panel-tabs">
+      <div class="panel-tab active" data-tab="ortho" onclick="switchTab('ortho')">Ortho</div>
+      <div class="panel-tab" data-tab="intel" onclick="switchTab('intel')">Intel</div>
+    </div>
+    <div id="panel-content">
+      <div id="tab-ortho">
+        <!-- Tile status badge -->
+        <div id="tile-status">
+          <div class="tile-dot"></div>
+          <div id="tile-status-text">Connecting to tile source...</div>
+        </div>
+
+        <!-- Ortho controls mirror -->
+        <div class="info-block" style="margin-top:14px;">
+          <div class="info-label ortho">Orthophoto Overlay</div>
+          <div class="info-value">DJI Terra photogrammetry output rendered as a georeferenced tile layer on top of the satellite basemap.</div>
+          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button onclick="toggleOverlay()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;" id="panel-overlay-btn">Show Ortho</button>
+            <button onclick="fitToBounds()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;">Fit to Ortho</button>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="opacity-label" style="margin-bottom:6px;">OPACITY <span id="panel-opacity-val" style="color:var(--text2);">80%</span></div>
+            <input type="range" id="panel-opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)" style="-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;">
+          </div>
+        </div>
+
+        <!-- Flight metadata -->
+        <div class="info-block">
+          <div class="info-label meta">Flight Metadata</div>
+          <div id="meta-rows"></div>
+        </div>
+
+        <!-- Bounds info -->
+        <div class="info-block">
+          <div class="info-label meta">Coverage Bounds</div>
+          <div id="bounds-rows"></div>
+        </div>
+      </div>
+
+      <div id="tab-intel" style="display:none;">
+        <div id="intel-content" class="panel-empty">No intel data available.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
 
@@ -151,7 +249,15 @@
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────
 const VERSION    = 'v1.0.0';
-@@ -239,6 +261,26 @@
+const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
+
+// ── State ─────────────────────────────────────────────────────────────────
+let map, panelOpen = false, mobileOpen = false;
+let mapsApiReady = false, pendingInit = null;
+let orthoLayer = null, orthoVisible = false;
+let currentOpacity = 0.80;
+let propertyData = null;
+let tileBounds = null; // google.maps.LatLngBounds
 
 const isMobile = () => window.innerWidth <= 768;
 
@@ -178,11 +284,59 @@ function clearDebug() { const l = document.getElementById('debug-log'); if (l) l
 // ── URL param helpers ─────────────────────────────────────────────────────
 function getParams() {
   const p = new URLSearchParams(window.location.search);
-@@ -295,7 +337,10 @@
+  return {
+    // Direct URL params (for standalone testing)
+    tilesUrl:  p.get('tiles'),      // base URL of XYZ tile folder
+    metaUrl:   p.get('meta'),       // URL of meta.json (optional, overrides tiles param)
+    // Property Intel integration
+    property:  p.get('property'),   // hash → fetch data/plane/{hash}.json
+    lat:       parseFloat(p.get('lat')  || '0'),
+    lng:       parseFloat(p.get('lng')  || '0'),
+    name:      p.get('name')  || '',
+    address:   p.get('address') || ''
+  };
+}
+
+// ── Panel / UI ────────────────────────────────────────────────────────────
+function togglePanel() {
+  panelOpen = !panelOpen;
+  document.getElementById('panel').classList.toggle('hidden', !panelOpen);
+  document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
+  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
+}
+function mobileToggle() {
+  mobileOpen = !mobileOpen;
+  document.getElementById('panel').classList.toggle('mobile-open', mobileOpen);
+  document.getElementById('mobile-label').textContent = mobileOpen ? 'Show Map' : 'Show Intel';
+  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
+}
+function switchTab(tab) {
+  document.querySelectorAll('.panel-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tab));
+  document.getElementById('tab-ortho').style.display = tab === 'ortho' ? 'block' : 'none';
+  document.getElementById('tab-intel').style.display = tab === 'intel' ? 'block' : 'none';
+}
+function setLoading(msg) { document.getElementById('loading-text').textContent = msg; }
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+function showError(title, msg, sub) {
+  hideLoading();
+  document.getElementById('error').classList.add('visible');
+  document.getElementById('error-title').textContent = title || 'Error';
+  document.getElementById('error-msg').textContent = msg || '';
+  document.getElementById('error-sub').textContent = sub || '';
+}
+function setTileStatus(state, text) {
+  const el = document.getElementById('tile-status');
+  el.className = state === 'loaded' ? 'loaded' : state === 'error' ? 'error' : '';
+  document.getElementById('tile-status-text').textContent = text;
+}
+
+// ── Opacity control ───────────────────────────────────────────────────────
+function setOpacity(val) {
+  currentOpacity = val / 100;
+  document.getElementById('opacity-val').textContent = val + '%';
   document.getElementById('panel-opacity-val').textContent = val + '%';
   document.getElementById('opacity-slider').value = val;
   document.getElementById('panel-opacity-slider').value = val;
-  if (orthoLayer) orthoLayer.setOpacity(currentOpacity);
   if (orthoLayer && orthoVisible) {
     orthoLayer.setOpacity(currentOpacity);
     dbg('Opacity set to ' + val + '%', 'info');
@@ -190,11 +344,18 @@ function getParams() {
 }
 
 // ── Overlay toggle ────────────────────────────────────────────────────────
-@@ -311,13 +356,22 @@
+function toggleOverlay() {
+  orthoVisible = !orthoVisible;
+  const btn = document.getElementById('overlay-btn');
+  const lbl = document.getElementById('overlay-label');
+  const pbtn = document.getElementById('panel-overlay-btn');
+  const opCtrl = document.getElementById('opacity-control');
+
+  if (orthoVisible) {
+    btn.classList.add('active');
     lbl.textContent = 'Hide Ortho';
     pbtn.textContent = 'Hide Ortho';
     opCtrl.classList.add('visible');
-    if (orthoLayer) orthoLayer.setMap(map);
     if (orthoLayer && map) {
       if (map.overlayMapTypes.getLength() === 0) {
         map.overlayMapTypes.push(orthoLayer);
@@ -207,7 +368,6 @@ function getParams() {
     lbl.textContent = 'Show Ortho';
     pbtn.textContent = 'Show Ortho';
     opCtrl.classList.remove('visible');
-    if (orthoLayer) orthoLayer.setMap(null);
     if (map) {
       map.overlayMapTypes.clear();
       dbg('Ortho layer removed', 'info');
@@ -215,7 +375,118 @@ function getParams() {
   }
 }
 
-@@ -436,7 +490,9 @@
+// ── Fit to bounds ─────────────────────────────────────────────────────────
+function fitToBounds() {
+  if (!map || !tileBounds) return;
+  map.fitBounds(tileBounds);
+}
+
+// ── Build XYZ tile layer ──────────────────────────────────────────────────
+// DJI Terra tile scheme: map/{z}/{x}/{y}.png
+// Google Maps uses {zoom}/{x}/{y} natively via ImageMapType
+function buildTileLayer(tilesBaseUrl) {
+  // Normalize: strip trailing slash
+  const base = tilesBaseUrl.replace(/\/$/, '');
+
+  const tileOpts = {
+    getTileUrl: function(coord, zoom) {
+      return base + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png';
+    },
+    tileSize: new google.maps.Size(256, 256),
+    minZoom: 12,
+    maxZoom: 21,
+    name: 'Ortho',
+    opacity: currentOpacity
+  };
+
+  return new google.maps.ImageMapType(tileOpts);
+}
+
+// ── Bounds from meta ──────────────────────────────────────────────────────
+function boundsFromMeta(meta) {
+  if (meta.bounds) {
+    return new google.maps.LatLngBounds(
+      { lat: meta.bounds.south, lng: meta.bounds.west },
+      { lat: meta.bounds.north, lng: meta.bounds.east }
+    );
+  }
+  if (meta.gps_corner) {
+    return new google.maps.LatLngBounds(
+      { lat: meta.gps_corner.bottom_right_lat, lng: meta.gps_corner.top_left_lon },
+      { lat: meta.gps_corner.top_left_lat,     lng: meta.gps_corner.bottom_right_lon }
+    );
+  }
+  return null;
+}
+
+// ── Populate meta panel ───────────────────────────────────────────────────
+function populateMeta(meta) {
+  const metaRows = document.getElementById('meta-rows');
+  const boundsRows = document.getElementById('bounds-rows');
+
+  const fields = [];
+  if (meta.fly_altitude)    fields.push(['Altitude',   Math.round(meta.fly_altitude) + ' m (' + Math.round(meta.fly_altitude * 3.28084) + ' ft)']);
+  if (meta.gsd)             fields.push(['GSD',        meta.gsd + ' cm/px']);
+  if (meta.covered_area)    fields.push(['Area',       (meta.covered_area * 100).toFixed(3) + ' ha']);
+  if (meta.min_zoom)        fields.push(['Zoom range', meta.min_zoom + ' – ' + meta.max_zoom]);
+  if (meta.image_count)     fields.push(['Images',     meta.image_count]);
+  if (meta.capture_date)    fields.push(['Captured',   meta.capture_date]);
+
+  metaRows.innerHTML = fields.length
+    ? fields.map(([k,v]) => `<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val">${v}</span></div>`).join('')
+    : '<div class="info-value" style="color:var(--text3);font-size:11px;font-family:\'DM Mono\',monospace;">No metadata available</div>';
+
+  const b = meta.bounds || (meta.gps_corner ? {
+    north: meta.gps_corner.top_left_lat,
+    south: meta.gps_corner.bottom_right_lat,
+    west:  meta.gps_corner.top_left_lon,
+    east:  meta.gps_corner.bottom_right_lon
+  } : null);
+
+  if (b) {
+    boundsRows.innerHTML = [
+      ['N', b.north.toFixed(6)], ['S', b.south.toFixed(6)],
+      ['W', b.west.toFixed(6)],  ['E', b.east.toFixed(6)]
+    ].map(([k,v]) => `<div class="meta-row"><span class="meta-key">${k}</span><span class="meta-val">${v}</span></div>`).join('');
+  } else {
+    boundsRows.innerHTML = '<div class="info-value" style="color:var(--text3);font-size:11px;font-family:\'DM Mono\',monospace;">No bounds available</div>';
+  }
+}
+
+// ── Intel tab content ─────────────────────────────────────────────────────
+function populateIntel(d) {
+  const el = document.getElementById('intel-content');
+  if (!d || (!d.considerations && !d.clarifications)) {
+    el.className = 'panel-empty';
+    el.innerHTML = 'No responder intel available for this property.';
+    return;
+  }
+  el.className = '';
+  let html = '';
+  if (d.considerations) {
+    html += '<div class="intel-block"><div class="intel-block-label considerations">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
+  }
+  if (d.clarifications) {
+    html += '<div class="intel-block"><div class="intel-block-label clarifications">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
+  }
+  el.innerHTML = html;
+}
+
+// ── Initialize map ────────────────────────────────────────────────────────
+function initMapAt(lat, lng, meta, tilesBaseUrl) {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat, lng },
+    zoom: 18,
+    mapTypeId: google.maps.MapTypeId.SATELLITE,
+    tilt: 0,
+    mapTypeControl: true,
+    mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
+    zoomControl: true,
+    zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: false,
+    fullscreenControl: true,
+    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+  });
 
   // Build tile layer
   if (tilesBaseUrl) {
@@ -225,7 +496,27 @@ function getParams() {
 
     // Probe a known tile to verify tiles actually exist
     const testZoom = 18;
-@@ -464,12 +520,17 @@
+    // Derive a tile coordinate near center from the bounds
+    if (meta && (meta.bounds || meta.gps_corner)) {
+      const b = meta.bounds || {
+        north: meta.gps_corner.top_left_lat,
+        south: meta.gps_corner.bottom_right_lat,
+        west:  meta.gps_corner.top_left_lon,
+        east:  meta.gps_corner.bottom_right_lon
+      };
+      tileBounds = new google.maps.LatLngBounds(
+        { lat: b.south, lng: b.west },
+        { lat: b.north, lng: b.east }
+      );
+      // Compute center tile at zoom 18 for probe
+      const cLat = (b.north + b.south) / 2;
+      const cLng = (b.east  + b.west)  / 2;
+      const n = Math.pow(2, testZoom);
+      const tx = Math.floor((cLng + 180) / 360 * n);
+      const latRad = cLat * Math.PI / 180;
+      const ty = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+      const probeUrl = tilesBaseUrl.replace(/\/$/, '') + '/' + testZoom + '/' + tx + '/' + ty + '.png';
+
       fetch(probeUrl, { method: 'HEAD' })
         .then(r => {
           if (r.ok) {
@@ -236,7 +527,6 @@ function getParams() {
             setTileStatus('error', 'Tiles not reachable (HTTP ' + r.status + ')');
           }
         })
-        .catch(() => setTileStatus('error', 'Tiles not reachable — check URL and CORS'));
         .catch(e => {
           dbg('Tile probe CORS/network error: ' + e.message, 'error');
           setTileStatus('error', 'Tiles not reachable — check URL and CORS');
@@ -244,7 +534,14 @@ function getParams() {
     } else {
       setTileStatus('', 'Tile source set — no bounds to verify');
     }
-@@ -484,14 +545,17 @@
+  }
+
+  // Fit to bounds if available
+  if (tileBounds) {
+    map.fitBounds(tileBounds);
+    google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+      if (map.getZoom() > 20) map.setZoom(20);
+    });
   }
 
   hideLoading();
@@ -262,7 +559,42 @@ async function loadViewer() {
   let tilesBaseUrl = null;
   let meta = {};
   let centerLat = null, centerLng = null;
-@@ -534,6 +598,7 @@
+  let name = params.name, address = params.address;
+
+  // ── Path 1: ?property= (Property Intel integration) ──────────────────
+  if (params.property) {
+    setLoading('Loading property data...');
+    try {
+      const DATA_ROOT = 'https://jonahbourgeois1.github.io/property-intel/data/';
+      const res = await fetch(DATA_ROOT + 'plane/' + params.property + '.json');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const d = await res.json();
+      propertyData = d;
+      name    = d.name    || name;
+      address = d.address || address;
+      tilesBaseUrl  = d.tiles_url  || null;
+      const metaUrl = d.meta_url   || null;
+
+      if (metaUrl) {
+        const mr = await fetch(metaUrl);
+        if (mr.ok) meta = await mr.json();
+      }
+      // Inline meta from JSON
+      if (d.fly_altitude)  meta.fly_altitude  = meta.fly_altitude  || d.fly_altitude;
+      if (d.gsd)           meta.gsd           = meta.gsd           || d.gsd;
+      if (d.covered_area)  meta.covered_area  = meta.covered_area  || d.covered_area;
+      if (d.bounds)        meta.bounds        = meta.bounds        || d.bounds;
+      if (d.min_zoom)      meta.min_zoom      = meta.min_zoom      || d.min_zoom;
+      if (d.max_zoom)      meta.max_zoom      = meta.max_zoom      || d.max_zoom;
+      if (d.lat && d.lng)  { centerLat = d.lat; centerLng = d.lng; }
+
+      populateIntel(d);
+    } catch(e) {
+      showError('Property not found', 'Could not load plane data for this property.', e.message);
+      return;
+    }
+  }
+
   // ── Path 2: ?tiles= (direct / testing) ───────────────────────────────
   if (!tilesBaseUrl && params.tilesUrl) {
     tilesBaseUrl = params.tilesUrl;
@@ -270,7 +602,11 @@ async function loadViewer() {
   }
 
   // ── Path 3: ?meta= (load meta.json directly) ─────────────────────────
-@@ -545,6 +610,7 @@
+  if (params.metaUrl) {
+    try {
+      const mr = await fetch(params.metaUrl);
+      if (mr.ok) meta = await mr.json();
+    } catch(e) { /* non-fatal */ }
   }
 
   if (!tilesBaseUrl) {
@@ -278,7 +614,13 @@ async function loadViewer() {
     showError(
       'No tile source',
       'Pass ?tiles=URL or ?property=HASH to load orthophoto tiles.',
-@@ -558,12 +624,15 @@
+      'Example: plane-viewer.html?tiles=http://localhost:8000/map'
+    );
+    return;
+  }
+
+  // ── Resolve center ────────────────────────────────────────────────────
+  if (!centerLat || !centerLng) {
     if (meta.bounds) {
       centerLat = (meta.bounds.north + meta.bounds.south) / 2;
       centerLng = (meta.bounds.east  + meta.bounds.west)  / 2;
@@ -294,7 +636,30 @@ async function loadViewer() {
     }
   }
 
-@@ -594,6 +663,9 @@
+  // ── Populate UI ───────────────────────────────────────────────────────
+  document.getElementById('property-name').textContent = name || 'Plane View';
+  document.getElementById('panel-title').textContent   = name || 'Plane View';
+  document.getElementById('panel-address').textContent = address.replace(/^\s+/, '');
+  populateMeta(meta);
+
+  // ── Geocode fallback if still no center ───────────────────────────────
+  if ((!centerLat || !centerLng) && address && GEOCODE_KEY) {
+    setLoading('Locating property...');
+    try {
+      const gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(address) + '&key=' + GEOCODE_KEY);
+      const gd = await gr.json();
+      if (gd.status === 'OK' && gd.results[0]) {
+        centerLat = gd.results[0].geometry.location.lat;
+        centerLng = gd.results[0].geometry.location.lng;
+      }
+    } catch(e) { /* non-fatal */ }
+  }
+
+  if (!centerLat || !centerLng) {
+    // Fall back to Bend, OR area if truly nothing
+    centerLat = 44.058;
+    centerLng = -121.315;
+  }
 
   // ── Init map ──────────────────────────────────────────────────────────
   setLoading('Initializing map...');
@@ -304,7 +669,9 @@ async function loadViewer() {
   if (mapsApiReady) {
     initMapAt(centerLat, centerLng, meta, tilesBaseUrl);
   } else {
-@@ -603,15 +675,16 @@
+    pendingInit = { lat: centerLat, lng: centerLng, meta, tilesBaseUrl };
+  }
+}
 
 window.initGoogleMaps = function() {
   mapsApiReady = true;
