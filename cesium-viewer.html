@@ -10,95 +10,101 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
   #cesiumContainer { width: 100%; height: 100%; }
-  #error-msg { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 12px; background: #0a0c0f; color: #8a93a2; font-family: monospace; font-size: 13px; text-align: center; padding: 32px; }
-  #error-msg.visible { display: flex; }
-  #error-msg strong { color: #ef4444; font-size: 15px; }
-  #debug { position: fixed; bottom: 0; left: 0; right: 0; max-height: 220px; overflow-y: auto; background: rgba(0,0,0,0.93); border-top: 1px solid rgba(59,130,246,0.4); font-family: monospace; font-size: 11px; z-index: 9999; padding: 6px 10px; }
+  #debug { position: fixed; bottom: 0; left: 0; right: 0; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.93); border-top: 1px solid rgba(59,130,246,0.4); font-family: monospace; font-size: 11px; z-index: 9999; padding: 6px 10px; }
   .dl { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); word-break: break-all; }
-  .ok  { color: #22c55e; }
-  .err { color: #ef4444; }
-  .inf { color: #8a93a2; }
-  .wrn { color: #f59e0b; }
+  .ok  { color: #22c55e; } .err { color: #ef4444; } .inf { color: #8a93a2; } .wrn { color: #f59e0b; }
 </style>
 </head>
 <body>
 <div id="cesiumContainer"></div>
-<div id="error-msg"><strong>Could not load 3D model</strong><span id="error-detail"></span></div>
 <div id="debug"></div>
 <script>
-  function dbg(msg, type) {
-    const d = document.getElementById('debug');
-    const t = new Date().toTimeString().slice(0,8);
-    const line = document.createElement('div');
-    line.className = 'dl ' + (type||'inf');
-    line.textContent = t + ' ' + msg;
-    d.appendChild(line);
-    d.scrollTop = d.scrollHeight;
-  }
+function dbg(msg, type) {
+  const d = document.getElementById('debug');
+  const t = new Date().toTimeString().slice(0,8);
+  const el = document.createElement('div');
+  el.className = 'dl ' + (type||'inf');
+  el.textContent = t + ' ' + msg;
+  d.appendChild(el);
+  d.scrollTop = d.scrollHeight;
+}
 
-  dbg('cesium-viewer starting', 'ok');
+dbg('Starting', 'ok');
+const params = new URLSearchParams(window.location.search);
+const tilesetUrl = params.get('tileset') ||
+  'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
+dbg('URL: ' + tilesetUrl, 'inf');
 
-  const params = new URLSearchParams(window.location.search);
-  const tilesetUrl = params.get('tileset') ||
-    'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
+Cesium.Ion.defaultAccessToken = '';
 
-  dbg('tileset URL: ' + tilesetUrl, 'inf');
-  dbg('Cesium version: ' + Cesium.VERSION, 'inf');
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  animation: false, baseLayerPicker: false, fullscreenButton: false,
+  geocoder: false, homeButton: false, infoBox: false,
+  sceneModePicker: false, selectionIndicator: false, timeline: false,
+  navigationHelpButton: false, skyBox: false, skyAtmosphere: false,
+  imageryProvider: false, baseLayer: false
+});
 
-  Cesium.Ion.defaultAccessToken = '';
+// Dark background, no globe
+viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#111318');
+viewer.scene.globe.show = false;
+viewer.scene.highDynamicRange = false;
 
-  const viewer = new Cesium.Viewer('cesiumContainer', {
-    animation: false, baseLayerPicker: false, fullscreenButton: false,
-    geocoder: false, homeButton: false, infoBox: false,
-    sceneModePicker: false, selectionIndicator: false, timeline: false,
-    navigationHelpButton: false, skyBox: false, skyAtmosphere: false,
-    imageryProvider: false, baseLayer: false
+// Strong light from above-front, high intensity so unlit B3DM textures show
+viewer.scene.light = new Cesium.DirectionalLight({
+  direction: Cesium.Cartesian3.normalize(
+    new Cesium.Cartesian3(1.0, 1.0, -1.0),
+    new Cesium.Cartesian3()
+  ),
+  intensity: 5.0
+});
+
+dbg('Viewer ready', 'ok');
+
+Cesium.Cesium3DTileset.fromUrl(tilesetUrl, {
+  maximumScreenSpaceError: 2,
+  // Force unlit rendering — DJI Terra B3DM meshes have no lighting model
+  imageBasedLightingFactor: new Cesium.Cartesian2(1.0, 1.0)
+}).then(function(tileset) {
+  dbg('Tileset loaded', 'ok');
+  viewer.scene.primitives.add(tileset);
+
+  // Override all tile materials to use unlit shading
+  tileset.style = new Cesium.Cesium3DTileStyle({
+    color: 'color("white", 1.0)'
   });
 
-  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0a0c0f');
-  viewer.scene.globe.show = false;
-  viewer.scene.light = new Cesium.SunLight();
-  dbg('Viewer + scene ready', 'ok');
+  const bs = tileset.boundingSphere;
+  const radius = bs.radius > 0 ? bs.radius : 500;
+  dbg('radius=' + radius.toFixed(0) + ' center=' + bs.center.x.toFixed(0) + ',' + bs.center.y.toFixed(0) + ',' + bs.center.z.toFixed(0), 'inf');
 
-  const ECEF_CENTER = new Cesium.Cartesian3(-2391595.5, -3921345.0, 4412217.0);
+  const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(bs.center);
+  const lon = Cesium.Math.toDegrees(carto.longitude);
+  const lat = Cesium.Math.toDegrees(carto.latitude);
+  const alt = carto.height;
+  dbg('lon=' + lon.toFixed(5) + ' lat=' + lat.toFixed(5) + ' alt=' + alt.toFixed(0), 'ok');
 
-  function flyToModel(tileset) {
-    const bs = tileset.boundingSphere;
-    dbg('BoundingSphere radius: ' + bs.radius.toFixed(1), 'inf');
-    dbg('BoundingSphere center: ' + bs.center.x.toFixed(0) + ',' + bs.center.y.toFixed(0) + ',' + bs.center.z.toFixed(0), 'inf');
-
-    const center = (bs && bs.radius > 0) ? bs.center : ECEF_CENTER;
-    const radius = (bs && bs.radius > 0) ? bs.radius : 500;
-
-    const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(center);
-    const lon = Cesium.Math.toDegrees(carto.longitude);
-    const lat = Cesium.Math.toDegrees(carto.latitude);
-    const alt = carto.height;
-    dbg('lon=' + lon.toFixed(5) + ' lat=' + lat.toFixed(5) + ' alt=' + alt.toFixed(0) + 'm', 'ok');
-
-    viewer.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.5),
-      orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 },
-      duration: 1.5
-    });
-    dbg('Camera flyTo dispatched', 'ok');
-  }
-
-  // v1.114 API: Cesium3DTileset.fromUrl() returns a Promise
-  dbg('Calling Cesium3DTileset.fromUrl()...', 'inf');
-
-  Cesium.Cesium3DTileset.fromUrl(tilesetUrl, {
-    maximumScreenSpaceError: 4
-  }).then(function(tileset) {
-    dbg('fromUrl resolved — tileset ready', 'ok');
-    viewer.scene.primitives.add(tileset);
-    dbg('Tileset added to primitives', 'ok');
-    flyToModel(tileset);
-  }).catch(function(err) {
-    dbg('fromUrl FAILED: ' + (err.message || String(err)), 'err');
-    document.getElementById('error-detail').textContent = err.message || 'Unknown error';
-    document.getElementById('error-msg').classList.add('visible');
+  viewer.camera.flyTo({
+    destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 5.0),
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-45), roll: 0 },
+    duration: 0
   });
+  dbg('Camera set', 'ok');
+
+  // Log what tiles are actually being rendered each frame for 3 seconds
+  let frameCount = 0;
+  const removeListener = viewer.scene.postRender.addEventListener(function() {
+    frameCount++;
+    if (frameCount === 30) {
+      const stats = tileset.statistics;
+      dbg('After 30 frames — selected:' + stats.selected + ' loaded:' + stats.numberOfTilesWithContentReady + ' total:' + stats.numberOfTilesTotal, 'wrn');
+    }
+    if (frameCount >= 90) removeListener();
+  });
+
+}).catch(function(err) {
+  dbg('FAILED: ' + (err.message || String(err)), 'err');
+});
 </script>
 </body>
 </html>
