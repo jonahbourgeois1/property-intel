@@ -161,10 +161,10 @@
 
   <div id="map-controls">
     <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()">
-      <span class="ctrl-dot"></span><span id="overlay-label">Show Ortho</span>
+      <span class="ctrl-dot"></span><span id="overlay-label">Show 2D Map</span>
     </button>
     <div id="opacity-control">
-      <div class="opacity-label">ORTHO OPACITY <span id="opacity-val">80%</span></div>
+      <div class="opacity-label">2D MAP OPACITY <span id="opacity-val">80%</span></div>
       <input type="range" id="opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)">
     </div>
     <button class="map-ctrl-btn" id="bounds-btn" onclick="fitToBounds()">
@@ -186,7 +186,7 @@
       <div class="panel-address" id="panel-address"></div>
     </div>
     <div id="panel-tabs">
-      <div class="panel-tab active" data-tab="ortho" onclick="switchTab('ortho')">Ortho</div>
+      <div class="panel-tab active" data-tab="ortho" onclick="switchTab('ortho')">2D Map</div>
       <div class="panel-tab" data-tab="model" onclick="switchTab('model')">3D Model</div>
       <div class="panel-tab" data-tab="intel" onclick="switchTab('intel')">Intel</div>
     </div>
@@ -199,10 +199,10 @@
           <div id="tile-status-text">Connecting to tile source...</div>
         </div>
         <div class="info-block" style="margin-top:14px;">
-          <div class="info-label ortho">Orthophoto Overlay</div>
-          <div class="info-value">DJI Terra photogrammetry output rendered as a georeferenced tile layer on top of the satellite basemap.</div>
+          <div class="info-label ortho">2D Map Overlay</div>
+          <div class="info-value">DJI Terra orthophoto rendered as a georeferenced tile layer — your aerial imagery as the base map.</div>
           <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button onclick="toggleOverlay()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;" id="panel-overlay-btn">Show Ortho</button>
+            <button onclick="toggleOverlay()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;" id="panel-overlay-btn">Show 2D Map</button>
             <button onclick="fitToBounds()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;">Fit to Ortho</button>
           </div>
           <div style="margin-top:10px;">
@@ -349,14 +349,14 @@ function toggleOverlay() {
   const pbtn = document.getElementById('panel-overlay-btn');
   const opCtrl = document.getElementById('opacity-control');
   if (orthoVisible) {
-    btn.classList.add('active'); lbl.textContent = 'Hide Ortho'; pbtn.textContent = 'Hide Ortho';
+    btn.classList.add('active'); lbl.textContent = 'Hide 2D Map'; pbtn.textContent = 'Hide 2D Map';
     opCtrl.classList.add('visible');
     if (orthoLayer && map) {
       if (map.overlayMapTypes.getLength() === 0) map.overlayMapTypes.push(orthoLayer);
       orthoLayer.setOpacity(currentOpacity);
     }
   } else {
-    btn.classList.remove('active'); lbl.textContent = 'Show Ortho'; pbtn.textContent = 'Show Ortho';
+    btn.classList.remove('active'); lbl.textContent = 'Show 2D Map'; pbtn.textContent = 'Show 2D Map';
     opCtrl.classList.remove('visible');
     if (map) map.overlayMapTypes.clear();
   }
@@ -387,10 +387,7 @@ function launch3D() {
   overlay.classList.add('active');
   loading.classList.remove('hidden');
 
-  iframe.onload = function() {
-    setTimeout(() => { loading.classList.add('hidden'); }, 3000);
-  };
-
+  // Hide plane-test loading overlay once cesium signals ready via postMessage
   iframe.src = CESIUM_VIEWER_BASE + '?tileset=' + encodeURIComponent(currentTilesetUrl);
 }
 
@@ -400,6 +397,13 @@ function exit3D() {
   overlay.classList.remove('active');
   iframe.src = 'about:blank';
 }
+
+// Listen for cesium-viewer ready/error signals
+window.addEventListener('message', function(e) {
+  if (e.data === 'cesium-ready' || e.data === 'cesium-error') {
+    document.getElementById('cesium-loading').classList.add('hidden');
+  }
+});
 
 // ── Meta panel ────────────────────────────────────────────────────────────
 function populateMeta(meta) {
@@ -461,7 +465,7 @@ function initMapAt(lat, lng, meta, tilesBaseUrl) {
     google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 20) map.setZoom(20); });
   }
   hideLoading();
-  if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); switchTab("model"); }, 600);
+  if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); switchTab("ortho"); }, 600);
 }
 
 // ── Main loader ───────────────────────────────────────────────────────────
