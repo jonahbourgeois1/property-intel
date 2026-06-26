@@ -3,18 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Viewer v6</title>
+<title>3D Viewer v7</title>
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
 <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; display: flex; flex-direction: column; }
-  /* Cesium gets top portion, debug gets bottom 180px */
   #cesiumContainer { flex: 1; min-height: 0; }
-  #debug { height: 180px; overflow-y: auto; background: #0a0c0f; border-top: 2px solid #3b82f6; font-family: monospace; font-size: 11px; padding: 6px 10px; flex-shrink: 0; }
+  #debug { height: 160px; overflow-y: auto; background: #0a0c0f; border-top: 2px solid #3b82f6; font-family: monospace; font-size: 11px; padding: 6px 10px; flex-shrink: 0; }
   .dl { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); word-break: break-all; }
   .ok { color: #22c55e; } .err { color: #ef4444; } .inf { color: #8a93a2; } .wrn { color: #f59e0b; }
-  #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 180px; background: #111318; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 100; transition: opacity 0.6s ease; }
+  #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 160px; background: #111318; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 100; transition: opacity 0.6s ease; }
   #loading.hidden { opacity: 0; pointer-events: none; }
   .spin { width: 32px; height: 32px; border: 2px solid rgba(168,85,247,0.2); border-top-color: #a855f7; border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -36,11 +35,10 @@ function dbg(msg, type) {
   d.scrollTop = d.scrollHeight;
 }
 
-dbg('v6 starting', 'ok');
+dbg('v7 starting', 'ok');
 const params = new URLSearchParams(window.location.search);
 const tilesetUrl = params.get('tileset') ||
   'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
-dbg('tileset: ' + tilesetUrl.split('/').slice(-3).join('/'), 'inf');
 
 Cesium.Ion.defaultAccessToken = '';
 
@@ -74,30 +72,42 @@ Cesium.Cesium3DTileset.fromUrl(tilesetUrl, { maximumScreenSpaceError: 2 })
     const alt = carto.height;
     dbg('r=' + radius.toFixed(0) + ' lon=' + lon.toFixed(4) + ' lat=' + lat.toFixed(4) + ' alt=' + alt.toFixed(0), 'inf');
 
+    // Step 1: straight down to get tiles selected
     viewer.camera.setView({
       destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
       orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
     });
     dbg('Camera: straight down', 'ok');
 
+    // Step 2: once selected, setView (not flyTo) to angled — no animation, no flying
     let transitioned = false;
     let frameCount = 0;
     const unsub = viewer.scene.postRender.addEventListener(function() {
       frameCount++;
       const s = tileset.statistics;
+
       if (frameCount % 30 === 0) {
-        dbg('f' + frameCount + ' sel:' + s.selected + ' rdy:' + s.numberOfTilesWithContentReady + ' tot:' + s.numberOfTilesTotal, s.selected > 0 ? 'ok' : 'wrn');
+        dbg('f' + frameCount + ' sel:' + s.selected + ' rdy:' + s.numberOfTilesWithContentReady, s.selected > 0 ? 'ok' : 'wrn');
       }
+
       if (!transitioned && s.selected > 0) {
         transitioned = true;
-        dbg('Tiles selected — transitioning', 'ok');
+        dbg('Tiles visible — switching view (no animation)', 'ok');
         document.getElementById('loading').classList.add('hidden');
-        viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(lon - 0.002, lat - 0.002, alt + radius * 2.5),
-          orientation: { heading: Cesium.Math.toRadians(45), pitch: Cesium.Math.toRadians(-35), roll: 0 },
-          duration: 2.0
+
+        // Use setView instead of flyTo — instant, no camera drift
+        // Look at model center from NW at 45 degrees
+        viewer.camera.setView({
+          destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
+          orientation: {
+            heading: 0,
+            pitch: Cesium.Math.toRadians(-45),
+            roll: 0
+          }
         });
+        dbg('Camera: angled view set', 'ok');
       }
+
       if (frameCount >= 150) unsub();
     });
   })
