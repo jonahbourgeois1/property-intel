@@ -479,55 +479,41 @@ function initCesium() {
   });
 
   cesiumViewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#111318');
+  cesiumViewer.scene.globe.show = false;
   cesiumViewer.scene.highDynamicRange = false;
   cesiumViewer.scene.light = new Cesium.DirectionalLight({
     direction: Cesium.Cartesian3.normalize(new Cesium.Cartesian3(1.0, 1.0, -1.0), new Cesium.Cartesian3()),
     intensity: 5.0
   });
 
-  cesiumViewer.scene.globe.show = false;
-
-  // Completely disable the default camera controller
-  cesiumViewer.scene.screenSpaceCameraController.enableRotate = false;
-  cesiumViewer.scene.screenSpaceCameraController.enableZoom = false;
-  cesiumViewer.scene.screenSpaceCameraController.enableTilt = false;
-  cesiumViewer.scene.screenSpaceCameraController.enableLook = false;
-  cesiumViewer.scene.screenSpaceCameraController.enableTranslate = false;
-
   Cesium.Cesium3DTileset.fromUrl(currentTilesetUrl, {
-    maximumScreenSpaceError: 16,
-    dynamicScreenSpaceError: false
+    maximumScreenSpaceError: 2
   }).then(function(tileset) {
-      cesiumViewer.scene.primitives.add(tileset);
+    cesiumViewer.scene.primitives.add(tileset);
 
-      const bs = tileset.boundingSphere;
-      const radius = bs.radius > 0 ? bs.radius : 500;
-      const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(bs.center);
-      const lon = Cesium.Math.toDegrees(carto.longitude);
-      const lat = Cesium.Math.toDegrees(carto.latitude);
-      const alt = carto.height;
-      const camAlt = alt + radius * 3.0;
+    const bs = tileset.boundingSphere;
+    const radius = bs.radius > 0 ? bs.radius : 500;
+    const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(bs.center);
+    const lon = Cesium.Math.toDegrees(carto.longitude);
+    const lat = Cesium.Math.toDegrees(carto.latitude);
+    const alt = carto.height;
 
-      // Set camera straight down
-      cesiumViewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(lon, lat, camAlt),
-        orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
-      });
-
-      let revealed = false;
-      const unsub = cesiumViewer.scene.postRender.addEventListener(function() {
-        if (!revealed && tileset.statistics.selected > 0) {
-          revealed = true;
-          unsub();
-          loading.classList.add('hidden');
-          // Enable manual orbit controls after model is visible
-          enableOrbitControls(cesiumViewer, lon, lat, camAlt);
-        }
-      });
-    })
-    .catch(function(err) {
-      loading.innerHTML = '<div style="color:#ef4444;font-family:monospace;font-size:13px;text-align:center;padding:32px;"><strong>Could not load 3D model</strong><br><br>' + (err.message || String(err)) + '</div>';
+    cesiumViewer.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
+      orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
     });
+
+    let revealed = false;
+    const unsub = cesiumViewer.scene.postRender.addEventListener(function() {
+      if (!revealed && tileset.statistics.selected > 0) {
+        revealed = true;
+        unsub();
+        loading.classList.add('hidden');
+      }
+    });
+  }).catch(function(err) {
+    loading.innerHTML = '<div style="color:#ef4444;font-family:monospace;font-size:13px;text-align:center;padding:32px;"><strong>Could not load 3D model</strong><br><br>' + (err.message || String(err)) + '</div>';
+  });
 }
 
 function exit3D() {
