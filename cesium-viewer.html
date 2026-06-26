@@ -3,14 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Model Viewer</title>
+<title>3D Viewer v6</title>
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
 <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; }
-  #cesiumContainer { width: 100%; height: 100%; }
-  #loading { position: fixed; inset: 0; background: #111318; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 100; transition: opacity 0.6s ease; }
+  html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; display: flex; flex-direction: column; }
+  /* Cesium gets top portion, debug gets bottom 180px */
+  #cesiumContainer { flex: 1; min-height: 0; }
+  #debug { height: 180px; overflow-y: auto; background: #0a0c0f; border-top: 2px solid #3b82f6; font-family: monospace; font-size: 11px; padding: 6px 10px; flex-shrink: 0; }
+  .dl { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.04); word-break: break-all; }
+  .ok { color: #22c55e; } .err { color: #ef4444; } .inf { color: #8a93a2; } .wrn { color: #f59e0b; }
+  #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 180px; background: #111318; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; z-index: 100; transition: opacity 0.6s ease; }
   #loading.hidden { opacity: 0; pointer-events: none; }
   .spin { width: 32px; height: 32px; border: 2px solid rgba(168,85,247,0.2); border-top-color: #a855f7; border-radius: 50%; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -20,35 +24,46 @@
 <body>
 <div id="cesiumContainer"></div>
 <div id="loading"><div class="spin"></div><div class="load-text">Loading 3D model...</div></div>
+<div id="debug"></div>
 <script>
-  const params = new URLSearchParams(window.location.search);
-  const tilesetUrl = params.get('tileset') ||
-    'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
+function dbg(msg, type) {
+  const d = document.getElementById('debug');
+  const t = new Date().toTimeString().slice(0,8);
+  const el = document.createElement('div');
+  el.className = 'dl ' + (type||'inf');
+  el.textContent = t + ' ' + msg;
+  d.appendChild(el);
+  d.scrollTop = d.scrollHeight;
+}
 
-  Cesium.Ion.defaultAccessToken = '';
+dbg('v6 starting', 'ok');
+const params = new URLSearchParams(window.location.search);
+const tilesetUrl = params.get('tileset') ||
+  'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
+dbg('tileset: ' + tilesetUrl.split('/').slice(-3).join('/'), 'inf');
 
-  const viewer = new Cesium.Viewer('cesiumContainer', {
-    animation: false, baseLayerPicker: false, fullscreenButton: false,
-    geocoder: false, homeButton: false, infoBox: false,
-    sceneModePicker: false, selectionIndicator: false, timeline: false,
-    navigationHelpButton: false, skyBox: false, skyAtmosphere: false,
-    imageryProvider: false, baseLayer: false
-  });
+Cesium.Ion.defaultAccessToken = '';
 
-  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#111318');
-  viewer.scene.globe.show = false;
-  viewer.scene.highDynamicRange = false;
-  viewer.scene.light = new Cesium.DirectionalLight({
-    direction: Cesium.Cartesian3.normalize(
-      new Cesium.Cartesian3(1.0, 1.0, -1.0),
-      new Cesium.Cartesian3()
-    ),
-    intensity: 5.0
-  });
+const viewer = new Cesium.Viewer('cesiumContainer', {
+  animation: false, baseLayerPicker: false, fullscreenButton: false,
+  geocoder: false, homeButton: false, infoBox: false,
+  sceneModePicker: false, selectionIndicator: false, timeline: false,
+  navigationHelpButton: false, skyBox: false, skyAtmosphere: false,
+  imageryProvider: false, baseLayer: false
+});
 
-  Cesium.Cesium3DTileset.fromUrl(tilesetUrl, {
-    maximumScreenSpaceError: 2
-  }).then(function(tileset) {
+viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#111318');
+viewer.scene.globe.show = false;
+viewer.scene.highDynamicRange = false;
+viewer.scene.light = new Cesium.DirectionalLight({
+  direction: Cesium.Cartesian3.normalize(new Cesium.Cartesian3(1.0, 1.0, -1.0), new Cesium.Cartesian3()),
+  intensity: 5.0
+});
+dbg('Viewer ready', 'ok');
+
+Cesium.Cesium3DTileset.fromUrl(tilesetUrl, { maximumScreenSpaceError: 2 })
+  .then(function(tileset) {
+    dbg('Tileset loaded', 'ok');
     viewer.scene.primitives.add(tileset);
 
     const bs = tileset.boundingSphere;
@@ -57,44 +72,37 @@
     const lon = Cesium.Math.toDegrees(carto.longitude);
     const lat = Cesium.Math.toDegrees(carto.latitude);
     const alt = carto.height;
+    dbg('r=' + radius.toFixed(0) + ' lon=' + lon.toFixed(4) + ' lat=' + lat.toFixed(4) + ' alt=' + alt.toFixed(0), 'inf');
 
-    // Start straight down so tiles get selected immediately
     viewer.camera.setView({
       destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
       orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
     });
+    dbg('Camera: straight down', 'ok');
 
-    // Once tiles are selected, hide loading and rotate to angled view
-    // Stay at same altitude — just change pitch, don't fly up
     let transitioned = false;
+    let frameCount = 0;
     const unsub = viewer.scene.postRender.addEventListener(function() {
-      if (transitioned) return;
-      if (tileset.statistics.selected > 0) {
+      frameCount++;
+      const s = tileset.statistics;
+      if (frameCount % 30 === 0) {
+        dbg('f' + frameCount + ' sel:' + s.selected + ' rdy:' + s.numberOfTilesWithContentReady + ' tot:' + s.numberOfTilesTotal, s.selected > 0 ? 'ok' : 'wrn');
+      }
+      if (!transitioned && s.selected > 0) {
         transitioned = true;
-        unsub();
+        dbg('Tiles selected — transitioning', 'ok');
         document.getElementById('loading').classList.add('hidden');
-
-        // Orbit to angled view — same destination altitude, just tilt the camera
         viewer.camera.flyTo({
-          destination: Cesium.Cartesian3.fromDegrees(
-            lon - 0.002,  // slightly offset so we look toward center
-            lat - 0.002,
-            alt + radius * 2.5
-          ),
-          orientation: {
-            heading: Cesium.Math.toRadians(45),
-            pitch: Cesium.Math.toRadians(-35),
-            roll: 0
-          },
+          destination: Cesium.Cartesian3.fromDegrees(lon - 0.002, lat - 0.002, alt + radius * 2.5),
+          orientation: { heading: Cesium.Math.toRadians(45), pitch: Cesium.Math.toRadians(-35), roll: 0 },
           duration: 2.0
         });
       }
+      if (frameCount >= 150) unsub();
     });
-
-  }).catch(function(err) {
-    document.getElementById('loading').innerHTML =
-      '<div style="color:#ef4444;font-family:monospace;font-size:13px;text-align:center;padding:32px;">' +
-      '<strong>Could not load 3D model</strong><br><br>' + (err.message || String(err)) + '</div>';
+  })
+  .catch(function(err) {
+    dbg('FAILED: ' + (err.message || String(err)), 'err');
   });
 </script>
 </body>
