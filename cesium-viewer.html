@@ -56,14 +56,33 @@
 
   viewer.scene.primitives.add(tileset);
 
+  // Enable lighting so the 3D geometry is visible
+  viewer.scene.globe.show = false;
+  viewer.scene.light = new Cesium.SunLight();
+
+  // Known ECEF center from tileset.json bounding volume
+  const ECEF_CENTER = new Cesium.Cartesian3(-2391595.5, -3921345.0, 4412217.0);
+
   tileset.readyPromise
     .then(function() {
-      // Zoom to the tileset bounds
-      viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(
-        Cesium.Math.toRadians(0),
-        Cesium.Math.toRadians(-45),
-        tileset.boundingSphere.radius * 2.5
-      ));
+      const bs = tileset.boundingSphere;
+      const center = (bs && bs.radius > 0) ? bs.center : ECEF_CENTER;
+      const radius = (bs && bs.radius > 0) ? bs.radius : 500;
+
+      const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(center);
+      const lon = Cesium.Math.toDegrees(carto.longitude);
+      const lat = Cesium.Math.toDegrees(carto.latitude);
+      const alt = carto.height;
+
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.5),
+        orientation: {
+          heading: Cesium.Math.toRadians(0),
+          pitch:   Cesium.Math.toRadians(-45),
+          roll:    0.0
+        },
+        duration: 1.5
+      });
     })
     .catch(function(err) {
       document.getElementById('error-detail').textContent = err.message || 'Unknown error loading tileset';
