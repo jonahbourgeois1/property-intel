@@ -2,539 +2,93 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Plane Test — Vyanet Intel</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="config.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Model Viewer</title>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0a0c0f; --surface: #12161b; --surface2: #1a1f27;
-    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.14);
-    --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e;
-    --accent: #3b82f6; --green: #22c55e; --red: #ef4444;
-    --orange: #f97316; --header-h: 52px;
-  }
-  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
-
-  /* ── Header ── */
-  #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
-  .logo-text { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.02em; }
-  .logo-sub { font-size: 11px; color: var(--text3); }
-  .header-right { display: flex; align-items: center; gap: 10px; }
-  #property-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; background: var(--surface2); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  #version-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; white-space: nowrap; }
-  #toggle-panel { background: rgba(255,255,255,0.06); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
-  #toggle-panel:hover { background: var(--surface2); }
-  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-  /* ── Main layout ── */
-  #main { display: flex; flex: 1; overflow: hidden; min-height: 0; position: relative; }
-  #map { flex: 1; background: var(--bg); min-width: 0; position: relative; }
-
-  /* ── Loading / error ── */
-  #loading { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 500; transition: opacity 0.3s ease; }
-  #loading.hidden { opacity: 0; pointer-events: none; }
-  #error { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 500; padding: 32px; text-align: center; }
-  #error.visible { display: flex; }
-  .spinner { width: 32px; height: 32px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 13px; color: var(--text3); font-family: 'DM Mono', monospace; }
-  .error-icon { font-size: 32px; color: var(--red); }
-  .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
-  .error-msg { font-size: 13px; color: var(--text3); max-width: 340px; line-height: 1.6; }
-  .error-sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 4px; }
-
-  /* ── Map controls ── */
-  #map-controls { position: absolute; bottom: 24px; left: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
-  .map-ctrl-btn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
-  .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
-  .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
-  .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  #opacity-control { display: none; flex-direction: column; gap: 6px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; box-shadow: 0 2px 12px rgba(0,0,0,0.5); min-width: 180px; }
-  #opacity-control.visible { display: flex; }
-  .opacity-label { display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 0.06em; }
-  .opacity-label span { color: var(--text2); }
-  #opacity-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 3px; background: var(--border2); border-radius: 2px; outline: none; cursor: pointer; }
-  #opacity-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); }
-  #opacity-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--accent); }
-
-  /* ── Side panel ── */
-  #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
-  #panel.hidden { transform: translateX(360px); width: 0; }
-  .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
-  .panel-title { font-size: 14px; font-weight: 600; color: var(--text); }
-  .panel-address { font-size: 11px; color: var(--text3); margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
-  #panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; overflow-x: auto; scrollbar-width: none; margin-top: 12px; }
-  #panel-tabs::-webkit-scrollbar { display: none; }
-  .panel-tab { padding: 9px 14px; font-size: 12px; font-weight: 500; color: var(--text3); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
-  .panel-tab:hover { color: var(--text2); background: rgba(255,255,255,0.02); }
-  .panel-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  #panel-content { overflow-y: auto; flex: 1; scrollbar-width: thin; scrollbar-color: var(--border2) transparent; }
-  .info-block { padding: 14px 16px; border-bottom: 1px solid var(--border); }
-  .info-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
-  .info-label.ortho { color: var(--accent); }
-  .info-label.model3d { color: #a855f7; }
-  .info-label.meta { color: var(--text3); }
-  .info-value { font-size: 12px; color: var(--text2); line-height: 1.7; }
-  .meta-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 11px; }
-  .meta-row:last-child { border-bottom: none; }
-  .meta-key { color: var(--text3); font-family: 'DM Mono', monospace; }
-  .meta-val { color: var(--text2); font-family: 'DM Mono', monospace; text-align: right; }
-  .panel-empty { padding: 40px 24px; text-align: center; color: var(--text3); font-size: 12px; line-height: 1.8; font-family: 'DM Mono', monospace; }
-  #tile-status { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; margin: 14px 16px 0; font-size: 11px; font-family: 'DM Mono', monospace; }
-  #tile-status.loaded { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); }
-  #tile-status.error { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.2); }
-  .tile-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
-  #tile-status.loaded .tile-dot { background: var(--green); }
-  #tile-status.error .tile-dot { background: var(--red); }
-  #tile-status-text { color: var(--text2); flex: 1; }
-  .intel-block { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.06); }
-  .intel-block-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 8px; padding: 4px 10px; border-radius: 4px; display: inline-block; }
-  .intel-block-label.considerations { color: var(--green); background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.2); }
-  .intel-block-label.clarifications { color: var(--orange); background: rgba(249,115,22,0.1); border: 1px solid rgba(249,115,22,0.2); }
-  .intel-block-text { font-size: 12px; color: var(--text2); line-height: 1.7; margin-top: 8px; }
-
-  /* ── Launch 3D button ── */
-  #launch-3d-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 11px 16px; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.35); border-radius: 7px; color: #c084fc; font-size: 12px; font-weight: 600; font-family: 'DM Mono', monospace; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
-  #launch-3d-btn:hover { background: rgba(168,85,247,0.22); border-color: rgba(168,85,247,0.55); color: #d8b4fe; }
-  .btn-icon { font-size: 14px; }
-
-  /* ── 3D Model Overlay ── */
-  #viewer-3d-overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: none; flex-direction: column; }
-  #viewer-3d-overlay.active { display: flex; }
-  #viewer-3d-header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: rgba(10,12,15,0.95); border-bottom: 1px solid var(--border2); flex-shrink: 0; backdrop-filter: blur(8px); }
-  .viewer-3d-title { display: flex; align-items: center; gap: 10px; }
-  .viewer-3d-badge { font-size: 10px; font-family: 'DM Mono', monospace; color: #c084fc; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.3); padding: 3px 8px; border-radius: 4px; letter-spacing: 0.05em; }
-  .viewer-3d-name { font-size: 13px; font-weight: 500; color: var(--text2); font-family: 'DM Mono', monospace; }
-  #exit-3d-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 6px; color: #f87171; font-size: 11px; font-weight: 500; font-family: 'DM Mono', monospace; cursor: pointer; transition: all 0.15s; }
-  #exit-3d-btn:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); }
-  #cesium-container { flex: 1; position: relative; }
-  #cesium-iframe { width: 100%; height: 100%; border: none; display: block; }
-  #cesium-loading { position: absolute; inset: 0; background: #000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; z-index: 10; transition: opacity 0.5s ease; }
-  #cesium-loading.hidden { opacity: 0; pointer-events: none; }
-  .cesium-spinner { width: 36px; height: 36px; border: 2px solid rgba(168,85,247,0.2); border-top-color: #a855f7; border-radius: 50%; animation: spin 0.8s linear infinite; }
-  .cesium-loading-text { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
-  .cesium-loading-sub { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; opacity: 0.6; }
-
-  /* ── Mobile ── */
-  #mobile-toggle { display: none; position: fixed; bottom: 20px; right: 20px; z-index: 50; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; align-items: center; gap: 6px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); }
-  @media (max-width: 768px) {
-    #toggle-panel { display: none; }
-    #mobile-toggle { display: flex; }
-    #map { position: absolute; inset: 0; width: 100%; height: 100%; }
-    #loading { right: 0; } #error { right: 0; }
-    #panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: var(--header-h); width: 100% !important; height: calc(100dvh - var(--header-h)) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid var(--border2) !important; z-index: 40; }
-    #panel.mobile-open { transform: translateY(0%) !important; }
-    #map-controls { bottom: 70px; }
-  }
-  .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
-  .gm-style .gm-style-iw-d { overflow: hidden !important; }
-  .gm-style .gm-style-iw-t::after { background: #12161b !important; }
-  .gm-style-iw-chr { background: #12161b !important; border-radius: 10px 10px 0 0 !important; height: 0 !important; padding: 0 !important; }
-  .gm-style-iw-chr button { filter: invert(1) !important; opacity: 0.6 !important; }
-  .gm-style-iw-chr button.gm-ui-hover-effect { display: none !important; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+  #cesiumContainer { width: 100%; height: 100%; }
+  #error-msg { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 12px; background: #0a0c0f; color: #8a93a2; font-family: monospace; font-size: 13px; text-align: center; padding: 32px; }
+  #error-msg.visible { display: flex; }
+  #error-msg strong { color: #ef4444; font-size: 15px; }
 </style>
 </head>
 <body>
-
-<div id="header">
-  <div class="logo">
-    <div class="logo-mark">VI</div>
-    <div>
-      <div class="logo-text">Vyanet Intel</div>
-      <div class="logo-sub">Plane Test</div>
-    </div>
-  </div>
-  <div class="header-right">
-    <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v0.1.0 — test</div>
-    <div id="property-name">Loading...</div>
-  </div>
-</div>
-
-<div id="main">
-  <div id="map"></div>
-
-  <div id="map-controls">
-    <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()">
-      <span class="ctrl-dot"></span><span id="overlay-label">Show Ortho</span>
-    </button>
-    <div id="opacity-control">
-      <div class="opacity-label">ORTHO OPACITY <span id="opacity-val">80%</span></div>
-      <input type="range" id="opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)">
-    </div>
-    <button class="map-ctrl-btn" id="bounds-btn" onclick="fitToBounds()">
-      <span class="ctrl-dot"></span><span>Fit to Ortho</span>
-    </button>
-  </div>
-
-  <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading plane data...</div></div>
-  <div id="error">
-    <div class="error-icon">⚠</div>
-    <div class="error-title" id="error-title">Could not load plane data</div>
-    <div class="error-msg" id="error-msg">No tile source available.</div>
-    <div class="error-sub" id="error-sub"></div>
-  </div>
-
-  <div id="panel">
-    <div class="panel-header">
-      <div class="panel-title" id="panel-title">Plane Details</div>
-      <div class="panel-address" id="panel-address"></div>
-    </div>
-    <div id="panel-tabs">
-      <div class="panel-tab active" data-tab="ortho" onclick="switchTab('ortho')">Ortho</div>
-      <div class="panel-tab" data-tab="model" onclick="switchTab('model')">3D Model</div>
-      <div class="panel-tab" data-tab="intel" onclick="switchTab('intel')">Intel</div>
-    </div>
-    <div id="panel-content">
-
-      <!-- Ortho tab -->
-      <div id="tab-ortho">
-        <div id="tile-status">
-          <div class="tile-dot"></div>
-          <div id="tile-status-text">Connecting to tile source...</div>
-        </div>
-        <div class="info-block" style="margin-top:14px;">
-          <div class="info-label ortho">Orthophoto Overlay</div>
-          <div class="info-value">DJI Terra photogrammetry output rendered as a georeferenced tile layer on top of the satellite basemap.</div>
-          <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button onclick="toggleOverlay()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;" id="panel-overlay-btn">Show Ortho</button>
-            <button onclick="fitToBounds()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;">Fit to Ortho</button>
-          </div>
-          <div style="margin-top:10px;">
-            <div class="opacity-label" style="margin-bottom:6px;">OPACITY <span id="panel-opacity-val" style="color:var(--text2);">80%</span></div>
-            <input type="range" id="panel-opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)" style="-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;">
-          </div>
-        </div>
-        <div class="info-block">
-          <div class="info-label meta">Flight Metadata</div>
-          <div id="meta-rows"></div>
-        </div>
-        <div class="info-block">
-          <div class="info-label meta">Coverage Bounds</div>
-          <div id="bounds-rows"></div>
-        </div>
-      </div>
-
-      <!-- 3D Model tab -->
-      <div id="tab-model" style="display:none;">
-        <div class="info-block">
-          <div class="info-label model3d">3D Model</div>
-          <div class="info-value" style="margin-bottom:14px;">Full photogrammetry reconstruction from DJI Terra. Explore the property in 3D with zoom, rotate, and pan controls.</div>
-          <button id="launch-3d-btn" onclick="launch3D()">
-            <span class="btn-icon">⬡</span> Launch 3D Viewer
-          </button>
-        </div>
-        <div class="info-block">
-          <div class="info-label meta">About 3D Tiles</div>
-          <div class="info-value">This model uses the 3D Tiles (B3DM) format rendered via CesiumJS. The tile set contains LOD levels L13–L21, streaming detail on demand as you zoom in.</div>
-        </div>
-        <div class="info-block" style="border:none;">
-          <div class="info-label meta">Controls</div>
-          <div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">
-            <div class="meta-row"><span class="meta-key">Rotate</span><span class="meta-val">Left drag</span></div>
-            <div class="meta-row"><span class="meta-key">Pan</span><span class="meta-val">Middle drag</span></div>
-            <div class="meta-row"><span class="meta-key">Zoom</span><span class="meta-val">Scroll wheel</span></div>
-            <div class="meta-row"><span class="meta-key">Tilt</span><span class="meta-val">Right drag</span></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Intel tab -->
-      <div id="tab-intel" style="display:none;">
-        <div id="intel-content" class="panel-empty">No intel data available.</div>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-<button id="mobile-toggle" onclick="mobileToggle()"><div class="status-dot"></div><span id="mobile-label">Show Intel</span></button>
-
-<!-- 3D Model Overlay -->
-<div id="viewer-3d-overlay">
-  <div id="viewer-3d-header">
-    <div class="viewer-3d-title">
-      <div class="viewer-3d-badge">3D MODEL</div>
-      <div class="viewer-3d-name" id="viewer-3d-name">Tracy Residence</div>
-    </div>
-    <button id="exit-3d-btn" onclick="exit3D()">✕ Exit 3D View</button>
-  </div>
-  <div id="cesium-container">
-    <div id="cesium-loading">
-      <div class="cesium-spinner"></div>
-      <div class="cesium-loading-text">Loading 3D model...</div>
-      <div class="cesium-loading-sub">Streaming tiles from S3</div>
-    </div>
-    <iframe id="cesium-iframe" allow="fullscreen"></iframe>
-  </div>
-</div>
-
+<div id="cesiumContainer"></div>
+<div id="error-msg"><strong>Could not load 3D model</strong><span id="error-detail"></span></div>
 <script>
-const VERSION = 'v0.1.0';
-const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
-const TILESET_URL = 'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
+  // Read tileset URL from query param
+  const params = new URLSearchParams(window.location.search);
+  const tilesetUrl = params.get('tileset') ||
+    'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
 
-let map, panelOpen = false, mobileOpen = false;
-let mapsApiReady = false, pendingInit = null;
-let orthoLayer = null, orthoVisible = false;
-let currentOpacity = 0.80;
-let tileBounds = null;
-let currentTilesetUrl = TILESET_URL;
+  // Disable ion — we use self-hosted tiles only
+  Cesium.Ion.defaultAccessToken = '';
 
-const isMobile = () => window.innerWidth <= 768;
-
-function getParams() {
-  const p = new URLSearchParams(window.location.search);
-  return {
-    tilesUrl:   p.get('tiles'),
-    metaUrl:    p.get('meta'),
-    tilesetUrl: p.get('tileset'),
-    property:   p.get('property'),
-    lat:        parseFloat(p.get('lat') || '0'),
-    lng:        parseFloat(p.get('lng') || '0'),
-    name:       p.get('name') || '',
-    address:    p.get('address') || ''
-  };
-}
-
-function togglePanel() {
-  panelOpen = !panelOpen;
-  document.getElementById('panel').classList.toggle('hidden', !panelOpen);
-  document.getElementById('toggle-label').textContent = panelOpen ? 'Hide Intel' : 'View Intel';
-  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 350);
-}
-function mobileToggle() {
-  mobileOpen = !mobileOpen;
-  document.getElementById('panel').classList.toggle('mobile-open', mobileOpen);
-  document.getElementById('mobile-label').textContent = mobileOpen ? 'Show Map' : 'Show Intel';
-  setTimeout(() => { if (map) google.maps.event.trigger(map, 'resize'); }, 380);
-}
-function switchTab(tab) {
-  document.querySelectorAll('.panel-tab').forEach(t => t.classList.toggle('active', t.getAttribute('data-tab') === tab));
-  document.getElementById('tab-ortho').style.display  = tab === 'ortho'  ? 'block' : 'none';
-  document.getElementById('tab-model').style.display  = tab === 'model'  ? 'block' : 'none';
-  document.getElementById('tab-intel').style.display  = tab === 'intel'  ? 'block' : 'none';
-}
-function setLoading(msg) { document.getElementById('loading-text').textContent = msg; }
-function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
-function showError(title, msg, sub) {
-  hideLoading();
-  document.getElementById('error').classList.add('visible');
-  document.getElementById('error-title').textContent = title || 'Error';
-  document.getElementById('error-msg').textContent = msg || '';
-  document.getElementById('error-sub').textContent = sub || '';
-}
-function setTileStatus(state, text) {
-  const el = document.getElementById('tile-status');
-  el.className = state === 'loaded' ? 'loaded' : state === 'error' ? 'error' : '';
-  document.getElementById('tile-status-text').textContent = text;
-}
-function setOpacity(val) {
-  currentOpacity = val / 100;
-  document.getElementById('opacity-val').textContent = val + '%';
-  document.getElementById('panel-opacity-val').textContent = val + '%';
-  document.getElementById('opacity-slider').value = val;
-  document.getElementById('panel-opacity-slider').value = val;
-  if (orthoLayer && orthoVisible) orthoLayer.setOpacity(currentOpacity);
-}
-function toggleOverlay() {
-  orthoVisible = !orthoVisible;
-  const btn = document.getElementById('overlay-btn');
-  const lbl = document.getElementById('overlay-label');
-  const pbtn = document.getElementById('panel-overlay-btn');
-  const opCtrl = document.getElementById('opacity-control');
-  if (orthoVisible) {
-    btn.classList.add('active'); lbl.textContent = 'Hide Ortho'; pbtn.textContent = 'Hide Ortho';
-    opCtrl.classList.add('visible');
-    if (orthoLayer && map) {
-      if (map.overlayMapTypes.getLength() === 0) map.overlayMapTypes.push(orthoLayer);
-      orthoLayer.setOpacity(currentOpacity);
-    }
-  } else {
-    btn.classList.remove('active'); lbl.textContent = 'Show Ortho'; pbtn.textContent = 'Show Ortho';
-    opCtrl.classList.remove('visible');
-    if (map) map.overlayMapTypes.clear();
-  }
-}
-function fitToBounds() {
-  if (!map || !tileBounds) return;
-  map.fitBounds(tileBounds);
-}
-function buildTileLayer(tilesBaseUrl) {
-  const base = tilesBaseUrl.replace(/\/$/, '');
-  return new google.maps.ImageMapType({
-    getTileUrl: function(coord, zoom) { return base + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png'; },
-    tileSize: new google.maps.Size(256, 256),
-    minZoom: 12, maxZoom: 21, name: 'Ortho', opacity: currentOpacity
+  const viewer = new Cesium.Viewer('cesiumContainer', {
+    animation:            false,
+    baseLayerPicker:      false,
+    fullscreenButton:     false,
+    geocoder:             false,
+    homeButton:           false,
+    infoBox:              false,
+    sceneModePicker:      false,
+    selectionIndicator:   false,
+    timeline:             false,
+    navigationHelpButton: false,
+    skyBox:               false,
+    skyAtmosphere:        false,
+    imageryProvider:      false,
+    baseLayer:            false
   });
-}
 
-// ── 3D Viewer ─────────────────────────────────────────────────────────────
-const CESIUM_VIEWER_BASE = 'https://jonahbourgeois1.github.io/property-intel/cesium-viewer.html';
+  // Dark background
+  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0a0c0f');
+  viewer.scene.globe.show = false;
 
-function launch3D() {
-  const overlay = document.getElementById('viewer-3d-overlay');
-  const iframe  = document.getElementById('cesium-iframe');
-  const loading = document.getElementById('cesium-loading');
-  const name    = document.getElementById('panel-title').textContent;
-
-  document.getElementById('viewer-3d-name').textContent = name;
-  overlay.classList.add('active');
-  loading.classList.remove('hidden');
-
-  iframe.onload = function() {
-    setTimeout(() => { loading.classList.add('hidden'); }, 3000);
-  };
-
-  iframe.src = CESIUM_VIEWER_BASE + '?tileset=' + encodeURIComponent(currentTilesetUrl);
-}
-
-function exit3D() {
-  const overlay = document.getElementById('viewer-3d-overlay');
-  const iframe  = document.getElementById('cesium-iframe');
-  overlay.classList.remove('active');
-  iframe.src = 'about:blank';
-}
-
-// ── Meta panel ────────────────────────────────────────────────────────────
-function populateMeta(meta) {
-  const metaRows = document.getElementById('meta-rows');
-  const boundsRows = document.getElementById('bounds-rows');
-  const fields = [];
-  if (meta.fly_altitude) fields.push(['Altitude', Math.round(meta.fly_altitude) + ' m (' + Math.round(meta.fly_altitude * 3.28084) + ' ft)']);
-  if (meta.gsd)          fields.push(['GSD', meta.gsd + ' cm/px']);
-  if (meta.covered_area) fields.push(['Area', (meta.covered_area * 100).toFixed(3) + ' ha']);
-  if (meta.min_zoom)     fields.push(['Zoom range', meta.min_zoom + ' - ' + meta.max_zoom]);
-  if (meta.capture_date) fields.push(['Captured', meta.capture_date]);
-  metaRows.innerHTML = fields.length
-    ? fields.map(([k,v]) => '<div class="meta-row"><span class="meta-key">' + k + '</span><span class="meta-val">' + v + '</span></div>').join('')
-    : '<div class="info-value" style="color:var(--text3);font-size:11px;font-family:\'DM Mono\',monospace;">No metadata available</div>';
-  const b = meta.bounds || (meta.gps_corner ? { north: meta.gps_corner.top_left_lat, south: meta.gps_corner.bottom_right_lat, west: meta.gps_corner.top_left_lon, east: meta.gps_corner.bottom_right_lon } : null);
-  if (b) {
-    boundsRows.innerHTML = [['N', b.north.toFixed(6)],['S', b.south.toFixed(6)],['W', b.west.toFixed(6)],['E', b.east.toFixed(6)]].map(([k,v]) => '<div class="meta-row"><span class="meta-key">' + k + '</span><span class="meta-val">' + v + '</span></div>').join('');
-  } else {
-    boundsRows.innerHTML = '<div class="info-value" style="color:var(--text3);font-size:11px;font-family:\'DM Mono\',monospace;">No bounds available</div>';
-  }
-}
-function populateIntel(d) {
-  const el = document.getElementById('intel-content');
-  if (!d || (!d.considerations && !d.clarifications)) { el.className = 'panel-empty'; el.innerHTML = 'No responder intel available for this property.'; return; }
-  el.className = '';
-  let html = '';
-  if (d.considerations) html += '<div class="intel-block"><div class="intel-block-label considerations">Responder Considerations</div><div class="intel-block-text">' + d.considerations + '</div></div>';
-  if (d.clarifications) html += '<div class="intel-block"><div class="intel-block-label clarifications">Information Needing Clarification</div><div class="intel-block-text">' + d.clarifications + '</div></div>';
-  el.innerHTML = html;
-}
-
-// ── Map init ──────────────────────────────────────────────────────────────
-function initMapAt(lat, lng, meta, tilesBaseUrl) {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat, lng }, zoom: 18, mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
-    mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: false, fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+  // Load the tileset
+  const tileset = new Cesium.Cesium3DTileset({
+    url: tilesetUrl,
+    maximumScreenSpaceError: 4
   });
-  if (tilesBaseUrl) {
-    orthoLayer = buildTileLayer(tilesBaseUrl);
-    if (meta && (meta.bounds || meta.gps_corner)) {
-      const b = meta.bounds || { north: meta.gps_corner.top_left_lat, south: meta.gps_corner.bottom_right_lat, west: meta.gps_corner.top_left_lon, east: meta.gps_corner.bottom_right_lon };
-      tileBounds = new google.maps.LatLngBounds({ lat: b.south, lng: b.west }, { lat: b.north, lng: b.east });
-      const n = Math.pow(2, 18);
-      const cLat = (b.north + b.south) / 2, cLng = (b.east + b.west) / 2;
-      const tx = Math.floor((cLng + 180) / 360 * n);
-      const latRad = cLat * Math.PI / 180;
-      const ty = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
-      fetch(tilesBaseUrl.replace(/\/$/, '') + '/18/' + tx + '/' + ty + '.png', { method: 'HEAD' })
-        .then(r => setTileStatus(r.ok ? 'loaded' : 'error', r.ok ? 'Tile source connected' : 'Tiles not reachable (HTTP ' + r.status + ')'))
-        .catch(() => setTileStatus('error', 'Tiles not reachable — check CORS'));
-    } else {
-      setTileStatus('', 'Tile source set — no bounds to verify');
-    }
-  }
-  if (tileBounds) {
-    map.fitBounds(tileBounds);
-    google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 20) map.setZoom(20); });
-  }
-  hideLoading();
-  if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 600);
-}
 
-// ── Main loader ───────────────────────────────────────────────────────────
-async function loadViewer() {
-  const params = getParams();
-  let tilesBaseUrl = null, meta = {}, centerLat = null, centerLng = null;
-  let name = params.name, address = params.address;
+  viewer.scene.primitives.add(tileset);
 
-  if (params.tilesetUrl) currentTilesetUrl = params.tilesetUrl;
+  // Enable lighting so the 3D geometry is visible
+  viewer.scene.globe.show = false;
+  viewer.scene.light = new Cesium.SunLight();
 
-  if (params.property) {
-    setLoading('Loading property data...');
-    try {
-      const res = await fetch('https://jonahbourgeois1.github.io/property-intel/data/plane/' + params.property + '.json');
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const d = await res.json();
-      name = d.name || name; address = d.address || address;
-      tilesBaseUrl = d.tiles_url || null;
-      if (d.tileset_url) currentTilesetUrl = d.tileset_url;
-      if (d.meta_url) { const mr = await fetch(d.meta_url); if (mr.ok) meta = await mr.json(); }
-      if (d.fly_altitude) meta.fly_altitude = meta.fly_altitude || d.fly_altitude;
-      if (d.gsd)          meta.gsd          = meta.gsd          || d.gsd;
-      if (d.covered_area) meta.covered_area  = meta.covered_area  || d.covered_area;
-      if (d.bounds)       meta.bounds        = meta.bounds        || d.bounds;
-      if (d.min_zoom)     meta.min_zoom      = meta.min_zoom      || d.min_zoom;
-      if (d.max_zoom)     meta.max_zoom      = meta.max_zoom      || d.max_zoom;
-      if (d.lat && d.lng) { centerLat = d.lat; centerLng = d.lng; }
-      populateIntel(d);
-    } catch(e) { showError('Property not found', 'Could not load plane data for this property.', e.message); return; }
-  }
+  // Known ECEF center from tileset.json bounding volume
+  const ECEF_CENTER = new Cesium.Cartesian3(-2391595.5, -3921345.0, 4412217.0);
 
-  if (!tilesBaseUrl && params.tilesUrl) tilesBaseUrl = params.tilesUrl;
-  if (params.metaUrl) { try { const mr = await fetch(params.metaUrl); if (mr.ok) meta = await mr.json(); } catch(e) {} }
+  tileset.readyPromise
+    .then(function() {
+      const bs = tileset.boundingSphere;
+      const center = (bs && bs.radius > 0) ? bs.center : ECEF_CENTER;
+      const radius = (bs && bs.radius > 0) ? bs.radius : 500;
 
-  if (!tilesBaseUrl) {
-    showError('No tile source', 'Pass ?tiles=URL or ?property=HASH to load orthophoto tiles.', 'Example: plane-test.html?tiles=https://...s3.../map');
-    return;
-  }
+      const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(center);
+      const lon = Cesium.Math.toDegrees(carto.longitude);
+      const lat = Cesium.Math.toDegrees(carto.latitude);
+      const alt = carto.height;
 
-  if (!centerLat || !centerLng) {
-    if (meta.bounds) { centerLat = (meta.bounds.north + meta.bounds.south) / 2; centerLng = (meta.bounds.east + meta.bounds.west) / 2; }
-    else if (meta.gps_corner) { centerLat = (meta.gps_corner.top_left_lat + meta.gps_corner.bottom_right_lat) / 2; centerLng = (meta.gps_corner.top_left_lon + meta.gps_corner.bottom_right_lon) / 2; }
-    else if (params.lat && params.lng) { centerLat = params.lat; centerLng = params.lng; }
-  }
-
-  document.getElementById('property-name').textContent = name || 'Plane Test';
-  document.getElementById('panel-title').textContent   = name || 'Plane Test';
-  document.getElementById('panel-address').textContent = address.replace(/^\s+/, '');
-  document.getElementById('viewer-3d-name').textContent = name || 'Plane Test';
-  populateMeta(meta);
-
-  if ((!centerLat || !centerLng) && address && GEOCODE_KEY) {
-    try {
-      const gr = await fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(address) + '&key=' + GEOCODE_KEY);
-      const gd = await gr.json();
-      if (gd.status === 'OK' && gd.results[0]) { centerLat = gd.results[0].geometry.location.lat; centerLng = gd.results[0].geometry.location.lng; }
-    } catch(e) {}
-  }
-
-  if (!centerLat || !centerLng) { centerLat = 44.058; centerLng = -121.315; }
-
-  setLoading('Initializing map...');
-  if (mapsApiReady) { initMapAt(centerLat, centerLng, meta, tilesBaseUrl); }
-  else { pendingInit = { lat: centerLat, lng: centerLng, meta, tilesBaseUrl }; }
-}
-
-window.initGoogleMaps = function() {
-  mapsApiReady = true;
-  if (pendingInit) { const { lat, lng, meta, tilesBaseUrl } = pendingInit; pendingInit = null; initMapAt(lat, lng, meta, tilesBaseUrl); }
-};
-
-loadViewer();
+      viewer.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.5),
+        orientation: {
+          heading: Cesium.Math.toRadians(0),
+          pitch:   Cesium.Math.toRadians(-45),
+          roll:    0.0
+        },
+        duration: 1.5
+      });
+    })
+    .catch(function(err) {
+      document.getElementById('error-detail').textContent = err.message || 'Unknown error loading tileset';
+      document.getElementById('error-msg').classList.add('visible');
+      console.error('Tileset error:', err);
+    });
 </script>
-<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 </body>
 </html>
