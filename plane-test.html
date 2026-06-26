@@ -426,6 +426,13 @@ function initCesium() {
     intensity: 5.0
   });
 
+  // Disable camera inertia and auto-zoom behaviors
+  cesiumViewer.scene.screenSpaceCameraController.inertiaSpin = 0;
+  cesiumViewer.scene.screenSpaceCameraController.inertiaTranslate = 0;
+  cesiumViewer.scene.screenSpaceCameraController.inertiaZoom = 0;
+  cesiumViewer.scene.screenSpaceCameraController.minimumZoomDistance = 50;
+  cesiumViewer.scene.screenSpaceCameraController.maximumZoomDistance = 5000;
+
   Cesium.Cesium3DTileset.fromUrl(currentTilesetUrl, { maximumScreenSpaceError: 16, dynamicScreenSpaceError: false })
     .then(function(tileset) {
       cesiumViewer.scene.primitives.add(tileset);
@@ -448,6 +455,13 @@ function initCesium() {
           revealed = true;
           unsub();
           loading.classList.add('hidden');
+          // Lock camera — prevent Cesium from auto-adjusting position
+          cesiumViewer.scene.screenSpaceCameraController.enableTilt = true;
+          cesiumViewer.scene.screenSpaceCameraController.enableZoom = true;
+          cesiumViewer.scene.screenSpaceCameraController.enableRotate = true;
+          cesiumViewer.scene.screenSpaceCameraController.enableTranslate = false;
+          // Stop any in-progress camera flight
+          cesiumViewer.camera.cancelFlight();
         }
       });
     })
