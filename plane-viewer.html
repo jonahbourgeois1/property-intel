@@ -344,7 +344,7 @@ async function loadViewer() {
   if (params.property) {
     setLoading('Loading property data...');
     try {
-      const res = await fetch('https://jonahbourgeois1.github.io/property-intel/data/plane/' + params.property + '.json');
+      const res = await fetch('https://responder-intel.vyanet.com/data/plane/' + params.property + '.json');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
       propertyData = d; name = d.name || name; address = d.address || address;
