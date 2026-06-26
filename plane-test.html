@@ -446,6 +446,13 @@ function initCesium() {
       orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
     });
 
+    // Disable all camera movement — prevent drift
+    cesiumViewer.scene.screenSpaceCameraController.enableRotate    = false;
+    cesiumViewer.scene.screenSpaceCameraController.enableZoom      = false;
+    cesiumViewer.scene.screenSpaceCameraController.enableTilt      = false;
+    cesiumViewer.scene.screenSpaceCameraController.enableLook      = false;
+    cesiumViewer.scene.screenSpaceCameraController.enableTranslate = false;
+
     let revealed = false;
     const unsub = cesiumViewer.scene.postRender.addEventListener(function() {
       if (!revealed && tileset.statistics.selected > 0) {
