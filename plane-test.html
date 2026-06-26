@@ -433,8 +433,10 @@ function initCesium() {
   cesiumViewer.scene.screenSpaceCameraController.minimumZoomDistance = 50;
   cesiumViewer.scene.screenSpaceCameraController.maximumZoomDistance = 5000;
 
-  Cesium.Cesium3DTileset.fromUrl(currentTilesetUrl, { maximumScreenSpaceError: 16, dynamicScreenSpaceError: false })
-    .then(function(tileset) {
+  Cesium.Cesium3DTileset.fromUrl(currentTilesetUrl, {
+    maximumScreenSpaceError: 16,
+    dynamicScreenSpaceError: false
+  }).then(function(tileset) {
       cesiumViewer.scene.primitives.add(tileset);
 
       const bs = tileset.boundingSphere;
@@ -443,10 +445,24 @@ function initCesium() {
       const lon = Cesium.Math.toDegrees(carto.longitude);
       const lat = Cesium.Math.toDegrees(carto.latitude);
       const alt = carto.height;
+      const camAlt = alt + radius * 3.0;
 
+      // Set camera straight down
       cesiumViewer.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
+        destination: Cesium.Cartesian3.fromDegrees(lon, lat, camAlt),
         orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
+      });
+
+      // Clamp camera so it cannot fly above the starting altitude
+      cesiumViewer.scene.postUpdate.addEventListener(function() {
+        const pos = cesiumViewer.camera.position;
+        const camCarto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(pos);
+        if (camCarto && camCarto.height > camAlt * 1.05) {
+          cesiumViewer.camera.setView({
+            destination: Cesium.Cartesian3.fromDegrees(lon, lat, camAlt),
+            orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
+          });
+        }
       });
 
       let revealed = false;
@@ -455,13 +471,6 @@ function initCesium() {
           revealed = true;
           unsub();
           loading.classList.add('hidden');
-          // Lock camera — prevent Cesium from auto-adjusting position
-          cesiumViewer.scene.screenSpaceCameraController.enableTilt = true;
-          cesiumViewer.scene.screenSpaceCameraController.enableZoom = true;
-          cesiumViewer.scene.screenSpaceCameraController.enableRotate = true;
-          cesiumViewer.scene.screenSpaceCameraController.enableTranslate = false;
-          // Stop any in-progress camera flight
-          cesiumViewer.camera.cancelFlight();
         }
       });
     })
