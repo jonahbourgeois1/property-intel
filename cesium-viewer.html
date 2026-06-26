@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Model Viewer</title>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #000; overflow: hidden; }
+  #cesiumContainer { width: 100%; height: 100%; }
+  #error-msg { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 12px; background: #0a0c0f; color: #8a93a2; font-family: monospace; font-size: 13px; text-align: center; padding: 32px; }
+  #error-msg.visible { display: flex; }
+  #error-msg strong { color: #ef4444; font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id="error-msg"><strong>Could not load 3D model</strong><span id="error-detail"></span></div>
+<script>
+  // Read tileset URL from query param
+  const params = new URLSearchParams(window.location.search);
+  const tilesetUrl = params.get('tileset') ||
+    'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
+
+  // Disable ion — we use self-hosted tiles only
+  Cesium.Ion.defaultAccessToken = '';
+
+  const viewer = new Cesium.Viewer('cesiumContainer', {
+    animation:            false,
+    baseLayerPicker:      false,
+    fullscreenButton:     false,
+    geocoder:             false,
+    homeButton:           false,
+    infoBox:              false,
+    sceneModePicker:      false,
+    selectionIndicator:   false,
+    timeline:             false,
+    navigationHelpButton: false,
+    skyBox:               false,
+    skyAtmosphere:        false,
+    imageryProvider:      false,
+    baseLayer:            false
+  });
+
+  // Dark background
+  viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0a0c0f');
+  viewer.scene.globe.show = false;
+
+  // Load the tileset
+  const tileset = new Cesium.Cesium3DTileset({
+    url: tilesetUrl,
+    maximumScreenSpaceError: 4
+  });
+
+  viewer.scene.primitives.add(tileset);
+
+  tileset.readyPromise
+    .then(function() {
+      // Zoom to the tileset bounds
+      viewer.zoomTo(tileset, new Cesium.HeadingPitchRange(
+        Cesium.Math.toRadians(0),
+        Cesium.Math.toRadians(-45),
+        tileset.boundingSphere.radius * 2.5
+      ));
+    })
+    .catch(function(err) {
+      document.getElementById('error-detail').textContent = err.message || 'Unknown error loading tileset';
+      document.getElementById('error-msg').classList.add('visible');
+      console.error('Tileset error:', err);
+    });
+</script>
+</body>
+</html>
