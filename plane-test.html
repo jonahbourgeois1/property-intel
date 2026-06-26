@@ -387,7 +387,10 @@ function launch3D() {
   overlay.classList.add('active');
   loading.classList.remove('hidden');
 
-  // Hide plane-test loading overlay once cesium signals ready via postMessage
+  // Hide plane-test cesium overlay immediately — cesium-viewer has its own spinner
+  iframe.onload = function() {
+    document.getElementById('cesium-loading').classList.add('hidden');
+  };
   iframe.src = CESIUM_VIEWER_BASE + '?tileset=' + encodeURIComponent(currentTilesetUrl);
 }
 
