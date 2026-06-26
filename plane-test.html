@@ -375,6 +375,8 @@ function buildTileLayer(tilesBaseUrl) {
 }
 
 // ── 3D Viewer ─────────────────────────────────────────────────────────────
+const CESIUM_VIEWER_BASE = 'https://jonahbourgeois1.github.io/property-intel/cesium-viewer.html';
+
 function launch3D() {
   const overlay = document.getElementById('viewer-3d-overlay');
   const iframe  = document.getElementById('cesium-iframe');
@@ -385,15 +387,11 @@ function launch3D() {
   overlay.classList.add('active');
   loading.classList.remove('hidden');
 
-  // Build self-contained Cesium HTML page as a data URL
-  const cesiumHtml = buildCesiumPage(currentTilesetUrl);
-  const blob = new Blob([cesiumHtml], { type: 'text/html' });
-  const blobUrl = URL.createObjectURL(blob);
-
   iframe.onload = function() {
-    setTimeout(() => { loading.classList.add('hidden'); }, 2000);
+    setTimeout(() => { loading.classList.add('hidden'); }, 3000);
   };
-  iframe.src = blobUrl;
+
+  iframe.src = CESIUM_VIEWER_BASE + '?tileset=' + encodeURIComponent(currentTilesetUrl);
 }
 
 function exit3D() {
@@ -401,46 +399,6 @@ function exit3D() {
   const iframe  = document.getElementById('cesium-iframe');
   overlay.classList.remove('active');
   iframe.src = 'about:blank';
-}
-
-function buildCesiumPage(tilesetUrl) {
-  return '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
-    '<title>3D Model</title>' +
-    '<script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"><\/script>' +
-    '<link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">' +
-    '<style>*{margin:0;padding:0;box-sizing:border-box;}html,body{width:100%;height:100%;background:#000;overflow:hidden;}#cesiumContainer{width:100%;height:100%;}<\/style>' +
-    '<\/head><body>' +
-    '<div id="cesiumContainer"><\/div>' +
-    '<script>' +
-    'Cesium.Ion.defaultAccessToken = "";' +
-    'const viewer = new Cesium.Viewer("cesiumContainer", {' +
-    '  animation: false,' +
-    '  baseLayerPicker: false,' +
-    '  fullscreenButton: true,' +
-    '  geocoder: false,' +
-    '  homeButton: true,' +
-    '  infoBox: false,' +
-    '  sceneModePicker: false,' +
-    '  selectionIndicator: false,' +
-    '  timeline: false,' +
-    '  navigationHelpButton: true,' +
-    '  imageryProvider: new Cesium.TileMapServiceImageryProvider({' +
-    '    url: Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),' +
-    '    maximumLevel: 5,' +
-    '    credit: ""' +
-    '  })' +
-    '});' +
-    'viewer.scene.globe.enableLighting = true;' +
-    'const tileset = viewer.scene.primitives.add(new Cesium.Cesium3DTileset({' +
-    '  url: "' + tilesetUrl + '",' +
-    '  maximumScreenSpaceError: 8' +
-    '}));' +
-    'tileset.readyPromise.then(function() {' +
-    '  viewer.zoomTo(tileset);' +
-    '}).catch(function(err) {' +
-    '  console.error("Tileset load error:", err);' +
-    '});' +
-    '<\/script><\/body><\/html>';
 }
 
 // ── Meta panel ────────────────────────────────────────────────────────────
