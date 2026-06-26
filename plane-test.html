@@ -375,8 +375,8 @@ function buildTileLayer(tilesBaseUrl) {
 }
 
 // ── 3D Viewer ─────────────────────────────────────────────────────────────
-const CESIUM_VIEWER_BASE = 'https://jonahbourgeois1.github.io/property-intel/cesium-viewer.html';
-
+const CESIUM_VIEWER_BASE = 'https://responder-intel.vyanet.com/cesium-viewer.html';
+ 
 function launch3D() {
   const overlay = document.getElementById('viewer-3d-overlay');
   const loading = document.getElementById('cesium-loading');
@@ -475,7 +475,7 @@ async function loadViewer() {
   if (params.property) {
     setLoading('Loading property data...');
     try {
-      const res = await fetch('https://jonahbourgeois1.github.io/property-intel/data/plane/' + params.property + '.json');
+      const res = await fetch('https://responder-intel.vyanet.com/data/plane/' + params.property + '.json');
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const d = await res.json();
       name = d.name || name; address = d.address || address;
