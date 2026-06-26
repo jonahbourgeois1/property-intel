@@ -461,7 +461,7 @@ function initMapAt(lat, lng, meta, tilesBaseUrl) {
     google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 20) map.setZoom(20); });
   }
   hideLoading();
-  if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 600);
+  if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); switchTab("model"); }, 600);
 }
 
 // ── Main loader ───────────────────────────────────────────────────────────
