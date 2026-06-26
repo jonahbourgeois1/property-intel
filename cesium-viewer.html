@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>3D Viewer v8</title>
+<title>3D Viewer v9</title>
 <script src="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Cesium.js"></script>
 <link href="https://cesium.com/downloads/cesiumjs/releases/1.114/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
 <style>
@@ -35,7 +35,7 @@ function dbg(msg, type) {
   d.scrollTop = d.scrollHeight;
 }
 
-dbg('v8 starting', 'ok');
+dbg('v9 starting', 'ok');
 const params = new URLSearchParams(window.location.search);
 const tilesetUrl = params.get('tileset') ||
   'https://property-intel-tiles.s3.amazonaws.com/captures/tracy-residence-2026-06/b3dm/tileset.json';
@@ -60,17 +60,9 @@ viewer.scene.light = new Cesium.DirectionalLight({
 dbg('Viewer ready', 'ok');
 
 Cesium.Cesium3DTileset.fromUrl(tilesetUrl, {
-  maximumScreenSpaceError: 2,
-  skipLevelOfDetail: false,
-  // Disable frustum and occlusion culling — DJI Terra bounding volumes are unreliable
-  cullWithChildrenBounds: false
+  maximumScreenSpaceError: 2
 }).then(function(tileset) {
   dbg('Tileset loaded', 'ok');
-
-  // Disable all culling on the tileset
-  tileset.foveatedScreenSpaceError = false;
-  tileset.skipLevelOfDetail = false;
-
   viewer.scene.primitives.add(tileset);
 
   const bs = tileset.boundingSphere;
@@ -81,26 +73,30 @@ Cesium.Cesium3DTileset.fromUrl(tilesetUrl, {
   const alt = carto.height;
   dbg('r=' + radius.toFixed(0) + ' lon=' + lon.toFixed(4) + ' lat=' + lat.toFixed(4) + ' alt=' + alt.toFixed(0), 'inf');
 
-  // Set angled view directly — no straight-down step
+  // Straight down — the only view that works
   viewer.camera.setView({
     destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
-    orientation: {
-      heading: 0,
-      pitch: Cesium.Math.toRadians(-45),
-      roll: 0
-    }
+    orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
   });
-  dbg('Camera: angled view', 'ok');
-  document.getElementById('loading').classList.add('hidden');
+  dbg('Camera: straight down (nadir view)', 'ok');
 
   let frameCount = 0;
+  let revealed = false;
   const unsub = viewer.scene.postRender.addEventListener(function() {
     frameCount++;
     const s = tileset.statistics;
+
+    // Hide loading once tiles are ready
+    if (!revealed && s.selected > 0) {
+      revealed = true;
+      document.getElementById('loading').classList.add('hidden');
+      dbg('Model visible — nadir view active', 'ok');
+    }
+
     if (frameCount % 30 === 0) {
       dbg('f' + frameCount + ' sel:' + s.selected + ' rdy:' + s.numberOfTilesWithContentReady + ' tot:' + s.numberOfTilesTotal, s.selected > 0 ? 'ok' : 'wrn');
     }
-    if (frameCount >= 150) unsub();
+    if (frameCount >= 90) unsub();
   });
 
 }).catch(function(err) {
