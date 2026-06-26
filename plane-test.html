@@ -398,73 +398,16 @@ function launch3D() {
 
   loadCesiumScript(function() {
     if (cesiumViewer) {
-      // Already initialized — just show and reveal
       loading.classList.add('hidden');
+      // Force resize so Cesium redraws at correct dimensions
+      setTimeout(() => { cesiumViewer.resize(); cesiumViewer.render(); }, 50);
       return;
     }
-    initCesium();
+    // Delay init until overlay is fully visible and has dimensions
+    setTimeout(initCesium, 100);
   });
 }
 
-function enableOrbitControls(viewer, lon, lat, alt) {
-  const canvas = viewer.canvas;
-  let isDragging = false;
-  let lastX = 0, lastY = 0;
-  let heading = 0, pitch = -90, dist = alt;
-
-  function updateCamera() {
-    viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(lon, lat, dist),
-      orientation: {
-        heading: Cesium.Math.toRadians(heading),
-        pitch: Cesium.Math.toRadians(pitch),
-        roll: 0
-      }
-    });
-  }
-
-  canvas.addEventListener('mousedown', function(e) { isDragging = true; lastX = e.clientX; lastY = e.clientY; });
-  canvas.addEventListener('mouseup', function() { isDragging = false; });
-  canvas.addEventListener('mousemove', function(e) {
-    if (!isDragging) return;
-    const dx = e.clientX - lastX;
-    const dy = e.clientY - lastY;
-    lastX = e.clientX; lastY = e.clientY;
-    heading += dx * 0.3;
-    pitch = Math.max(-90, Math.min(-5, pitch - dy * 0.2));
-    updateCamera();
-  });
-  canvas.addEventListener('wheel', function(e) {
-    dist = Math.max(100, Math.min(alt * 2, dist + e.deltaY * 0.5));
-    updateCamera();
-    e.preventDefault();
-  }, { passive: false });
-
-  // Touch support
-  let lastTouchDist = 0;
-  canvas.addEventListener('touchstart', function(e) {
-    if (e.touches.length === 1) { isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY; }
-    if (e.touches.length === 2) { lastTouchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY); }
-  });
-  canvas.addEventListener('touchend', function() { isDragging = false; });
-  canvas.addEventListener('touchmove', function(e) {
-    if (e.touches.length === 1 && isDragging) {
-      const dx = e.touches[0].clientX - lastX;
-      const dy = e.touches[0].clientY - lastY;
-      lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
-      heading += dx * 0.3;
-      pitch = Math.max(-90, Math.min(-5, pitch - dy * 0.2));
-      updateCamera();
-    }
-    if (e.touches.length === 2) {
-      const d = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-      dist = Math.max(100, Math.min(alt * 2, dist - (d - lastTouchDist) * 1.5));
-      lastTouchDist = d;
-      updateCamera();
-    }
-    e.preventDefault();
-  }, { passive: false });
-}
 
 function initCesium() {
   const loading = document.getElementById('cesium-loading');
