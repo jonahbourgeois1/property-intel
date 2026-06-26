@@ -426,7 +426,7 @@ function initCesium() {
     intensity: 5.0
   });
 
-  Cesium.Cesium3DTileset.fromUrl(currentTilesetUrl, { maximumScreenSpaceError: 2 })
+  Cesium.Cesium3DTileset.fromUrl(currentTilesetUrl, { maximumScreenSpaceError: 16, dynamicScreenSpaceError: false })
     .then(function(tileset) {
       cesiumViewer.scene.primitives.add(tileset);
 
