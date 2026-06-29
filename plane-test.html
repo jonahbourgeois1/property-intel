@@ -475,7 +475,7 @@ function buildTileLayerOverlay(capture) {
   const maxZ = capture.tile_levels.max;
   const b = capture.bounds;
   // Shrink bounds by a small margin to avoid requesting edge tiles that don't exist
-  const margin = 0.001;
+  const margin = 0.003;
   const inner = {
     north: b.north - margin,
     south: b.south + margin,
