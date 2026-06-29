@@ -164,8 +164,8 @@
       <span class="ctrl-dot"></span><span id="overlay-label">Show 2D Map</span>
     </button>
     <div id="opacity-control">
-      <div class="opacity-label">2D MAP OPACITY <span id="opacity-val">80%</span></div>
-      <input type="range" id="opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)">
+      <div class="opacity-label">2D MAP OPACITY <span id="opacity-val">100%</span></div>
+      <input type="range" id="opacity-slider" min="0" max="100" value="100" oninput="setOpacity(this.value)">
     </div>
     <button class="map-ctrl-btn" id="bounds-btn" onclick="fitToBounds()">
       <span class="ctrl-dot"></span><span>Fit to Ortho</span>
@@ -206,8 +206,8 @@
             <button onclick="fitToBounds()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;">Fit to Ortho</button>
           </div>
           <div style="margin-top:10px;">
-            <div class="opacity-label" style="margin-bottom:6px;">OPACITY <span id="panel-opacity-val" style="color:var(--text2);">80%</span></div>
-            <input type="range" id="panel-opacity-slider" min="0" max="100" value="80" oninput="setOpacity(this.value)" style="-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;">
+            <div class="opacity-label" style="margin-bottom:6px;">OPACITY <span id="panel-opacity-val" style="color:var(--text2);">100%</span></div>
+            <input type="range" id="panel-opacity-slider" min="0" max="100" value="100" oninput="setOpacity(this.value)" style="-webkit-appearance:none;appearance:none;width:100%;height:3px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;" value="100">
           </div>
         </div>
         <div class="info-block">
@@ -282,7 +282,7 @@ const CAPTURES_URL = 'https://responder-intel.vyanet.com/data/captures.json';
 let map, panelOpen = false, mobileOpen = false;
 let mapsApiReady = false, pendingInit = null;
 let orthoLayers = [], orthoVisible = false;
-let currentOpacity = 0.80;
+let currentOpacity = 1.0;
 let allBounds = null;         // union of all capture bounds
 let captures = [];            // loaded from captures.json
 let activeTilesetUrl = null;  // best-match B3DM for current property
@@ -367,8 +367,19 @@ function fitToBounds() {
 // Build an ImageMapType for a single capture
 function buildTileLayer(capture) {
   const base = capture.tiles.replace(/\/$/, '');
+  const b = capture.bounds;
   return new google.maps.ImageMapType({
-    getTileUrl: (coord, zoom) => base + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png',
+    getTileUrl: function(coord, zoom) {
+      // Only serve tiles whose tile bounds intersect the capture bounds
+      const n = Math.pow(2, zoom);
+      const tileLng_w = coord.x / n * 360 - 180;
+      const tileLng_e = (coord.x + 1) / n * 360 - 180;
+      const tileY_n = Math.atan(Math.sinh(Math.PI * (1 - 2 * coord.y / n))) * 180 / Math.PI;
+      const tileY_s = Math.atan(Math.sinh(Math.PI * (1 - 2 * (coord.y + 1) / n))) * 180 / Math.PI;
+      // Skip tile if it doesn't intersect capture bounds at all
+      if (tileLng_e < b.west || tileLng_w > b.east || tileY_n < b.south || tileY_s > b.north) return null;
+      return base + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png';
+    },
     tileSize: new google.maps.Size(256, 256),
     minZoom: capture.tile_levels.min,
     maxZoom: capture.tile_levels.max,
@@ -493,6 +504,8 @@ function initMapAt(lat, lng, propertyName, propertyAddress) {
 
   hideLoading();
   if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); switchTab('ortho'); }, 600);
+  // Auto-show orthophoto overlay on load
+  setTimeout(() => toggleOverlay(), 800);
 }
 
 // ── Main loader ───────────────────────────────────────────────────────────
