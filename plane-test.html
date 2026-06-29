@@ -473,7 +473,15 @@ function buildTileLayerOverlay(capture) {
   const base = capture.tiles.replace(/\/$/, '');
   const minZ = capture.tile_levels.min;
   const maxZ = capture.tile_levels.max;
-  const extents = capture.tile_extents || {};
+  const b = capture.bounds;
+  // Shrink bounds by a small margin to avoid requesting edge tiles that don't exist
+  const margin = 0.001;
+  const inner = {
+    north: b.north - margin,
+    south: b.south + margin,
+    east:  b.east  - margin,
+    west:  b.west  + margin
+  };
   return new google.maps.ImageMapType({
     getTileUrl: function(coord, zoom) {
       // Clamp zoom to available tile range
@@ -482,11 +490,14 @@ function buildTileLayerOverlay(capture) {
       const scale = Math.pow(2, zoom - z);
       const tx = Math.floor(coord.x / scale);
       const ty = Math.floor(coord.y / scale);
-      // Use exact tile extents from S3 to avoid requesting non-existent tiles
-      const e = extents[String(z)];
-      if (e) {
-        if (tx < e.x[0] || tx > e.x[1] || ty < e.y[0] || ty > e.y[1]) return null;
-      }
+      // Check tile intersects the (slightly shrunk) capture bounds
+      const n = Math.pow(2, z);
+      const tileLng_w = tx / n * 360 - 180;
+      const tileLng_e = (tx + 1) / n * 360 - 180;
+      const tileY_n = Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / n))) * 180 / Math.PI;
+      const tileY_s = Math.atan(Math.sinh(Math.PI * (1 - 2 * (ty + 1) / n))) * 180 / Math.PI;
+      if (tileLng_e < inner.west || tileLng_w > inner.east ||
+          tileY_n < inner.south  || tileY_s > inner.north) return null;
       return base + '/' + z + '/' + tx + '/' + ty + '.png';
     },
     tileSize: new google.maps.Size(256, 256),
