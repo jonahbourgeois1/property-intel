@@ -161,7 +161,7 @@
 
   <div id="map-controls">
     <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()">
-      <span class="ctrl-dot"></span><span id="overlay-label">Show 2D Map</span>
+      <span class="ctrl-dot"></span><span id="overlay-label">Hide Ortho</span>
     </button>
     <div id="opacity-control">
       <div class="opacity-label">2D MAP OPACITY <span id="opacity-val">100%</span></div>
@@ -202,7 +202,7 @@
           <div class="info-label ortho">2D Map Overlay</div>
           <div class="info-value">DJI Terra orthophoto rendered as a georeferenced tile layer — your aerial imagery as the base map.</div>
           <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button onclick="toggleOverlay()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;" id="panel-overlay-btn">Show 2D Map</button>
+            <button onclick="toggleOverlay()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;" id="panel-overlay-btn">Hide Ortho</button>
             <button onclick="fitToBounds()" style="flex:1; padding:9px 12px; background:var(--surface2); border:1px solid var(--border2); border-radius:6px; color:var(--text2); font-size:11px; font-family:'DM Mono',monospace; cursor:pointer; transition:all 0.15s;">Fit to Ortho</button>
           </div>
           <div style="margin-top:10px;">
@@ -338,7 +338,17 @@ function setOpacity(val) {
   document.getElementById('panel-opacity-val').textContent = val + '%';
   document.getElementById('opacity-slider').value = val;
   document.getElementById('panel-opacity-slider').value = val;
-  if (orthoVisible) orthoLayers.forEach(l => l.setOpacity(currentOpacity));
+  // Opacity on base map type: push as overlay at given opacity over satellite
+  if (!map) return;
+  map.overlayMapTypes.clear();
+  if (currentOpacity < 1.0) {
+    // Blend mode: switch base to satellite, push ortho as semi-transparent overlay
+    map.setMapTypeId('satellite');
+    orthoLayers.forEach(l => { l.setOpacity(currentOpacity); map.overlayMapTypes.push(l); });
+  } else {
+    // Full opacity: use ortho as base map
+    map.setMapTypeId('ortho');
+  }
 }
 function toggleOverlay() {
   orthoVisible = !orthoVisible;
@@ -347,16 +357,13 @@ function toggleOverlay() {
   const pbtn = document.getElementById('panel-overlay-btn');
   const opCtrl = document.getElementById('opacity-control');
   if (orthoVisible) {
-    btn.classList.add('active'); lbl.textContent = 'Hide 2D Map'; pbtn.textContent = 'Hide 2D Map';
+    btn.classList.add('active'); lbl.textContent = 'Hide Ortho'; pbtn.textContent = 'Hide Ortho';
     opCtrl.classList.add('visible');
-    if (map) {
-      map.overlayMapTypes.clear();
-      orthoLayers.forEach(l => { l.setOpacity(currentOpacity); map.overlayMapTypes.push(l); });
-    }
+    if (map) map.setMapTypeId('ortho');
   } else {
-    btn.classList.remove('active'); lbl.textContent = 'Show 2D Map'; pbtn.textContent = 'Show 2D Map';
+    btn.classList.remove('active'); lbl.textContent = 'Show Ortho'; pbtn.textContent = 'Show Ortho';
     opCtrl.classList.remove('visible');
-    if (map) map.overlayMapTypes.clear();
+    if (map) map.setMapTypeId('satellite');
   }
 }
 function fitToBounds() {
@@ -446,20 +453,52 @@ function populateIntel(d) {
 }
 
 // ── Map init ──────────────────────────────────────────────────────────────
+function buildCompositeBaseType(caps) {
+  // Max tile zoom across all captures
+  const maxZ = Math.max(...caps.map(c => c.tile_levels.max));
+  const minZ = Math.min(...caps.map(c => c.tile_levels.min));
+
+  return {
+    tileSize: new google.maps.Size(256, 256),
+    maxZoom: maxZ,
+    minZoom: minZ,
+    name: 'Ortho',
+    alt: 'Aerial Orthophoto',
+    getTile: function(coord, zoom, doc) {
+      const div = doc.createElement('div');
+      div.style.width = '256px';
+      div.style.height = '256px';
+      div.style.background = '#0a0c0f'; // dark fill for areas with no tile
+
+      // Find which capture(s) cover this tile
+      const n = Math.pow(2, zoom);
+      const tileLng_w = coord.x / n * 360 - 180;
+      const tileLng_e = (coord.x + 1) / n * 360 - 180;
+      const tileY_n = Math.atan(Math.sinh(Math.PI * (1 - 2 * coord.y / n))) * 180 / Math.PI;
+      const tileY_s = Math.atan(Math.sinh(Math.PI * (1 - 2 * (coord.y + 1) / n))) * 180 / Math.PI;
+
+      // Stack matching captures (last one wins on overlap, which is fine)
+      caps.forEach(cap => {
+        const b = cap.bounds;
+        if (zoom < cap.tile_levels.min || zoom > cap.tile_levels.max) return;
+        if (tileLng_e < b.west || tileLng_w > b.east || tileY_n < b.south || tileY_s > b.north) return;
+        const img = doc.createElement('img');
+        img.src = cap.tiles + '/' + zoom + '/' + coord.x + '/' + coord.y + '.png';
+        img.style.position = 'absolute';
+        img.style.top = '0'; img.style.left = '0';
+        img.style.width = '256px'; img.style.height = '256px';
+        img.onerror = () => img.remove(); // silently drop missing tiles
+        div.appendChild(img);
+      });
+
+      return div;
+    },
+    releaseTile: function(tile) { if (tile) tile.innerHTML = ''; }
+  };
+}
+
 function initMapAt(lat, lng, propertyName, propertyAddress) {
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat, lng }, zoom: 17, mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
-    mapTypeControl: true,
-    mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: false, fullscreenControl: true,
-    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
-  });
-
-  // Build one layer per capture
-  orthoLayers = captures.map(buildTileLayer);
-
-  // Build union bounds
+  // Build union bounds first (needed for maxZoom cap)
   if (captures.length) {
     const n = Math.max(...captures.map(c => c.bounds.north));
     const s = Math.min(...captures.map(c => c.bounds.south));
@@ -468,17 +507,45 @@ function initMapAt(lat, lng, propertyName, propertyAddress) {
     allBounds = new google.maps.LatLngBounds({ lat: s, lng: w }, { lat: n, lng: e });
   }
 
-  // Determine active 3D tileset for this property (first matching capture)
+  const maxTileZoom = captures.length ? Math.max(...captures.map(c => c.tile_levels.max)) : 19;
+
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat, lng },
+    zoom: 17,
+    // Start on our custom ortho type, not Google satellite
+    mapTypeId: 'ortho',
+    tilt: 0,
+    maxZoom: maxTileZoom, // hard cap — never zooms past our tiles
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+      mapTypeIds: ['ortho', 'satellite', 'hybrid', 'roadmap']
+    },
+    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
+    streetViewControl: false, fullscreenControl: true,
+    fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+  });
+
+  // Register composite ortho as a named base map type
+  const compositeType = buildCompositeBaseType(captures);
+  map.mapTypes.set('ortho', compositeType);
+
+  // Also build overlay layers for the opacity slider (used when toggling)
+  orthoLayers = captures.map(buildTileLayer);
+
+  // Determine active 3D tileset for this property
   const matchingCap = captures.find(c => pointInCapture(lat, lng, c));
   activeTilesetUrl = matchingCap ? matchingCap.b3dm : (captures[0] ? captures[0].b3dm : null);
 
-  // Fit to union bounds (or property if no captures)
+  // Fit to union bounds
   if (allBounds) {
     map.fitBounds(allBounds);
-    google.maps.event.addListenerOnce(map, 'bounds_changed', () => { if (map.getZoom() > 20) map.setZoom(20); });
+    google.maps.event.addListenerOnce(map, 'bounds_changed', () => {
+      if (map.getZoom() > maxTileZoom) map.setZoom(maxTileZoom);
+    });
   }
 
-  // Ping a sample tile from first capture to verify connectivity
+  // Ping a sample tile to verify S3 connectivity
   if (captures.length) {
     const c0 = captures[0];
     const n18 = Math.pow(2, 18);
@@ -489,7 +556,7 @@ function initMapAt(lat, lng, propertyName, propertyAddress) {
     const ty = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n18);
     fetch(c0.tiles + '/18/' + tx + '/' + ty + '.png', { method: 'HEAD' })
       .then(r => setTileStatus(r.ok ? 'loaded' : 'error',
-        r.ok ? captures.length + ' capture(s) loaded — ' + captures.map(c=>c.label).join(', ')
+        r.ok ? captures.length + ' capture(s) loaded — ' + captures.map(c => c.label).join(', ')
               : 'Tiles not reachable (HTTP ' + r.status + ')'))
       .catch(() => setTileStatus('error', 'Tiles not reachable — check CORS'));
   } else {
@@ -504,8 +571,6 @@ function initMapAt(lat, lng, propertyName, propertyAddress) {
 
   hideLoading();
   if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); switchTab('ortho'); }, 600);
-  // Auto-show orthophoto overlay on load
-  setTimeout(() => toggleOverlay(), 800);
 }
 
 // ── Main loader ───────────────────────────────────────────────────────────
