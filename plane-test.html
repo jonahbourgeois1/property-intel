@@ -532,7 +532,7 @@ async function fetchTileExtents(capture) {
   } catch(e) { /* non-fatal — falls back to bounds check */ }
 }
 
-function initMapAt(lat, lng, propertyName, propertyAddress) {
+async function initMapAt(lat, lng, propertyName, propertyAddress) {
   // Build union bounds
   if (captures.length) {
     const n = Math.max(...captures.map(c => c.bounds.north));
@@ -557,9 +557,9 @@ function initMapAt(lat, lng, propertyName, propertyAddress) {
     fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
   });
 
-  // Build overlay layers (bounds-aware — only serve tiles inside capture footprint)
+  // Fetch exact tile extents first, then build layers — avoids race condition 403s
+  await Promise.all(captures.map(cap => fetchTileExtents(cap)));
   orthoLayers = captures.map(buildTileLayerOverlay);
-  captures.forEach(cap => fetchTileExtents(cap));
 
   // Push overlays immediately — Google satellite shows through outside capture bounds
   orthoLayers.forEach(l => map.overlayMapTypes.push(l));
