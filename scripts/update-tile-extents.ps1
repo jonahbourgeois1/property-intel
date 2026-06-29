@@ -6,13 +6,12 @@ $capturesFile = "$PSScriptRoot\..\data\captures.json"
 $data = Get-Content $capturesFile -Raw | ConvertFrom-Json
 
 foreach ($cap in $data.captures) {
-    Write-Host "Processing $($cap.id)..." -ForegroundColor Cyan
+    Write-Host "Processing $($cap.id)..."
     $bucket = "property-intel-tiles"
     $prefix = "captures/plane/$($cap.id)/map"
     $extents = [ordered]@{}
 
     for ($z = $cap.tile_levels.min; $z -le $cap.tile_levels.max; $z++) {
-        # Get all x dirs at this zoom
         $xList = aws s3 ls "s3://$bucket/$prefix/$z/" | ForEach-Object {
             ($_ -split '\s+')[-1].TrimEnd('/')
         } | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ } | Sort-Object
@@ -21,7 +20,6 @@ foreach ($cap in $data.captures) {
         $xMin = ($xList | Measure-Object -Minimum).Minimum
         $xMax = ($xList | Measure-Object -Maximum).Maximum
 
-        # Get all y values across all x dirs
         $yAll = @()
         foreach ($x in $xList) {
             $yList = aws s3 ls "s3://$bucket/$prefix/$z/$x/" | ForEach-Object {
@@ -36,7 +34,6 @@ foreach ($cap in $data.captures) {
         Write-Host "  z=$z  x=$xMin-$xMax  y=$yMin-$yMax"
     }
 
-    # Add or update tile_extents on the capture
     if ($cap.PSObject.Properties['tile_extents']) {
         $cap.tile_extents = $extents
     } else {
@@ -45,4 +42,4 @@ foreach ($cap in $data.captures) {
 }
 
 $data | ConvertTo-Json -Depth 10 | Set-Content $capturesFile -Encoding UTF8
-Write-Host "`nDone — captures.json updated with exact tile extents" -ForegroundColor Green
+Write-Host "Done - captures.json updated with exact tile extents"
