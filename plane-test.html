@@ -474,30 +474,29 @@ function buildTileLayerOverlay(capture) {
   const minZ = capture.tile_levels.min;
   const maxZ = capture.tile_levels.max;
   const b = capture.bounds;
-  // Shrink bounds by a small margin to avoid requesting edge tiles that don't exist
-  const margin = 0.003;
-  const inner = {
-    north: b.north - margin,
-    south: b.south + margin,
-    east:  b.east  - margin,
-    west:  b.west  + margin
-  };
+  // extents populated after fetchTileExtents resolves
+  const extents = capture._extents || {};
   return new google.maps.ImageMapType({
     getTileUrl: function(coord, zoom) {
-      // Clamp zoom to available tile range
       const z = Math.min(Math.max(zoom, minZ), maxZ);
-      // Scale coord if zoomed past max (so z20+ reuses z19 tiles)
       const scale = Math.pow(2, zoom - z);
       const tx = Math.floor(coord.x / scale);
       const ty = Math.floor(coord.y / scale);
-      // Check tile intersects the (slightly shrunk) capture bounds
-      const n = Math.pow(2, z);
-      const tileLng_w = tx / n * 360 - 180;
-      const tileLng_e = (tx + 1) / n * 360 - 180;
-      const tileY_n = Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / n))) * 180 / Math.PI;
-      const tileY_s = Math.atan(Math.sinh(Math.PI * (1 - 2 * (ty + 1) / n))) * 180 / Math.PI;
-      if (tileLng_e < inner.west || tileLng_w > inner.east ||
-          tileY_n < inner.south  || tileY_s > inner.north) return null;
+      // If extents loaded, use exact tile ranges
+      const e = capture._extents && capture._extents[String(z)];
+      if (e) {
+        if (tx < e.x[0] || tx > e.x[1] || ty < e.y[0] || ty > e.y[1]) return null;
+      } else {
+        // Fall back to bounds check with small margin while extents load
+        const margin = 0.002;
+        const n = Math.pow(2, z);
+        const tileLng_w = tx / n * 360 - 180;
+        const tileLng_e = (tx + 1) / n * 360 - 180;
+        const tileY_n = Math.atan(Math.sinh(Math.PI * (1 - 2 * ty / n))) * 180 / Math.PI;
+        const tileY_s = Math.atan(Math.sinh(Math.PI * (1 - 2 * (ty + 1) / n))) * 180 / Math.PI;
+        if (tileLng_e < b.west - margin || tileLng_w > b.east + margin ||
+            tileY_n < b.south - margin  || tileY_s > b.north + margin) return null;
+      }
       return base + '/' + z + '/' + tx + '/' + ty + '.png';
     },
     tileSize: new google.maps.Size(256, 256),
@@ -506,6 +505,31 @@ function buildTileLayerOverlay(capture) {
     name: capture.label,
     opacity: currentOpacity
   });
+}
+
+// Fetch tile extents from map_report.json and cache on capture object
+// This is automatic — no manual updates needed when adding captures
+async function fetchTileExtents(capture) {
+  try {
+    const res = await fetch(capture.map_report);
+    if (!res.ok) return;
+    const report = await res.json();
+    // map_report.json has gps_corner with exact bounds
+    // Build extents from actual GPS bounds in report (tighter than captures.json bounds)
+    const gc = report.gps_corner;
+    if (!gc) return;
+    const extents = {};
+    for (let z = capture.tile_levels.min; z <= capture.tile_levels.max; z++) {
+      const n = Math.pow(2, z);
+      const toX = lng => Math.floor((lng + 180) / 360 * n);
+      const toY = lat => { const r = lat * Math.PI / 180; return Math.floor((1 - Math.log(Math.tan(r) + 1/Math.cos(r)) / Math.PI) / 2 * n); };
+      extents[String(z)] = {
+        x: [toX(gc.top_left_lon), toX(gc.bottom_right_lon)],
+        y: [toY(gc.top_left_lat), toY(gc.bottom_right_lat)]
+      };
+    }
+    capture._extents = extents;
+  } catch(e) { /* non-fatal — falls back to bounds check */ }
 }
 
 function initMapAt(lat, lng, propertyName, propertyAddress) {
@@ -535,6 +559,7 @@ function initMapAt(lat, lng, propertyName, propertyAddress) {
 
   // Build overlay layers (bounds-aware — only serve tiles inside capture footprint)
   orthoLayers = captures.map(buildTileLayerOverlay);
+  captures.forEach(cap => fetchTileExtents(cap));
 
   // Push overlays immediately — Google satellite shows through outside capture bounds
   orthoLayers.forEach(l => map.overlayMapTypes.push(l));
