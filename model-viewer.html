@@ -51,7 +51,7 @@
   <strong>Could not load model</strong>
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
-<div id="hint">Drag to pan · Right/middle drag to rotate · Scroll to zoom</div>
+<div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 
 <script type="importmap">
 {
@@ -99,12 +99,15 @@ controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 controls.minDistance = 10;
 controls.maxDistance = 5000;
-// Left drag = pan, middle drag = rotate/tilt, right drag = rotate, scroll = zoom
+// Match DJI viewer: left = pan, right = zoom, middle = rotate
 controls.mouseButtons = {
   LEFT: THREE.MOUSE.PAN,
   MIDDLE: THREE.MOUSE.ROTATE,
-  RIGHT: THREE.MOUSE.ROTATE
+  RIGHT: THREE.MOUSE.DOLLY
 };
+// Disable scroll wheel zoom (right click handles zoom like DJI)
+controls.enableZoom = true;
+controls.zoomSpeed = 1.0;
 
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
