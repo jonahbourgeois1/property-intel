@@ -53,15 +53,21 @@
   }).then(function(tileset) {
     viewer.scene.primitives.add(tileset);
 
-    // Use zoomTo to auto-fit, then override with nadir orientation
-    viewer.zoomTo(tileset).then(function() {
+    // Wait for first tile to render, then fit camera tightly
+    let cameraSet = false;
+    const unsub = viewer.scene.postRender.addEventListener(function() {
+      if (cameraSet) return;
+      if (tileset.statistics.selected === 0) return;
+      cameraSet = true;
+      unsub();
+
       const bs = tileset.boundingSphere;
       const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(bs.center);
       const lon = Cesium.Math.toDegrees(carto.longitude);
       const lat = Cesium.Math.toDegrees(carto.latitude);
       const alt = carto.height;
 
-      // Place camera close above the tileset — radius * 1.5 fits tightly
+      // Tight nadir view — radius * 1.5 with 150m minimum
       const radius = bs.radius > 0 ? bs.radius : 100;
       const camAlt = alt + Math.max(radius * 1.5, 150);
 
