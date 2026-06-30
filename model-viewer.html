@@ -107,7 +107,6 @@ controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 controls.minDistance = 10;
 controls.maxDistance = 5000;
-// Match DJI viewer: left = pan, right = zoom, middle = rotate
 controls.mouseButtons = {
   LEFT: THREE.MOUSE.PAN,
   MIDDLE: THREE.MOUSE.ROTATE,
@@ -115,9 +114,10 @@ controls.mouseButtons = {
 };
 controls.enableZoom = true;
 controls.zoomSpeed = 1.0;
-// Prevent going past straight down or straight up — avoids gimbal lock
+// Hard lock: camera can only go from straight down (0) to horizon (90°)
+// Cannot go underneath — matches DJI viewer behavior
 controls.minPolarAngle = 0;
-controls.maxPolarAngle = Math.PI * 0.95;
+controls.maxPolarAngle = Math.PI / 2;
 
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
