@@ -6,153 +6,175 @@
 <title>Property 3D Viewer</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; }
-  #canvas { width: 100%; height: 100%; display: block; }
+  html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; font-family: monospace; }
+  canvas { display: block; }
   #loading {
     position: fixed; inset: 0; background: #111318;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 14px; z-index: 100; transition: opacity 0.5s ease;
+    gap: 16px; z-index: 100; transition: opacity 0.5s ease;
   }
   #loading.hidden { opacity: 0; pointer-events: none; }
   .spin {
-    width: 32px; height: 32px;
+    width: 36px; height: 36px;
     border: 2px solid rgba(168,85,247,0.2);
     border-top-color: #a855f7;
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .load-text { font-family: monospace; font-size: 12px; color: #555f6e; }
+  .load-text { font-size: 12px; color: #555f6e; }
+  #progress { font-size: 11px; color: #3d4752; margin-top: 4px; }
   #err {
     display: none; position: fixed; inset: 0;
     align-items: center; justify-content: center; flex-direction: column;
     gap: 12px; background: #0a0c0f; color: #8a93a2;
-    font-family: monospace; font-size: 13px; text-align: center; padding: 32px; z-index: 200;
+    font-size: 13px; text-align: center; padding: 32px; z-index: 200;
   }
   #err.visible { display: flex; }
-  #err strong { color: #ef4444; }
-  #err small { font-size: 11px; opacity: 0.6; margin-top: 8px; max-width: 480px; }
+  #err strong { color: #ef4444; font-size: 15px; }
+  #hint {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #555f6e; font-size: 11px;
+    padding: 6px 14px; border-radius: 20px; pointer-events: none;
+    transition: opacity 1s ease; z-index: 50;
+  }
+  #hint.hidden { opacity: 0; }
 </style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
-<div id="loading"><div class="spin"></div><div class="load-text">Loading 3D model...</div></div>
-<div id="err">
-  <strong>Could not load 3D model</strong>
-  <small id="err-msg"></small>
+<div id="loading">
+  <div class="spin"></div>
+  <div class="load-text">Loading property model...</div>
+  <div id="progress"></div>
 </div>
+<div id="err">
+  <strong>Could not load model</strong>
+  <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
+</div>
+<div id="hint">Scroll to zoom · Drag to orbit · Right-drag to pan</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script>
-const params = new URLSearchParams(window.location.search);
-const glbUrl = params.get('glb');
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// Load GLTFLoader and OrbitControls from three.js examples CDN
+const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
+
+const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
+const { DRACOLoader }    = await import(`${BASE}/loaders/DRACOLoader.js`);
+const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
+
+// ── URL param ─────────────────────────────────────────────────────────
+const params  = new URLSearchParams(window.location.search);
+const glbUrl  = params.get('model');
 
 if (!glbUrl) {
-  document.getElementById('loading').classList.add('hidden');
-  document.getElementById('err-msg').textContent = 'No GLB URL provided (?glb=...)';
-  document.getElementById('err').classList.add('visible');
+  showErr('No model URL provided. Add ?model=https://... to the URL.');
 }
 
-const canvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+// ── Scene setup ───────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputEncoding = THREE.sRGBEncoding;
-renderer.physicallyCorrectLights = true;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x111318);
+scene.background = new THREE.Color('#111318');
 
-// Lighting — bright overhead for aerial texture fidelity
-const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = true;
+controls.minDistance = 10;
+controls.maxDistance = 5000;
+
+// Lighting
+const ambient = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambient);
-const sun = new THREE.DirectionalLight(0xffffff, 2.0);
-sun.position.set(0, 1, 0.5);
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(1, 2, 2);
 scene.add(sun);
 
-const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 50000);
+// ── Load GLB ─────────────────────────────────────────────────────────
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
 
-// Resize
+const loader = new GLTFLoader();
+loader.setDRACOLoader(dracoLoader);
+
+loader.load(
+  glbUrl,
+  function(gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+
+    // Compute bounding box
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+
+    // The GLB is in local OBJ space — Y is up in Three.js
+    // The mesh is a terrain patch, nearly flat, XY spread >> Z height
+    // Orient camera straight above looking down
+    const maxSpan = Math.max(size.x, size.y);
+    const camHeight = maxSpan * 1.2; // tight overhead view
+
+    // Point camera straight down at the model center
+    camera.position.set(center.x, center.y + camHeight, center.z);
+    camera.up.set(0, 0, -1); // Z-back keeps north roughly up
+    camera.lookAt(center);
+    camera.updateProjectionMatrix();
+
+    // Orbit target = model center
+    controls.target.copy(center);
+    controls.update();
+
+    // Fade in
+    document.getElementById('loading').classList.add('hidden');
+    setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+  },
+  function(xhr) {
+    if (xhr.total) {
+      const pct = Math.round(xhr.loaded / xhr.total * 100);
+      document.getElementById('progress').textContent = pct + '%';
+    }
+  },
+  function(err) {
+    showErr(err.message || String(err));
+  }
+);
+
+// ── Render loop ───────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
 window.addEventListener('resize', () => {
-  renderer.setSize(window.innerWidth, window.innerHeight);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Load GLB — Three.js r128 GLTFLoader via global THREE object isn't included
-// We'll use the CDN build of GLTFLoader
-function loadScript(src, cb) {
-  const s = document.createElement('script');
-  s.src = src;
-  s.onload = cb;
-  s.onerror = () => showError('Failed to load 3D library');
-  document.head.appendChild(s);
-}
-
-function showError(msg) {
+function showErr(msg) {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('err-msg').textContent = msg;
   document.getElementById('err').classList.add('visible');
-  try { window.parent.postMessage('cesium-error', '*'); } catch(e) {}
 }
-
-loadScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js', function() {
-  const loader = new THREE.GLTFLoader();
-  loader.load(
-    glbUrl,
-    function(gltf) {
-      const model = gltf.scene;
-      scene.add(model);
-
-      // Compute bounding box to center and frame the model
-      const box = new THREE.Box3().setFromObject(model);
-      const center = box.getCenter(new THREE.Vector3());
-      const size = box.getSize(new THREE.Vector3());
-
-      // Center model on origin
-      model.position.sub(center);
-
-      // Recalculate box after centering
-      const box2 = new THREE.Box3().setFromObject(model);
-      const size2 = box2.getSize(new THREE.Vector3());
-
-      // Camera: straight down nadir view
-      // Distance needed to fit the model: max(width, depth) / 2 / tan(fov/2)
-      const maxSpan = Math.max(size2.x, size2.z);
-      const fovRad = camera.fov * Math.PI / 180;
-      const dist = (maxSpan / 2) / Math.tan(fovRad / 2) * 1.1; // 10% padding
-
-      // Place camera directly above center, looking straight down
-      camera.position.set(0, dist, 0);
-      camera.lookAt(0, 0, 0);
-      camera.up.set(0, 0, -1); // north-up in Z axis for aerial
-
-      // Adjust near/far planes for model size
-      camera.near = dist * 0.01;
-      camera.far = dist * 10;
-      camera.updateProjectionMatrix();
-
-      // Hide loading
-      document.getElementById('loading').classList.add('hidden');
-      try { window.parent.postMessage('cesium-ready', '*'); } catch(e) {}
-
-      // Render loop
-      function animate() {
-        requestAnimationFrame(animate);
-        renderer.render(scene, camera);
-      }
-      animate();
-    },
-    function(xhr) {
-      const pct = Math.round(xhr.loaded / xhr.total * 100);
-      const el = document.querySelector('.load-text');
-      if (el && xhr.total > 0) el.textContent = 'Loading... ' + pct + '%';
-    },
-    function(err) {
-      showError('Failed to load GLB: ' + (err.message || String(err)));
-    }
-  );
-});
 </script>
 </body>
 </html>
