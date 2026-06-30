@@ -51,7 +51,7 @@
   <strong>Could not load model</strong>
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
-<div id="hint">Scroll to zoom · Drag to orbit · Right-drag to pan</div>
+<div id="hint">Drag to pan · Right-drag to rotate · Scroll to zoom</div>
 
 <script type="importmap">
 {
@@ -99,6 +99,12 @@ controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 controls.minDistance = 10;
 controls.maxDistance = 5000;
+// Left drag = pan, right drag = rotate, scroll = zoom
+controls.mouseButtons = {
+  LEFT: THREE.MOUSE.PAN,
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.ROTATE
+};
 
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
