@@ -52,6 +52,14 @@
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
+<button id="resetBtn" onclick="resetView()" style="
+  position: fixed; bottom: 48px; right: 16px; z-index: 50;
+  background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
+  font-family: monospace; font-size: 11px; padding: 6px 12px;
+  border-radius: 6px; cursor: pointer; transition: color 0.2s;
+" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8a93a2'">
+  ↑ Reset View
+</button>
 
 <script type="importmap">
 {
@@ -105,9 +113,11 @@ controls.mouseButtons = {
   MIDDLE: THREE.MOUSE.ROTATE,
   RIGHT: THREE.MOUSE.DOLLY
 };
-// Disable scroll wheel zoom (right click handles zoom like DJI)
 controls.enableZoom = true;
 controls.zoomSpeed = 1.0;
+// Prevent going past straight down or straight up — avoids gimbal lock
+controls.minPolarAngle = 0;
+controls.maxPolarAngle = Math.PI * 0.95;
 
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
@@ -152,6 +162,17 @@ loader.load(
     // Orbit target = model center
     controls.target.copy(center);
     controls.update();
+
+    // Store initial camera state for reset
+    const initPos = camera.position.clone();
+    const initTarget = controls.target.clone();
+
+    // Expose reset function to the button
+    window.resetView = function() {
+      camera.position.copy(initPos);
+      controls.target.copy(initTarget);
+      controls.update();
+    };
 
     // Fade in
     document.getElementById('loading').classList.add('hidden');
