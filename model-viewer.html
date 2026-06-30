@@ -131,14 +131,18 @@ loader.load(
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
 
-    // DJI Terra OBJ uses Z-up. The mesh is nearly flat in XY,
-    // with Z as elevation. Camera goes above in Z, looking down.
+    // DJI Terra OBJ uses Z-up.
+    // Open at ~45° angle matching DJI viewer style — camera offset in Y and Z
     const maxSpan = Math.max(size.x, size.y);
-    const camDist = maxSpan * 1.2;
+    const camDist = maxSpan * 1.4;
 
-    // Camera above center along Z axis, Y-forward keeps orientation stable
-    camera.position.set(center.x, center.y, center.z + camDist);
-    camera.up.set(0, 1, 0);
+    // Pull camera back and up at ~45° — offset in -Y (south) and +Z (up)
+    camera.position.set(
+      center.x,
+      center.y - camDist * 0.8,  // back
+      center.z + camDist * 0.8   // up
+    );
+    camera.up.set(0, 0, 1);
     camera.lookAt(center);
     camera.updateProjectionMatrix();
 
