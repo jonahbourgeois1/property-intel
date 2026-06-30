@@ -40,7 +40,8 @@
   });
 
   viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#111318');
-  viewer.scene.globe.show = false;
+  viewer.scene.globe.show = true;
+  viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1a1f27');
   viewer.scene.highDynamicRange = false;
   viewer.scene.light = new Cesium.DirectionalLight({
     direction: Cesium.Cartesian3.normalize(new Cesium.Cartesian3(1.0, 1.0, -1.0), new Cesium.Cartesian3()),
@@ -53,17 +54,25 @@
     viewer.scene.primitives.add(tileset);
 
     const bs = tileset.boundingSphere;
-    const radius = bs.radius > 0 ? bs.radius : 500;
     const carto = Cesium.Ellipsoid.WGS84.cartesianToCartographic(bs.center);
     const lon = Cesium.Math.toDegrees(carto.longitude);
     const lat = Cesium.Math.toDegrees(carto.latitude);
     const alt = carto.height;
 
+    // Use a fixed altitude that works for both single parcels and full captures
+    // radius * 4 with a minimum of 400m so small parcels don't clip
+    const radius = bs.radius > 0 ? bs.radius : 200;
+    const camAlt = alt + Math.max(radius * 4.0, 400);
+
     // Nadir (straight down) — only view confirmed working with DJI Terra B3DM
     viewer.camera.setView({
-      destination: Cesium.Cartesian3.fromDegrees(lon, lat, alt + radius * 3.0),
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, camAlt),
       orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 }
     });
+
+    // Clamp zoom so camera never goes below the tileset surface
+    viewer.scene.screenSpaceCameraController.minimumZoomDistance = 50;
+    viewer.scene.screenSpaceCameraController.maximumZoomDistance = camAlt * 3;
 
     // Hide loading once tiles are actually selected for rendering
     let revealed = false;
