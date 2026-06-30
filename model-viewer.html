@@ -125,15 +125,14 @@ loader.load(
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
 
-    // The GLB is in local OBJ space — Y is up in Three.js
-    // The mesh is a terrain patch, nearly flat, XY spread >> Z height
-    // Orient camera straight above looking down
+    // DJI Terra OBJ uses Z-up. The mesh is nearly flat in XY,
+    // with Z as elevation. Camera goes above in Z, looking down.
     const maxSpan = Math.max(size.x, size.y);
-    const camHeight = maxSpan * 1.2; // tight overhead view
+    const camDist = maxSpan * 1.2;
 
-    // Point camera straight down at the model center
-    camera.position.set(center.x, center.y + camHeight, center.z);
-    camera.up.set(0, 0, -1); // Z-back keeps north roughly up
+    // Camera above center along Z axis, Y-forward keeps orientation stable
+    camera.position.set(center.x, center.y, center.z + camDist);
+    camera.up.set(0, 1, 0);
     camera.lookAt(center);
     camera.updateProjectionMatrix();
 
