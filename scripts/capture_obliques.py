@@ -93,7 +93,10 @@ async def capture_one_view(browser, base_url, model_url, taxlot, view_name, azim
             try:
                 debug_info = await page.evaluate("() => window.__debugInfo || null")
                 if debug_info:
+                    drift = debug_info.get('driftDistance')
+                    drift_str = f"{drift:.1f}m" if drift is not None else "n/a"
                     print(f"[debug] {taxlot}: detected={debug_info.get('detectionSucceeded')} "
+                          f"drift={drift_str} capped={debug_info.get('driftCapped')} "
                           f"focus_input=({debug_info.get('focusInputX')},{debug_info.get('focusInputY')}) "
                           f"focus_center=({debug_info['focusCenter']['x']:.1f},{debug_info['focusCenter']['y']:.1f},{debug_info['focusCenter']['z']:.1f}) "
                           f"distance={debug_info.get('distance'):.1f} maxSpan={debug_info.get('maxSpan'):.1f}")

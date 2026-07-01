@@ -274,7 +274,16 @@ loader.load(
       // single-family home + a little surrounding yard.
       let focusCenter = center;
       let detectionSucceeded = false;
+      let driftDistance = null;
       const FIXED_FRAMING_RADIUS = 28.0;
+      // Real data across all 26 properties showed this detection approach
+      // is inconsistent: most properties drift a reasonable 6-30m from
+      // the (confirmed accurate) address point, but several drifted
+      // 100-183m — clearly walking onto an unrelated tall feature
+      // (entrance gates, distant trees) rather than refining onto the
+      // house. Capping the allowed drift turns those catastrophic
+      // failures into a graceful fallback instead of a broken render.
+      const MAX_DRIFT_METERS = 20.0;
       if (hasFocusPoint) {
         const allPoints = getAllModelPoints(model);
         // Address points are confirmed accurate on the house itself (not
@@ -291,15 +300,23 @@ loader.load(
         if (coarse) {
           const refined = findStructureNearPoint(model, allPoints, coarse.center.x, coarse.center.y, 15.0, 0.95);
           const tallCenter = (refined || coarse).center;
-          // The tall-point centroid can skew toward whichever roof
-          // section happens to be tallest (a turret, steep gable, etc.)
-          // rather than the visual middle of a large or irregular house.
-          // Re-center using ALL nearby geometry (not just the tallest
-          // points) around that estimate, which better approximates the
-          // whole footprint's center rather than just its highest point.
           const footprint = findStructureNearPoint(model, allPoints, tallCenter.x, tallCenter.y, 15.0, 0.0);
-          focusCenter = (footprint || refined || coarse).center;
-          detectionSucceeded = true;
+          const detected = (footprint || refined || coarse).center;
+
+          const dx = detected.x - focusXParam, dy = detected.y - focusYParam;
+          driftDistance = Math.sqrt(dx * dx + dy * dy);
+
+          if (driftDistance <= MAX_DRIFT_METERS) {
+            focusCenter = detected;
+            detectionSucceeded = true;
+          } else {
+            // Detection wandered too far — trust the address point
+            // directly instead. Still sample a real mesh height at that
+            // (x, y) rather than using the raw (unreliable) input z.
+            const atAddress = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, 8.0, 0.0);
+            focusCenter = atAddress ? atAddress.center : new THREE.Vector3(focusXParam, focusYParam, center.z);
+            detectionSucceeded = true;
+          }
         }
       }
       // If structure detection succeeded, frame tightly around the house
@@ -321,6 +338,8 @@ loader.load(
         focusInputX: focusXParam,
         focusInputY: focusYParam,
         detectionSucceeded,
+        driftDistance,
+        driftCapped: driftDistance !== null && driftDistance > MAX_DRIFT_METERS,
         focusCenter: { x: focusCenter.x, y: focusCenter.y, z: focusCenter.z },
         distance,
         maxSpan,
