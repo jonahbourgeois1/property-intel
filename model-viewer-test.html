@@ -273,19 +273,48 @@ loader.load(
       // radius for distance instead, sized to comfortably fit a whole
       // single-family home + a little surrounding yard.
       let focusCenter = center;
+      let detectionSucceeded = false;
       const FIXED_FRAMING_RADIUS = 20.0;
       if (hasFocusPoint) {
         const allPoints = getAllModelPoints(model);
-        const coarse = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, 45.0, 0.90);
+        // Search radius scales to THIS parcel's actual size, not a fixed
+        // guess — a fixed 45m radius failed on this exact property, since
+        // its address-to-edge distance alone is 72.7m, meaning the house
+        // could sit well outside a 45m window from the address point.
+        // maxSpan already covers the parcel's full diagonal, so this
+        // guarantees the house is within the search area regardless of
+        // how far the address pin sits from the actual structure.
+        const coarseSearchRadius = Math.max(maxSpan, 50.0);
+        const coarse = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, coarseSearchRadius, 0.90);
         if (coarse) {
           const refined = findStructureNearPoint(model, allPoints, coarse.center.x, coarse.center.y, 15.0, 0.95);
           focusCenter = (refined || coarse).center;
+          detectionSucceeded = true;
         }
       }
-      // 2.5x the fixed radius gives generous margin so the whole
-      // structure is visible, not just a close-up fragment of it. zoom
-      // tightens from this safely-wide baseline as needed.
-      const distance = (FIXED_FRAMING_RADIUS * 2.5) / zoom;
+      // If structure detection succeeded, frame tightly around the house
+      // (2.5x the fixed radius gives margin so the whole structure is
+      // visible, not a close-up fragment). If detection failed for any
+      // reason (no focus point, or truly no mesh data found even across
+      // the whole-parcel search radius), fall back to the ORIGINAL
+      // whole-parcel default view distance — showing the whole
+      // recognizable parcel beats a broken close-up of random terrain.
+      const distance = detectionSucceeded
+        ? (FIXED_FRAMING_RADIUS * 2.5) / zoom
+        : (camDist * Math.SQRT2 * 0.8) / zoom;
+
+      // Diagnostics for capture_obliques.py to read via page.evaluate —
+      // avoids needing a screenshot round-trip just to see whether
+      // detection succeeded and what numbers it used.
+      window.__debugInfo = {
+        hasFocusPoint,
+        focusInputX: focusXParam,
+        focusInputY: focusYParam,
+        detectionSucceeded,
+        focusCenter: { x: focusCenter.x, y: focusCenter.y, z: focusCenter.z },
+        distance,
+        maxSpan,
+      };
       positionCameraCompass(camera, focusCenter, azimuthParam, polarParam, distance);
       orbitTarget = focusCenter;
       controls.enabled = false;

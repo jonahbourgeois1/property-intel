@@ -86,6 +86,20 @@ async def capture_one_view(browser, base_url, model_url, taxlot, view_name, azim
         if not ready:
             print(f"[warn] {taxlot}/{view_name}: viewer never signaled ready, capturing anyway", file=sys.stderr)
 
+        # Print detection diagnostics for the alpha view only (same for all
+        # 4 views of a property since detection runs once per page load) —
+        # avoids a screenshot round-trip just to check if detection worked.
+        if view_name == "alpha":
+            try:
+                debug_info = await page.evaluate("() => window.__debugInfo || null")
+                if debug_info:
+                    print(f"[debug] {taxlot}: detected={debug_info.get('detectionSucceeded')} "
+                          f"focus_input=({debug_info.get('focusInputX')},{debug_info.get('focusInputY')}) "
+                          f"focus_center=({debug_info['focusCenter']['x']:.1f},{debug_info['focusCenter']['y']:.1f},{debug_info['focusCenter']['z']:.1f}) "
+                          f"distance={debug_info.get('distance'):.1f} maxSpan={debug_info.get('maxSpan'):.1f}")
+            except Exception as e:
+                print(f"[debug] {taxlot}: could not read debug info: {e}", file=sys.stderr)
+
         out_path = os.path.join(out_dir, taxlot, f"{view_name}.jpg")
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         await page.screenshot(path=out_path, type="jpeg", quality=90)
