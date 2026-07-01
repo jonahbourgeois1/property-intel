@@ -86,22 +86,24 @@ async def capture_one_view(browser, base_url, model_url, taxlot, view_name, azim
         if not ready:
             print(f"[warn] {taxlot}/{view_name}: viewer never signaled ready, capturing anyway", file=sys.stderr)
 
-        # Print detection diagnostics for the alpha view only (same for all
-        # 4 views of a property since detection runs once per page load) —
-        # avoids a screenshot round-trip just to check if detection worked.
-        if view_name == "alpha":
-            try:
-                debug_info = await page.evaluate("() => window.__debugInfo || null")
-                if debug_info:
-                    drift = debug_info.get('driftDistance')
-                    drift_str = f"{drift:.1f}m" if drift is not None else "n/a"
-                    print(f"[debug] {taxlot}: detected={debug_info.get('detectionSucceeded')} "
-                          f"drift={drift_str} capped={debug_info.get('driftCapped')} "
-                          f"focus_input=({debug_info.get('focusInputX')},{debug_info.get('focusInputY')}) "
-                          f"focus_center=({debug_info['focusCenter']['x']:.1f},{debug_info['focusCenter']['y']:.1f},{debug_info['focusCenter']['z']:.1f}) "
-                          f"distance={debug_info.get('distance'):.1f} maxSpan={debug_info.get('maxSpan'):.1f}")
-            except Exception as e:
-                print(f"[debug] {taxlot}: could not read debug info: {e}", file=sys.stderr)
+        # Print for all 4 views (not just alpha) — needed to verify
+        # whether azimuth-to-azimuth visual differences (e.g. one view
+        # looking "more zoomed" than others) come from an actual
+        # numeric difference (bug) or are just compositional, from an
+        # elongated/irregular parcel shape putting more or less open
+        # land in frame depending on viewing direction.
+        try:
+            debug_info = await page.evaluate("() => window.__debugInfo || null")
+            if debug_info:
+                drift = debug_info.get('driftDistance')
+                drift_str = f"{drift:.1f}m" if drift is not None else "n/a"
+                print(f"[debug] {taxlot}/{view_name}: detected={debug_info.get('detectionSucceeded')} "
+                      f"drift={drift_str} capped={debug_info.get('driftCapped')} "
+                      f"focus_input=({debug_info.get('focusInputX')},{debug_info.get('focusInputY')}) "
+                      f"focus_center=({debug_info['focusCenter']['x']:.1f},{debug_info['focusCenter']['y']:.1f},{debug_info['focusCenter']['z']:.1f}) "
+                      f"distance={debug_info.get('distance'):.1f} maxSpan={debug_info.get('maxSpan'):.1f}")
+        except Exception as e:
+            print(f"[debug] {taxlot}/{view_name}: could not read debug info: {e}", file=sys.stderr)
 
         out_path = os.path.join(out_dir, taxlot, f"{view_name}.jpg")
         os.makedirs(os.path.dirname(out_path), exist_ok=True)

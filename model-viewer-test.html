@@ -275,7 +275,6 @@ loader.load(
       let focusCenter = center;
       let detectionSucceeded = false;
       let driftDistance = null;
-      const FIXED_FRAMING_RADIUS = 28.0;
       // Real data across all 26 properties showed this detection approach
       // is inconsistent: most properties drift a reasonable 6-30m from
       // the (confirmed accurate) address point, but several drifted
@@ -319,15 +318,18 @@ loader.load(
           }
         }
       }
-      // If structure detection succeeded, frame tightly around the house
-      // (2.5x the fixed radius gives margin so the whole structure is
-      // visible, not a close-up fragment). If detection failed for any
-      // reason (no focus point, or truly no mesh data found even across
-      // the whole-parcel search radius), fall back to the ORIGINAL
-      // whole-parcel default view distance — showing the whole
-      // recognizable parcel beats a broken close-up of random terrain.
+      // Smart zoom: scale framing distance to THIS property's actual size
+      // (maxSpan, the parcel's diagonal — already reliably computed, no
+      // detection needed), same philosophy as the existing nadir pipeline's
+      // zoomForBounds() which sizes the satellite image zoom from real
+      // parcel bounds rather than a fixed zoom level for every property.
+      // PARCEL_SIZE_FACTOR calibrated against the validated test property
+      // (181102D000600, maxSpan=285.5m) targeting ~205m framing distance,
+      // confirmed visually correct.
+      const PARCEL_SIZE_FACTOR = 0.718;
+      const smartDistance = maxSpan * PARCEL_SIZE_FACTOR;
       const distance = detectionSucceeded
-        ? (FIXED_FRAMING_RADIUS * 2.5) / zoom
+        ? smartDistance / zoom
         : (camDist * Math.SQRT2 * 0.8) / zoom;
 
       // Diagnostics for capture_obliques.py to read via page.evaluate —
@@ -343,6 +345,8 @@ loader.load(
         focusCenter: { x: focusCenter.x, y: focusCenter.y, z: focusCenter.z },
         distance,
         maxSpan,
+        smartDistance,
+        zoom,
       };
       positionCameraCompass(camera, focusCenter, azimuthParam, polarParam, distance);
       orbitTarget = focusCenter;
