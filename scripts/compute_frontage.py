@@ -60,6 +60,52 @@ import json
 import math
 import sys
 
+# ── OBJ-local <-> ECEF transform ─────────────────────────────────────────
+# Copied EXACTLY from clip_parcel_textured.py — this must stay in sync with
+# that file, since it's the same BlockR.obj export and the same transform
+# matrix. Used here only to convert an address point's lat/lon into the
+# GLB's local (x, y) plane, so model-viewer.html can center its oblique
+# framing on the actual house location instead of guessing from mesh
+# geometry alone (which proved unreliable on sloped terrain — a tall,
+# wide hillside can out-compete a small house footprint in a pure
+# height/density clustering approach).
+_M = [
+    0.8538393068677613, -0.5205366827108161, 0.0, 0.0,
+    0.3618967178637809,  0.5936212624426974, 0.7187799123343397, 0.0,
+   -0.3741513111656884, -0.6137225421380228, 0.6952376842667829, 0.0,
+   -2390834.612219335,  -3921699.7301742565, 4412849.998474161,  1.0
+]
+_R = [[_M[0], _M[4], _M[8]], [_M[1], _M[5], _M[9]], [_M[2], _M[6], _M[10]]]
+_T = [_M[12], _M[13], _M[14]]
+_R_T = [[_R[j][i] for j in range(3)] for i in range(3)]
+
+_WGS84_A, _WGS84_E2 = 6378137.0, 0.00669437999014
+
+
+def _geodetic_to_ecef(lat, lon, h=0.0):
+    lat, lon = math.radians(lat), math.radians(lon)
+    sl = math.sin(lat)
+    N = _WGS84_A / math.sqrt(1 - _WGS84_E2 * sl * sl)
+    return ((N + h) * math.cos(lat) * math.cos(lon),
+            (N + h) * math.cos(lat) * math.sin(lon),
+            (N * (1 - _WGS84_E2) + h) * sl)
+
+
+def _ecef_to_local(ex, ey, ez):
+    dx, dy, dz = ex - _T[0], ey - _T[1], ez - _T[2]
+    return (_R_T[0][0]*dx + _R_T[0][1]*dy + _R_T[0][2]*dz,
+            _R_T[1][0]*dx + _R_T[1][1]*dy + _R_T[1][2]*dz,
+            _R_T[2][0]*dx + _R_T[2][1]*dy + _R_T[2][2]*dz)
+
+
+def latlon_to_local_xy(lat, lon):
+    """Returns (x, y) in the GLB's local frame. Z is intentionally not
+    returned here — it depends on assumed elevation, which we don't know
+    precisely per-property, and isn't needed since model-viewer.html
+    samples the actual mesh height at this (x, y) directly instead."""
+    x, y, _z = _ecef_to_local(*_geodetic_to_ecef(lat, lon, h=0.0))
+    return x, y
+
 from pyproj import Transformer
 from shapely.geometry import shape, Point
 from shapely.ops import nearest_points, transform as shapely_transform
@@ -215,6 +261,8 @@ def process(matches_path, parcels_path, out_path, address_field, taxlot_field,
             for name, offset in OBLIQUE_OFFSETS.items()
         }
 
+        focus_x, focus_y = latlon_to_local_xy(lat, lon)
+
         results.append({
             "address": address,
             "taxlot": taxlot,
@@ -222,6 +270,8 @@ def process(matches_path, parcels_path, out_path, address_field, taxlot_field,
             "address_to_edge_distance_m": round(dist, 1),
             "polar_deg": polar_deg,
             "views": {k: round(v, 1) for k, v in views.items()},
+            "focus_x": round(focus_x, 2),
+            "focus_y": round(focus_y, 2),
         })
 
     with open(out_path, "w") as f:

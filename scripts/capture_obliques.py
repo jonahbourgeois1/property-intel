@@ -55,7 +55,7 @@ READY_POLL_INTERVAL_MS = 250
 VIEWPORT = {"width": 1600, "height": 1200}
 
 
-async def capture_one_view(browser, base_url, model_url, taxlot, view_name, azimuth, polar, zoom, out_dir):
+async def capture_one_view(browser, base_url, model_url, taxlot, view_name, azimuth, polar, zoom, focus_x, focus_y, out_dir):
     params = {
         "model": model_url,
         "azimuth": azimuth,
@@ -63,6 +63,9 @@ async def capture_one_view(browser, base_url, model_url, taxlot, view_name, azim
         "zoom": zoom,
         "autocapture": 1,
     }
+    if focus_x is not None and focus_y is not None:
+        params["focus_x"] = focus_x
+        params["focus_y"] = focus_y
     url = f"{base_url}?{urlencode(params)}"
 
     page = await browser.new_page(viewport=VIEWPORT)
@@ -111,8 +114,10 @@ async def run(frontage_path, base_url, model_url_template, out_dir, concurrency,
             taxlot = prop["taxlot"]
             model_url = model_url_template.format(taxlot=taxlot)
             polar = prop.get("polar_deg", 45)
+            focus_x = prop.get("focus_x")
+            focus_y = prop.get("focus_y")
             for view_name, azimuth in prop["views"].items():
-                tasks.append(bound_capture(browser, base_url, model_url, taxlot, view_name, azimuth, polar, zoom, out_dir))
+                tasks.append(bound_capture(browser, base_url, model_url, taxlot, view_name, azimuth, polar, zoom, focus_x, focus_y, out_dir))
 
         await asyncio.gather(*tasks)
         await browser.close()

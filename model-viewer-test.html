@@ -97,6 +97,13 @@ const azimuthParam = parseFloat(params.get('azimuth'));
 // house itself — zoom divides that distance down for a tighter crop.
 const zoomParam = parseFloat(params.get('zoom'));
 const zoom = isNaN(zoomParam) ? 1.0 : zoomParam;
+// Address point's horizontal position in the GLB's local frame (computed
+// by compute_frontage.py using the same ECEF transform as
+// clip_parcel_textured.py). Used to center oblique framing on the actual
+// house location instead of guessing from mesh geometry.
+const focusXParam = parseFloat(params.get('focus_x'));
+const focusYParam = parseFloat(params.get('focus_y'));
+const hasFocusPoint = !isNaN(focusXParam) && !isNaN(focusYParam);
 const polarParam   = parseFloat(params.get('polar'));
 const hasCaptureAngles = !isNaN(azimuthParam) && !isNaN(polarParam);
 
@@ -129,19 +136,15 @@ function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distanc
   camera.lookAt(center);
 }
 
-// Detects the actual structure (house) within the clipped parcel, rather
-// than framing/zooming based on the whole parcel's extent (which is mostly
-// open land). Approach: take vertices above the mid-height of the parcel
-// (roofline + trees are both "elevated" — ground and low shrubs are not),
-// then grid-bucket their (x,y) positions and flood-fill outward from the
-// densest cell. A house roof is a large, contiguous, densely-meshed
-// surface, so it dominates many adjacent cells; an isolated tree only
-// fills one or two cells and gets excluded by the relative density
-// threshold. Falls back to the whole-parcel center/radius if no cluster
-// is found (e.g. a lot with no structure yet, or extremely sparse mesh).
-function findStructureCluster(model, cellSize) {
-  let zMin = Infinity, zMax = -Infinity;
-  const pts = [];
+// Samples the mesh's actual height (z) at a given horizontal (x, y)
+// position, by averaging the z of all vertices within a small radius.
+// This gives an accurate local ground/roof height without needing to
+// guess elevation from lat/lon — the horizontal (x, y) comes from
+// compute_frontage.py's ECEF transform of the address point, which is
+// reliable; height is best answered by just asking the mesh directly.
+function sampleHeightNear(model, x, y, searchRadius) {
+  let sumZ = 0, count = 0;
+  const rSq = searchRadius * searchRadius;
 
   model.updateMatrixWorld(true);
   const v = new THREE.Vector3();
@@ -152,76 +155,15 @@ function findStructureCluster(model, cellSize) {
     for (let i = 0; i < posAttr.count; i++) {
       v.fromBufferAttribute(posAttr, i);
       v.applyMatrix4(child.matrixWorld);
-      pts.push(v.x, v.y, v.z);
-      if (v.z < zMin) zMin = v.z;
-      if (v.z > zMax) zMax = v.z;
+      const dx = v.x - x, dy = v.y - y;
+      if (dx * dx + dy * dy <= rSq) {
+        sumZ += v.z;
+        count++;
+      }
     }
   });
 
-  if (pts.length === 0) return null;
-
-  const heightThreshold = zMin + 0.5 * (zMax - zMin);
-  const cellMap = new Map();
-  for (let i = 0; i < pts.length; i += 3) {
-    const x = pts[i], y = pts[i + 1], z = pts[i + 2];
-    if (z < heightThreshold) continue;
-    const ix = Math.floor(x / cellSize);
-    const iy = Math.floor(y / cellSize);
-    const key = ix + ',' + iy;
-    let cell = cellMap.get(key);
-    if (!cell) {
-      cell = { count: 0, sumX: 0, sumY: 0, sumZ: 0, ix, iy };
-      cellMap.set(key, cell);
-    }
-    cell.count++;
-    cell.sumX += x; cell.sumY += y; cell.sumZ += z;
-  }
-
-  if (cellMap.size === 0) return null;
-
-  let maxCell = null;
-  for (const cell of cellMap.values()) {
-    if (!maxCell || cell.count > maxCell.count) maxCell = cell;
-  }
-
-  const visited = new Set();
-  const queue = [maxCell];
-  visited.add(maxCell.ix + ',' + maxCell.iy);
-  const relThreshold = maxCell.count * 0.15;
-  const selected = [];
-
-  while (queue.length) {
-    const cur = queue.shift();
-    selected.push(cur);
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        if (dx === 0 && dy === 0) continue;
-        const nx = cur.ix + dx, ny = cur.iy + dy;
-        const key = nx + ',' + ny;
-        if (visited.has(key)) continue;
-        const neighbor = cellMap.get(key);
-        if (neighbor && neighbor.count >= relThreshold) {
-          visited.add(key);
-          queue.push(neighbor);
-        }
-      }
-    }
-  }
-
-  let sumX = 0, sumY = 0, sumZ = 0, totalCount = 0;
-  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-  for (const cell of selected) {
-    sumX += cell.sumX; sumY += cell.sumY; sumZ += cell.sumZ; totalCount += cell.count;
-    const cellMinX = cell.ix * cellSize, cellMaxX = cellMinX + cellSize;
-    const cellMinY = cell.iy * cellSize, cellMaxY = cellMinY + cellSize;
-    minX = Math.min(minX, cellMinX); maxX = Math.max(maxX, cellMaxX);
-    minY = Math.min(minY, cellMinY); maxY = Math.max(maxY, cellMaxY);
-  }
-
-  return {
-    center: new THREE.Vector3(sumX / totalCount, sumY / totalCount, sumZ / totalCount),
-    radius: Math.max(maxX - minX, maxY - minY) / 2,
-  };
+  return count > 0 ? sumZ / count : null;
 }
 
 // ── Scene setup ───────────────────────────────────────────────────────
@@ -288,14 +230,23 @@ loader.load(
     let orbitTarget = center;
 
     if (autocapture && hasCaptureAngles) {
-      // Frame relative to the detected structure (house), not the whole
-      // parcel — a lot's open land shouldn't dictate how tight the crop is.
-      const structure = findStructureCluster(model, 3.0);
-      const focusCenter = structure ? structure.center : center;
-      const focusRadius = structure ? Math.max(structure.radius, 5) : maxSpan / 2;
-      // 3x radius gives headroom so the structure doesn't fill the entire
-      // frame edge-to-edge; zoom then tightens/loosens from that baseline.
-      const distance = (focusRadius * 3.0) / zoom;
+      // Frame relative to the actual house location (from the address
+      // point, converted to local coordinates by compute_frontage.py),
+      // not the whole parcel's open land. Height is sampled directly from
+      // the mesh at that (x, y) rather than guessed from elevation data.
+      let focusCenter = center;
+      if (hasFocusPoint) {
+        const sampledZ = sampleHeightNear(model, focusXParam, focusYParam, 8.0);
+        if (sampledZ !== null) {
+          focusCenter = new THREE.Vector3(focusXParam, focusYParam, sampledZ);
+        }
+      }
+      // Fixed base radius sized for a typical house footprint (~12m half-
+      // width covers most single-family homes with some margin). zoom
+      // tightens/loosens from this baseline — no per-property tuning
+      // needed since this no longer depends on parcel or terrain size.
+      const baseRadius = 12.0;
+      const distance = baseRadius / zoom;
       positionCameraCompass(camera, focusCenter, azimuthParam, polarParam, distance);
       orbitTarget = focusCenter;
       controls.enabled = false;
