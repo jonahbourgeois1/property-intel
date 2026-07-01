@@ -83,8 +83,44 @@ const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
 const params  = new URLSearchParams(window.location.search);
 const glbUrl  = params.get('model');
 
+// Optional programmatic camera positioning for headless capture
+// (see capture_obliques.py). azimuth/polar are compass bearing + elevation
+// angle in degrees, both measured the same way compute_frontage.py's
+// output uses them: azimuth 0=north/90=east/180=south/270=west, polar =
+// elevation of the camera above the horizon (45 matches the default
+// hand-tuned "DJI-style" framing already used below).
+const autocapture = params.get('autocapture') === '1';
+const azimuthParam = parseFloat(params.get('azimuth'));
+const polarParam   = parseFloat(params.get('polar'));
+const hasCaptureAngles = !isNaN(azimuthParam) && !isNaN(polarParam);
+
 if (!glbUrl) {
   showErr('No model URL provided. Add ?model=https://... to the URL.');
+}
+
+if (autocapture) {
+  // Headless Chromium has no mouse — hide interactive chrome so it never
+  // shows up in a screenshot, and don't wait on the 4s hint fade timer.
+  document.getElementById('hint').classList.add('hidden');
+  document.getElementById('resetBtn').style.display = 'none';
+}
+
+// Same axis convention as positionCameraForDefaultView below: Z-up,
+// +Y = north, +X = east (confirmed by the existing default view's
+// "-Y (south)" camera offset). azimuth = compass bearing of the camera's
+// position relative to the model center (i.e. an azimuth of 180/south
+// reproduces this file's original default view when polar=45).
+function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distance) {
+  const az = THREE.MathUtils.degToRad(azimuthDeg);
+  const el = THREE.MathUtils.degToRad(elevationDeg);
+  const horiz = distance * Math.cos(el);
+  const up = distance * Math.sin(el);
+  const east = horiz * Math.sin(az);
+  const north = horiz * Math.cos(az);
+
+  camera.position.set(center.x + east, center.y + north, center.z + up);
+  camera.up.set(0, 0, 1);
+  camera.lookAt(center);
 }
 
 // ── Scene setup ───────────────────────────────────────────────────────
@@ -149,14 +185,21 @@ loader.load(
     const maxSpan = Math.max(size.x, size.y);
     const camDist = maxSpan * 1.4;
 
-    // Pull camera back and up at ~45° — offset in -Y (south) and +Z (up)
-    camera.position.set(
-      center.x,
-      center.y - camDist * 0.8,  // back
-      center.z + camDist * 0.8   // up
-    );
-    camera.up.set(0, 0, 1);
-    camera.lookAt(center);
+    if (autocapture && hasCaptureAngles) {
+      // Programmatic framing for oblique capture (alpha/bravo/charlie/delta).
+      // Same camDist basis as the default view for consistent scale/crop.
+      positionCameraCompass(camera, center, azimuthParam, polarParam, camDist * Math.SQRT2 * 0.8);
+      controls.enabled = false;
+    } else {
+      // Pull camera back and up at ~45° — offset in -Y (south) and +Z (up)
+      camera.position.set(
+        center.x,
+        center.y - camDist * 0.8,  // back
+        center.z + camDist * 0.8   // up
+      );
+      camera.up.set(0, 0, 1);
+      camera.lookAt(center);
+    }
     camera.updateProjectionMatrix();
 
     // Orbit target = model center
@@ -176,7 +219,18 @@ loader.load(
 
     // Fade in
     document.getElementById('loading').classList.add('hidden');
-    setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+    if (!autocapture) {
+      setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+    }
+
+    // Signal readiness for capture_obliques.py — wait two frames so the
+    // canvas has actually painted the positioned view before a screenshot
+    // is taken, not just the first uninitialized frame.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.__viewerReady = true;
+      });
+    });
   },
   function(xhr) {
     if (xhr.total) {
