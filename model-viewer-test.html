@@ -137,15 +137,53 @@ function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distanc
 }
 
 // Samples the mesh's actual height (z) at a given horizontal (x, y)
-// position, by averaging the z of all vertices within a small radius.
-// This gives an accurate local ground/roof height without needing to
-// guess elevation from lat/lon — the horizontal (x, y) comes from
-// compute_frontage.py's ECEF transform of the address point, which is
-// reliable; height is best answered by just asking the mesh directly.
-function sampleHeightNear(model, x, y, searchRadius) {
-  let sumZ = 0, count = 0;
+// Finds the tallest cluster of geometry within a bounded radius of a
+// given (x, y) anchor point. Used with two passes: a coarse pass anchored
+// on the address point (which can be tens of meters from the actual
+// house on larger lots — an address pin often sits near the road, not
+// the structure), then a tight refinement pass anchored on the coarse
+// result. This two-pass design is deliberate: a single wide pass risks
+// sweeping in elevated terrain unrelated to the house (sloped high-desert
+// lots can have a hillside taller/wider than the house itself); a single
+// narrow pass risks missing the house entirely if it's far from the
+// address point. Bounding to a local neighborhood (rather than scanning
+// the whole parcel) also avoids the earlier failure mode where a wide
+// sloped ridge out-competed a small house footprint for cluster size.
+function findStructureNearPoint(model, allPoints, focusX, focusY, searchRadius, percentile) {
   const rSq = searchRadius * searchRadius;
+  const nearby = [];
+  for (let i = 0; i < allPoints.length; i += 3) {
+    const dx = allPoints[i] - focusX, dy = allPoints[i + 1] - focusY;
+    if (dx * dx + dy * dy <= rSq) {
+      nearby.push(allPoints[i], allPoints[i + 1], allPoints[i + 2]);
+    }
+  }
+  if (nearby.length === 0) return null;
 
+  const zs = [];
+  for (let i = 2; i < nearby.length; i += 3) zs.push(nearby[i]);
+  zs.sort((a, b) => a - b);
+  const heightThreshold = zs[Math.floor(percentile * (zs.length - 1))];
+
+  let sumX = 0, sumY = 0, sumZ = 0, n = 0;
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < nearby.length; i += 3) {
+    const x = nearby[i], y = nearby[i + 1], z = nearby[i + 2];
+    if (z < heightThreshold) continue;
+    sumX += x; sumY += y; sumZ += z; n++;
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  if (n === 0) return null;
+
+  return {
+    center: new THREE.Vector3(sumX / n, sumY / n, sumZ / n),
+    radius: Math.max(maxX - minX, maxY - minY) / 2,
+  };
+}
+
+function getAllModelPoints(model) {
+  const pts = [];
   model.updateMatrixWorld(true);
   const v = new THREE.Vector3();
   model.traverse((child) => {
@@ -155,15 +193,10 @@ function sampleHeightNear(model, x, y, searchRadius) {
     for (let i = 0; i < posAttr.count; i++) {
       v.fromBufferAttribute(posAttr, i);
       v.applyMatrix4(child.matrixWorld);
-      const dx = v.x - x, dy = v.y - y;
-      if (dx * dx + dy * dy <= rSq) {
-        sumZ += v.z;
-        count++;
-      }
+      pts.push(v.x, v.y, v.z);
     }
   });
-
-  return count > 0 ? sumZ / count : null;
+  return pts;
 }
 
 // ── Scene setup ───────────────────────────────────────────────────────
@@ -230,23 +263,27 @@ loader.load(
     let orbitTarget = center;
 
     if (autocapture && hasCaptureAngles) {
-      // Frame relative to the actual house location (from the address
-      // point, converted to local coordinates by compute_frontage.py),
-      // not the whole parcel's open land. Height is sampled directly from
-      // the mesh at that (x, y) rather than guessed from elevation data.
+      // Frame relative to the actual house, found via a two-pass search
+      // anchored on the address point (see findStructureNearPoint above
+      // for why two passes: the address point can be tens of meters from
+      // the real structure on larger lots, so a coarse pass locates the
+      // neighborhood, then a tight pass refines onto the structure itself).
       let focusCenter = center;
+      let focusRadius = 12.0; // fallback if no focus point / detection fails
       if (hasFocusPoint) {
-        const sampledZ = sampleHeightNear(model, focusXParam, focusYParam, 8.0);
-        if (sampledZ !== null) {
-          focusCenter = new THREE.Vector3(focusXParam, focusYParam, sampledZ);
+        const allPoints = getAllModelPoints(model);
+        const coarse = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, 45.0, 0.90);
+        if (coarse) {
+          const refined = findStructureNearPoint(model, allPoints, coarse.center.x, coarse.center.y, 15.0, 0.95);
+          const result = refined || coarse;
+          focusCenter = result.center;
+          focusRadius = Math.max(result.radius, 5.0);
         }
       }
-      // Fixed base radius sized for a typical house footprint (~12m half-
-      // width covers most single-family homes with some margin). zoom
-      // tightens/loosens from this baseline — no per-property tuning
-      // needed since this no longer depends on parcel or terrain size.
-      const baseRadius = 12.0;
-      const distance = baseRadius / zoom;
+      // radius * 1.8 gives a tight crop with a small margin so the
+      // structure fills most of the frame without edges clipping off;
+      // zoom tightens/loosens further from that baseline.
+      const distance = (focusRadius * 1.8) / zoom;
       positionCameraCompass(camera, focusCenter, azimuthParam, polarParam, distance);
       orbitTarget = focusCenter;
       controls.enabled = false;
