@@ -277,14 +277,16 @@ loader.load(
       const FIXED_FRAMING_RADIUS = 28.0;
       if (hasFocusPoint) {
         const allPoints = getAllModelPoints(model);
-        // Search radius scales to THIS parcel's actual size, not a fixed
-        // guess — a fixed 45m radius failed on this exact property, since
-        // its address-to-edge distance alone is 72.7m, meaning the house
-        // could sit well outside a 45m window from the address point.
-        // maxSpan already covers the parcel's full diagonal, so this
-        // guarantees the house is within the search area regardless of
-        // how far the address pin sits from the actual structure.
-        const coarseSearchRadius = Math.max(maxSpan, 50.0);
+        // Address points are confirmed accurate on the house itself (not
+        // just somewhere inside the parcel), so this only needs to cover
+        // normal GPS/geocoding uncertainty — NOT the whole parcel. (A
+        // previous version widened this to the parcel's full span,
+        // reasoning from address-to-EDGE distance — a different
+        // measurement from address-to-HOUSE distance that doesn't apply
+        // here — which let the 90th-percentile height search latch onto
+        // unrelated tall features elsewhere on the property, like
+        // entrance gate posts or ornamental trees near the road.)
+        const coarseSearchRadius = 20.0;
         const coarse = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, coarseSearchRadius, 0.90);
         if (coarse) {
           const refined = findStructureNearPoint(model, allPoints, coarse.center.x, coarse.center.y, 15.0, 0.95);
