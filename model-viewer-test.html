@@ -274,7 +274,7 @@ loader.load(
       // single-family home + a little surrounding yard.
       let focusCenter = center;
       let detectionSucceeded = false;
-      const FIXED_FRAMING_RADIUS = 20.0;
+      const FIXED_FRAMING_RADIUS = 28.0;
       if (hasFocusPoint) {
         const allPoints = getAllModelPoints(model);
         // Search radius scales to THIS parcel's actual size, not a fixed
@@ -288,7 +288,15 @@ loader.load(
         const coarse = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, coarseSearchRadius, 0.90);
         if (coarse) {
           const refined = findStructureNearPoint(model, allPoints, coarse.center.x, coarse.center.y, 15.0, 0.95);
-          focusCenter = (refined || coarse).center;
+          const tallCenter = (refined || coarse).center;
+          // The tall-point centroid can skew toward whichever roof
+          // section happens to be tallest (a turret, steep gable, etc.)
+          // rather than the visual middle of a large or irregular house.
+          // Re-center using ALL nearby geometry (not just the tallest
+          // points) around that estimate, which better approximates the
+          // whole footprint's center rather than just its highest point.
+          const footprint = findStructureNearPoint(model, allPoints, tallCenter.x, tallCenter.y, 15.0, 0.0);
+          focusCenter = (footprint || refined || coarse).center;
           detectionSucceeded = true;
         }
       }
