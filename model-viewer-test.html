@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property 3D Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; font-family: monospace; }
+  canvas { display: block; }
+  #loading {
+    position: fixed; inset: 0; background: #111318;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; z-index: 100; transition: opacity 0.5s ease;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+  .spin {
+    width: 36px; height: 36px;
+    border: 2px solid rgba(168,85,247,0.2);
+    border-top-color: #a855f7;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .load-text { font-size: 12px; color: #555f6e; }
+  #progress { font-size: 11px; color: #3d4752; margin-top: 4px; }
+  #err {
+    display: none; position: fixed; inset: 0;
+    align-items: center; justify-content: center; flex-direction: column;
+    gap: 12px; background: #0a0c0f; color: #8a93a2;
+    font-size: 13px; text-align: center; padding: 32px; z-index: 200;
+  }
+  #err.visible { display: flex; }
+  #err strong { color: #ef4444; font-size: 15px; }
+  #hint {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.5); color: #555f6e; font-size: 11px;
+    padding: 6px 14px; border-radius: 20px; pointer-events: none;
+    transition: opacity 1s ease; z-index: 50;
+  }
+  #hint.hidden { opacity: 0; }
+</style>
+</head>
+<body>
+<div id="loading">
+  <div class="spin"></div>
+  <div class="load-text">Loading property model...</div>
+  <div id="progress"></div>
+</div>
+<div id="err">
+  <strong>Could not load model</strong>
+  <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
+</div>
+<div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
+<button id="resetBtn" onclick="resetView()" style="
+  position: fixed; bottom: 48px; right: 16px; z-index: 50;
+  background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
+  font-family: monospace; font-size: 11px; padding: 6px 12px;
+  border-radius: 6px; cursor: pointer; transition: color 0.2s;
+" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8a93a2'">
+  ↑ Reset View
+</button>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+
+// Load GLTFLoader and OrbitControls from three.js examples CDN
+const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
+
+const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
+const { DRACOLoader }    = await import(`${BASE}/loaders/DRACOLoader.js`);
+const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
+
+// ── URL param ─────────────────────────────────────────────────────────
+const params  = new URLSearchParams(window.location.search);
+const glbUrl  = params.get('model');
+
+// Optional programmatic camera positioning for headless capture
+// (see capture_obliques.py). azimuth/polar are compass bearing + elevation
+// angle in degrees, both measured the same way compute_frontage.py's
+// output uses them: azimuth 0=north/90=east/180=south/270=west, polar =
+// elevation of the camera above the horizon (45 matches the default
+// hand-tuned "DJI-style" framing already used below).
+const autocapture = params.get('autocapture') === '1';
+const azimuthParam = parseFloat(params.get('azimuth'));
+const polarParam   = parseFloat(params.get('polar'));
+const hasCaptureAngles = !isNaN(azimuthParam) && !isNaN(polarParam);
+
+if (!glbUrl) {
+  showErr('No model URL provided. Add ?model=https://... to the URL.');
+}
+
+if (autocapture) {
+  // Headless Chromium has no mouse — hide interactive chrome so it never
+  // shows up in a screenshot, and don't wait on the 4s hint fade timer.
+  document.getElementById('hint').classList.add('hidden');
+  document.getElementById('resetBtn').style.display = 'none';
+}
+
+// Same axis convention as positionCameraForDefaultView below: Z-up,
+// +Y = north, +X = east (confirmed by the existing default view's
+// "-Y (south)" camera offset). azimuth = compass bearing of the camera's
+// position relative to the model center (i.e. an azimuth of 180/south
+// reproduces this file's original default view when polar=45).
+function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distance) {
+  const az = THREE.MathUtils.degToRad(azimuthDeg);
+  const el = THREE.MathUtils.degToRad(elevationDeg);
+  const horiz = distance * Math.cos(el);
+  const up = distance * Math.sin(el);
+  const east = horiz * Math.sin(az);
+  const north = horiz * Math.cos(az);
+
+  camera.position.set(center.x + east, center.y + north, center.z + up);
+  camera.up.set(0, 0, 1);
+  camera.lookAt(center);
+}
+
+// ── Scene setup ───────────────────────────────────────────────────────
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#111318');
+
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.screenSpacePanning = true;
+controls.minDistance = 10;
+controls.maxDistance = 5000;
+controls.mouseButtons = {
+  LEFT: THREE.MOUSE.PAN,
+  MIDDLE: THREE.MOUSE.ROTATE,
+  RIGHT: THREE.MOUSE.DOLLY
+};
+controls.enableZoom = true;
+controls.zoomSpeed = 1.0;
+// Hard lock: camera can only go from straight down (0) to horizon (90°)
+// Cannot go underneath — matches DJI viewer behavior
+controls.minPolarAngle = 0;
+controls.maxPolarAngle = Math.PI / 2;
+
+// Lighting
+const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+scene.add(ambient);
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(1, 2, 2);
+scene.add(sun);
+
+// ── Load GLB ─────────────────────────────────────────────────────────
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+
+const loader = new GLTFLoader();
+loader.setDRACOLoader(dracoLoader);
+
+loader.load(
+  glbUrl,
+  function(gltf) {
+    const model = gltf.scene;
+    scene.add(model);
+
+    // Compute bounding box
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+
+    // DJI Terra OBJ uses Z-up.
+    // Open at ~45° angle matching DJI viewer style — camera offset in Y and Z
+    const maxSpan = Math.max(size.x, size.y);
+    const camDist = maxSpan * 1.4;
+
+    if (autocapture && hasCaptureAngles) {
+      // Programmatic framing for oblique capture (alpha/bravo/charlie/delta).
+      // Same camDist basis as the default view for consistent scale/crop.
+      positionCameraCompass(camera, center, azimuthParam, polarParam, camDist * Math.SQRT2 * 0.8);
+      controls.enabled = false;
+    } else {
+      // Pull camera back and up at ~45° — offset in -Y (south) and +Z (up)
+      camera.position.set(
+        center.x,
+        center.y - camDist * 0.8,  // back
+        center.z + camDist * 0.8   // up
+      );
+      camera.up.set(0, 0, 1);
+      camera.lookAt(center);
+    }
+    camera.updateProjectionMatrix();
+
+    // Orbit target = model center
+    controls.target.copy(center);
+    controls.update();
+
+    // Store initial camera state for reset
+    const initPos = camera.position.clone();
+    const initTarget = controls.target.clone();
+
+    // Expose reset function to the button
+    window.resetView = function() {
+      camera.position.copy(initPos);
+      controls.target.copy(initTarget);
+      controls.update();
+    };
+
+    // Fade in
+    document.getElementById('loading').classList.add('hidden');
+    if (!autocapture) {
+      setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+    }
+
+    // Signal readiness for capture_obliques.py — wait two frames so the
+    // canvas has actually painted the positioned view before a screenshot
+    // is taken, not just the first uninitialized frame.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        window.__viewerReady = true;
+      });
+    });
+  },
+  function(xhr) {
+    if (xhr.total) {
+      const pct = Math.round(xhr.loaded / xhr.total * 100);
+      document.getElementById('progress').textContent = pct + '%';
+    }
+  },
+  function(err) {
+    showErr(err.message || String(err));
+  }
+);
+
+// ── Render loop ───────────────────────────────────────────────────────
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function showErr(msg) {
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('err-msg').textContent = msg;
+  document.getElementById('err').classList.add('visible');
+}
+</script>
+</body>
+</html>
