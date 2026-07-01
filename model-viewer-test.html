@@ -263,27 +263,29 @@ loader.load(
     let orbitTarget = center;
 
     if (autocapture && hasCaptureAngles) {
-      // Frame relative to the actual house, found via a two-pass search
-      // anchored on the address point (see findStructureNearPoint above
-      // for why two passes: the address point can be tens of meters from
-      // the real structure on larger lots, so a coarse pass locates the
-      // neighborhood, then a tight pass refines onto the structure itself).
+      // Two-pass search finds WHERE the house is (this part is validated:
+      // coarse pass anchored on the address point, tight pass refines
+      // onto the structure). But framing DISTANCE should not come from
+      // that same detected cluster — a "tallest 5-10% of points" cluster
+      // is dominated by just the roof ridge/peak, not the whole house
+      // footprint, so using its radius directly makes the crop too tight
+      // and risks the camera clipping into geometry. Use a generous fixed
+      // radius for distance instead, sized to comfortably fit a whole
+      // single-family home + a little surrounding yard.
       let focusCenter = center;
-      let focusRadius = 12.0; // fallback if no focus point / detection fails
+      const FIXED_FRAMING_RADIUS = 20.0;
       if (hasFocusPoint) {
         const allPoints = getAllModelPoints(model);
         const coarse = findStructureNearPoint(model, allPoints, focusXParam, focusYParam, 45.0, 0.90);
         if (coarse) {
           const refined = findStructureNearPoint(model, allPoints, coarse.center.x, coarse.center.y, 15.0, 0.95);
-          const result = refined || coarse;
-          focusCenter = result.center;
-          focusRadius = Math.max(result.radius, 5.0);
+          focusCenter = (refined || coarse).center;
         }
       }
-      // radius * 1.8 gives a tight crop with a small margin so the
-      // structure fills most of the frame without edges clipping off;
-      // zoom tightens/loosens further from that baseline.
-      const distance = (focusRadius * 1.8) / zoom;
+      // 2.5x the fixed radius gives generous margin so the whole
+      // structure is visible, not just a close-up fragment of it. zoom
+      // tightens from this safely-wide baseline as needed.
+      const distance = (FIXED_FRAMING_RADIUS * 2.5) / zoom;
       positionCameraCompass(camera, focusCenter, azimuthParam, polarParam, distance);
       orbitTarget = focusCenter;
       controls.enabled = false;
