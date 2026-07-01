@@ -70,12 +70,12 @@ PROJECTED_EPSG = "EPSG:32610"
 SOURCE_EPSG = "EPSG:4326"
 
 OBLIQUE_OFFSETS = {
-    "alpha": -45,   # front-left
-    "bravo": 45,    # front-right
-    "charlie": 135, # rear-right
-    "delta": -135,  # rear-left
+    "alpha": 0,     # front — straight-on, inline with the driveway/frontage
+    "bravo": 90,    # right side
+    "charlie": 180, # rear
+    "delta": 270,   # left side
 }
-DEFAULT_POLAR_DEG = 45
+DEFAULT_POLAR_DEG = 25
 
 
 def normalize_bearing(deg):
