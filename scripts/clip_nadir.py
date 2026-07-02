@@ -116,7 +116,7 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
     tiles_wide = tile_x1 - tile_x0 + 1
     tiles_high = tile_y1 - tile_y0 + 1
 
-    if tiles_wide <= 0 or tiles_high <= 0 or tiles_wide > 20 or tiles_high > 20:
+    if tiles_wide <= 0 or tiles_high <= 0 or tiles_wide > 100 or tiles_high > 100:
         raise ValueError(f"unreasonable tile span {tiles_wide}x{tiles_high} — bbox likely wrong")
 
     canvas = Image.new("RGB", (tiles_wide * TILE_SIZE, tiles_high * TILE_SIZE), (0, 0, 0))
