@@ -69,6 +69,13 @@ import requests
 from PIL import Image
 from shapely.geometry import shape
 
+# Our own tile-span sanity guard (max 100x100 tiles = ~655M pixels at
+# 256px tiles) already bounds canvas size to a known-reasonable maximum
+# for real property crops — PIL's generic decompression-bomb heuristic
+# doesn't know that and just adds noise to the output for legitimately
+# large (but expected and already-bounded) stitched tiles.
+Image.MAX_IMAGE_PIXELS = None
+
 TILE_SIZE = 256
 DEFAULT_BEDROCK_MODEL = "us.anthropic.claude-sonnet-4-6"
 
