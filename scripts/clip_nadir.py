@@ -174,20 +174,29 @@ def load_capture_tile_extent(captures_json_path, capture_id, zoom):
     return None
 
 
-def bbox_fits_in_tile_extent(bbox, zoom, extent):
-    """Checks whether a lat/lon bbox's required tile range is FULLY
-    contained within the capture's declared 2D tile extent — the check
-    this function replaces (attempting the fetch and discovering failure
-    afterward) wastes network calls on properties we can determine in
-    advance have no chance of full coverage."""
+def bbox_coverage_overlap_fraction(bbox, zoom, extent):
+    """Returns what fraction of a lat/lon bbox's required tile AREA falls
+    within the capture's declared 2D tile extent — a fractional overlap
+    rather than strict all-or-nothing containment, since captures.json's
+    'bounds' is a simple rectangle around an inherently diagonal, irregular
+    capture strip and can be slightly conservative near the edges. Uses
+    fractional (non-floored) tile coordinates for a precise area
+    calculation, not the floored integer tile indices used elsewhere for
+    actual tile fetching."""
     min_lon, min_lat, max_lon, max_lat = bbox
     x0f, y0f = deg2num(max_lat, min_lon, zoom)
     x1f, y1f = deg2num(min_lat, max_lon, zoom)
-    tile_x0, tile_x1 = int(math.floor(x0f)), int(math.floor(x1f))
-    tile_y0, tile_y1 = int(math.floor(y0f)), int(math.floor(y1f))
 
     ext_x_min, ext_x_max, ext_y_min, ext_y_max = extent
-    return tile_x0 >= ext_x_min and tile_x1 <= ext_x_max and tile_y0 >= ext_y_min and tile_y1 <= ext_y_max
+
+    overlap_x = max(0.0, min(x1f, ext_x_max + 1) - max(x0f, ext_x_min))
+    overlap_y = max(0.0, min(y1f, ext_y_max + 1) - max(y0f, ext_y_min))
+    overlap_area = overlap_x * overlap_y
+
+    needed_area = (x1f - x0f) * (y1f - y0f)
+    if needed_area <= 0:
+        return 0.0
+    return overlap_area / needed_area
 
 
 def deg2num(lat_deg, lon_deg, zoom):
@@ -284,16 +293,19 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
 
 def process_property(session, capture_base, zoom, parcel, taxlot, name, out_dir,
                       fixed_padding, auto_zoom, padding_candidates, bedrock_region, bedrock_model,
-                      max_missing_fraction, tile_extent):
+                      max_missing_fraction, tile_extent, min_coverage_overlap):
     final_path = os.path.join(out_dir, f"{taxlot}.jpg")
 
     if not auto_zoom:
         bbox = get_padded_bbox(parcel, fixed_padding)
-        if tile_extent and not bbox_fits_in_tile_extent(bbox, zoom, tile_extent):
-            raise RuntimeError(
-                "property's padded bounds fall outside the 2D tile pyramid's declared coverage "
-                "(checked against captures.json, not the 3D mesh) — skipping before any fetch attempt"
-            )
+        if tile_extent:
+            overlap = bbox_coverage_overlap_fraction(bbox, zoom, tile_extent)
+            if overlap < min_coverage_overlap:
+                raise RuntimeError(
+                    f"property's padded bounds only overlap {overlap:.0%} of the 2D tile pyramid's "
+                    f"declared coverage (need at least {min_coverage_overlap:.0%}) — "
+                    f"skipping before any fetch attempt"
+                )
         missing, total = crop_nadir(session, capture_base, zoom, bbox, final_path)
         missing_frac = missing / total if total else 1.0
         if missing_frac > max_missing_fraction:
@@ -318,12 +330,14 @@ def process_property(session, capture_base, zoom, parcel, taxlot, name, out_dir,
     # this property's full parcel bounds don't fit within real coverage.
     tightest_padding = min(padding_candidates)
     tightest_bbox = get_padded_bbox(parcel, tightest_padding)
-    if tile_extent and not bbox_fits_in_tile_extent(tightest_bbox, zoom, tile_extent):
-        raise RuntimeError(
-            f"even the tightest padding ({tightest_padding:.0%}) falls outside the 2D tile pyramid's "
-            f"declared coverage (checked against captures.json, not the 3D mesh) — "
-            f"skipping before any fetch attempt"
-        )
+    if tile_extent:
+        overlap = bbox_coverage_overlap_fraction(tightest_bbox, zoom, tile_extent)
+        if overlap < min_coverage_overlap:
+            raise RuntimeError(
+                f"even the tightest padding ({tightest_padding:.0%}) only overlaps {overlap:.0%} of the "
+                f"2D tile pyramid's declared coverage (need at least {min_coverage_overlap:.0%}) — "
+                f"skipping before any fetch attempt"
+            )
 
     candidate_dir = os.path.join(out_dir, "_candidates", taxlot)
     candidate_paths = []
@@ -369,6 +383,7 @@ def main():
     ap.add_argument("--capture-base", required=True)
     ap.add_argument("--captures-json", default=None, help="Path to captures.json — if provided along with --capture-id, properties whose bounds fall outside the DECLARED 2D tile coverage are skipped before any fetch attempt (this checks the 2D tile pyramid's coverage, not the 3D mesh's, which can differ).")
     ap.add_argument("--capture-id", default=None, help="Capture ID to look up in captures.json, e.g. 'bend-5-21-26'.")
+    ap.add_argument("--min-coverage-overlap", type=float, default=0.80, help="Minimum fraction (0-1) of a property's padded bounds that must overlap the declared 2D tile coverage to attempt it at all (default 0.80). Properties below this are skipped before any fetch attempt.")
     ap.add_argument("--zoom", type=int, default=21)
     ap.add_argument("--padding", type=float, default=0.15, help="Fixed padding fraction, used when --auto-zoom is NOT set.")
     ap.add_argument("--auto-zoom", action="store_true", help="Enable AI-based padding selection via AWS Bedrock (3 candidates, mirrors the Apps Script's selectBestZoom()).")
@@ -413,7 +428,7 @@ def main():
         try:
             process_property(session, args.capture_base, args.zoom, parcel, taxlot, name, args.out_dir,
                               args.padding, args.auto_zoom, padding_candidates, args.bedrock_region, args.bedrock_model,
-                              args.max_missing_fraction, tile_extent)
+                              args.max_missing_fraction, tile_extent, args.min_coverage_overlap)
             succeeded += 1
         except Exception as e:
             print(f"[skip] {name} ({taxlot}) failed: {e}", file=sys.stderr)
