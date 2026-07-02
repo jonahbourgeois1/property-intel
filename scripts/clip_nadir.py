@@ -232,6 +232,7 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
 
     crop_box = (int(px0), int(py0), int(px1), int(py1))
     cropped = canvas.crop(crop_box)
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     cropped.save(out_path, "JPEG", quality=90)
     return missing, tiles_wide * tiles_high
 
