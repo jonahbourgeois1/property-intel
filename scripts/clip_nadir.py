@@ -50,6 +50,7 @@ import json
 import math
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 from PIL import Image
@@ -92,7 +93,7 @@ def get_padded_bbox(polygon, padding_frac):
 
 def fetch_tile(session, capture_base, zoom, x, y):
     url = f"{capture_base}/{zoom}/{x}/{y}.png"
-    resp = session.get(url, timeout=15)
+    resp = session.get(url, timeout=8)
     if resp.status_code != 200:
         return None
     try:
@@ -119,11 +120,24 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
     if tiles_wide <= 0 or tiles_high <= 0 or tiles_wide > 100 or tiles_high > 100:
         raise ValueError(f"unreasonable tile span {tiles_wide}x{tiles_high} — bbox likely wrong")
 
+    # Fetch tiles concurrently — these are independent network round-trips,
+    # so sequential fetching (the original approach) wastes almost all its
+    # time waiting on network latency rather than doing real work. This
+    # matters most for properties with NO valid tiles (like Jones, outside
+    # the actual capture footprint), where sequential fetching means every
+    # single failed request has to complete one at a time before giving up.
+    tile_coords = [(tx, ty) for tx in range(tile_x0, tile_x1 + 1) for ty in range(tile_y0, tile_y1 + 1)]
     canvas = Image.new("RGB", (tiles_wide * TILE_SIZE, tiles_high * TILE_SIZE), (0, 0, 0))
     missing = 0
-    for tx in range(tile_x0, tile_x1 + 1):
-        for ty in range(tile_y0, tile_y1 + 1):
-            tile = fetch_tile(session, capture_base, zoom, tx, ty)
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        future_to_coord = {
+            executor.submit(fetch_tile, session, capture_base, zoom, tx, ty): (tx, ty)
+            for tx, ty in tile_coords
+        }
+        for future in as_completed(future_to_coord):
+            tx, ty = future_to_coord[future]
+            tile = future.result()
             if tile is None:
                 missing += 1
                 continue
