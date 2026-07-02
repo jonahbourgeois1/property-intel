@@ -297,14 +297,32 @@ BROWSER_ARGS = [
     "--mute-audio",
 ]
 
-# 1280x960 keeps the same 4:3 aspect as the old 1600x1200 but cuts the
-# WebGL framebuffer + screenshot memory by ~36%. Bedrock's framing
-# selection and the sheet-linked images don't need more. Revisit (bump
-# back to 1600x1200) once the Lambda memory quota increase past 3008 MB
-# is approved.
-VIEWPORT = {"width": 1280, "height": 960}
+# Render viewport — env-configurable so it can be tuned WITHOUT a
+# container rebuild (e.g. drop to 1024x768 if memory pressure shows up
+# on big GLBs, raise back to 1600x1200 once the Lambda memory quota
+# increase past 3008 MB is approved). 1280x960 keeps the same 4:3
+# aspect as the original 1600x1200 at ~64% of the pixel count.
+VIEWPORT = {
+    "width": int(os.environ.get("RENDER_VIEWPORT_WIDTH", "1280")),
+    "height": int(os.environ.get("RENDER_VIEWPORT_HEIGHT", "960")),
+}
 
 VIEWER_READY_TIMEOUT_S = 25  # 100 polls x 0.25s
+
+
+def log_available_memory(label):
+    """Log container-wide available memory so CloudWatch shows exactly
+    where the budget goes across views — the difference between 'it
+    crashed' and 'delta started with only 180MB free'."""
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                if line.startswith("MemAvailable:"):
+                    kb = int(line.split()[1])
+                    print(f"  [mem] {label}: {kb // 1024} MB available")
+                    return
+    except Exception:
+        pass
 
 
 def kill_stray_chromium():
@@ -370,6 +388,7 @@ async def render_all_obliques_async(taxlot, glb_url, views, focus_x, focus_y,
     note above for why."""
     results = {}
     for view_name, azimuth in views.items():
+        log_available_memory(f"before {view_name}")
         last_error = None
         for attempt in range(3):
             try:
@@ -383,12 +402,16 @@ async def render_all_obliques_async(taxlot, glb_url, views, focus_x, focus_y,
                 last_error = e
                 print(f"  [warn] {view_name} render attempt {attempt + 1}/3 "
                       f"failed: {e}", file=sys.stderr)
-                # A dead attempt can leave orphaned Chromium processes even
-                # though the playwright driver exited — reap them so the
-                # NEXT attempt isn't starved of memory.
-                kill_stray_chromium()
                 if attempt < 2:
                     await asyncio.sleep(2)
+            finally:
+                # Reap after EVERY attempt, successful or not. With
+                # --single-process/--no-zygote, browser.close() can leave
+                # remnant processes behind even on a clean render — the
+                # 7/2/26 failure logs showed memory climbing across
+                # SUCCESSFUL views (alpha→bravo→charlie fine, delta dead),
+                # which only happens if completed browsers leak.
+                kill_stray_chromium()
         if last_error is not None:
             raise last_error
     return results
@@ -546,8 +569,25 @@ def lambda_handler(event, context):
 
     results = {}
 
-    # Obliques
-    oblique_paths = render_all_obliques(taxlot, glb_url, views, focus_x, focus_y)
+    # Obliques.
+    #
+    # If all 3 attempts for a view fail, do NOT raise normally — a normal
+    # exception keeps this (memory-saturated) execution environment alive,
+    # and Lambda's automatic async retries land back in the SAME warm
+    # container, dying instantly (observed 7/2/26: retries failed in ~6.7s
+    # with memory already pegged at 3008 MB). os._exit() kills the runtime
+    # process, forcing Lambda to mark the invocation failed AND discard
+    # the environment, so the automatic retry starts cold with a full
+    # memory budget — turning Lambda's built-in retry into a genuine
+    # second chance instead of a guaranteed failure.
+    try:
+        oblique_paths = render_all_obliques(taxlot, glb_url, views, focus_x, focus_y)
+    except Exception as e:
+        print(f"[FATAL] oblique rendering failed after retries: {e}", file=sys.stderr)
+        sys.stderr.flush()
+        sys.stdout.flush()
+        os._exit(1)
+
     for view_name, local_path in oblique_paths.items():
         url = upload_image(local_path, taxlot, view_name)
         desc = describe_image(local_path, view_name)
