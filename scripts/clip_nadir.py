@@ -3,52 +3,65 @@ clip_nadir.py
 
 Generates the nadir (straight-down) view for each property by cropping
 directly from the existing georeferenced 2D tile pyramid — the same
-imagery already serving the live map viewer. No 3D rendering, no house
-detection, no camera framing decisions: the parcel polygon's real
-geographic bounds are already known exactly, so this is a deterministic
-crop, not a heuristic search.
+imagery already serving the live map viewer.
 
 HOW IT WORKS:
   1. Look up the property's parcel polygon (by taxlot) to get its exact
      lat/lon bounding box.
-  2. Pad that box by a percentage (default 15%) so the property isn't
-     cropped edge-to-edge with zero margin — mirrors the same
-     "fill target, not exact bounds" philosophy as the existing
-     zoomForBounds() satellite-image sizing.
+  2. Pad that box by a percentage so the property isn't cropped
+     edge-to-edge with zero margin.
   3. Convert the padded bbox to pixel coordinates in the tile pyramid's
-     global pixel space at a chosen zoom level (default 21 — matches the
-     capture's native ~16cm ground resolution).
+     global pixel space at a chosen zoom level (default 21).
   4. Determine which tiles cover that pixel region, download them
-     (plain HTTP — the tile CDN is public), and stitch them into one
-     canvas.
+     concurrently, and stitch them into one canvas.
   5. Crop the canvas to the exact padded-bbox pixel region and save.
+
+AUTO ZOOM (optional, --auto-zoom):
+  This is the same selectBestZoom() pattern from the Apps Script, applied
+  more directly than in the oblique pipeline — nadir crops from this
+  script ARE the same kind of straight-down aerial image the Apps Script
+  already generates from Google Static Maps, just sourced from the drone
+  tile pyramid instead. Rather than trusting one fixed padding percentage
+  for every property, this generates 3 candidate crops (tight/medium/wide
+  padding) and asks Claude (via AWS Bedrock — same credentials/pipeline
+  the Apps Script already uses) to pick the best-framed one.
 
 INPUT:
   --matches       highlands_matches.json (address/taxlot/lat/lon) — only
-                  used to get the taxlot list and property names; the
-                  actual crop geometry comes from the parcel polygon.
-  --parcels       Parcel GeoJSON (same file used by compute_frontage.py
-                  and clip_parcel_textured.py).
-  --capture-base  Base tile URL for the capture, e.g.
-                  https://d3fg47bqswi0rr.cloudfront.net/captures/plane/bend-5-21-26/map
+                  used to get the taxlot list and property names.
+  --parcels       Parcel GeoJSON.
+  --capture-base  Base tile URL for the capture.
   --zoom          Tile zoom level to crop from (default 21).
-  --padding       Fractional padding around the parcel bbox (default 0.15
-                  = 15% on each side).
+  --padding       Fixed padding fraction (used when --auto-zoom is NOT set).
+  --auto-zoom     Enable AI-based padding selection via Bedrock.
+  --padding-candidates
+                  Comma-separated padding fractions to try with
+                  --auto-zoom, ordered tightest-to-widest
+                  (default "0.05,0.15,0.35").
+  --bedrock-region, --bedrock-model
+                  AWS Bedrock settings for the selection call.
   --out-dir       Output directory for nadir JPGs, one per taxlot.
 
-USAGE:
+USAGE (fixed padding, original behavior):
     python3 clip_nadir.py \
-        --matches highlands_matches.json \
-        --parcels bend-5-21-26-parcels.geojson \
+        --matches highlands_matches.json --parcels bend-5-21-26-parcels.geojson \
         --capture-base https://d3fg47bqswi0rr.cloudfront.net/captures/plane/bend-5-21-26/map \
-        --out-dir nadir_captures
+        --out-dir nadir_captures --padding 0.15
+
+USAGE (AI-selected padding):
+    python3 clip_nadir.py \
+        --matches highlands_matches.json --parcels bend-5-21-26-parcels.geojson \
+        --capture-base https://d3fg47bqswi0rr.cloudfront.net/captures/plane/bend-5-21-26/map \
+        --out-dir nadir_captures --auto-zoom
 """
 
 import argparse
+import base64
 import io
 import json
 import math
 import os
+import shutil
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -57,6 +70,79 @@ from PIL import Image
 from shapely.geometry import shape
 
 TILE_SIZE = 256
+DEFAULT_BEDROCK_MODEL = "us.anthropic.claude-sonnet-4-6"
+
+# Closely mirrors ZOOM_PROMPT_RESIDENTIAL from the Apps Script — this is
+# the same task (pick the best-framed straight-down property image from a
+# few candidates), just applied to drone tile crops instead of Google
+# Static Maps zoom levels.
+NADIR_PADDING_SELECTION_PROMPT = """You are selecting the best-framed nadir (straight-down) aerial image of a single residential property from three candidate crops. All three are centered on the same property, cropped from the same source imagery, with different amounts of surrounding context.
+
+Image 1 is the tightest crop (closest to the parcel boundary, least surrounding context).
+Image 2 is a medium crop.
+Image 3 is the widest crop (most surrounding context, most neighboring land visible).
+
+The objective is to clearly display:
+- The residence and any detached structures
+- Driveways and access routes
+- Rear-yard and side-yard areas
+- Pools, recreation areas, and major landscape features
+
+Rules:
+If the target property occupies less than 25% of the image area in image 3, prefer image 1 or image 2 instead.
+If the property is a small lot with boundaries close to neighboring properties, prefer a tighter crop.
+If the property is a large or irregularly shaped parcel, more surrounding context (image 2 or image 3) is appropriate.
+The selected image must show the target property clearly without cropping out any part of the main residence or its immediate grounds, and without excessive irrelevant neighboring context.
+
+Return ONLY a single integer: 1, 2, or 3. No other text."""
+
+
+def select_best_padding_via_bedrock(candidate_paths, region, model_id):
+    """Sends the candidate JPEGs to Claude via Bedrock and returns the
+    0-indexed selection. Falls back to the middle candidate on any
+    failure — matches the Apps Script's selectBestZoom() fallback-to-19
+    behavior rather than crashing the batch over one bad API response."""
+    fallback_index = len(candidate_paths) // 2
+
+    try:
+        import boto3
+    except ImportError:
+        print("[warn] boto3 not installed — falling back to middle padding candidate. "
+              "Install with: pip install boto3 --break-system-packages", file=sys.stderr)
+        return fallback_index
+
+    try:
+        content = []
+        for path in candidate_paths:
+            with open(path, "rb") as f:
+                img_b64 = base64.b64encode(f.read()).decode("ascii")
+            content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64}})
+        content.append({"type": "text", "text": f"Images show option 1 (tightest) through option {len(candidate_paths)} (widest). Return ONLY the number of the best-framed option."})
+
+        payload = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 5,
+            "system": NADIR_PADDING_SELECTION_PROMPT,
+            "messages": [{"role": "user", "content": content}],
+        }
+
+        client = boto3.client("bedrock-runtime", region_name=region)
+        response = client.invoke_model(
+            modelId=model_id,
+            body=json.dumps(payload),
+            contentType="application/json",
+            accept="application/json",
+        )
+        body = json.loads(response["body"].read())
+        text = body["content"][0]["text"].strip()
+        choice = int(text)
+        if 1 <= choice <= len(candidate_paths):
+            return choice - 1
+        print(f"[warn] Bedrock returned out-of-range choice '{text}', using middle candidate", file=sys.stderr)
+        return fallback_index
+    except Exception as e:
+        print(f"[warn] Bedrock padding selection failed ({e}), using middle candidate", file=sys.stderr)
+        return fallback_index
 
 
 def deg2num(lat_deg, lon_deg, zoom):
@@ -105,9 +191,6 @@ def fetch_tile(session, capture_base, zoom, x, y):
 def crop_nadir(session, capture_base, zoom, bbox, out_path):
     min_lon, min_lat, max_lon, max_lat = bbox
 
-    # Fractional tile coords for the two corners. Note: latitude is
-    # inverted in tile space (y increases southward), so max_lat gives
-    # the smaller (northern) y value.
     x0f, y0f = deg2num(max_lat, min_lon, zoom)  # north-west corner
     x1f, y1f = deg2num(min_lat, max_lon, zoom)  # south-east corner
 
@@ -120,12 +203,6 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
     if tiles_wide <= 0 or tiles_high <= 0 or tiles_wide > 100 or tiles_high > 100:
         raise ValueError(f"unreasonable tile span {tiles_wide}x{tiles_high} — bbox likely wrong")
 
-    # Fetch tiles concurrently — these are independent network round-trips,
-    # so sequential fetching (the original approach) wastes almost all its
-    # time waiting on network latency rather than doing real work. This
-    # matters most for properties with NO valid tiles (like Jones, outside
-    # the actual capture footprint), where sequential fetching means every
-    # single failed request has to complete one at a time before giving up.
     tile_coords = [(tx, ty) for tx in range(tile_x0, tile_x1 + 1) for ty in range(tile_y0, tile_y1 + 1)]
     canvas = Image.new("RGB", (tiles_wide * TILE_SIZE, tiles_high * TILE_SIZE), (0, 0, 0))
     missing = 0
@@ -148,7 +225,6 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
     if missing == tiles_wide * tiles_high:
         raise RuntimeError("no tiles could be fetched — check capture-base URL / zoom level")
 
-    # Pixel offset of the exact bbox corners within the stitched canvas
     px0 = (x0f - tile_x0) * TILE_SIZE
     py0 = (y0f - tile_y0) * TILE_SIZE
     px1 = (x1f - tile_x0) * TILE_SIZE
@@ -160,6 +236,42 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
     return missing, tiles_wide * tiles_high
 
 
+def process_property(session, capture_base, zoom, parcel, taxlot, name, out_dir,
+                      fixed_padding, auto_zoom, padding_candidates, bedrock_region, bedrock_model):
+    final_path = os.path.join(out_dir, f"{taxlot}.jpg")
+
+    if not auto_zoom:
+        bbox = get_padded_bbox(parcel, fixed_padding)
+        missing, total = crop_nadir(session, capture_base, zoom, bbox, final_path)
+        tag = f" ({missing}/{total} tiles missing)" if missing else ""
+        print(f"[ok] {name} ({taxlot}) -> {final_path}{tag}")
+        return
+
+    # Auto-zoom: generate one candidate per padding level, ask Bedrock to
+    # pick the best-framed one.
+    candidate_dir = os.path.join(out_dir, "_candidates", taxlot)
+    candidate_paths = []
+    for i, pad in enumerate(padding_candidates):
+        cand_path = os.path.join(candidate_dir, f"option{i+1}_pad{pad}.jpg")
+        bbox = get_padded_bbox(parcel, pad)
+        try:
+            crop_nadir(session, capture_base, zoom, bbox, cand_path)
+            candidate_paths.append(cand_path)
+        except Exception as e:
+            print(f"[warn] {name} ({taxlot}) candidate pad={pad} failed: {e}", file=sys.stderr)
+
+    if not candidate_paths:
+        raise RuntimeError("no padding candidates could be generated")
+
+    chosen_index = select_best_padding_via_bedrock(candidate_paths, bedrock_region, bedrock_model)
+    chosen_index = min(chosen_index, len(candidate_paths) - 1)
+
+    os.makedirs(os.path.dirname(final_path), exist_ok=True)
+    shutil.copy(candidate_paths[chosen_index], final_path)
+    chosen_pad = padding_candidates[chosen_index] if chosen_index < len(padding_candidates) else "?"
+    print(f"[ok] {name} ({taxlot}) -> {final_path} (auto-zoom selected option {chosen_index+1}, padding={chosen_pad})")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--matches", required=True)
@@ -167,9 +279,15 @@ def main():
     ap.add_argument("--parcel-taxlot-field", default="TAXLOT")
     ap.add_argument("--capture-base", required=True)
     ap.add_argument("--zoom", type=int, default=21)
-    ap.add_argument("--padding", type=float, default=0.15)
+    ap.add_argument("--padding", type=float, default=0.15, help="Fixed padding fraction, used when --auto-zoom is NOT set.")
+    ap.add_argument("--auto-zoom", action="store_true", help="Enable AI-based padding selection via AWS Bedrock (3 candidates, mirrors the Apps Script's selectBestZoom()).")
+    ap.add_argument("--padding-candidates", default="0.05,0.15,0.35", help="Comma-separated padding fractions to try with --auto-zoom, ordered tightest-to-widest.")
+    ap.add_argument("--bedrock-region", default="us-east-1")
+    ap.add_argument("--bedrock-model", default=DEFAULT_BEDROCK_MODEL)
     ap.add_argument("--out-dir", required=True)
     args = ap.parse_args()
+
+    padding_candidates = [float(p.strip()) for p in args.padding_candidates.split(",")]
 
     with open(args.matches, "r") as f:
         matches = json.load(f)
@@ -190,13 +308,9 @@ def main():
             skipped += 1
             continue
 
-        bbox = get_padded_bbox(parcel, args.padding)
-        out_path = os.path.join(args.out_dir, f"{taxlot}.jpg")
-
         try:
-            missing, total = crop_nadir(session, args.capture_base, args.zoom, bbox, out_path)
-            tag = f" ({missing}/{total} tiles missing)" if missing else ""
-            print(f"[ok] {name} ({taxlot}) -> {out_path}{tag}")
+            process_property(session, args.capture_base, args.zoom, parcel, taxlot, name, args.out_dir,
+                              args.padding, args.auto_zoom, padding_candidates, args.bedrock_region, args.bedrock_model)
             succeeded += 1
         except Exception as e:
             print(f"[skip] {name} ({taxlot}) failed: {e}", file=sys.stderr)
