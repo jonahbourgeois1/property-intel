@@ -157,6 +157,39 @@ def select_best_padding_via_bedrock(candidate_paths, region, model_id):
         return fallback_index
 
 
+def load_capture_tile_extent(captures_json_path, capture_id, zoom):
+    """Reads the DECLARED tile coverage bounds for a capture at a given
+    zoom level from captures.json — this is the 2D tile pyramid's actual
+    coverage, which is NOT the same as the 3D OBJ mesh's coverage (we
+    confirmed properties exist with real 3D vertices but zero 2D tile
+    overlap, and vice versa). Returns (x_min, x_max, y_min, y_max) in
+    tile coordinates, or None if not found."""
+    with open(captures_json_path, "r") as f:
+        data = json.load(f)
+    for cap in data.get("captures", []):
+        if cap.get("id") == capture_id:
+            extent = cap.get("tile_extents", {}).get(str(zoom))
+            if extent:
+                return extent["x"][0], extent["x"][1], extent["y"][0], extent["y"][1]
+    return None
+
+
+def bbox_fits_in_tile_extent(bbox, zoom, extent):
+    """Checks whether a lat/lon bbox's required tile range is FULLY
+    contained within the capture's declared 2D tile extent — the check
+    this function replaces (attempting the fetch and discovering failure
+    afterward) wastes network calls on properties we can determine in
+    advance have no chance of full coverage."""
+    min_lon, min_lat, max_lon, max_lat = bbox
+    x0f, y0f = deg2num(max_lat, min_lon, zoom)
+    x1f, y1f = deg2num(min_lat, max_lon, zoom)
+    tile_x0, tile_x1 = int(math.floor(x0f)), int(math.floor(x1f))
+    tile_y0, tile_y1 = int(math.floor(y0f)), int(math.floor(y1f))
+
+    ext_x_min, ext_x_max, ext_y_min, ext_y_max = extent
+    return tile_x0 >= ext_x_min and tile_x1 <= ext_x_max and tile_y0 >= ext_y_min and tile_y1 <= ext_y_max
+
+
 def deg2num(lat_deg, lon_deg, zoom):
     """Standard slippy-map lat/lon -> fractional tile coordinates."""
     lat_rad = math.radians(lat_deg)
@@ -250,31 +283,74 @@ def crop_nadir(session, capture_base, zoom, bbox, out_path):
 
 
 def process_property(session, capture_base, zoom, parcel, taxlot, name, out_dir,
-                      fixed_padding, auto_zoom, padding_candidates, bedrock_region, bedrock_model):
+                      fixed_padding, auto_zoom, padding_candidates, bedrock_region, bedrock_model,
+                      max_missing_fraction, tile_extent):
     final_path = os.path.join(out_dir, f"{taxlot}.jpg")
 
     if not auto_zoom:
         bbox = get_padded_bbox(parcel, fixed_padding)
+        if tile_extent and not bbox_fits_in_tile_extent(bbox, zoom, tile_extent):
+            raise RuntimeError(
+                "property's padded bounds fall outside the 2D tile pyramid's declared coverage "
+                "(checked against captures.json, not the 3D mesh) — skipping before any fetch attempt"
+            )
         missing, total = crop_nadir(session, capture_base, zoom, bbox, final_path)
+        missing_frac = missing / total if total else 1.0
+        if missing_frac > max_missing_fraction:
+            # Remove the degraded output rather than leaving a mostly-black
+            # image on disk that looks like a success at a glance.
+            if os.path.exists(final_path):
+                os.remove(final_path)
+            raise RuntimeError(
+                f"crop is {missing_frac:.0%} missing tiles (limit {max_missing_fraction:.0%}) — "
+                f"the parcel's full bounds likely extend beyond real capture coverage, "
+                f"even though part of the property may be covered"
+            )
         tag = f" ({missing}/{total} tiles missing)" if missing else ""
         print(f"[ok] {name} ({taxlot}) -> {final_path}{tag}")
         return
 
     # Auto-zoom: generate one candidate per padding level, ask Bedrock to
-    # pick the best-framed one.
+    # pick the best-framed one. Candidates that fail the completeness
+    # threshold are excluded entirely BEFORE Bedrock sees them — asking an
+    # AI to pick "the least bad of three bad options" produces a plausible-
+    # sounding but still-unusable result, when the honest answer is that
+    # this property's full parcel bounds don't fit within real coverage.
+    tightest_padding = min(padding_candidates)
+    tightest_bbox = get_padded_bbox(parcel, tightest_padding)
+    if tile_extent and not bbox_fits_in_tile_extent(tightest_bbox, zoom, tile_extent):
+        raise RuntimeError(
+            f"even the tightest padding ({tightest_padding:.0%}) falls outside the 2D tile pyramid's "
+            f"declared coverage (checked against captures.json, not the 3D mesh) — "
+            f"skipping before any fetch attempt"
+        )
+
     candidate_dir = os.path.join(out_dir, "_candidates", taxlot)
     candidate_paths = []
+    all_missing_fractions = []
     for i, pad in enumerate(padding_candidates):
         cand_path = os.path.join(candidate_dir, f"option{i+1}_pad{pad}.jpg")
         bbox = get_padded_bbox(parcel, pad)
         try:
-            crop_nadir(session, capture_base, zoom, bbox, cand_path)
+            missing, total = crop_nadir(session, capture_base, zoom, bbox, cand_path)
+            missing_frac = missing / total if total else 1.0
+            all_missing_fractions.append(missing_frac)
+            if missing_frac > max_missing_fraction:
+                print(f"[warn] {name} ({taxlot}) candidate pad={pad} rejected: "
+                      f"{missing_frac:.0%} missing tiles (limit {max_missing_fraction:.0%})", file=sys.stderr)
+                if os.path.exists(cand_path):
+                    os.remove(cand_path)
+                continue
             candidate_paths.append(cand_path)
         except Exception as e:
             print(f"[warn] {name} ({taxlot}) candidate pad={pad} failed: {e}", file=sys.stderr)
 
     if not candidate_paths:
-        raise RuntimeError("no padding candidates could be generated")
+        worst = f", best candidate still had {min(all_missing_fractions):.0%} missing" if all_missing_fractions else ""
+        raise RuntimeError(
+            f"no padding candidate met the {max_missing_fraction:.0%} coverage threshold{worst} — "
+            f"the parcel's full bounds likely extend beyond real capture coverage"
+        )
 
     chosen_index = select_best_padding_via_bedrock(candidate_paths, bedrock_region, bedrock_model)
     chosen_index = min(chosen_index, len(candidate_paths) - 1)
@@ -291,6 +367,8 @@ def main():
     ap.add_argument("--parcels", required=True)
     ap.add_argument("--parcel-taxlot-field", default="TAXLOT")
     ap.add_argument("--capture-base", required=True)
+    ap.add_argument("--captures-json", default=None, help="Path to captures.json — if provided along with --capture-id, properties whose bounds fall outside the DECLARED 2D tile coverage are skipped before any fetch attempt (this checks the 2D tile pyramid's coverage, not the 3D mesh's, which can differ).")
+    ap.add_argument("--capture-id", default=None, help="Capture ID to look up in captures.json, e.g. 'bend-5-21-26'.")
     ap.add_argument("--zoom", type=int, default=21)
     ap.add_argument("--padding", type=float, default=0.15, help="Fixed padding fraction, used when --auto-zoom is NOT set.")
     ap.add_argument("--auto-zoom", action="store_true", help="Enable AI-based padding selection via AWS Bedrock (3 candidates, mirrors the Apps Script's selectBestZoom()).")
@@ -298,6 +376,7 @@ def main():
     ap.add_argument("--bedrock-region", default="us-east-1")
     ap.add_argument("--bedrock-model", default=DEFAULT_BEDROCK_MODEL)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--max-missing-fraction", type=float, default=0.15, help="Reject a crop/candidate if more than this fraction of its tiles are missing (default 0.15 = 15%%). Prevents accepting a mostly-black image just because it's the least-bad of the options generated.")
     args = ap.parse_args()
 
     padding_candidates = [float(p.strip()) for p in args.padding_candidates.split(",")]
@@ -307,6 +386,16 @@ def main():
 
     parcels = load_parcels(args.parcels, args.parcel_taxlot_field)
     os.makedirs(args.out_dir, exist_ok=True)
+
+    tile_extent = None
+    if args.captures_json and args.capture_id:
+        tile_extent = load_capture_tile_extent(args.captures_json, args.capture_id, args.zoom)
+        if tile_extent:
+            print(f"Loaded 2D tile coverage bounds for '{args.capture_id}' at z{args.zoom}: "
+                  f"x={tile_extent[0]}-{tile_extent[1]}, y={tile_extent[2]}-{tile_extent[3]}", file=sys.stderr)
+        else:
+            print(f"[warn] could not find tile_extents for capture '{args.capture_id}' at z{args.zoom} "
+                  f"in {args.captures_json} — coverage pre-check disabled", file=sys.stderr)
 
     session = requests.Session()
     succeeded, skipped = 0, 0
@@ -323,7 +412,8 @@ def main():
 
         try:
             process_property(session, args.capture_base, args.zoom, parcel, taxlot, name, args.out_dir,
-                              args.padding, args.auto_zoom, padding_candidates, args.bedrock_region, args.bedrock_model)
+                              args.padding, args.auto_zoom, padding_candidates, args.bedrock_region, args.bedrock_model,
+                              args.max_missing_fraction, tile_extent)
             succeeded += 1
         except Exception as e:
             print(f"[skip] {name} ({taxlot}) failed: {e}", file=sys.stderr)
