@@ -92,6 +92,7 @@ Rules:
 If the target property occupies less than 25% of the image area in image 3, prefer image 1 or image 2 instead.
 If the property is a small lot with boundaries close to neighboring properties, prefer a tighter crop.
 If the property is a large or irregularly shaped parcel, more surrounding context (image 2 or image 3) is appropriate.
+If any image contains a large solid black region (missing imagery, common near the edge of drone capture coverage), avoid selecting it unless every option has the same problem — prefer the option with the least missing imagery.
 The selected image must show the target property clearly without cropping out any part of the main residence or its immediate grounds, and without excessive irrelevant neighboring context.
 
 Return ONLY a single integer: 1, 2, or 3. No other text."""
@@ -114,8 +115,19 @@ def select_best_padding_via_bedrock(candidate_paths, region, model_id):
     try:
         content = []
         for path in candidate_paths:
-            with open(path, "rb") as f:
-                img_b64 = base64.b64encode(f.read()).decode("ascii")
+            # Nadir crops scale with real property size (unlike oblique's
+            # fixed 1600x1200 browser screenshots), so large properties with
+            # generous padding can exceed Bedrock's 8000px image limit —
+            # this caused every large-property selection call to silently
+            # fail validation and fall back to the middle candidate,
+            # without ever actually being seen by the model. Downscale a
+            # copy just for the API call; the full-resolution original is
+            # still what gets saved as the final output.
+            img = Image.open(path)
+            img.thumbnail((1568, 1568), Image.LANCZOS)
+            buf = io.BytesIO()
+            img.convert("RGB").save(buf, format="JPEG", quality=85)
+            img_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
             content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": img_b64}})
         content.append({"type": "text", "text": f"Images show option 1 (tightest) through option {len(candidate_paths)} (widest). Return ONLY the number of the best-framed option."})
 
