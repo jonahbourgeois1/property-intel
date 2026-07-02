@@ -83,6 +83,12 @@ MODEL_VIEWER_BASE_URL = os.environ["MODEL_VIEWER_BASE_URL"]
 TILE_CAPTURE_BASE = os.environ["TILE_CAPTURE_BASE"]
 GLB_URL_TEMPLATE = os.environ["GLB_URL_TEMPLATE"]
 CAPTURE_ID = os.environ["CAPTURE_ID"]
+# Public-facing base URL for rendered images. The raw s3.amazonaws.com
+# endpoint is NOT publicly readable (confirmed 7/2/26: AccessDenied) —
+# all public assets in this platform are served through CloudFront,
+# which has access to the bucket. Sheet URLs must therefore be
+# CloudFront URLs, matching GLB_URL_TEMPLATE / TILE_CAPTURE_BASE.
+PUBLIC_CDN_BASE = os.environ.get("PUBLIC_CDN_BASE", "https://d3fg47bqswi0rr.cloudfront.net")
 MAPS_API_KEY_SECRET_ARN = os.environ["MAPS_API_KEY_SECRET_ARN"]
 BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
 BEDROCK_REGION = os.environ.get("AWS_REGION_BEDROCK", "us-east-1")
@@ -478,7 +484,7 @@ def describe_image(image_path, view_label):
 def upload_image(local_path, taxlot, view_name):
     key = f"renders/{taxlot}/{view_name}.jpg"
     s3.upload_file(local_path, OUTPUT_BUCKET, key, ExtraArgs={"ContentType": "image/jpeg"})
-    return f"https://{OUTPUT_BUCKET}.s3.amazonaws.com/{key}"
+    return f"{PUBLIC_CDN_BASE.rstrip('/')}/{key}"
 
 
 # ── Google Sheets write-back ────────────────────────────────────────────────
