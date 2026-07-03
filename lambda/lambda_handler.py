@@ -32,22 +32,20 @@ EXPECTED EVENT PAYLOAD (from Apps Script):
   "accountType": "residential" | "commercial"
 }
 
-REQUIRED S3 LAYOUT (one-time setup — mirror these from the repo before
-first use, since Lambda never reads from GitHub):
-  s3://{REFERENCE_BUCKET}/parcels/bend-5-21-26-parcels.geojson
-  s3://{REFERENCE_BUCKET}/captures.json
-  (GLBs and 2D tiles are already in S3 from the existing pipeline)
+REQUIRED S3 LAYOUT (see CAPTURE_ONBOARDING.md — adding a NEW capture is
+data-only, no code changes):
+  s3://{REFERENCE_BUCKET}/reference/captures.json          — capture registry
+  s3://{REFERENCE_BUCKET}/reference/parcels/{capture-id}-parcels.geojson
+  (GLBs at captures/plane/{capture-id}/parcels/{taxlot}/clipped.glb and 2D
+   tiles at captures/plane/{capture-id}/map/{z}/{x}/{y}.png, per capture)
 
 REQUIRED ENV VARS:
-  REFERENCE_BUCKET       — bucket holding parcels.geojson / captures.json
+  REFERENCE_BUCKET       — bucket holding reference/captures.json + parcels
   OUTPUT_BUCKET          — bucket to upload final rendered images to
   MODEL_VIEWER_BASE_URL  — e.g. https://responder-intel.vyanet.com/model-viewer-test.html
                            (a public webpage load for rendering purposes —
                            not a data write, so this doesn't violate the
                            git/AWS write isolation requirement)
-  TILE_CAPTURE_BASE      — e.g. https://d3fg47bqswi0rr.cloudfront.net/captures/plane/bend-5-21-26/map
-  GLB_URL_TEMPLATE       — e.g. https://.../parcels/{taxlot}/clipped.glb
-  CAPTURE_ID             — e.g. bend-5-21-26
   MAPS_API_KEY_SECRET_ARN     — Secrets Manager ARN for the Google Maps geocoding key
   WORKLOAD_IDENTITY_CONFIG_PATH — path to the non-secret WIF credential config
                            bundled into the image (default /var/task/aws-credential-config.json).
@@ -56,6 +54,15 @@ REQUIRED ENV VARS:
                            key exists or is needed (Google Cloud org policy
                            disables key creation; this is Google's own
                            recommended alternative anyway).
+
+OPTIONAL ENV VARS (defaults follow the standard packaging convention):
+  PUBLIC_CDN_BASE        — default https://d3fg47bqswi0rr.cloudfront.net
+  GLB_URL_TEMPLATE       — default {cdn}/captures/plane/{capture_id}/parcels/{taxlot}/clipped.glb
+  TILE_CAPTURE_BASE_TEMPLATE — default {cdn}/captures/plane/{capture_id}/map
+  PARCELS_KEY_TEMPLATE   — default reference/parcels/{capture_id}-parcels.geojson
+  CAPTURES_KEY           — default reference/captures.json
+  MIN_TILE_COVERAGE      — default 0.8
+  RENDER_VIEWPORT_WIDTH/HEIGHT — default 1280x960
   BEDROCK_MODEL_ID       — default us.anthropic.claude-sonnet-4-6
   AWS_REGION_BEDROCK     — default us-east-1
 """
@@ -80,27 +87,52 @@ from shapely.geometry import shape, Point
 REFERENCE_BUCKET = os.environ["REFERENCE_BUCKET"]
 OUTPUT_BUCKET = os.environ["OUTPUT_BUCKET"]
 MODEL_VIEWER_BASE_URL = os.environ["MODEL_VIEWER_BASE_URL"]
-TILE_CAPTURE_BASE = os.environ["TILE_CAPTURE_BASE"]
-GLB_URL_TEMPLATE = os.environ["GLB_URL_TEMPLATE"]
-CAPTURE_ID = os.environ["CAPTURE_ID"]
 # Public-facing base URL for rendered images. The raw s3.amazonaws.com
 # endpoint is NOT publicly readable (confirmed 7/2/26: AccessDenied) —
 # all public assets in this platform are served through CloudFront,
 # which has access to the bucket. Sheet URLs must therefore be
-# CloudFront URLs, matching GLB_URL_TEMPLATE / TILE_CAPTURE_BASE.
+# CloudFront URLs.
 PUBLIC_CDN_BASE = os.environ.get("PUBLIC_CDN_BASE", "https://d3fg47bqswi0rr.cloudfront.net")
+
+# MULTI-CAPTURE (7/3/26): the pipeline is no longer bound to one capture.
+# Captures are discovered from the registry (reference/captures.json) and
+# every per-capture path is derived from these templates, so onboarding a
+# new plane mapping is data-only: upload assets in the standard layout,
+# append a registry entry, done. See CAPTURE_ONBOARDING.md. A legacy
+# single-capture GLB_URL_TEMPLATE (with the capture id baked in and only
+# {taxlot} as a placeholder) still works — str.format ignores unused kwargs.
+GLB_URL_TEMPLATE = os.environ.get(
+    "GLB_URL_TEMPLATE",
+    PUBLIC_CDN_BASE + "/captures/plane/{capture_id}/parcels/{taxlot}/clipped.glb")
+TILE_CAPTURE_BASE_TEMPLATE = os.environ.get(
+    "TILE_CAPTURE_BASE_TEMPLATE",
+    os.environ.get("TILE_CAPTURE_BASE",  # legacy single-capture fallback
+                   PUBLIC_CDN_BASE + "/captures/plane/{capture_id}/map"))
+PARCELS_KEY_TEMPLATE = os.environ.get(
+    "PARCELS_KEY_TEMPLATE", "reference/parcels/{capture_id}-parcels.geojson")
+CAPTURES_KEY = os.environ.get("CAPTURES_KEY", "reference/captures.json")
+
 MAPS_API_KEY_SECRET_ARN = os.environ["MAPS_API_KEY_SECRET_ARN"]
 BEDROCK_MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-sonnet-4-6")
 BEDROCK_REGION = os.environ.get("AWS_REGION_BEDROCK", "us-east-1")
 
-TILE_ZOOM = 21
 PLANE_SHEET_COLUMNS = {
-    # 0-indexed, matching PLANE_SHEET's documented layout in the Apps Script
+    # 0-indexed, matching the Plane sheet layout per Apps Script v5.14
+    # processSheet() — Account Type was added as column A in v5.14,
+    # shifting all other columns right by one:
+    # A Account Type | B Account Name | C Property Address | D HOA | E View
+    # F Nadir Image URL | G Nadir Description | H Alpha Image URL
+    # I Alpha Description | J Bravo Image URL | K Bravo Description
+    # L Charlie Image URL | M Charlie Description | N Delta Image URL
+    # O Delta Description | P Responder Considerations
+    # Q Information Needing Clarification | R 360 View URL | S FR Link
+    # T Upload Date
     "nadir_url": 5, "nadir_desc": 6,
     "alpha_url": 7, "alpha_desc": 8,
     "bravo_url": 9, "bravo_desc": 10,
     "charlie_url": 11, "charlie_desc": 12,
     "delta_url": 13, "delta_desc": 14,
+    "viewer_url": 17,  # R: 360 View URL — interactive 3D model link
 }
 
 s3 = boto3.client("s3")
@@ -125,24 +157,42 @@ def load_reference_json(key):
     return _cache[key]
 
 
-def load_parcels():
-    gj = load_reference_json("reference/parcels/bend-5-21-26-parcels.geojson")
-    parcels = {}
-    for feat in gj.get("features", []):
-        taxlot = feat.get("properties", {}).get("TAXLOT")
-        if taxlot is not None:
-            parcels[str(taxlot)] = shape(feat["geometry"])
-    return parcels
+def list_plane_captures():
+    """Enabled plane captures from the registry, NEWEST FIRST — when
+    multiple captures cover the same property, the most recent flight
+    wins, so re-flying an area automatically refreshes its imagery."""
+    data = load_reference_json(CAPTURES_KEY)
+    caps = [c for c in data.get("captures", [])
+            if c.get("tile_extents")
+            and c.get("type", "plane") == "plane"
+            and c.get("enabled", True)]
+    return sorted(caps, key=lambda c: str(c.get("captured", "")), reverse=True)
 
 
-def load_tile_extent(zoom):
-    data = load_reference_json("reference/captures.json")
-    for cap in data.get("captures", []):
-        if cap.get("id") == CAPTURE_ID:
-            ext = cap.get("tile_extents", {}).get(str(zoom))
-            if ext:
-                return ext["x"][0], ext["x"][1], ext["y"][0], ext["y"][1]
-    return None
+def capture_max_zoom(cap):
+    """Highest zoom level a capture declares — this is what the nadir
+    cropper uses, so captures may ship different zoom sets freely."""
+    return max(int(z) for z in cap["tile_extents"].keys())
+
+
+def capture_tile_extent(cap, zoom):
+    ext = cap.get("tile_extents", {}).get(str(zoom))
+    if not ext:
+        return None
+    return ext["x"][0], ext["x"][1], ext["y"][0], ext["y"][1]
+
+
+def load_parcels(capture_id):
+    cache_key = f"parcels::{capture_id}"
+    if cache_key not in _cache:
+        gj = load_reference_json(PARCELS_KEY_TEMPLATE.format(capture_id=capture_id))
+        parcels = {}
+        for feat in gj.get("features", []):
+            taxlot = feat.get("properties", {}).get("TAXLOT")
+            if taxlot is not None:
+                parcels[str(taxlot)] = shape(feat["geometry"])
+        _cache[cache_key] = parcels
+    return _cache[cache_key]
 
 
 # ── Address -> taxlot ──────────────────────────────────────────────────────
@@ -168,18 +218,34 @@ def match_taxlot(lat, lon, parcels):
     return None
 
 
-# ── ECEF transform (EXACT copy — must stay in sync with clip_parcel_textured.py) ──
+# ── ECEF → capture-local transform ──────────────────────────────────────────
+# Each capture's GLBs live in that capture's OWN model space, defined by the
+# tileset's column-major 4x4 ECEF transform (the matrix in that capture's
+# clip_parcel_textured.py run). Using the wrong capture's matrix aims the
+# camera at the wrong spot, so the matrix ships in the registry as
+# "model_transform" per capture. The original bend-5-21-26 matrix is kept
+# as the built-in default for registry entries that predate this field.
 
-_M = [
+_DEFAULT_MODEL_TRANSFORM = [
     0.8538393068677613, -0.5205366827108161, 0.0, 0.0,
     0.3618967178637809, 0.5936212624426974, 0.7187799123343397, 0.0,
     -0.3741513111656884, -0.6137225421380228, 0.6952376842667829, 0.0,
     -2390834.612219335, -3921699.7301742565, 4412849.998474161, 1.0
 ]
-_R = [[_M[0], _M[4], _M[8]], [_M[1], _M[5], _M[9]], [_M[2], _M[6], _M[10]]]
-_T = [_M[12], _M[13], _M[14]]
-_R_T = [[_R[j][i] for j in range(3)] for i in range(3)]
 _WGS84_A, _WGS84_E2 = 6378137.0, 0.00669437999014
+
+
+def _transform_parts(matrix):
+    """Rotation-transpose and translation extracted from a column-major
+    4x4, cached per matrix."""
+    key = f"xform::{tuple(matrix)}"
+    if key not in _cache:
+        M = matrix
+        R = [[M[0], M[4], M[8]], [M[1], M[5], M[9]], [M[2], M[6], M[10]]]
+        T = [M[12], M[13], M[14]]
+        R_T = [[R[j][i] for j in range(3)] for i in range(3)]
+        _cache[key] = (R_T, T)
+    return _cache[key]
 
 
 def _geodetic_to_ecef(lat, lon, h=0.0):
@@ -191,16 +257,17 @@ def _geodetic_to_ecef(lat, lon, h=0.0):
              (N * (1 - _WGS84_E2) + h) * sl)
 
 
-def latlon_to_local_xy(lat, lon):
-    dx, dy, dz = (_geodetic_to_ecef(lat, lon)[i] - _T[i] for i in range(3))
-    x = _R_T[0][0]*dx + _R_T[0][1]*dy + _R_T[0][2]*dz
-    y = _R_T[1][0]*dx + _R_T[1][1]*dy + _R_T[1][2]*dz
+def latlon_to_local_xy(lat, lon, model_transform=None):
+    R_T, T = _transform_parts(model_transform or _DEFAULT_MODEL_TRANSFORM)
+    dx, dy, dz = (_geodetic_to_ecef(lat, lon)[i] - T[i] for i in range(3))
+    x = R_T[0][0]*dx + R_T[0][1]*dy + R_T[0][2]*dz
+    y = R_T[1][0]*dx + R_T[1][1]*dy + R_T[1][2]*dz
     return x, y
 
 
 # ── Frontage bearing (same math as compute_frontage.py) ────────────────────
 
-def frontage_and_views(parcel_polygon, address_lat, address_lon):
+def frontage_and_views(parcel_polygon, address_lat, address_lon, model_transform=None):
     from pyproj import Transformer
     to_proj = Transformer.from_crs("EPSG:4326", "EPSG:32610", always_xy=True).transform
     px, py = to_proj(address_lon, address_lat)
@@ -237,7 +304,7 @@ def frontage_and_views(parcel_polygon, address_lat, address_lon):
         best_dist = dist
         best_bearing = math.degrees(math.atan2(outward[0], outward[1])) % 360
 
-    focus_x, focus_y = latlon_to_local_xy(address_lat, address_lon)
+    focus_x, focus_y = latlon_to_local_xy(address_lat, address_lon, model_transform)
 
     views = {
         "alpha": best_bearing % 360,
@@ -486,7 +553,7 @@ def deg2num(lat_deg, lon_deg, zoom):
     return xtile, ytile
 
 
-def crop_nadir(bbox, out_path, zoom=TILE_ZOOM):
+def crop_nadir(bbox, out_path, tile_base, zoom):
     min_lon, min_lat, max_lon, max_lat = bbox
     x0f, y0f = deg2num(max_lat, min_lon, zoom)
     x1f, y1f = deg2num(min_lat, max_lon, zoom)
@@ -498,7 +565,7 @@ def crop_nadir(bbox, out_path, zoom=TILE_ZOOM):
     missing = 0
     for tx in range(tile_x0, tile_x1 + 1):
         for ty in range(tile_y0, tile_y1 + 1):
-            resp = requests.get(f"{TILE_CAPTURE_BASE}/{zoom}/{tx}/{ty}.png", timeout=8)
+            resp = requests.get(f"{tile_base}/{zoom}/{tx}/{ty}.png", timeout=8)
             if resp.status_code != 200:
                 missing += 1
                 continue
@@ -527,13 +594,11 @@ def get_padded_bbox(polygon, padding_frac=0.15):
 MIN_TILE_COVERAGE = float(os.environ.get("MIN_TILE_COVERAGE", "0.8"))
 
 
-def tile_coverage_fraction(parcel_polygon, zoom):
+def tile_coverage_fraction(parcel_polygon, zoom, extent):
     """Fraction of the parcel's bounding box (in fractional tile
-    coordinates) that lies inside the capture's tile extent at `zoom` —
+    coordinates) that lies inside the given tile extent at `zoom` —
     the same fractional-area-overlap measure clip_nadir.py and the
-    eligibility Lambda use. Returns 0.0 if the capture has no recorded
-    extent at this zoom."""
-    extent = load_tile_extent(zoom)
+    eligibility Lambda use."""
     if not extent:
         return 0.0
     ext_x0, ext_x1, ext_y0, ext_y1 = extent
@@ -557,9 +622,72 @@ def tile_coverage_fraction(parcel_polygon, zoom):
     return ((ix1 - ix0) * (iy1 - iy0)) / parcel_area
 
 
+def select_capture(lat, lon, requested_capture_id=None):
+    """The multi-capture heart of the pipeline. Walks every enabled plane
+    capture NEWEST FIRST and returns the first one where this property
+    fully qualifies:
+      1. a parcel in that capture's parcel set contains the point
+      2. >= MIN_TILE_COVERAGE of the parcel sits inside that capture's
+         2D tile extent (HARD STOP rule, checked at the capture's max zoom)
+      3. the parcel's clipped GLB exists in that capture
+
+    Returns (capture_dict, taxlot, parcel_polygon, zoom, coverage, glb_url).
+    Raises with a per-capture explanation if NO capture qualifies — which
+    is also what makes growth automatic: when a future flight's registry
+    entry covers this property, the same address starts succeeding with
+    no code change.
+    """
+    captures = list_plane_captures()
+    if requested_capture_id:
+        captures = [c for c in captures if c["id"] == requested_capture_id]
+        if not captures:
+            raise RuntimeError(
+                f"HARD STOP: requested capture '{requested_capture_id}' not "
+                f"found/enabled in {CAPTURES_KEY}")
+    if not captures:
+        raise RuntimeError(f"HARD STOP: no enabled plane captures in {CAPTURES_KEY}")
+
+    attempts = []
+    for cap in captures:
+        cid = cap["id"]
+        try:
+            parcels = load_parcels(cid)
+        except Exception as e:
+            attempts.append(f"{cid}: parcel data unavailable ({e})")
+            continue
+        taxlot = match_taxlot(lat, lon, parcels)
+        if not taxlot:
+            attempts.append(f"{cid}: no parcel match")
+            continue
+        zoom = capture_max_zoom(cap)
+        coverage = tile_coverage_fraction(
+            parcels[taxlot], zoom, capture_tile_extent(cap, zoom))
+        if coverage < MIN_TILE_COVERAGE:
+            attempts.append(f"{cid}: taxlot {taxlot}, only {coverage:.0%} 2D "
+                            f"coverage (need {MIN_TILE_COVERAGE:.0%})")
+            continue
+        glb_url = GLB_URL_TEMPLATE.format(capture_id=cid, taxlot=taxlot)
+        try:
+            head_status = requests.head(glb_url, timeout=10).status_code
+        except Exception as e:
+            attempts.append(f"{cid}: GLB check failed ({e})")
+            continue
+        if head_status != 200:
+            attempts.append(f"{cid}: taxlot {taxlot}, coverage OK, but no "
+                            f"GLB (HTTP {head_status})")
+            continue
+        return cap, taxlot, parcels[taxlot], zoom, coverage, glb_url
+
+    raise RuntimeError(
+        "HARD STOP: property does not qualify in any capture — "
+        + "; ".join(attempts)
+        + " — no rendering attempted. (It will qualify automatically once "
+          "a future capture covering it is registered.)")
+
+
 # ── Bedrock: image description (mirrors the Satellite pipeline's analyzeImage) ──
 
-def describe_image(image_path, view_label):
+def describe_image(image_path, view_label, account_type="residential"):
     # Always downscale before sending to Bedrock — nadir crops scale with
     # real parcel size (unlike the fixed-size oblique screenshots),
     # so a large property's nadir image can exceed Bedrock's 5MB payload
@@ -571,10 +699,21 @@ def describe_image(image_path, view_label):
     img.convert("RGB").save(buf, format="JPEG", quality=85)
     img_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
 
+    # Account type drives the framing: a commercial property described as
+    # a residence (or vice versa) produces misleading responder records —
+    # same residential/commercial split the Apps Script applies to all
+    # its satellite prompts as of v5.14.
+    if account_type == "commercial":
+        subject = ("commercial property", "the building(s), parking and loading areas, "
+                   "access roads, notable site features, and entrances")
+    else:
+        subject = ("residential property", "the structure, driveway, notable landscape "
+                   "features, and access points")
+
     prompt = (
-        f"You are describing a {view_label} aerial photo of a residential property for a "
+        f"You are describing a {view_label} aerial photo of a {subject[0]} for a "
         f"first-responder property intelligence record. Describe only what is directly visible: "
-        f"the structure, driveway, notable landscape features, and access points. "
+        f"{subject[1]}. "
         f"Use plain, factual, one-to-two sentence language — no speculation, no confidence caveats. "
         f"Do not mention image quality or camera angle."
     )
@@ -650,59 +789,39 @@ def lambda_handler(event, context):
     sheet_name = event.get("sheetName", "Plane")
     row_index = event["rowIndex"]
     address = event["address"]
+    # Normalize account type the same way the Apps Script does
+    # (normalizeAccountType): anything not clearly "commercial" is
+    # residential — safe default.
+    account_type = "commercial" if str(event.get("accountType", "")).strip().lower().startswith("comm") else "residential"
 
-    print(f"Processing: {address} (row {row_index})")
+    print(f"Processing: {address} (row {row_index}, {account_type})")
 
     lat, lon = geocode_address(address)
-    parcels = load_parcels()
-    taxlot = match_taxlot(lat, lon, parcels)
-    if not taxlot:
-        raise RuntimeError(f"no parcel match for {address} at ({lat},{lon})")
 
-    parcel = parcels[taxlot]
+    # ── PRE-FLIGHT GATES (HARD STOP), multi-capture ───────────────────────
+    # select_capture() walks every enabled plane capture NEWEST FIRST and
+    # applies the pipeline rule per capture: parcel match → >=80% 2D tile
+    # coverage → GLB exists. If no capture qualifies, it raises with a
+    # per-capture explanation and nothing is rendered. Because captures are
+    # discovered from the registry at run time, a property that fails today
+    # starts succeeding automatically the moment a future flight covering
+    # it is registered — no code change, no redeploy. An optional
+    # "captureId" in the event pins processing to one specific capture.
+    cap, taxlot, parcel, tile_zoom, coverage, glb_url = select_capture(
+        lat, lon, event.get("captureId"))
+    capture_id = cap["id"]
+    print(f"  capture selected: {capture_id} (taxlot {taxlot}, "
+          f"{coverage:.0%} 2D coverage at z{tile_zoom})")
 
-    # ── PRE-FLIGHT GATE #1 (HARD STOP): 2D tile coverage ─────────────────
-    # The parcel must sit sufficiently inside the capture's 2D tile pyramid
-    # BEFORE anything is rendered. This is the same 80% fractional-overlap
-    # rule as clip_nadir.py and the plane-eligibility-check Lambda. Without
-    # this gate, a parcel with a GLB but no 2D coverage (observed 7/2/26:
-    # 61855 Dunbar Ct / 181102B000800) renders all four obliques and then
-    # dies at the nadir step, wasting ~2.5 min per attempt and writing
-    # nothing to the sheet. 3D and 2D coverage are different footprints, so
-    # both gates are required; this one runs first per the pipeline rule:
-    # 2D coverage → GLB exists → render → images.
-    coverage = tile_coverage_fraction(parcel, TILE_ZOOM)
-    if coverage < MIN_TILE_COVERAGE:
-        raise RuntimeError(
-            f"HARD STOP: parcel {taxlot} has only {coverage:.0%} 2D tile "
-            f"coverage in capture {CAPTURE_ID} (minimum "
-            f"{MIN_TILE_COVERAGE:.0%}) — property is outside the 2D map; "
-            f"no rendering attempted"
-        )
-    print(f"  2D coverage OK: {coverage:.0%} of parcel within tile extent")
-
-    views, focus_x, focus_y = frontage_and_views(parcel, lat, lon)
-    glb_url = GLB_URL_TEMPLATE.format(taxlot=taxlot)
-
-    # ── PRE-FLIGHT GATE #2: GLB exists ────────────────────────────────────
-    # Confirm the GLB actually exists for this taxlot in this capture
-    # BEFORE burning ~90s of render attempts on it. A missing GLB
-    # (e.g. the property was matched to a taxlot but its parcel was only
-    # captured in a different strip/capture, or clipping produced no
-    # usable mesh) makes the viewer hang at "never __viewerReady" —
-    # indistinguishable from a browser problem without this check. NOTE:
-    # this Lambda is single-capture by design (CAPTURE_ID env var);
-    # multi-capture selection is a known future work item.
-    head = requests.head(glb_url, timeout=10)
-    if head.status_code != 200:
-        raise RuntimeError(
-            f"HARD STOP: no GLB for taxlot {taxlot} in capture {CAPTURE_ID} "
-            f"(HTTP {head.status_code} at {glb_url}) — property may belong "
-            f"to a different capture strip or lack a clipped model; "
-            f"no rendering attempted"
-        )
+    views, focus_x, focus_y = frontage_and_views(
+        parcel, lat, lon, cap.get("model_transform"))
 
     results = {}
+
+    # Interactive 3D view link — same model and viewer page the obliques
+    # are screenshotted from, minus autocapture, so humans can orbit it
+    # live. Deterministic from the capture + taxlot; costs nothing to emit.
+    results["viewer_url"] = f"{MODEL_VIEWER_BASE_URL}?model={glb_url}"
 
     # Obliques.
     #
@@ -725,18 +844,21 @@ def lambda_handler(event, context):
 
     for view_name, local_path in oblique_paths.items():
         url = upload_image(local_path, taxlot, view_name)
-        desc = describe_image(local_path, view_name)
+        desc = describe_image(local_path, view_name, account_type)
         results[f"{view_name}_url"] = url
         results[f"{view_name}_desc"] = desc
         print(f"  {view_name}: {url}")
 
-    # Nadir
-    tile_extent = load_tile_extent(TILE_ZOOM)
+    # Nadir — cropped from the SELECTED capture's tile pyramid at that
+    # capture's highest declared zoom, so captures may ship different zoom
+    # sets (and future higher-resolution captures automatically improve
+    # nadir quality with zero code changes).
+    tile_base = TILE_CAPTURE_BASE_TEMPLATE.format(capture_id=capture_id)
     bbox = get_padded_bbox(parcel, 0.15)
     nadir_path = f"/tmp/{taxlot}_nadir.jpg"
-    crop_nadir(bbox, nadir_path)
+    crop_nadir(bbox, nadir_path, tile_base, tile_zoom)
     nadir_url = upload_image(nadir_path, taxlot, "nadir")
-    nadir_desc = describe_image(nadir_path, "nadir (straight-down)")
+    nadir_desc = describe_image(nadir_path, "nadir (straight-down)", account_type)
     results["nadir_url"] = nadir_url
     results["nadir_desc"] = nadir_desc
     print(f"  nadir: {nadir_url}")
@@ -745,5 +867,6 @@ def lambda_handler(event, context):
     values_by_col = {PLANE_SHEET_COLUMNS[k]: v for k, v in results.items() if k in PLANE_SHEET_COLUMNS}
     write_to_sheet(spreadsheet_id, sheet_name, row_index, values_by_col)
 
-    print(f"Done: {address} written to row {row_index}")
-    return {"statusCode": 200, "body": json.dumps({"taxlot": taxlot, "results": results})}
+    print(f"Done: {address} written to row {row_index} (capture {capture_id})")
+    return {"statusCode": 200, "body": json.dumps(
+        {"taxlot": taxlot, "capture": capture_id, "results": results})}
