@@ -311,28 +311,77 @@ VIEWER_READY_TIMEOUT_S = 25  # 100 polls x 0.25s
 
 
 def log_available_memory(label):
-    """Log container-wide available memory so CloudWatch shows exactly
-    where the budget goes across views — the difference between 'it
-    crashed' and 'delta started with only 180MB free'."""
+    """Log container-wide available memory AND /tmp free space so
+    CloudWatch shows exactly where both budgets go across views — the
+    difference between 'it crashed' and 'delta started with 180MB RAM'
+    or 'alpha started with 0 bytes of /tmp'."""
+    mem_mb = "?"
     try:
         with open("/proc/meminfo") as f:
             for line in f:
                 if line.startswith("MemAvailable:"):
-                    kb = int(line.split()[1])
-                    print(f"  [mem] {label}: {kb // 1024} MB available")
-                    return
+                    mem_mb = int(line.split()[1]) // 1024
+                    break
     except Exception:
         pass
+    disk_mb = "?"
+    try:
+        st = os.statvfs("/tmp")
+        disk_mb = (st.f_bavail * st.f_frsize) // (1024 * 1024)
+    except Exception:
+        pass
+    print(f"  [mem] {label}: {mem_mb} MB RAM available, {disk_mb} MB /tmp free")
+
+
+def clean_scratch(keep_prefix=None):
+    """Aggressively reclaim /tmp.
+
+    ROOT CAUSE of the 7/2/26 evening failures: --disable-dev-shm-usage
+    redirects Chromium's shared-memory files to /tmp, and Lambda's
+    ephemeral storage PERSISTS across warm invocations and runtime
+    restarts. A pattern-based sweep proved insufficient — a run ended
+    with 74 MB free while glob found nothing to delete, because
+    Chromium's shm files are unlinked-while-open (invisible to listing;
+    space returns only when the owning processes are fully reaped).
+
+    So: delete EVERYTHING in /tmp except this run's rendered screenshots
+    (identified by keep_prefix, e.g. the taxlot). Nothing else in /tmp
+    is load-bearing — the browser binaries live in /ms-playwright, and
+    every browser launch creates its profile fresh anyway.
+    """
+    import glob
+    import shutil
+    removed = 0
+    for path in glob.glob("/tmp/*") + glob.glob("/tmp/.[!.]*"):
+        base = os.path.basename(path)
+        if keep_prefix and base.startswith(keep_prefix) and base.endswith(".jpg"):
+            continue
+        try:
+            if os.path.isdir(path) and not os.path.islink(path):
+                shutil.rmtree(path, ignore_errors=True)
+            else:
+                os.remove(path)
+            removed += 1
+        except Exception:
+            pass
+    if removed:
+        print(f"  [scratch] removed {removed} entries from /tmp")
 
 
 def kill_stray_chromium():
     """Force-kill any Chromium processes left over from a crashed prior
     invocation in this warm container. Lambda has no init process to
     reap children, so a crashed browser's processes survive between
-    invocations and eat memory the next run needs."""
+    invocations and eat memory the next run needs. The short sleep
+    matters: Chromium's /tmp shm files are unlinked-while-open, so the
+    disk space only returns once the killed processes are fully reaped
+    — sweeping /tmp immediately after pkill can find nothing to delete
+    while the space is still held."""
+    import time
     try:
         subprocess.run(["pkill", "-9", "-f", "chrom"], timeout=5,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1.0)
     except Exception as e:
         print(f"  [warn] stray-chromium cleanup skipped: {e}", file=sys.stderr)
 
@@ -412,6 +461,12 @@ async def render_all_obliques_async(taxlot, glb_url, views, focus_x, focus_y,
                 # SUCCESSFUL views (alpha→bravo→charlie fine, delta dead),
                 # which only happens if completed browsers leak.
                 kill_stray_chromium()
+                # Then sweep /tmp — each launch leaves a profile dir plus
+                # shared-memory files (--disable-dev-shm-usage puts shm on
+                # /tmp), and 4+ launches of leftovers is enough to fill
+                # the 2GB ephemeral disk and hard-kill every later browser.
+                # Keep this taxlot's finished screenshots.
+                clean_scratch(keep_prefix=taxlot)
         if last_error is not None:
             raise last_error
     return results
@@ -464,6 +519,42 @@ def get_padded_bbox(polygon, padding_frac=0.15):
     min_lon, min_lat, max_lon, max_lat = polygon.bounds
     pad_lon, pad_lat = (max_lon - min_lon) * padding_frac, (max_lat - min_lat) * padding_frac
     return (min_lon - pad_lon, min_lat - pad_lat, max_lon + pad_lon, max_lat + pad_lat)
+
+
+# Minimum fraction of the parcel that must fall inside the capture's 2D
+# tile extent for processing to proceed — same 80% rule as clip_nadir.py
+# and the plane-eligibility-check Lambda. Env-tunable without a rebuild.
+MIN_TILE_COVERAGE = float(os.environ.get("MIN_TILE_COVERAGE", "0.8"))
+
+
+def tile_coverage_fraction(parcel_polygon, zoom):
+    """Fraction of the parcel's bounding box (in fractional tile
+    coordinates) that lies inside the capture's tile extent at `zoom` —
+    the same fractional-area-overlap measure clip_nadir.py and the
+    eligibility Lambda use. Returns 0.0 if the capture has no recorded
+    extent at this zoom."""
+    extent = load_tile_extent(zoom)
+    if not extent:
+        return 0.0
+    ext_x0, ext_x1, ext_y0, ext_y1 = extent
+
+    min_lon, min_lat, max_lon, max_lat = parcel_polygon.bounds
+    # Note: y grows southward in tile coords, so max_lat -> smaller y.
+    px0, py0 = deg2num(max_lat, min_lon, zoom)
+    px1, py1 = deg2num(min_lat, max_lon, zoom)
+
+    parcel_area = (px1 - px0) * (py1 - py0)
+    if parcel_area <= 0:
+        return 0.0
+
+    # Tile extents are inclusive tile indices; +1 to get the far edge.
+    ix0 = max(px0, ext_x0)
+    ix1 = min(px1, ext_x1 + 1)
+    iy0 = max(py0, ext_y0)
+    iy1 = min(py1, ext_y1 + 1)
+    if ix1 <= ix0 or iy1 <= iy0:
+        return 0.0
+    return ((ix1 - ix0) * (iy1 - iy0)) / parcel_area
 
 
 # ── Bedrock: image description (mirrors the Satellite pipeline's analyzeImage) ──
@@ -546,9 +637,14 @@ def write_to_sheet(spreadsheet_id, sheet_name, row_index, values_by_col):
 
 def lambda_handler(event, context):
     # First order of business in a (possibly warm) container: reap any
-    # Chromium processes a previous crashed invocation left behind, so
-    # this run starts with its full memory budget.
+    # Chromium processes a previous crashed invocation left behind, then
+    # sweep their /tmp droppings — ephemeral storage persists across
+    # invocations AND across runtime restarts, so without this a single
+    # earlier run can leave /tmp full and every browser here dies at
+    # page creation.
     kill_stray_chromium()
+    clean_scratch()
+    log_available_memory("handler start")
 
     spreadsheet_id = event["spreadsheetId"]
     sheet_name = event.get("sheetName", "Plane")
@@ -564,8 +660,47 @@ def lambda_handler(event, context):
         raise RuntimeError(f"no parcel match for {address} at ({lat},{lon})")
 
     parcel = parcels[taxlot]
+
+    # ── PRE-FLIGHT GATE #1 (HARD STOP): 2D tile coverage ─────────────────
+    # The parcel must sit sufficiently inside the capture's 2D tile pyramid
+    # BEFORE anything is rendered. This is the same 80% fractional-overlap
+    # rule as clip_nadir.py and the plane-eligibility-check Lambda. Without
+    # this gate, a parcel with a GLB but no 2D coverage (observed 7/2/26:
+    # 61855 Dunbar Ct / 181102B000800) renders all four obliques and then
+    # dies at the nadir step, wasting ~2.5 min per attempt and writing
+    # nothing to the sheet. 3D and 2D coverage are different footprints, so
+    # both gates are required; this one runs first per the pipeline rule:
+    # 2D coverage → GLB exists → render → images.
+    coverage = tile_coverage_fraction(parcel, TILE_ZOOM)
+    if coverage < MIN_TILE_COVERAGE:
+        raise RuntimeError(
+            f"HARD STOP: parcel {taxlot} has only {coverage:.0%} 2D tile "
+            f"coverage in capture {CAPTURE_ID} (minimum "
+            f"{MIN_TILE_COVERAGE:.0%}) — property is outside the 2D map; "
+            f"no rendering attempted"
+        )
+    print(f"  2D coverage OK: {coverage:.0%} of parcel within tile extent")
+
     views, focus_x, focus_y = frontage_and_views(parcel, lat, lon)
     glb_url = GLB_URL_TEMPLATE.format(taxlot=taxlot)
+
+    # ── PRE-FLIGHT GATE #2: GLB exists ────────────────────────────────────
+    # Confirm the GLB actually exists for this taxlot in this capture
+    # BEFORE burning ~90s of render attempts on it. A missing GLB
+    # (e.g. the property was matched to a taxlot but its parcel was only
+    # captured in a different strip/capture, or clipping produced no
+    # usable mesh) makes the viewer hang at "never __viewerReady" —
+    # indistinguishable from a browser problem without this check. NOTE:
+    # this Lambda is single-capture by design (CAPTURE_ID env var);
+    # multi-capture selection is a known future work item.
+    head = requests.head(glb_url, timeout=10)
+    if head.status_code != 200:
+        raise RuntimeError(
+            f"HARD STOP: no GLB for taxlot {taxlot} in capture {CAPTURE_ID} "
+            f"(HTTP {head.status_code} at {glb_url}) — property may belong "
+            f"to a different capture strip or lack a clipped model; "
+            f"no rendering attempted"
+        )
 
     results = {}
 
