@@ -1,7 +1,8 @@
 # Plane Capture Ingest — Operator Runbook
 
 **Stage:** 1 (Ingest) · **Owner:** data-prep operator
-**Tools:** `scripts/ingest_capture.py`, `scripts/promote_capture.py`
+**Tools:** `scripts/ingest_capture.py`, `scripts/promote_capture.py`,
+`scripts/audit_serving.py` (verification)
 **Prereqs (one-time):** Python 3.11+, `pip install pyproj pillow rasterio boto3`,
 AWS CLI configured with credentials that can write `property-intel-ingest`
 and `property-intel-tiles`.
@@ -101,6 +102,30 @@ without `dry`. Promotion: server-side copies `processed/` into
 capture's entry into `reference/captures.json` (backing up the old registry
 first), and invalidates CloudFront. Only after this step do eligibility,
 rendering, and the viewers see the capture.
+
+**Expected output notes:** `stale_pruned` and orphan-prune lines during
+ingest and promote are normal — they are cleanup of superseded tiles, not
+errors.
+
+## 6. Post-promote verification (required)
+
+After promote reports `PROMOTED`, verify serving matches staging before
+notifying anyone downstream:
+
+```
+python scripts/audit_serving.py "<repo>\staging\<capture-id>\tiles" <capture-id>
+```
+
+Required result: **`serving is byte-identical to staging`** with all three
+discrepancy counts at 0. Any mismatch, missing, or stale count other than
+zero means stop and investigate before the capture is treated as live.
+
+Note on CloudFront: the invalidation takes a few minutes to complete. A 404
+from the CDN immediately after promote is almost always edge-cache lag, not
+a missing tile — the audit script reads S3 directly and is the ground
+truth. (This step exists because you deleted staging in step 3 only *after*
+verified upload; if staging is already gone, re-download of
+`processed/tiles/` from the ingest bucket serves as the comparison source.)
 
 ## Troubleshooting quick reference
 

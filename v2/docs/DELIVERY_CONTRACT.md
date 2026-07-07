@@ -2,11 +2,16 @@
 
 **Stage:** 1 — Ingest
 **Audience:** Flight operators (capture delivery) and data-prep operators
-**Status:** v1.1 — aligned with `ingest_capture.py` as implemented and
+**Status:** v1.2 — aligned with `ingest_capture.py` as implemented and
 production-tested against `Bend 5-21-26` and `Bend 5-21-26 Run 3`.
 v1.0 → v1.1 changes: single-storage layout (big binaries stored once under
 `processed/`), tile generation sourced from `result.tif` (not z19 upscale),
 final manifest schema.
+v1.1 → v1.2 changes (single-source pyramid): the **entire serving pyramid
+(z12–z21) is generated from `result.tif`** so every zoom level has a
+consistent footprint. Terra's native `map/` tiles are **QA/reference only**
+and are never uploaded to ingest or serving — they are used by the pyramid
+validation gate and for visual spot-checks, nothing else.
 
 ---
 
@@ -21,7 +26,7 @@ date-preserving (e.g. `bend-5-21-26-run3`).
 
 | Path in delivery | Purpose |
 |---|---|
-| `map/{z}/{x}/{y}.png` | Native 2D tile pyramid (contiguous zooms; z12–z19 expected, other max is a warning) |
+| `map/{z}/{x}/{y}.png` | Native 2D tile pyramid — **QA/reference only, never uploaded** (validates delivery integrity; visual spot-checks) |
 | `map/result.tif` + `.tfw` + `.prj` | Full-resolution georeferenced orthomosaic — **the source for generated z20/z21** |
 | `models/pc/0/terra_obj/BlockR/BlockR.obj` + `.mtl` + textures | Whole-capture textured mesh (every MTL texture reference must resolve) |
 | `models/pc/0/terra_obj/metadata.xml` | `SRS` + `SRSOrigin` — deterministic ECEF transform source |
@@ -54,11 +59,14 @@ transform source, future Cesium use), `AT/report/`, `map/report/`
 
 ## Generation
 
-z(max+1) and z(max+2) (normally z20/z21) are sliced **directly from
-`result.tif`** via a tile-grid-snapped UTM→WebMercator warp (LANCZOS),
-because the orthomosaic (~16 cm GSD) out-resolves the z19 pyramid
-(~21.5 cm/px). Coverage follows the TIF footprint; fully transparent tiles
-are skipped, so tile counts and extents describe imagery, not grid.
+The **full serving pyramid (z12–z21)** is sliced directly from `result.tif`
+via a tile-grid-snapped UTM→WebMercator warp (LANCZOS). The orthomosaic
+(~16 cm GSD) out-resolves Terra's native z19 pyramid (~21.5 cm/px), and
+sourcing every zoom from the same TIF guarantees a consistent per-zoom
+footprint — the native tiles' coverage varied between zooms. Native tiles
+are used only by the pyramid validation gate and for QA comparison; they
+are never uploaded. Coverage follows the TIF footprint; fully transparent
+tiles are skipped, so tile counts and extents describe imagery, not grid.
 Resumable: existing outputs are never regenerated.
 
 ## S3 layout — `property-intel-ingest` (single-storage: nothing stored twice)
@@ -72,7 +80,7 @@ captures/{capture-id}/
     models/pc/0/terra_b3dms/…           ← fallback transform / Cesium
     AT/sfm_geo_desc.json
   processed/
-    tiles/{z}/{x}/{y}.png               ← native zooms + generated z20/z21
+    tiles/{z}/{x}/{y}.png               ← full generated pyramid z12–z21 (from result.tif; native tiles never uploaded)
     model/BlockR.obj|.mtl|textures      ← the only copy of the mesh package
   manifest.json                          ← uploaded LAST; presence in S3
                                            = upload complete
@@ -88,9 +96,9 @@ captures/{capture-id}/
   "status": "ready_for_review | failed",
   "tiles": {
     "native_max_zoom": 19,
-    "generated_zooms": [20, 21],
-    "generation_source": "map/result.tif (warped UTM->WebMercator, LANCZOS)",
-    "tile_extents": { "12": {"x":[..],"y":[..]}, "…": "all zooms incl. generated" },
+    "generated_zooms": [12, "…", 21],
+    "generation_source": "map/result.tif (warped UTM->WebMercator, LANCZOS; full pyramid)",
+    "tile_extents": { "12": {"x":[..],"y":[..]}, "…": "all generated zooms" },
     "tile_count_native": 0,
     "tile_count_generated": 0
   },
