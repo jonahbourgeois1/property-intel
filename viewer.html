@@ -185,7 +185,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.4.0 — drone 3D view</div>
+    <div id="version-badge">v2.5.0 — plane intel</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -237,7 +237,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.4.0';
+const VERSION     = 'v2.5.0';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/satellite/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -629,6 +629,12 @@ function buildPanel(d) {
     const bullets = formatDesc(v.data.desc), idx = lbIndex++;
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
+  if (d.considerations) {
+    html += '<div class="rec-block"><div class="rec-label security">Responder Considerations</div><div class="rec-text">' + d.considerations + '</div></div>';
+  }
+  if (d.clarifications) {
+    html += '<div class="rec-block"><div class="rec-label wildfire">Information Needing Clarification</div><div class="rec-text">' + d.clarifications + '</div></div>';
+  }
   document.getElementById('panel-content').innerHTML = html;
   updateGroundBanner();
 }
