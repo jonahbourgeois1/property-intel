@@ -74,6 +74,16 @@
   .view-badge { width: 22px; height: 22px; border-radius: 5px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: white; flex-shrink: 0; font-family: 'DM Mono', monospace; }
   .view-badge.nadir  { background: #7c3aed; }
   .view-badge.deg360 { background: #059669; }
+  .view-img-wrap.pin-wrap { position: relative; }
+  .nadir-pin { position: absolute; transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; background: #dc2626; color: #fff; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.6); cursor: pointer; z-index: 3; }
+  .pin-legend { padding: 6px 8px 10px; }
+  .pin-legend-item { padding: 6px 8px; border-radius: 6px; cursor: pointer; transition: background 0.12s; }
+  .pin-legend-item:hover { background: var(--surface); }
+  .pin-legend-num { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: #dc2626; color: #fff; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; margin-right: 8px; vertical-align: middle; }
+  .pin-legend-name { font-size: 12px; font-weight: 600; color: var(--text2); vertical-align: middle; }
+  .pin-legend-item.open .pin-legend-name { color: var(--text); }
+  .pin-legend-def { display: none; margin: 5px 0 2px 26px; font-size: 11px; color: var(--text3); line-height: 1.6; }
+  .pin-legend-item.open .pin-legend-def { display: block; }
   .view-label { font-size: 12px; font-weight: 500; color: var(--text); flex: 1; }
   .chevron { font-size: 10px; color: var(--text3); transition: transform 0.2s; }
   .view-body { display: block; }
@@ -185,7 +195,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.5.0 — plane intel</div>
+    <div id="version-badge">v2.6.0 — nadir pins</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -237,7 +247,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.5.0';
+const VERSION     = 'v2.6.0';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/satellite/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -265,6 +275,18 @@ let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
+
+// FR Residential pin catalog — fetched once; ids resolve to names and
+// full definitions client-side (definitions never travel through Bedrock).
+let pinCatalogById = null;
+fetch(DATA_ROOT + 'pin-catalog/fr-residential.json')
+  .then(function (r) { return r.json(); })
+  .then(function (c) {
+    pinCatalogById = {};
+    c.pins.forEach(function (p) { pinCatalogById[p.id] = p; });
+    dbg('Pin catalog loaded: ' + c.pin_count + ' pins', 'ok');
+  })
+  .catch(function (e) { dbg('Pin catalog unavailable: ' + e.message, 'warn'); });
 
 function dbg(msg, type) {
   type = type || 'info';
@@ -609,16 +631,55 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   }
   document.getElementById('panel-content').innerHTML = html;
 }
+// ── Nadir pins (plane tab) ──────────────────────────────────────────
+// Residential pins are {id,x,y}; ids resolve through the FR catalog to
+// a name + full definition. Commercial pins are {label,x,y} (name only).
+function pinDisplay(p) {
+  if (p.label) return { name: p.label, def: '' };
+  const c = pinCatalogById && pinCatalogById[p.id];
+  return { name: c ? c.name : ('Pin ' + p.id), def: c ? (c.definition || '') : '' };
+}
+function buildPinnedNadirSection(v, idx) {
+  let markers = '', legend = '';
+  v.data.pins.forEach(function (p, i) {
+    const n = ELEMENT_LABELS[i] || String(i + 1), d = pinDisplay(p);
+    markers += `<div class="nadir-pin" style="left:${p.x}%;top:${p.y}%" onclick="event.stopPropagation();togglePinInfo(${idx},${i})">${n}</div>`;
+    legend += `<div class="pin-legend-item" id="pin-info-${idx}-${i}" onclick="togglePinInfo(${idx},${i})"><span class="pin-legend-num">${n}</span><span class="pin-legend-name">${d.name}</span>${d.def ? '<div class="pin-legend-def">' + d.def + '</div>' : ''}</div>`;
+  });
+  return `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap pin-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy">${markers}<div class="zoom-hint">🔍 Tap to enlarge</div></div><div class="pin-legend">${legend}</div></div></div>`;
+}
+function togglePinInfo(idx, i) {
+  const el = document.getElementById('pin-info-' + idx + '-' + i);
+  if (el) el.classList.toggle('open');
+}
+function dropNadirPinMapMarkers(d) {
+  if (!d.nadir || !Array.isArray(d.nadir.pins) || !d.nadir.pins.length) return;
+  const b = d.nadir.bounds;
+  if (!b || b.north == null || b.south == null || b.east == null || b.west == null) {
+    dbg('Nadir pins present but no bounds — map markers skipped', 'warn');
+    return;
+  }
+  const pins = d.nadir.pins.map(function (p) {
+    return {
+      label: pinDisplay(p).name,
+      lat: b.north - (p.y / 100) * (b.north - b.south),
+      lng: b.west + (p.x / 100) * (b.east - b.west)
+    };
+  });
+  dropPins(pins, 'plane', '#dc2626');
+  dbg('Nadir pins: ' + pins.length + ' map markers placed via bounds', 'ok');
+}
 function buildPanel(d) {
   clearMarkers();
   if (groundOverlay) { groundOverlay.setMap(null); }
+  dropNadirPinMapMarkers(d);
   const views = [
     { label: 'Alpha', badge: 'A', cls: '', data: d.alpha }, { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
     { label: 'Charlie', badge: 'C', cls: '', data: d.charlie }, { label: 'Delta', badge: 'D', cls: '', data: d.delta },
     { label: 'Nadir', badge: 'N', cls: 'nadir', data: d.nadir }
   ];
   lightboxViews = [];
-  views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc) }); });
+  views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc || '') }); });
   let html = '';
   if (d.viewer360) {
     html += `<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">3D Aerial View</div><div class="interior-card-sub">Interactive drone model</div></div><div class="interior-card-actions"><div class="interior-action-btn${djiViewerActive ? ' active' : ''}" onclick="showDjiViewer()"><div class="interior-action-text"><div class="interior-action-label">Launch 3D Viewer</div><div class="interior-action-desc">Full interactive drone flyover</div></div><div class="interior-action-arrow">›</div></div></div></div>`;
@@ -626,7 +687,12 @@ function buildPanel(d) {
   let lbIndex = 0;
   views.forEach(v => {
     if (!v.data || !v.data.url) return;
-    const bullets = formatDesc(v.data.desc), idx = lbIndex++;
+    const idx = lbIndex++;
+    if (Array.isArray(v.data.pins) && v.data.pins.length) {
+      html += buildPinnedNadirSection(v, idx);
+      return;
+    }
+    const bullets = formatDesc(v.data.desc);
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
   });
   if (d.considerations) {
