@@ -106,13 +106,45 @@
     border-radius: 6px;
     overflow: hidden;
     max-width: 100%; max-height: 100%;
+    transform-origin: 0 0;         /* zoom/pan applied via JS transform */
+    cursor: grab;
+    will-change: transform;
   }
+  .frame.panning { cursor: grabbing; }
   .frame img {
     display: block;
     max-width: 100%;
     max-height: calc(100vh - 130px);
     width: auto; height: auto;
     user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;          /* let drag/wheel hit the frame, not the img */
+  }
+
+  /* Zoom control cluster (bottom-left of the stage). */
+  .zoom-controls {
+    position: absolute; left: 16px; bottom: 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    z-index: 5;
+  }
+  .zoom-btn {
+    width: 34px; height: 34px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    border-radius: 8px;
+    font-family: var(--mono); font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .zoom-btn:hover { background: var(--panel-2); border-color: var(--hot); }
+  .zoom-btn.reset { font-size: 12px; letter-spacing: 0.04em; }
+  .zoom-level {
+    text-align: center;
+    font-family: var(--mono); font-size: 10px; color: var(--ink-faint);
+    margin-top: 1px;
   }
 
   .marker {
@@ -219,6 +251,12 @@
     <section class="stage">
       <div class="frame" id="frame">
         <img id="nadir" alt="Nadir orthophoto">
+      </div>
+      <div class="zoom-controls">
+        <div class="zoom-btn" id="zoom-in" title="Zoom in">+</div>
+        <div class="zoom-btn" id="zoom-out" title="Zoom out">&minus;</div>
+        <div class="zoom-btn reset" id="zoom-reset" title="Reset view">1:1</div>
+        <div class="zoom-level" id="zoom-level">100%</div>
       </div>
     </section>
     <aside class="legend">
@@ -377,6 +415,104 @@
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
         ') — showing ids only.';
     });
+  // ── Zoom / pan ─────────────────────────────────────────────────────────
+  // Applies a translate+scale transform to #frame. Markers live inside the
+  // frame at % coordinates, so they pan and scale with the image for free.
+  // Scroll-wheel zooms toward the cursor; +/- buttons zoom about the center;
+  // drag pans. State is kept in scale/tx/ty and written via applyTransform.
+  (function initZoomPan() {
+    var frame = document.getElementById('frame');
+    var stage = frame ? frame.parentElement : null;
+    if (!frame || !stage) return;
+
+    var MIN = 1, MAX = 8;
+    var scale = 1, tx = 0, ty = 0;
+
+    function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+    function applyTransform() {
+      frame.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+      var lvl = document.getElementById('zoom-level');
+      if (lvl) lvl.textContent = Math.round(scale * 100) + '%';
+    }
+    // Keep the transformed frame from drifting entirely out of the stage.
+    function constrainPan() {
+      if (scale <= 1) { tx = 0; ty = 0; return; }
+      var s = stage.getBoundingClientRect();
+      // frame's untransformed size:
+      var fw = frame.offsetWidth, fh = frame.offsetHeight;
+      var scaledW = fw * scale, scaledH = fh * scale;
+      // allow panning within the overflow, plus a little slack
+      var maxX = Math.max(0, (scaledW - s.width) / 2 + 40);
+      var maxY = Math.max(0, (scaledH - s.height) / 2 + 40);
+      tx = clamp(tx, -maxX, maxX);
+      ty = clamp(ty, -maxY, maxY);
+    }
+
+    // Zoom about a point (px,py) given in stage-local coordinates.
+    function zoomAt(px, py, nextScale) {
+      nextScale = clamp(nextScale, MIN, MAX);
+      if (nextScale === scale) return;
+      var s = stage.getBoundingClientRect();
+      // center of stage is the transform reference for our translate model
+      var cx = s.width / 2, cy = s.height / 2;
+      // point relative to current transform
+      var k = nextScale / scale;
+      tx = px - cx - (px - cx - tx) * k;
+      ty = py - cy - (py - cy - ty) * k;
+      scale = nextScale;
+      constrainPan();
+      applyTransform();
+    }
+    function zoomCenter(factor) {
+      var s = stage.getBoundingClientRect();
+      zoomAt(s.width / 2, s.height / 2, scale * factor);
+    }
+    function reset() { scale = 1; tx = 0; ty = 0; applyTransform(); }
+
+    // Wheel: zoom toward cursor.
+    stage.addEventListener('wheel', function (e) {
+      e.preventDefault();
+      var s = stage.getBoundingClientRect();
+      var px = e.clientX - s.left, py = e.clientY - s.top;
+      var factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      zoomAt(px, py, scale * factor);
+    }, { passive: false });
+
+    // Buttons.
+    var bi = document.getElementById('zoom-in'),
+        bo = document.getElementById('zoom-out'),
+        br = document.getElementById('zoom-reset');
+    if (bi) bi.addEventListener('click', function () { zoomCenter(1.4); });
+    if (bo) bo.addEventListener('click', function () { zoomCenter(1 / 1.4); });
+    if (br) br.addEventListener('click', reset);
+
+    // Drag to pan (only meaningful when zoomed in). Ignore drags that start
+    // on a marker so pin clicks still register.
+    var dragging = false, sx = 0, sy = 0, stx = 0, sty = 0, moved = false;
+    frame.addEventListener('mousedown', function (e) {
+      if (scale <= 1) return;
+      if (e.target && e.target.classList && e.target.classList.contains('marker')) return;
+      dragging = true; moved = false;
+      sx = e.clientX; sy = e.clientY; stx = tx; sty = ty;
+      frame.classList.add('panning');
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', function (e) {
+      if (!dragging) return;
+      tx = stx + (e.clientX - sx);
+      ty = sty + (e.clientY - sy);
+      if (Math.abs(e.clientX - sx) > 3 || Math.abs(e.clientY - sy) > 3) moved = true;
+      constrainPan();
+      applyTransform();
+    });
+    window.addEventListener('mouseup', function () {
+      dragging = false;
+      frame.classList.remove('panning');
+    });
+
+    applyTransform();
+  })();
+
 })();
 </script>
 </body>
