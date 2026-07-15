@@ -50,7 +50,7 @@
   }
 
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
     background: var(--ground);
     color: var(--ink);
@@ -109,6 +109,7 @@
     transform-origin: 0 0;         /* zoom/pan applied via JS transform */
     cursor: grab;
     will-change: transform;
+    touch-action: none;
   }
   .frame.panning { cursor: grabbing; }
   .frame img {
@@ -467,14 +468,19 @@
     }
     function reset() { scale = 1; tx = 0; ty = 0; applyTransform(); }
 
-    // Wheel: zoom toward cursor.
-    stage.addEventListener('wheel', function (e) {
+    // Wheel: zoom toward cursor. Bound to the FRAME (the image) so it only
+    // fires over the picture, and both prevented + stopped so it never turns
+    // into page scroll.
+    function onWheel(e) {
       e.preventDefault();
+      e.stopPropagation();
       var s = stage.getBoundingClientRect();
       var px = e.clientX - s.left, py = e.clientY - s.top;
       var factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
       zoomAt(px, py, scale * factor);
-    }, { passive: false });
+    }
+    frame.addEventListener('wheel', onWheel, { passive: false });
+    stage.addEventListener('wheel', onWheel, { passive: false });
 
     // Buttons.
     var bi = document.getElementById('zoom-in'),
