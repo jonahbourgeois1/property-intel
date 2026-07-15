@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Element Review — Property Intel</title>
 <!--
-  element-review.html — Pass 1 element-pin QA surface (v1, 2026-07-14)
+  element-review.html — Pass 1 element-pin QA surface (v2, 2026-07-15)
 
   Reads a row's data from its own query string and renders the ELEMENT
   pins on the real nadir orthophoto with a numbered-marker + legend-strip
@@ -16,20 +16,23 @@
     nadir  = (required) CloudFront URL of the nadir image
     pins   = (required) URL-encoded JSON array of {id,x,y} element pins
     addr   = (optional) property address, shown in the header
-    catalog= (optional) override catalog URL (defaults to the live FR catalog)
+    type   = (optional) 'residential' | 'commercial' — flags pins whose
+             account_type doesn't include this type
+    catalog= (optional) override catalog URL (defaults to the live catalog)
 
-  Pins carry only catalog ids; names are resolved here from
-  fr-residential.json. x,y are percentages (0..100) on the nadir image,
-  so no geographic bounds are needed for this overlay.
+  v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
+  merged, tagged catalog). Each pin carries role / account_type / analysis;
+  the legend meta line surfaces those and flags a pin that is NOT role=primary
+  or that doesn't belong to the requested account type, so a misfiled element
+  pin is visible during review. The resolver stays permissive — it displays
+  whatever id it is given (even a wrong one) so the reviewer sees the mistake.
 
-  The overlay logic (resolveNames + placeMarkers + legend linking) is
-  written to be lifted into the Stage 5 viewer largely as-is; the
-  page chrome around it is throwaway.
+  Pins carry only catalog ids; names are resolved here from the catalog.
+  x,y are percentages (0..100) on the nadir image, so no geographic bounds
+  are needed for this overlay.
 -->
 <style>
   :root {
-    /* Instrument palette: cool slate ground so the warm aerial imagery
-       and the pin markers are the only saturated things on screen. */
     --ground:    #1b2027;
     --panel:     #232a33;
     --panel-2:   #2b333e;
@@ -37,9 +40,9 @@
     --ink:       #eef2f6;
     --ink-dim:   #9aa7b4;
     --ink-faint: #667380;
-    --marker:    #ffd23f;   /* element markers — high-vis amber on aerial */
+    --marker:    #ffd23f;
     --marker-ink:#1b2027;
-    --hot:       #4fd1c5;   /* active/hover link between marker and legend */
+    --hot:       #4fd1c5;
     --warn:      #e8955a;
     --radius:    10px;
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, monospace;
@@ -115,7 +118,7 @@
   .marker {
     position: absolute;
     width: 26px; height: 26px;
-    margin: -13px 0 0 -13px;   /* center on the point */
+    margin: -13px 0 0 -13px;
     border-radius: 50%;
     background: var(--marker);
     color: var(--marker-ink);
@@ -133,6 +136,10 @@
     transform: scale(1.25);
     z-index: 3;
     box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+  }
+  .marker.flag {
+    background: var(--warn);
+    border-color: rgba(27,32,39,0.7);
   }
 
   /* ── Legend strip ────────────────────────────────────────── */
@@ -177,11 +184,13 @@
     transition: background 0.1s ease;
   }
   .legend li:hover .num, .legend li.active .num { background: var(--hot); }
+  .legend li.flag .num { background: var(--warn); }
   .legend .name { font-size: 14px; color: var(--ink); }
   .legend .meta {
     font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
     margin-top: 1px;
   }
+  .legend .meta .bad { color: var(--warn); }
 
   .empty, .error {
     padding: 40px 20px; text-align: center; color: var(--ink-dim);
@@ -215,13 +224,14 @@
     <aside class="legend">
       <h2>Elements</h2>
       <ol id="list"></ol>
-      <div class="hint">Hover a marker or row to link the two. Numbers are review labels only.</div>
+      <div class="hint">Hover a marker or row to link the two. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
     </aside>
   </main>
 
 <script>
 (function () {
-  var DEFAULT_CATALOG = 'https://responder-intel.vyanet.com/data/pin-catalog/fr-residential.json';
+  // v2: merged, tagged catalog.
+  var DEFAULT_CATALOG = 'https://responder-intel.vyanet.com/data/pin-catalog/pins-catalog.json';
 
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
@@ -237,6 +247,7 @@
   var nadirUrl = qp('nadir');
   var pinsRaw  = qp('pins');
   var addr     = qp('addr');
+  var acctType = (qp('type') || '').toLowerCase();   // optional: residential|commercial
   var catalogUrl = qp('catalog') || DEFAULT_CATALOG;
 
   if (addr) document.getElementById('addr').textContent = '· ' + addr;
@@ -255,18 +266,26 @@
 
   document.getElementById('nadir').src = nadirUrl;
 
-  // Resolve catalog id -> {name, section}. Reusable in the Stage 5 viewer.
+  // Resolve catalog id -> {name, section, role, account_type, ...}. The pin is
+  // "flagged" if it isn't a primary/element pin, or (when ?type given) doesn't
+  // belong to that account type — surfacing a misfiled pin during review.
   function resolveNames(pins, catalog) {
     var byId = {};
     (catalog.pins || []).forEach(function (p) { byId[p.id] = p; });
     return pins.map(function (p) {
       var entry = byId[p.id] || {};
+      var known = !!entry.name;
+      var role = entry.role || '';
+      var types = Array.isArray(entry.account_type) ? entry.account_type : [];
+      var wrongRole = !!(known && role !== 'primary');
+      var wrongType = !!(known && acctType && types.indexOf(acctType) === -1);
       return {
-        id: p.id,
-        x: p.x, y: p.y,
+        id: p.id, x: p.x, y: p.y,
         name: entry.name || ('Unknown id ' + p.id),
         section: entry.section || '',
-        known: !!entry.name
+        role: role, types: types,
+        known: known, wrongRole: wrongRole, wrongType: wrongType,
+        flag: !known || wrongRole || wrongType
       };
     });
   }
@@ -274,7 +293,10 @@
   function render(resolved) {
     var frame = document.getElementById('frame');
     var list = document.getElementById('list');
-    document.getElementById('count').innerHTML = '<b>' + resolved.length + '</b> element' + (resolved.length === 1 ? '' : 's');
+    var flagged = resolved.filter(function (p) { return p.flag; }).length;
+    document.getElementById('count').innerHTML =
+      '<b>' + resolved.length + '</b> element' + (resolved.length === 1 ? '' : 's') +
+      (flagged ? ' · <span style="color:var(--warn)">' + flagged + ' flagged</span>' : '');
 
     if (!resolved.length) {
       list.innerHTML = '<div class="empty">No element pins on this row yet.</div>';
@@ -284,7 +306,7 @@
     // Markers on the image (percentage placement — no bounds needed).
     resolved.forEach(function (p, i) {
       var m = document.createElement('div');
-      m.className = 'marker';
+      m.className = 'marker' + (p.flag ? ' flag' : '');
       m.style.left = p.x + '%';
       m.style.top = p.y + '%';
       m.textContent = (i + 1);
@@ -295,13 +317,21 @@
 
     // Legend rows.
     resolved.forEach(function (p, i) {
+      var flags = [];
+      if (!p.known) flags.push('NOT IN CATALOG');
+      else {
+        if (p.wrongRole) flags.push('NOT AN ELEMENT (' + escapeHtml(p.role) + ')');
+        if (p.wrongType) flags.push('NOT ' + escapeHtml(acctType.toUpperCase()));
+      }
+      var flagHtml = flags.length ? ' · <span class="bad">' + flags.join(' · ') + '</span>' : '';
       var li = document.createElement('li');
+      li.className = p.flag ? 'flag' : '';
       li.dataset.idx = i;
       li.innerHTML =
         '<span class="num">' + (i + 1) + '</span>' +
         '<span><span class="name">' + escapeHtml(p.name) + '</span>' +
         '<div class="meta">#' + p.id + (p.section ? ' · ' + escapeHtml(p.section) : '') +
-        (p.known ? '' : ' · NOT IN CATALOG') + '</div></span>';
+        flagHtml + '</div></span>';
       list.appendChild(li);
     });
 
@@ -340,7 +370,8 @@
     .catch(function (e) {
       // Degrade gracefully: still show markers, names as ids.
       render(pins.map(function (p) {
-        return { id: p.id, x: p.x, y: p.y, name: 'id ' + p.id, section: '', known: false };
+        return { id: p.id, x: p.x, y: p.y, name: 'id ' + p.id, section: '',
+                 role: '', types: [], known: false, wrongRole: false, wrongType: false, flag: true };
       }));
       var hint = document.querySelector('.hint');
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
