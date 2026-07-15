@@ -200,7 +200,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.7.0 — element/concern pins</div>
+    <div id="version-badge">v2.8.0 — per-property index</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -252,7 +252,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.7.0';
+const VERSION     = 'v2.8.0';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/satellite/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -946,12 +946,12 @@ async function loadPropertyData() {
   dbg('Property hash: ' + propertyHash.substring(0,12) + '...', 'info');
   try {
     setLoading('Loading property index...');
-    const indexRes = await fetch(DATA_ROOT + 'index.json');
-    if (!indexRes.ok) { showError('Index not found.'); return; }
-    propertyIndex = await indexRes.json();
-    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' properties', 'ok');
-    const entry = propertyIndex[propertyHash];
-    if (!entry) { showError('Property not found.'); return; }
+    // v2.8.0: per-property index file (data/index/{id}.json) replaces the
+    // monolithic index.json. The file IS the entry — identity + views map.
+    const indexRes = await fetch(DATA_ROOT + 'index/' + propertyHash + '.json');
+    if (!indexRes.ok) { showError('Property not found.'); return; }
+    const entry = await indexRes.json();
+    if (!entry || !entry.views) { showError('Property not found.'); return; }
     dbg('Property found: ' + entry.name, 'ok');
     const propRes = await fetch(BASE_URL + propertyHash + '.json');
     const propData = propRes.ok ? await propRes.json() : null;
@@ -960,11 +960,17 @@ async function loadPropertyData() {
     currentViews = views;
     document.getElementById('property-name').textContent = entry.name;
     document.getElementById('panel-title').textContent = entry.name;
-    document.getElementById('panel-address').textContent = entry.address.replace(/^\s+/, '');
+    document.getElementById('panel-address').textContent = (entry.address || '').replace(/^\s+/, '');
     if (frMode) document.getElementById('view-tabs').style.display = 'none';
+    dbg('Available views: ' + Object.keys(views).join(', '), 'info');
+    // v2.8.0: if a specific tab was requested but isn't published for this
+    // property, say so plainly rather than silently loading a different view.
+    if (tabParam && !views[tabParam]) {
+      showError('The ' + (VIEW_LABELS[tabParam] || tabParam) + ' view isn’t published yet for ' + (entry.name || 'this property') + '.');
+      return;
+    }
     const firstView = (tabParam && views[tabParam]) ? tabParam : VIEW_ORDER.find(v => views[v]);
     if (!firstView) { showError('No views available.'); return; }
-    dbg('Available views: ' + Object.keys(views).join(', '), 'info');
     if (!frMode) buildTabs(views, firstView);
     setLoading('Loading ' + firstView + '...');
     await loadView(views, firstView);
