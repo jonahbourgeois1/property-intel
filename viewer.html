@@ -76,10 +76,15 @@
   .view-badge.deg360 { background: #059669; }
   .view-img-wrap.pin-wrap { position: relative; }
   .nadir-pin { position: absolute; transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; background: #dc2626; color: #fff; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.6); cursor: pointer; z-index: 3; }
+  .nadir-pin.element { background: var(--green); }
+  .nadir-pin.concern { background: var(--red); }
   .pin-legend { padding: 6px 8px 10px; }
+  .pin-legend-group-label { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; font-family: 'DM Mono', monospace; margin: 8px 8px 4px; }
   .pin-legend-item { padding: 6px 8px; border-radius: 6px; cursor: pointer; transition: background 0.12s; }
   .pin-legend-item:hover { background: var(--surface); }
   .pin-legend-num { display: inline-block; width: 18px; height: 18px; border-radius: 50%; background: #dc2626; color: #fff; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; line-height: 18px; text-align: center; margin-right: 8px; vertical-align: middle; }
+  .pin-legend-num.element { background: var(--green); }
+  .pin-legend-num.concern { background: var(--red); }
   .pin-legend-name { font-size: 12px; font-weight: 600; color: var(--text2); vertical-align: middle; }
   .pin-legend-item.open .pin-legend-name { color: var(--text); }
   .pin-legend-def { display: none; margin: 5px 0 2px 26px; font-size: 11px; color: var(--text3); line-height: 1.6; }
@@ -195,7 +200,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.6.0 — nadir pins</div>
+    <div id="version-badge">v2.7.0 — element/concern pins</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -247,7 +252,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.6.0';
+const VERSION     = 'v2.7.0';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/satellite/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -454,9 +459,10 @@ function setOverlay(imageUrl, centerLat, centerLng, zoom) {
 }
 function flushPendingMapData() {
   if (pendingOverlay) {
-    const { imageUrl, centerLat, centerLng, zoom } = pendingOverlay;
+    const po = pendingOverlay;
     pendingOverlay = null;
-    setOverlay(imageUrl, centerLat, centerLng, zoom);
+    if (po.bounds) { setOverlayFromBounds(po.imageUrl, po.bounds); }
+    else { setOverlay(po.imageUrl, po.centerLat, po.centerLng, po.zoom); }
   }
   const sets = pendingPinSets.slice();
   pendingPinSets = [];
@@ -571,6 +577,7 @@ function buildSecurityPanel(d, centerLat, centerLng) {
     }
   }
   setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
+  const _ob = document.getElementById('overlay-btn'); if (_ob) _ob.style.display = 'flex';
   dropPins(elements, 'green', '#22c55e');
   dropPins(considerations, 'red', '#ef4444');
   dbg('Security: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
@@ -614,6 +621,7 @@ function buildWildfirePanel(d, centerLat, centerLng) {
     }
   }
   setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
+  const _ob = document.getElementById('overlay-btn'); if (_ob) _ob.style.display = 'flex';
   dropPins(conditions, 'orange', '#f97316');
   dbg('Wildfire: ' + conditions.length + ' conditions', 'ok');
   if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
@@ -634,45 +642,125 @@ function buildWildfirePanel(d, centerLat, centerLng) {
 // ── Nadir pins (plane tab) ──────────────────────────────────────────
 // Residential pins are {id,x,y}; ids resolve through the FR catalog to
 // a name + full definition. Commercial pins are {label,x,y} (name only).
+// v2.7.0: pins are split into two kinds — element_pins (green, "what is
+// here") and concern_pins (red, "responder concern here"). Older, not-yet-
+// resynced rows only carry the merged `pins` array; nadirPinSets_ falls
+// back to treating those as a single concern-less "element" set so the
+// viewer keeps working through the migration.
+function nadirPinSets_(nadir) {
+  if (!nadir) return { element: [], concern: [], legacy: false };
+  const hasSplit = Array.isArray(nadir.element_pins) || Array.isArray(nadir.concern_pins);
+  if (hasSplit) {
+    return {
+      element: Array.isArray(nadir.element_pins) ? nadir.element_pins : [],
+      concern: Array.isArray(nadir.concern_pins) ? nadir.concern_pins : [],
+      legacy: false
+    };
+  }
+  // Fallback: single flat array, rendered in the pre-2.7.0 single style.
+  return { element: Array.isArray(nadir.pins) ? nadir.pins : [], concern: [], legacy: true };
+}
 function pinDisplay(p) {
   if (p.label) return { name: p.label, def: '' };
   const c = pinCatalogById && pinCatalogById[p.id];
   return { name: c ? c.name : ('Pin ' + p.id), def: c ? (c.definition || '') : '' };
 }
 function buildPinnedNadirSection(v, idx) {
+  const sets = nadirPinSets_(v.data);
   let markers = '', legend = '';
-  v.data.pins.forEach(function (p, i) {
-    const n = ELEMENT_LABELS[i] || String(i + 1), d = pinDisplay(p);
-    markers += `<div class="nadir-pin" style="left:${p.x}%;top:${p.y}%" onclick="event.stopPropagation();togglePinInfo(${idx},${i})">${n}</div>`;
-    legend += `<div class="pin-legend-item" id="pin-info-${idx}-${i}" onclick="togglePinInfo(${idx},${i})"><span class="pin-legend-num">${n}</span><span class="pin-legend-name">${d.name}</span>${d.def ? '<div class="pin-legend-def">' + d.def + '</div>' : ''}</div>`;
+
+  // Elements — green, numbered 1..0. In legacy (un-resynced) rows this set
+  // carries the whole flat `pins` array and is rendered in the original
+  // single style (no green class), so nothing changes for old data.
+  sets.element.forEach(function (p, i) {
+    const n = ELEMENT_LABELS[i] || String(i + 1), disp = pinDisplay(p);
+    const kind = sets.legacy ? '' : ' element';
+    markers += `<div class="nadir-pin${kind}" style="left:${p.x}%;top:${p.y}%" onclick="event.stopPropagation();togglePinInfo(${idx},'e',${i})">${n}</div>`;
+    legend  += `<div class="pin-legend-item" id="pin-info-${idx}-e-${i}" onclick="togglePinInfo(${idx},'e',${i})"><span class="pin-legend-num${kind}">${n}</span><span class="pin-legend-name">${disp.name}</span>${disp.def ? '<div class="pin-legend-def">' + disp.def + '</div>' : ''}</div>`;
   });
-  return `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap pin-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy">${markers}<div class="zoom-hint">🔍 Tap to enlarge</div></div><div class="pin-legend">${legend}</div></div></div>`;
+  let elementLegend = legend;
+  legend = '';
+
+  // Concerns — red, lettered A..Z. Empty in legacy rows.
+  sets.concern.forEach(function (p, i) {
+    const n = CONCERN_LABELS[i] || String(i + 1), disp = pinDisplay(p);
+    markers += `<div class="nadir-pin concern" style="left:${p.x}%;top:${p.y}%" onclick="event.stopPropagation();togglePinInfo(${idx},'c',${i})">${n}</div>`;
+    legend  += `<div class="pin-legend-item" id="pin-info-${idx}-c-${i}" onclick="togglePinInfo(${idx},'c',${i})"><span class="pin-legend-num concern">${n}</span><span class="pin-legend-name">${disp.name}</span>${disp.def ? '<div class="pin-legend-def">' + disp.def + '</div>' : ''}</div>`;
+  });
+  const concernLegend = legend;
+
+  // Split legend: labeled groups, each hidden when empty. Legacy rows show a
+  // single unlabeled list (matches pre-2.7.0 behavior).
+  let legendHtml = '';
+  if (sets.legacy) {
+    legendHtml = elementLegend;
+  } else {
+    if (sets.element.length) legendHtml += '<div class="pin-legend-group-label">Property Elements</div>' + elementLegend;
+    if (sets.concern.length) legendHtml += '<div class="pin-legend-group-label">Responder Concerns</div>' + concernLegend;
+  }
+
+  return `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap pin-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy">${markers}<div class="zoom-hint">🔍 Tap to enlarge</div></div><div class="pin-legend">${legendHtml}</div></div></div>`;
 }
-function togglePinInfo(idx, i) {
-  const el = document.getElementById('pin-info-' + idx + '-' + i);
+function togglePinInfo(idx, kind, i) {
+  const el = document.getElementById('pin-info-' + idx + '-' + kind + '-' + i);
   if (el) el.classList.toggle('open');
 }
 function dropNadirPinMapMarkers(d) {
-  if (!d.nadir || !Array.isArray(d.nadir.pins) || !d.nadir.pins.length) return;
+  if (!d.nadir) return;
+  const sets = nadirPinSets_(d.nadir);
+  if (!sets.element.length && !sets.concern.length) return;
   const b = d.nadir.bounds;
   if (!b || b.north == null || b.south == null || b.east == null || b.west == null) {
     dbg('Nadir pins present but no bounds — map markers skipped', 'warn');
     return;
   }
-  const pins = d.nadir.pins.map(function (p) {
+  const toLatLng = function (p) {
     return {
       label: pinDisplay(p).name,
       lat: b.north - (p.y / 100) * (b.north - b.south),
       lng: b.west + (p.x / 100) * (b.east - b.west)
     };
-  });
-  dropPins(pins, 'plane', '#dc2626');
-  dbg('Nadir pins: ' + pins.length + ' map markers placed via bounds', 'ok');
+  };
+  if (sets.legacy) {
+    // Un-resynced row: single flat set, original red styling.
+    dropPins(sets.element.map(toLatLng), 'plane', '#dc2626');
+    dbg('Nadir pins (legacy): ' + sets.element.length + ' map markers placed via bounds', 'ok');
+    return;
+  }
+  if (sets.element.length) dropPins(sets.element.map(toLatLng), 'green', '#22c55e');
+  if (sets.concern.length) dropPins(sets.concern.map(toLatLng), 'red', '#ef4444');
+  dbg('Nadir pins: ' + sets.element.length + ' element + ' + sets.concern.length + ' concern markers placed via bounds', 'ok');
+}
+// Ground overlay from real geographic bounds (plane nadir). Unlike
+// setOverlay (which estimates bounds from center+zoom for the
+// Security/Wildfire tabs), the plane pipeline publishes exact
+// north/south/east/west, so the nadir image lines up precisely.
+function setOverlayFromBounds(imageUrl, b) {
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
+  if (!imageUrl || !b || b.north == null || b.south == null || b.east == null || b.west == null) return;
+  if (!map) { pendingOverlay = { imageUrl: imageUrl, bounds: b }; return; }
+  const bounds = new google.maps.LatLngBounds(
+    { lat: b.south, lng: b.west }, { lat: b.north, lng: b.east });
+  groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
+  if (overlayVisible) groundOverlay.setMap(map);
 }
 function buildPanel(d) {
   clearMarkers();
-  if (groundOverlay) { groundOverlay.setMap(null); }
+  if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   dropNadirPinMapMarkers(d);
+  // Plane-tab 2D nadir overlay: wire the overlay control to the real
+  // published bounds when present, else hide the control (no overlay for
+  // this property). setOverlayFromBounds respects the current
+  // overlayVisible toggle state.
+  const overlayCtl = document.getElementById('overlay-btn');
+  if (d.nadir && d.nadir.url && d.nadir.bounds &&
+      d.nadir.bounds.north != null && d.nadir.bounds.south != null &&
+      d.nadir.bounds.east != null && d.nadir.bounds.west != null) {
+    if (overlayCtl) overlayCtl.style.display = 'flex';
+    setOverlayFromBounds(d.nadir.url, d.nadir.bounds);
+  } else if (overlayCtl) {
+    overlayCtl.style.display = 'none';
+  }
   const views = [
     { label: 'Alpha', badge: 'A', cls: '', data: d.alpha }, { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
     { label: 'Charlie', badge: 'C', cls: '', data: d.charlie }, { label: 'Delta', badge: 'D', cls: '', data: d.delta },
@@ -688,9 +776,9 @@ function buildPanel(d) {
   views.forEach(v => {
     if (!v.data || !v.data.url) return;
     const idx = lbIndex++;
-    if (Array.isArray(v.data.pins) && v.data.pins.length) {
-      html += buildPinnedNadirSection(v, idx);
-      return;
+    if (v.cls === 'nadir') {
+      const s = nadirPinSets_(v.data);
+      if (s.element.length || s.concern.length) { html += buildPinnedNadirSection(v, idx); return; }
     }
     const bullets = formatDesc(v.data.desc);
     html += `<div class="view-section"><div class="view-header" onclick="toggleSection(this)"><div class="view-badge ${v.cls}">${v.badge}</div><div class="view-label">${v.label}</div><div class="chevron">▼</div></div><div class="view-body"><div class="view-img-wrap" onclick="openLightbox(${idx})"><img class="view-img" src="${v.data.url}" alt="${v.label}" loading="lazy"><div class="zoom-hint">🔍 Tap to enlarge</div></div><ul class="view-bullets">${bullets.map(b => '<li>' + b + '</li>').join('')}</ul></div></div>`;
