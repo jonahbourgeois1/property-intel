@@ -200,7 +200,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.8.0 — per-property index</div>
+    <div id="version-badge">v2.9.0 — satellite split pins</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -252,7 +252,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.8.0';
+const VERSION     = 'v2.9.0';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/satellite/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -281,10 +281,10 @@ let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
 
-// FR Residential pin catalog — fetched once; ids resolve to names and
-// full definitions client-side (definitions never travel through Bedrock).
+// Merged, tagged pin catalog — fetched once; ids resolve to names and full
+// definitions client-side (definitions never travel through Bedrock).
 let pinCatalogById = null;
-fetch(DATA_ROOT + 'pin-catalog/fr-residential.json')
+fetch(DATA_ROOT + 'pin-catalog/pins-catalog.json')
   .then(function (r) { return r.json(); })
   .then(function (c) {
     pinCatalogById = {};
@@ -409,7 +409,7 @@ function dropPins(pins, color, hexColor) {
   if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
   const immersiveActive = matterportActive || streetViewActive || djiViewerActive;
   pins.forEach((pin, i) => {
-    const label = color === 'red' ? CONCERN_LABELS[i] || String(i+1) : ELEMENT_LABELS[i] || String(i+1);
+    const label = (color === 'red' || color === 'orange') ? (CONCERN_LABELS[i] || String(i+1)) : (ELEMENT_LABELS[i] || String(i+1));
     const pinId = color + '-' + i;
     const marker = new google.maps.Marker({
       position: { lat: pin.lat, lng: pin.lng },
@@ -558,83 +558,95 @@ function buildTabs(views, activeView) {
     tabsEl.appendChild(tab);
   });
 }
+// v2.9.0 (two-pass satellite): reads the new payload shape — a single clean
+// nadir_url, a shared top-level elements[] array of {id,x,y}, and per-analysis
+// fr.concerns[]/wildfire.concerns[] of {id,x,y} plus considerations +
+// recommendations prose. x,y are percentages converted to lat/lng via
+// pixelToLatLng (no bounds needed — it's a Maps overlay). Pin ids resolve to
+// names/definitions through the merged catalog (pinDisplay).
+function satElementLatLngPins_(d, centerLat, centerLng, zoom) {
+  const els = Array.isArray(d.elements) ? d.elements : [];
+  return els.map(function (p) {
+    const ll = pixelToLatLng(centerLat, centerLng, zoom, p.x, p.y);
+    return { label: pinDisplay(p).name, def: pinDisplay(p).def, lat: ll.lat, lng: ll.lng };
+  });
+}
+function satConcernLatLngPins_(concerns, centerLat, centerLng, zoom) {
+  const arr = Array.isArray(concerns) ? concerns : [];
+  return arr.map(function (p) {
+    const ll = pixelToLatLng(centerLat, centerLng, zoom, p.x, p.y);
+    return { label: pinDisplay(p).name, def: pinDisplay(p).def, lat: ll.lat, lng: ll.lng };
+  });
+}
+function satPinRowsHtml_(title, pins, colorClass, labelSet) {
+  if (!pins.length) return '';
+  let html = '<div class="pin-group"><div class="pin-group-label">' + title + '</div>';
+  pins.forEach(function (el, i) {
+    const label = (labelSet[i] || String(i + 1)), pinId = colorClass + '-' + i;
+    html += '<div class="pin-row" data-pin-id="' + pinId + '" onclick="pinRowClick(\'' + pinId + '\')">' +
+            '<div class="pin-badge ' + colorClass + '">' + label + '</div>' +
+            '<div class="pin-label">' + el.label + '</div></div>';
+  });
+  return html + '</div>';
+}
 function buildSecurityPanel(d, centerLat, centerLng) {
   clearMarkers();
-  const fr = d.fr;
-  if (!fr || !fr.nadir_url) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>'; return; }
-  const zoom = extractZoom(fr.nadir_url);
-  const hasError = !fr.elements || (typeof fr.elements === 'string' && fr.elements.startsWith('ERROR:'));
-  let elements = [], considerations = [];
-  if (!hasError) {
-    if (Array.isArray(fr.elements)) {
-      elements = fr.elements;
-      considerations = Array.isArray(fr.considerations) ? fr.considerations : [];
-    } else {
-      const rawEl = normalizePins(fr.elements), rawRc = normalizePins(fr.considerations);
-      const allPins = parsePinsFromUrl(fr.nadir_url);
-      elements = mergePinsWithCoords(rawEl, allPins.slice(0, rawEl.length), centerLat, centerLng);
-      considerations = mergePinsWithCoords(rawRc, allPins.slice(rawEl.length), centerLat, centerLng);
-    }
-  }
-  setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
+  const nadirUrl = d.nadir_url || '';
+  const fr = d.fr || {};
+  if (!nadirUrl) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>'; return; }
+  const zoom = extractZoom(nadirUrl);
+
+  const elements = satElementLatLngPins_(d, centerLat, centerLng, zoom);
+  const concerns = satConcernLatLngPins_(fr.concerns, centerLat, centerLng, zoom);
+
+  setOverlay(nadirUrl, centerLat, centerLng, zoom);
   const _ob = document.getElementById('overlay-btn'); if (_ob) _ob.style.display = 'flex';
   dropPins(elements, 'green', '#22c55e');
-  dropPins(considerations, 'red', '#ef4444');
-  dbg('Security: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
-  if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
+  dropPins(concerns, 'red', '#ef4444');
+  dbg('Security: ' + elements.length + ' elements, ' + concerns.length + ' FR concerns', 'ok');
+
   let html = '';
-  if (elements.length > 0) {
-    html += '<div class="pin-group"><div class="pin-group-label">Property Elements</div>';
-    elements.forEach((el, i) => {
-      const label = ELEMENT_LABELS[i] || String(i+1), pinId = 'green-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge green">${label}</div><div class="pin-label">${el.label}</div></div>`;
-    });
-    html += '</div>';
+  html += satPinRowsHtml_('Property Elements', elements, 'green', ELEMENT_LABELS);
+  if (concerns.length) {
+    if (elements.length) html += '<div class="pin-group-divider"></div>';
+    html += satPinRowsHtml_('Responder Concerns', concerns, 'red', CONCERN_LABELS);
   }
-  if (considerations.length > 0 && !(considerations.length === 1 && considerations[0].label === 'None Visible')) {
-    if (elements.length > 0) html += '<div class="pin-group-divider"></div>';
-    html += '<div class="pin-group"><div class="pin-group-label">Responder Considerations</div>';
-    considerations.forEach((el, i) => {
-      const label = CONCERN_LABELS[i] || String(i+1), pinId = 'red-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge red">${label}</div><div class="pin-label">${el.label}</div></div>`;
-    });
-    html += '</div>';
+  if (!html) html = '<div class="panel-empty">No elements identified yet.</div>';
+  if (fr.considerations) {
+    html += '<div class="rec-block"><div class="rec-label security">Responder Considerations</div><div class="rec-text">' + fr.considerations + '</div></div>';
   }
-  if (!html) html = '<div class="panel-empty">No elements identified.</div>';
-  if (!hasError && fr.recommendations && fr.recommendations.length > 0) {
+  if (fr.recommendations) {
     html += '<div class="rec-block"><div class="rec-label security">First Responder Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
 }
 function buildWildfirePanel(d, centerLat, centerLng) {
   clearMarkers();
-  const wf = d.wildfire;
-  if (!wf || !wf.nadir_url) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>'; return; }
-  const zoom = extractZoom(wf.nadir_url);
-  const hasError = !wf.conditions || (typeof wf.conditions === 'string' && wf.conditions.startsWith('ERROR:'));
-  let conditions = [];
-  if (!hasError) {
-    if (Array.isArray(wf.conditions)) { conditions = wf.conditions; }
-    else {
-      const rawConds = normalizePins(wf.conditions), urlPins = parsePinsFromUrl(wf.nadir_url);
-      conditions = mergePinsWithCoords(rawConds, urlPins, centerLat, centerLng);
-    }
-  }
-  setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
+  const nadirUrl = d.nadir_url || '';
+  const wf = d.wildfire || {};
+  if (!nadirUrl) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>'; return; }
+  const zoom = extractZoom(nadirUrl);
+
+  const elements = satElementLatLngPins_(d, centerLat, centerLng, zoom);
+  const concerns = satConcernLatLngPins_(wf.concerns, centerLat, centerLng, zoom);
+
+  setOverlay(nadirUrl, centerLat, centerLng, zoom);
   const _ob = document.getElementById('overlay-btn'); if (_ob) _ob.style.display = 'flex';
-  dropPins(conditions, 'orange', '#f97316');
-  dbg('Wildfire: ' + conditions.length + ' conditions', 'ok');
-  if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
+  dropPins(elements, 'green', '#22c55e');
+  dropPins(concerns, 'orange', '#f97316');
+  dbg('Wildfire: ' + elements.length + ' elements, ' + concerns.length + ' WF concerns', 'ok');
+
   let html = '';
-  if (conditions.length > 0 && !(conditions.length === 1 && conditions[0].label === 'None Visible')) {
-    html += '<div class="pin-group"><div class="pin-group-label">Wildfire Conditions</div>';
-    conditions.forEach((el, i) => {
-      const label = ELEMENT_LABELS[i] || String(i+1), pinId = 'orange-' + i;
-      html += `<div class="pin-row" data-pin-id="${pinId}" onclick="pinRowClick('${pinId}')"><div class="pin-badge orange">${label}</div><div class="pin-label">${el.label}</div></div>`;
-    });
-    html += '</div>';
-  } else { html = '<div class="panel-empty">No conditions identified.</div>'; }
-  if (!hasError && wf.recommendations && wf.recommendations.length > 0) {
+  html += satPinRowsHtml_('Property Elements', elements, 'green', ELEMENT_LABELS);
+  if (concerns.length) {
+    if (elements.length) html += '<div class="pin-group-divider"></div>';
+    html += satPinRowsHtml_('Wildfire Concerns', concerns, 'orange', CONCERN_LABELS);
+  }
+  if (!html) html = '<div class="panel-empty">No elements identified yet.</div>';
+  if (wf.considerations) {
+    html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Considerations</div><div class="rec-text">' + wf.considerations + '</div></div>';
+  }
+  if (wf.recommendations) {
     html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Recommendations</div><div class="rec-text">' + wf.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
