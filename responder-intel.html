@@ -46,7 +46,22 @@
     width: auto;
     flex-shrink: 0;
   }
-  .nav-tabs { display: flex; }
+  .nav-tabs { display: flex; flex-shrink: 0; }
+  .nav-property {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0 24px;
+    text-align: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nav-property:empty { display: none; }
   .tab-btn {
     padding: 0 22px;
     height: 64px;
@@ -398,6 +413,7 @@
     #tab-nav { padding: 0 16px; height: 56px; }
     .nav-logo { height: 36px; }
     .tab-btn { padding: 0 12px; font-size: 11px; letter-spacing: 0.05em; height: 56px; }
+    .nav-property { font-size: 11px; margin: 0 12px; }
 
     /* Hero */
     .hero { padding: 48px 20px 44px; }
@@ -454,6 +470,7 @@
 
     /* Nav — hide middle tab on very small screens */
     .tab-btn { padding: 0 10px; font-size: 10px; }
+    .nav-property { display: none; }
 
     /* Hero */
     .hero { padding: 36px 16px 36px; }
@@ -795,6 +812,7 @@
 <!-- ── Navigation ── -->
 <nav id="tab-nav">
   <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="nav-logo">
+  <div id="nav-property" class="nav-property"></div>
   <div class="nav-tabs">
     <button class="tab-btn active" onclick="showTab('landing')">Property Intel</button>
     <button class="tab-btn" onclick="showTab('viewer')">Responder Viewer</button>
@@ -818,7 +836,7 @@
     <div class="hero-btns">
       <button class="btn-dark" onclick="showTab('viewer')">Open Responder Viewer</button>
       <div class="btn-hint">View aerial imagery and intelligence for this property.</div>
-      <a class="btn-outline" href="https://www.vyanet.com" target="_blank">Join the Customer Portal (Coming Soon)</a>
+      <a class="btn-outline" href="https://www.vyanet.com" target="_blank">Join the Portal (Coming Soon)</a>
       <div class="btn-hint">Property owners — enroll to get your report delivered to your fire agency.</div>
     </div>
   </section>
@@ -870,7 +888,7 @@
     <h2 class="portal-heading">Get your property into the system.</h2>
     <div class="portal-rule"></div>
     <p class="portal-body">Property owners enroll through the Vyanet Customer Portal. We capture the imagery, run the analysis, and deliver the report to your local responding agency.</p>
-    <a class="btn-portal" href="https://www.vyanet.com" target="_blank">Enroll in the Customer Portal (Coming Soon)</a>
+    <a class="btn-portal" href="https://www.vyanet.com" target="_blank">Enroll in the Customer Portal</a>
   </section>
 
   <!-- Footer -->
@@ -949,7 +967,7 @@
         <div class="status-dot"></div>
         <span id="viewer-toggle-label">View Intel</span>
       </button>
-      <div id="viewer-version">v2.4.0 — Responder Intel</div>
+      <div id="viewer-version">v2.5.0 — Responder Intel</div>
     </div>
   </div>
   <!-- viewer body -->
@@ -1003,8 +1021,8 @@
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
-const VERSION      = 'v2.4.0';
-const BASE_URL = 'https://responder-intel.vyanet.com/data/responder-drone/';
+const VERSION      = 'v2.5.0';
+const BASE_URL    = 'https://responder-intel.vyanet.com/data/responder-drone/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
@@ -1022,6 +1040,7 @@ let groundOverlay = null, overlayVisible = false;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
 let viewerInitialised = false;
+let propertyPromise = null;
 const isMobile = () => window.innerWidth <= 768;
 
 // ── Tab switching ──────────────────────────────────────────────────────────
@@ -1388,18 +1407,35 @@ function updateLightbox() {
 }
 
 // ── Main viewer init ───────────────────────────────────────────────────────
+// ── Property data (fetched once, on page load) ─────────────────────────────
+function getPropertyHash() {
+  return new URLSearchParams(window.location.search).get('property');
+}
+async function loadPropertyData() {
+  const hash = getPropertyHash();
+  if (!hash) return null;
+  const res = await fetch(BASE_URL + hash + '.json');
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
+function setNavProperty(name) {
+  const el = document.getElementById('nav-property');
+  if (el) el.textContent = name || '';
+}
+
 async function initViewer() {
   dbg(VERSION + ' — Responder Intel loaded', 'ok');
-  const params = new URLSearchParams(window.location.search);
-  const hash = params.get('property');
+  const hash = getPropertyHash();
   if (!hash) { showViewerError('No property ID in URL. Use a direct link from your Responder Intel report.'); return; }
   dbg('Property hash: ' + hash.substring(0,12) + '...', 'info');
   try {
     setViewerLoading('Loading property data...');
-    const res = await fetch(BASE_URL + hash + '.json');
-    if (!res.ok) { showViewerError('Property not found. (' + hash.substring(0,8) + '...)'); return; }
-    const d = await res.json();
+    if (!propertyPromise) propertyPromise = loadPropertyData();
+    const d = await propertyPromise;
+    if (!d) { showViewerError('Property not found. (' + hash.substring(0,8) + '...)'); return; }
     currentData = d;
+    setNavProperty(d.name);
     dbg('Property loaded: ' + (d.name || hash), 'ok');
     document.getElementById('viewer-property-name').textContent = d.name || '';
     document.getElementById('vp-title').textContent = d.name || 'Property Details';
@@ -1417,8 +1453,16 @@ window.initGoogleMaps = function() {
   if (pendingEntry) { resolveAndInitMap(pendingEntry); pendingEntry = null; }
 };
 
-// ── Always start on landing page — viewer loads lazily on tab click ───────
-// (property hash is preserved in URL for when user clicks Responder Viewer tab)
+// ── Preload so the property name shows in the header on every tab ──────────
+// The page still opens on the landing tab; only the data fetch is hoisted, so
+// the nav name is populated before the user ever clicks Responder Viewer.
+(function bootstrapProperty() {
+  if (!getPropertyHash()) return;
+  propertyPromise = loadPropertyData();
+  propertyPromise.then(function (d) {
+    if (d) { currentData = d; setNavProperty(d.name); }
+  }).catch(function (e) { dbg('Preload failed: ' + e.message, 'error'); });
+})();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
 
