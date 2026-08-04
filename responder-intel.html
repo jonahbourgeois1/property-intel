@@ -10,6 +10,7 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
+    --nav-h: 64px;
     --red: #c0392b;
     --dark: #111111;
     --text: #2c2c2c;
@@ -39,7 +40,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 0 40px;
-    height: 64px;
+    height: var(--nav-h);
   }
   .nav-logo {
     height: 52px;
@@ -57,14 +58,14 @@
     font-weight: 500;
     color: var(--text2);
     letter-spacing: 0.02em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
   }
   .nav-property:empty { display: none; }
   .tab-btn {
     padding: 0 22px;
-    height: 64px;
+    height: var(--nav-h);
     display: flex;
     align-items: center;
     font-size: 12px;
@@ -87,7 +88,7 @@
   /* ══════════════════════════════════════
      LANDING PAGE — Option 3: Intel Brief
   ══════════════════════════════════════ */
-  #page-landing { background: var(--cream); height: calc(100vh - 64px); overflow-y: auto; }
+  #page-landing { background: var(--cream); height: calc(100vh - var(--nav-h)); overflow-y: auto; }
 
   /* Hero — centered, cream, Playfair + italic subline, red rule */
   .hero {
@@ -410,10 +411,12 @@
   @media (max-width: 768px) {
 
     /* Nav */
-    #tab-nav { padding: 0 16px; height: 56px; }
+    :root { --nav-h: 56px; }
+    #tab-nav { padding: 0 16px; }
     .nav-logo { height: 36px; }
-    .tab-btn { padding: 0 12px; font-size: 11px; letter-spacing: 0.05em; height: 56px; }
+    .tab-btn { padding: 0 12px; font-size: 11px; letter-spacing: 0.05em; }
     .nav-property { font-size: 11px; margin: 0 12px; }
+    #viewer-property-name { display: none; }
 
     /* Hero */
     .hero { padding: 48px 20px 44px; }
@@ -468,9 +471,11 @@
   ══════════════════════════════ */
   @media (max-width: 480px) {
 
-    /* Nav — hide middle tab on very small screens */
-    .tab-btn { padding: 0 10px; font-size: 10px; }
-    .nav-property { display: none; }
+    /* Nav — name drops to its own row */
+    :root { --nav-h: 96px; }
+    #tab-nav { flex-wrap: wrap; align-content: center; padding: 8px 16px; }
+    .tab-btn { padding: 0 10px; font-size: 10px; height: 44px; }
+    .nav-property { flex: 1 0 100%; order: 3; margin: 4px 0 0; font-size: 11px; }
 
     /* Hero */
     .hero { padding: 36px 16px 36px; }
@@ -499,7 +504,7 @@
 
   /* ── VIEWER PAGE ── */
   #page-viewer {
-    height: calc(100vh - 64px);
+    height: calc(100vh - var(--nav-h));
     overflow: hidden;
   }
 
@@ -508,8 +513,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
-    height: 48px;
+    padding: 6px 16px;
+    min-height: 48px;
     background: #12161b;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0;
@@ -530,10 +535,11 @@
     padding: 4px 10px;
     border-radius: 4px;
     border: 1px solid rgba(255,255,255,0.08);
-    max-width: 220px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
   }
   #viewer-version {
     font-size: 10px;
@@ -605,7 +611,7 @@
   }
   #viewer-panel.hidden { transform: translateX(360px); width: 0; }
   .vp-header { padding: 14px 16px 0; flex-shrink: 0; }
-  .vp-title { font-size: 14px; font-weight: 600; color: #f0f2f5; }
+  .vp-title { font-size: 14px; font-weight: 600; color: #f0f2f5; line-height: 1.35; overflow-wrap: anywhere; }
   .vp-address { font-size: 11px; color: #555f6e; margin-top: 3px; font-family: 'DM Mono', monospace; line-height: 1.4; }
   #vp-tabs {
     display: flex; border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -725,7 +731,7 @@
 
   /* ── Client Assessment page ── */
   #page-update {
-    height: calc(100vh - 64px);
+    height: calc(100vh - var(--nav-h));
     overflow: hidden;
   }
   .update-iframe {
@@ -761,7 +767,7 @@
   @media (max-width: 768px) {
     .intel-grid { grid-template-columns: 1fr; }
     .portal-features { gap: 8px; }
-    #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: 104px; width: 100% !important; height: calc(100vh - 104px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
+    #viewer-panel { position: fixed !important; left: 0; right: 0; bottom: 0; top: calc(var(--nav-h) + 48px); width: 100% !important; height: calc(100vh - var(--nav-h) - 48px) !important; transform: translateY(100%) !important; transition: transform 0.35s ease !important; border-left: none !important; border-top: 1px solid rgba(255,255,255,0.14) !important; z-index: 40; }
     #viewer-panel.mobile-open { transform: translateY(0%) !important; }
     #viewer-toggle-panel { display: none !important; }
     #viewer-mobile-toggle {
@@ -788,7 +794,7 @@
     }
     #viewer-mobile-toggle.panel-open {
       bottom: auto;
-      top: 64px;
+      top: var(--nav-h);
       left: 0;
       right: 0;
       transform: none;
@@ -967,7 +973,7 @@
         <div class="status-dot"></div>
         <span id="viewer-toggle-label">View Intel</span>
       </button>
-      <div id="viewer-version">v2.5.0 — Responder Intel</div>
+      <div id="viewer-version">v2.5.1 — Responder Intel</div>
     </div>
   </div>
   <!-- viewer body -->
@@ -1021,7 +1027,7 @@
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
-const VERSION      = 'v2.5.0';
+const VERSION      = 'v2.5.1';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/responder-drone/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -1058,11 +1064,11 @@ function showTab(tab) {
   } else if (tab === 'viewer') {
     viewer.style.display       = 'flex';
     viewer.style.flexDirection = 'column';
-    viewer.style.height        = 'calc(100vh - 64px)';
+    viewer.style.height        = 'calc(100vh - var(--nav-h))';
     viewer.style.overflow      = 'hidden';
   } else if (tab === 'update') {
     update.style.display  = 'block';
-    update.style.height   = 'calc(100vh - 64px)';
+    update.style.height   = 'calc(100vh - var(--nav-h))';
     update.style.overflow = 'hidden';
   }
   // Update tab buttons
@@ -1421,7 +1427,7 @@ async function loadPropertyData() {
 }
 function setNavProperty(name) {
   const el = document.getElementById('nav-property');
-  if (el) el.textContent = name || '';
+  if (el) { el.textContent = name || ''; el.title = name || ''; }
 }
 
 async function initViewer() {
@@ -1438,6 +1444,7 @@ async function initViewer() {
     setNavProperty(d.name);
     dbg('Property loaded: ' + (d.name || hash), 'ok');
     document.getElementById('viewer-property-name').textContent = d.name || '';
+    document.getElementById('viewer-property-name').title = d.name || '';
     document.getElementById('vp-title').textContent = d.name || 'Property Details';
     document.getElementById('vp-address').textContent = (d.address || '').replace(/^\s+/, '');
     buildTabs(d);
