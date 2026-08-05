@@ -222,6 +222,12 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#111318');
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
+// Z-up MUST be set BEFORE OrbitControls is constructed: OrbitControls bakes its
+// up-frame (and the polar-angle clamp) from camera.up at construction. With the
+// default Y-up, southward vantages (alpha/delta) compute a polar angle past
+// maxPolarAngle and get clamped -- the camera snaps to a different spot on
+// hand-off. Setting Z-up here makes the clamp operate in the correct frame.
+camera.up.set(0, 0, 1);
 
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
