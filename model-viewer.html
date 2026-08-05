@@ -271,7 +271,8 @@ let MODEL = null, BOX = null, CENTER = null, VIEWS = null, playing = false;
 
 // Target pose {pos, target} for a named button. Vantages frame the whole
 // parcel from a side (or top-down); 'entrance' frames the driveway point.
-if (name === 'nadir') {
+function poseFor(name) {
+  if (name === 'nadir') {
     // el 89 (not 90) keeps camera.up = +Z valid; a true straight-down view
     // with up=Z is a gimbal singularity. Orient the top-down to the entrance
     // bearing (alpha) so the entryway sits consistently in frame; fall back to
