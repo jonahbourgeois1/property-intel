@@ -39,10 +39,10 @@
     transition: opacity 1s ease; z-index: 50;
   }
   #hint.hidden { opacity: 0; }
-  /* view buttons (Nadir + the four approaches) */
+  /* view buttons (vantages) + the separate Entrance action */
   #viewButtons {
     position: fixed; bottom: 16px; left: 16px; z-index: 50;
-    display: flex; gap: 8px; flex-wrap: wrap;
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
   }
   .view-btn {
     background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
@@ -51,6 +51,9 @@
   }
   .view-btn:hover { color: #fff; border-color: #3d4657; }
   .view-btn:disabled { opacity: 0.35; cursor: default; }
+  /* the Entrance button is an action, not a vantage -- set it apart */
+  .entrance-btn { margin-left: 8px; border-color: #3d5a8a; color: #9db8e0; }
+  .entrance-btn:hover { color: #fff; border-color: #5a82c0; }
 </style>
 </head>
 <body>
@@ -63,7 +66,7 @@
   <strong>Could not load model</strong>
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
-<div id="hint">Left drag to pan - Middle drag to rotate - Right drag to zoom</div>
+<div id="hint">Left drag to pan - Middle drag to rotate - Right drag to zoom - Wheel to zoom</div>
 <button id="resetBtn" onclick="resetView()" style="
   position: fixed; bottom: 56px; right: 16px; z-index: 50;
   background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
@@ -73,11 +76,12 @@
   Reset View
 </button>
 <div id="viewButtons">
-  <button class="view-btn" onclick="playView('nadir')">Nadir</button>
-  <button class="view-btn" onclick="playView('alpha')">Alpha</button>
-  <button class="view-btn" onclick="playView('bravo')">Bravo</button>
-  <button class="view-btn" onclick="playView('charlie')">Charlie</button>
-  <button class="view-btn" onclick="playView('delta')">Delta</button>
+  <button class="view-btn" data-view="nadir"   onclick="playView('nadir')">Nadir</button>
+  <button class="view-btn" data-view="alpha"   onclick="playView('alpha')">Alpha</button>
+  <button class="view-btn" data-view="bravo"   onclick="playView('bravo')">Bravo</button>
+  <button class="view-btn" data-view="charlie" onclick="playView('charlie')">Charlie</button>
+  <button class="view-btn" data-view="delta"   onclick="playView('delta')">Delta</button>
+  <button class="view-btn entrance-btn" data-view="entrance" onclick="playView('entrance')">Entrance</button>
 </div>
 
 <script type="importmap">
@@ -97,12 +101,11 @@ const { DRACOLoader }   = await import(`${BASE}/loaders/DRACOLoader.js`);
 const { OrbitControls } = await import(`${BASE}/controls/OrbitControls.js`);
 
 // -- URL params -----------------------------------------------------------
-// Interactive responder viewer. It is fed the SAME geometry the render/video
-// pipeline computes: a clipped GLB, the entrance bearing (alpha), and the
-// entrance point in the GLB's local frame. From alpha alone it derives the
-// four approach azimuths; the buttons fly the camera along the same 2-keyframe
-// path the approach videos use (start on the view's oblique, end on the
-// entrance), so the live flight matches the rendered clip.
+// Interactive responder viewer. Fed the same geometry the pipeline computes:
+// a clipped GLB, the entrance bearing (alpha), and the entrance point in the
+// GLB's local frame. The five vantage buttons fly the camera to a viewpoint
+// (obliques from alpha+0/90/180/270, or top-down for Nadir); the separate
+// Entrance button flies from wherever you are to the driveway framing.
 const params   = new URLSearchParams(window.location.search);
 const glbUrl   = params.get('model');
 const alphaParam = parseFloat(params.get('alpha'));      // entrance bearing, deg
@@ -112,37 +115,33 @@ const entYParam  = parseFloat(params.get('ent_y'));
 const hasEntrance = !isNaN(entXParam) && !isNaN(entYParam);
 
 const num = (k, d) => { const v = parseFloat(params.get(k)); return isNaN(v) ? d : v; };
-const POLAR_START = num('polar', 25);
-const POLAR_END   = num('polar_end', 15);
-const END_RADIUS  = num('end_radius', 45);
-const PATH_FRAMES = parseInt(params.get('frames') || '60', 10);
-const PATH_HOLD   = parseInt(params.get('hold')   || '8',  10);
-const FLIGHT_MS   = parseInt(params.get('dur_ms') || '4000', 10);
+const POLAR_VIEW = num('polar', 25);        // oblique elevation
+const POLAR_ENT  = num('polar_end', 15);    // entrance-approach elevation
+const END_RADIUS = num('end_radius', 45);   // entrance framing box half-size (m)
+const FLY_MS     = parseInt(params.get('dur_ms') || '1600', 10);
 
 if (!glbUrl) {
   showErr('No model URL provided. Add ?model=https://... to the URL.');
 }
 
-// Every approach ENDS facing the entrance (alpha); each STARTS on its own
-// oblique: alpha+0/90/180/270.
+// Each approach ENDS facing the entrance (alpha); each vantage sits on its own
+// side: alpha+0/90/180/270.
 function viewAzimuths(alpha) {
   return { alpha: alpha % 360, bravo: (alpha + 90) % 360,
            charlie: (alpha + 180) % 360, delta: (alpha + 270) % 360 };
 }
 
-// -- Engine (reused verbatim from the capture viewer, render-viewer.html) --
-// Z-up, +Y = north, +X = east. azimuth = compass bearing of the camera's
-// position relative to the target point.
-function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distance) {
+// -- Engine (reused from the capture viewer, render-viewer.html) ----------
+// Camera position for a compass azimuth + elevation at a distance from target.
+// Z-up, +Y = north, +X = east.
+function camPos(target, azimuthDeg, elevationDeg, distance) {
   const az = THREE.MathUtils.degToRad(azimuthDeg);
   const el = THREE.MathUtils.degToRad(elevationDeg);
   const horiz = distance * Math.cos(el);
   const up = distance * Math.sin(el);
-  const east = horiz * Math.sin(az);
-  const north = horiz * Math.cos(az);
-  camera.position.set(center.x + east, center.y + north, center.z + up);
-  camera.up.set(0, 0, 1);
-  camera.lookAt(center);
+  return new THREE.Vector3(target.x + horiz * Math.sin(az),
+                           target.y + horiz * Math.cos(az),
+                           target.z + up);
 }
 
 // Exact-fit distance: smallest distance keeping every bounding-box corner in
@@ -231,10 +230,26 @@ controls.screenSpacePanning = true;
 controls.minDistance = 10;
 controls.maxDistance = 5000;
 controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.DOLLY };
-controls.enableZoom = true;
 controls.zoomSpeed = 1.0;
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2;
+
+// Inverted mouse-wheel zoom. OrbitControls has no invert flag in r128, so we
+// disable its wheel handling and dolly the camera ourselves in the opposite
+// sense. To flip the direction, swap `step : 1/step` below.
+controls.enableZoom = false;
+renderer.domElement.addEventListener('wheel', (ev) => {
+  ev.preventDefault();
+  if (playing) return;
+  const step = Math.pow(0.95, controls.zoomSpeed || 1.0);
+  const factor = ev.deltaY < 0 ? step : 1 / step;   // wheel UP zooms IN
+  const off = camera.position.clone().sub(controls.target);
+  let dist = off.length() * factor;
+  dist = Math.min(Math.max(dist, controls.minDistance), controls.maxDistance);
+  off.setLength(dist);
+  camera.position.copy(controls.target).add(off);
+  controls.update();
+}, { passive: false });
 
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambient);
@@ -242,63 +257,59 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.2);
 sun.position.set(1, 2, 2);
 scene.add(sun);
 
-// -- Live-flight state ----------------------------------------------------
-// While a flight runs, OrbitControls is detached (see the !playing gate in
-// animate) and the camera is owned by setFrame; on arrival we re-seat the
-// orbit target on the end look-at and hand control back.
+// -- Camera-move state ----------------------------------------------------
+// While a move runs, OrbitControls is detached (the !playing gate in animate)
+// and the camera is driven by the tween; on arrival we re-seat the orbit
+// target and hand control back so free-orbit resumes from the landing pose.
 let MODEL = null, BOX = null, CENTER = null, VIEWS = null, playing = false;
 
-// Build the 2-keyframe approach path for one view and install window.setFrame.
-// START = the view's oblique (exact-fit on the whole parcel at startAz).
-// END   = framed on the entrance point from the alpha bearing, lower polar.
-function buildApproachPath(startAz, endAz, spin) {
-  const startTarget = CENTER.clone();
-  const startDist = exactFitDistance(BOX, startTarget, startAz, POLAR_START);
-  let endTarget;
-  if (hasEntrance) {
+// Target pose {pos, target} for a named button. Vantages frame the whole
+// parcel from a side (or top-down); 'entrance' frames the driveway point.
+function poseFor(name) {
+  if (name === 'nadir') {
+    // el 89 (not 90) keeps camera.up = +Z valid; a true straight-down view
+    // with up=Z is a gimbal singularity.
+    const az = 0, el = 89;
+    return { target: CENTER.clone(), pos: camPos(CENTER, az, el, exactFitDistance(BOX, CENTER, az, el)) };
+  }
+  if (name === 'entrance') {
     const allPoints = getAllModelPoints(MODEL);
     const ground = findStructureNearPoint(MODEL, allPoints, entXParam, entYParam, 8.0, 0.0);
-    endTarget = ground ? ground.center : new THREE.Vector3(entXParam, entYParam, BOX.min.z);
-  } else {
-    endTarget = startTarget.clone();   // no entrance point: swing + push-in only
+    const target = ground ? ground.center : new THREE.Vector3(entXParam, entYParam, BOX.min.z);
+    const endBox = new THREE.Box3(
+      new THREE.Vector3(target.x - END_RADIUS, target.y - END_RADIUS, BOX.min.z),
+      new THREE.Vector3(target.x + END_RADIUS, target.y + END_RADIUS, BOX.max.z));
+    const az = VIEWS.alpha, el = POLAR_ENT;
+    return { target, pos: camPos(target, az, el, exactFitDistance(endBox, target, az, el)) };
   }
-  const endBox = new THREE.Box3(
-    new THREE.Vector3(endTarget.x - END_RADIUS, endTarget.y - END_RADIUS, BOX.min.z),
-    new THREE.Vector3(endTarget.x + END_RADIUS, endTarget.y + END_RADIUS, BOX.max.z));
-  const endDist = exactFitDistance(endBox, endTarget, endAz, POLAR_END);
-  let dAz = ((endAz - startAz + 540) % 360) - 180;   // shortest arc
-  if (Math.abs(Math.abs(dAz) - 180) < 1e-6 && spin) dAz = 180 * Math.sign(spin);
-  const total = Math.max(2, PATH_FRAMES);
-  const hold  = Math.min(Math.max(0, PATH_HOLD), total - 2);
-  window.__pathInfo = { endTarget: endTarget.toArray() };
-  window.pathFrames = total;
-  const tmp = new THREE.Vector3();
-  window.setFrame = function(i) {
-    const t = Math.min(Math.max((i - hold) / (total - hold - 1), 0), 1);
-    const e = t * t * (3 - 2 * t);   // smoothstep
-    tmp.lerpVectors(startTarget, endTarget, e);
-    positionCameraCompass(camera, tmp, startAz + dAz * e,
-                          POLAR_START + (POLAR_END - POLAR_START) * e,
-                          startDist + (endDist - startDist) * e);
-    camera.updateProjectionMatrix();
-  };
+  // vantage oblique on the parcel
+  const az = VIEWS[name], el = POLAR_VIEW;
+  return { target: CENTER.clone(), pos: camPos(CENTER, az, el, exactFitDistance(BOX, CENTER, az, el)) };
 }
 
-// Fly the currently-built path from wall-clock time, then hand back to orbit.
-function playPath(durationMs) {
-  if (!window.setFrame || !window.pathFrames) return;
-  const total = window.pathFrames;
+// Smoothly fly the camera from its current pose to `pose`, then hand back to
+// orbit. Straight interpolation of position + look-at ("drag from here to
+// there"); up stays +Z the whole way so OrbitControls' frame stays consistent.
+function flyTo(pose, durationMs) {
+  const p0 = camera.position.clone();
+  const t0v = controls.target.clone();
   controls.enabled = false;
   playing = true;
   const t0 = performance.now();
+  const tmpP = new THREE.Vector3(), tmpT = new THREE.Vector3();
   function step(now) {
     const t = Math.min((now - t0) / durationMs, 1);
-    window.setFrame(Math.round(t * (total - 1)));
+    const e = t * t * (3 - 2 * t);   // smoothstep ease in/out
+    tmpP.lerpVectors(p0, pose.pos, e);
+    tmpT.lerpVectors(t0v, pose.target, e);
+    camera.position.copy(tmpP);
+    camera.up.set(0, 0, 1);
+    camera.lookAt(tmpT);
+    camera.updateProjectionMatrix();
     if (t < 1) {
       requestAnimationFrame(step);
     } else {
-      const end = window.__pathInfo.endTarget;
-      controls.target.set(end[0], end[1], end[2]);
+      controls.target.copy(pose.target);
       controls.enabled = true;
       controls.update();
       playing = false;
@@ -307,27 +318,16 @@ function playPath(durationMs) {
   requestAnimationFrame(step);
 }
 
-// Nadir: instant top-down. Polar 89 (not 90) keeps camera.up = +Z valid, so
-// OrbitControls' frame stays consistent with the obliques (a true straight-
-// down view with up=Z is a gimbal singularity).
-function snapNadir() {
-  if (playing) return;
-  const az = 0, el = 89;
-  positionCameraCompass(camera, CENTER, az, el, exactFitDistance(BOX, CENTER, az, el));
-  camera.updateProjectionMatrix();
-  controls.target.copy(CENTER);
-  controls.enabled = true;
-  controls.update();
-}
-
-// Public: play a named view (called from the buttons).
+// Public: fly to a named view (called from the buttons).
 window.playView = function(name) {
   if (!MODEL || playing) return;
-  if (name === 'nadir') { snapNadir(); return; }
-  if (!hasAlpha) { console.warn('[viewer] no alpha bearing in URL; approach views unavailable'); return; }
-  const spin = (name === 'charlie') ? 1 : 0;
-  buildApproachPath(VIEWS[name], VIEWS.alpha, spin);
-  playPath(FLIGHT_MS);
+  if (name === 'nadir') { flyTo(poseFor('nadir'), FLY_MS); return; }
+  if (name === 'entrance') {
+    if (!hasAlpha || !hasEntrance) { console.warn('[viewer] entrance needs alpha + ent_x/ent_y'); return; }
+    flyTo(poseFor('entrance'), FLY_MS); return;
+  }
+  if (!hasAlpha) { console.warn('[viewer] no alpha bearing in URL; vantage views unavailable'); return; }
+  flyTo(poseFor(name), FLY_MS);
 };
 
 // -- Load GLB -------------------------------------------------------------
@@ -367,12 +367,11 @@ loader.load(
       controls.update();
     };
 
-    // Disable approach buttons if no entrance bearing was supplied.
-    if (!hasAlpha) {
-      document.querySelectorAll('.view-btn').forEach((b) => {
-        if (b.textContent.trim() !== 'Nadir') b.disabled = true;
-      });
-    }
+    // Enable only the buttons we have data for. Vantages need alpha; Entrance
+    // needs alpha + the entrance point. Nadir always works.
+    const disable = (v) => { const b = document.querySelector('.view-btn[data-view="' + v + '"]'); if (b) b.disabled = true; };
+    if (!hasAlpha) { ['alpha','bravo','charlie','delta','entrance'].forEach(disable); }
+    else if (!hasEntrance) { disable('entrance'); }
 
     document.getElementById('loading').classList.add('hidden');
     setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
