@@ -54,6 +54,14 @@
   /* the Entrance button is an action, not a vantage -- set it apart */
   .entrance-btn { margin-left: 8px; border-color: #3d5a8a; color: #9db8e0; }
   .entrance-btn:hover { color: #fff; border-color: #5a82c0; }
+  /* element-pin hover tooltip */
+  #pinTip {
+    position: fixed; z-index: 60; pointer-events: none; display: none;
+    background: rgba(0,0,0,0.82); color: #e6ebf2; font-family: monospace;
+    font-size: 12px; padding: 4px 8px; border-radius: 5px;
+    border: 1px solid #2a3040; white-space: nowrap;
+  }
+  #pinTip.visible { display: block; }
 </style>
 </head>
 <body>
@@ -67,6 +75,7 @@
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
 <div id="hint">Left drag to pan - Middle drag to rotate - Right drag to zoom - Wheel to zoom</div>
+<div id="pinTip"></div>
 <button id="resetBtn" onclick="resetView()" style="
   position: fixed; bottom: 56px; right: 16px; z-index: 50;
   background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
@@ -113,6 +122,7 @@ const hasAlpha   = !isNaN(alphaParam);
 const entXParam  = parseFloat(params.get('ent_x'));
 const entYParam  = parseFloat(params.get('ent_y'));
 const hasEntrance = !isNaN(entXParam) && !isNaN(entYParam);
+const pinsUrl    = params.get('pins');                   // URL to element-pin JSON
 
 const num = (k, d) => { const v = parseFloat(params.get(k)); return isNaN(v) ? d : v; };
 const POLAR_VIEW = num('polar', 25);        // oblique elevation
@@ -263,6 +273,93 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.2);
 sun.position.set(1, 2, 2);
 scene.add(sun);
 
+// -- Element pins ---------------------------------------------------------
+// Layer 1 (primary) / Layer 2 (concern) markers. Fed a per-property JSON of
+// points ALREADY in the GLB's local frame ([{id,name,role,x,y[,z]}]). The
+// server side converts the sheet's nadir-image percentages to model X,Y with
+// the SAME latlon_to_local the entrance point uses, so pins land in the frame
+// the vantage/entrance buttons already trust. Dots snap to the surface under
+// (x, y); hover shows the element name. Colour is by role, so Layer 2 drops in
+// with no viewer change.
+const PIN_PX      = 9;                                     // dot radius, screen px
+const ROLE_COLORS = { primary: '#a855f7', concern: '#f5a524' };
+const pinGroup    = new THREE.Group();
+scene.add(pinGroup);
+
+const _pinTexCache = {};
+function pinTexture(hex) {
+  if (_pinTexCache[hex]) return _pinTexCache[hex];
+  const s = 64, c = document.createElement('canvas');
+  c.width = c.height = s;
+  const g = c.getContext('2d');
+  g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 7, 0, Math.PI * 2);
+  g.fillStyle = hex; g.fill();
+  g.lineWidth = 7; g.strokeStyle = 'rgba(255,255,255,0.92)'; g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  _pinTexCache[hex] = t;
+  return t;
+}
+
+// First surface hit straight down through (x, y): the roof or ground the pin
+// sits on. Falls back to the parcel floor if the ray misses all geometry.
+function surfaceZ(x, y) {
+  const rc = new THREE.Raycaster(
+    new THREE.Vector3(x, y, BOX.max.z + 1000),
+    new THREE.Vector3(0, 0, -1));
+  const hits = rc.intersectObject(MODEL, true);
+  return hits.length ? hits[0].point.z : BOX.min.z;
+}
+
+async function loadPins(url) {
+  let pins;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    pins = await resp.json();
+  } catch (e) {
+    console.warn('[viewer] pins load failed:', e.message || e);
+    return;
+  }
+  if (!Array.isArray(pins)) { console.warn('[viewer] pins JSON is not an array'); return; }
+  for (const p of pins) {
+    if (typeof p.x !== 'number' || typeof p.y !== 'number') continue;
+    const color = ROLE_COLORS[p.role] || ROLE_COLORS.primary;
+    const mat = new THREE.SpriteMaterial({
+      map: pinTexture(color), transparent: true,
+      depthTest: false, depthWrite: false });
+    const spr = new THREE.Sprite(mat);
+    const z = (typeof p.z === 'number') ? p.z : surfaceZ(p.x, p.y);
+    spr.position.set(p.x, p.y, z);
+    spr.renderOrder = 999;                                 // always over the model
+    spr.userData = { name: p.name || ('#' + p.id), id: p.id, role: p.role };
+    pinGroup.add(spr);
+  }
+  console.log('[viewer] pins loaded:', pinGroup.children.length);
+}
+
+// Hover -> element-name tooltip.
+const _pinTip    = document.getElementById('pinTip');
+const _raycaster = new THREE.Raycaster();
+const _pointer   = new THREE.Vector2();
+renderer.domElement.addEventListener('pointermove', (ev) => {
+  if (!pinGroup.children.length) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  _pointer.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
+  _pointer.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
+  _raycaster.setFromCamera(_pointer, camera);
+  const hit = _raycaster.intersectObjects(pinGroup.children)[0];
+  if (hit) {
+    _pinTip.textContent = hit.object.userData.name;
+    _pinTip.style.left = (ev.clientX + 12) + 'px';
+    _pinTip.style.top  = (ev.clientY + 12) + 'px';
+    _pinTip.classList.add('visible');
+    renderer.domElement.style.cursor = 'pointer';
+  } else {
+    _pinTip.classList.remove('visible');
+    renderer.domElement.style.cursor = '';
+  }
+});
+
 // -- Camera-move state ----------------------------------------------------
 // While a move runs, OrbitControls is detached (the !playing gate in animate)
 // and the camera is driven by the tween; on arrival we re-seat the orbit
@@ -382,6 +479,10 @@ loader.load(
     if (!hasAlpha) { ['alpha','bravo','charlie','delta','entrance'].forEach(disable); }
     else if (!hasEntrance) { disable('entrance'); }
 
+    // Element pins (Layer 1 / Layer 2). Drawn once the model is in the scene so
+    // surfaceZ() can raycast against real geometry.
+    if (pinsUrl) loadPins(pinsUrl);
+
     document.getElementById('loading').classList.add('hidden');
     setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
     requestAnimationFrame(() => {
@@ -403,6 +504,14 @@ loader.load(
 function animate() {
   requestAnimationFrame(animate);
   if (!playing) controls.update();
+  // Keep pin dots a constant on-screen size regardless of zoom.
+  if (pinGroup.children.length) {
+    const wpp = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / window.innerHeight;
+    for (const spr of pinGroup.children) {
+      const d = camera.position.distanceTo(spr.position);
+      spr.scale.setScalar(wpp * d * PIN_PX * 2);   // diameter ~ 2 * PIN_PX px
+    }
+  }
   renderer.render(scene, camera);
 }
 animate();
