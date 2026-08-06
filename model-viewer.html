@@ -62,6 +62,25 @@
     border: 1px solid #2a3040; white-space: nowrap;
   }
   #pinTip.visible { display: block; }
+  /* debug console overlay */
+  #dbg {
+    position: fixed; top: 10px; left: 10px; z-index: 300;
+    width: 420px; max-width: 46vw; max-height: 70vh; overflow: auto;
+    background: rgba(6,8,11,0.86); color: #b9c2d0; border: 1px solid #2a3040;
+    border-radius: 6px; padding: 8px 10px; font-size: 11px; line-height: 1.45;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  #dbg .h { color: #a855f7; font-weight: bold; }
+  #dbg .ok { color: #4ade80; }
+  #dbg .warn { color: #f5a524; }
+  #dbg .err { color: #ef4444; }
+  #dbg .dim { color: #6b7688; }
+  #dbgToggle {
+    position: fixed; top: 10px; left: 10px; z-index: 301; display: none;
+    background: rgba(0,0,0,0.6); color: #a855f7; border: 1px solid #3d4657;
+    font-family: monospace; font-size: 11px; padding: 5px 10px;
+    border-radius: 6px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -76,6 +95,9 @@
 </div>
 <div id="hint">Left drag to pan - Middle drag to rotate - Right drag to zoom - Wheel to zoom</div>
 <div id="pinTip"></div>
+<div id="dbg"><span class="h">DEBUG</span>  <span class="dim">(press D to hide)</span>
+</div>
+<button id="dbgToggle" onclick="document.getElementById('dbg').style.display='block';this.style.display='none';">DEBUG</button>
 <button id="resetBtn" onclick="resetView()" style="
   position: fixed; bottom: 56px; right: 16px; z-index: 50;
   background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
@@ -93,6 +115,36 @@
   <button class="view-btn entrance-btn" data-view="entrance" onclick="playView('entrance')">Entrance</button>
 </div>
 
+<script>
+// -- Debug console (plain script so it exists before the module runs) -----
+(function () {
+  var box = document.getElementById('dbg');
+  var seq = 0;
+  window.dbg = function (msg, cls) {
+    seq++;
+    var line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = String(msg);
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+    try { console.log('[dbg] ' + msg); } catch (e) {}
+  };
+  window.addEventListener('error', function (e) {
+    window.dbg('JS ERROR: ' + (e.message || e) + (e.filename ? ' @ ' + e.filename + ':' + e.lineno : ''), 'err');
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    window.dbg('PROMISE REJECTION: ' + ((e.reason && e.reason.message) || e.reason), 'err');
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'd' || e.key === 'D') {
+      var hidden = box.style.display === 'none';
+      box.style.display = hidden ? 'block' : 'none';
+      document.getElementById('dbgToggle').style.display = hidden ? 'none' : 'block';
+    }
+  });
+})();
+</script>
+
 <script type="importmap">
 {
   "imports": {
@@ -103,47 +155,53 @@
 
 <script type="module">
 import * as THREE from 'three';
+dbg('module: three r' + (THREE.REVISION || '?') + ' imported', 'ok');
 
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
-const { GLTFLoader }    = await import(`${BASE}/loaders/GLTFLoader.js`);
-const { DRACOLoader }   = await import(`${BASE}/loaders/DRACOLoader.js`);
-const { OrbitControls } = await import(`${BASE}/controls/OrbitControls.js`);
+let GLTFLoader, DRACOLoader, OrbitControls;
+try {
+  ({ GLTFLoader }   = await import(`${BASE}/loaders/GLTFLoader.js`));
+  ({ DRACOLoader }  = await import(`${BASE}/loaders/DRACOLoader.js`));
+  ({ OrbitControls } = await import(`${BASE}/controls/OrbitControls.js`));
+  dbg('module: GLTFLoader/DRACOLoader/OrbitControls loaded', 'ok');
+} catch (e) {
+  dbg('module: loader import FAILED -> ' + (e.message || e), 'err');
+  throw e;
+}
 
 // -- URL params -----------------------------------------------------------
-// Interactive responder viewer. Fed the same geometry the pipeline computes:
-// a clipped GLB, the entrance bearing (alpha), and the entrance point in the
-// GLB's local frame. The five vantage buttons fly the camera to a viewpoint
-// (obliques from alpha+0/90/180/270, or top-down for Nadir); the separate
-// Entrance button flies from wherever you are to the driveway framing.
 const params   = new URLSearchParams(window.location.search);
 const glbUrl   = params.get('model');
-const alphaParam = parseFloat(params.get('alpha'));      // entrance bearing, deg
+const alphaParam = parseFloat(params.get('alpha'));
 const hasAlpha   = !isNaN(alphaParam);
 const entXParam  = parseFloat(params.get('ent_x'));
 const entYParam  = parseFloat(params.get('ent_y'));
 const hasEntrance = !isNaN(entXParam) && !isNaN(entYParam);
-const pinsUrl    = params.get('pins');                   // URL to element-pin JSON
+const pinsUrl    = params.get('pins');
+
+dbg('params: model=' + (glbUrl ? 'set' : 'MISSING') + '  alpha=' + params.get('alpha') +
+    '  ent=(' + params.get('ent_x') + ',' + params.get('ent_y') + ')');
+dbg('params: pins=' + (pinsUrl || '(none)'), pinsUrl ? 'ok' : 'warn');
+if (pinsUrl) {
+  try { dbg('pins: resolves to ' + new URL(pinsUrl, window.location.href).href, 'dim'); }
+  catch (e) { dbg('pins: bad URL -> ' + (e.message || e), 'err'); }
+}
 
 const num = (k, d) => { const v = parseFloat(params.get(k)); return isNaN(v) ? d : v; };
-const POLAR_VIEW = num('polar', 25);        // oblique elevation
-const POLAR_ENT  = num('polar_end', 15);    // entrance-approach elevation
-const END_RADIUS = num('end_radius', 45);   // entrance framing box half-size (m)
+const POLAR_VIEW = num('polar', 25);
+const POLAR_ENT  = num('polar_end', 15);
+const END_RADIUS = num('end_radius', 45);
 const FLY_MS     = parseInt(params.get('dur_ms') || '1600', 10);
 
 if (!glbUrl) {
   showErr('No model URL provided. Add ?model=https://... to the URL.');
 }
 
-// Each approach ENDS facing the entrance (alpha); each vantage sits on its own
-// side: alpha+0/90/180/270.
 function viewAzimuths(alpha) {
   return { alpha: alpha % 360, bravo: (alpha + 90) % 360,
            charlie: (alpha + 180) % 360, delta: (alpha + 270) % 360 };
 }
 
-// -- Engine (reused from the capture viewer, render-viewer.html) ----------
-// Camera position for a compass azimuth + elevation at a distance from target.
-// Z-up, +Y = north, +X = east.
 function camPos(target, azimuthDeg, elevationDeg, distance) {
   const az = THREE.MathUtils.degToRad(azimuthDeg);
   const el = THREE.MathUtils.degToRad(elevationDeg);
@@ -154,9 +212,6 @@ function camPos(target, azimuthDeg, elevationDeg, distance) {
                            target.z + up);
 }
 
-// Exact-fit distance: smallest distance keeping every bounding-box corner in
-// the viewport, plus a 4% margin. Reads module-scope `camera` for fov/aspect;
-// only ever called after load, so no TDZ concern.
 function exactFitDistance(box, center, azimuthDeg, elevationDeg) {
   const azr = THREE.MathUtils.degToRad(azimuthDeg);
   const elr = THREE.MathUtils.degToRad(elevationDeg);
@@ -232,11 +287,6 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#111318');
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
-// Z-up MUST be set BEFORE OrbitControls is constructed: OrbitControls bakes its
-// up-frame (and the polar-angle clamp) from camera.up at construction. With the
-// default Y-up, southward vantages (alpha/delta) compute a polar angle past
-// maxPolarAngle and get clamped -- the camera snaps to a different spot on
-// hand-off. Setting Z-up here makes the clamp operate in the correct frame.
 camera.up.set(0, 0, 1);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -250,15 +300,12 @@ controls.zoomSpeed = 1.0;
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2;
 
-// Inverted mouse-wheel zoom. OrbitControls has no invert flag in r128, so we
-// disable its wheel handling and dolly the camera ourselves in the opposite
-// sense. To flip the direction, swap `step : 1/step` below.
 controls.enableZoom = false;
 renderer.domElement.addEventListener('wheel', (ev) => {
   ev.preventDefault();
   if (playing) return;
   const step = Math.pow(0.95, controls.zoomSpeed || 1.0);
-  const factor = ev.deltaY < 0 ? step : 1 / step;   // wheel UP zooms IN
+  const factor = ev.deltaY < 0 ? step : 1 / step;
   const off = camera.position.clone().sub(controls.target);
   let dist = off.length() * factor;
   dist = Math.min(Math.max(dist, controls.minDistance), controls.maxDistance);
@@ -274,14 +321,7 @@ sun.position.set(1, 2, 2);
 scene.add(sun);
 
 // -- Element pins ---------------------------------------------------------
-// Layer 1 (primary) / Layer 2 (concern) markers. Fed a per-property JSON of
-// points ALREADY in the GLB's local frame ([{id,name,role,x,y[,z]}]). The
-// server side converts the sheet's nadir-image percentages to model X,Y with
-// the SAME latlon_to_local the entrance point uses, so pins land in the frame
-// the vantage/entrance buttons already trust. Dots snap to the surface under
-// (x, y); hover shows the element name. Colour is by role, so Layer 2 drops in
-// with no viewer change.
-const PIN_PX      = 9;                                     // dot radius, screen px
+const PIN_PX      = 9;
 const ROLE_COLORS = { primary: '#a855f7', concern: '#f5a524' };
 const pinGroup    = new THREE.Group();
 scene.add(pinGroup);
@@ -300,81 +340,69 @@ function pinTexture(hex) {
   return t;
 }
 
-// First surface hit straight down through (x, y): the roof or ground the pin
-// sits on. Falls back to the parcel floor if the ray misses all geometry.
+// First surface hit straight down through (x, y). Returns {z, hit}.
 function surfaceZ(x, y) {
   const rc = new THREE.Raycaster(
     new THREE.Vector3(x, y, BOX.max.z + 1000),
     new THREE.Vector3(0, 0, -1));
   const hits = rc.intersectObject(MODEL, true);
-  return hits.length ? hits[0].point.z : BOX.min.z;
+  return hits.length ? { z: hits[0].point.z, hit: 'ray' } : { z: BOX.min.z, hit: 'floor' };
 }
 
 async function loadPins(url) {
+  dbg('--- pins ---', 'h');
   let pins;
   try {
     const resp = await fetch(url);
+    dbg('fetch: HTTP ' + resp.status + (resp.ok ? ' OK' : ' FAIL') +
+        '  type=' + (resp.headers.get('content-type') || '?'), resp.ok ? 'ok' : 'err');
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    pins = await resp.json();
+    const text = await resp.text();
+    dbg('body: ' + text.length + ' chars', 'dim');
+    pins = JSON.parse(text);
   } catch (e) {
-    console.warn('[viewer] pins load failed:', e.message || e);
+    dbg('LOAD FAILED -> ' + (e.message || e), 'err');
+    dbg('(a 404 here = file not committed / wrong path; a CORS/type error = served wrong)', 'dim');
     return;
   }
-  if (!Array.isArray(pins)) { console.warn('[viewer] pins JSON is not an array'); return; }
+  if (!Array.isArray(pins)) { dbg('parsed JSON is not an array (got ' + typeof pins + ')', 'err'); return; }
+  dbg('parsed ' + pins.length + ' pin(s)', 'ok');
+  dbg('model box  min(' + BOX.min.x.toFixed(1) + ',' + BOX.min.y.toFixed(1) + ',' + BOX.min.z.toFixed(1) +
+      ')  max(' + BOX.max.x.toFixed(1) + ',' + BOX.max.y.toFixed(1) + ',' + BOX.max.z.toFixed(1) + ')', 'dim');
+
+  let added = 0, outside = 0;
   for (const p of pins) {
-    if (typeof p.x !== 'number' || typeof p.y !== 'number') continue;
+    if (typeof p.x !== 'number' || typeof p.y !== 'number') {
+      dbg('skip id=' + p.id + ': x/y not numbers', 'warn'); continue;
+    }
     const color = ROLE_COLORS[p.role] || ROLE_COLORS.primary;
     const mat = new THREE.SpriteMaterial({
-      map: pinTexture(color), transparent: true,
-      depthTest: false, depthWrite: false });
+      map: pinTexture(color), transparent: true, depthTest: false, depthWrite: false });
     const spr = new THREE.Sprite(mat);
-    const z = (typeof p.z === 'number') ? p.z : surfaceZ(p.x, p.y);
+    let z, hit;
+    if (typeof p.z === 'number') { z = p.z; hit = 'given'; }
+    else { const s = surfaceZ(p.x, p.y); z = s.z; hit = s.hit; }
     spr.position.set(p.x, p.y, z);
-    spr.renderOrder = 999;                                 // always over the model
+    spr.renderOrder = 999;
     spr.userData = { name: p.name || ('#' + p.id), id: p.id, role: p.role };
     pinGroup.add(spr);
+    added++;
+    const inX = p.x >= BOX.min.x && p.x <= BOX.max.x;
+    const inY = p.y >= BOX.min.y && p.y <= BOX.max.y;
+    if (!(inX && inY)) outside++;
+    dbg('  + ' + (p.name || ('#' + p.id)) + '  xy(' + p.x + ',' + p.y + ') z=' + z.toFixed(1) +
+        ' [' + hit + ']' + ((inX && inY) ? '' : '  <-- OUTSIDE model box'), (inX && inY) ? '' : 'warn');
   }
-  console.log('[viewer] pins loaded:', pinGroup.children.length);
+  dbg('sprites added = ' + added + '  (group=' + pinGroup.children.length + ')', added ? 'ok' : 'err');
+  if (outside) dbg(outside + ' pin(s) fall OUTSIDE the model footprint -> frame/coord mismatch', 'warn');
+  if (added && !outside) dbg('pins are inside the model box; if you cannot see them, orbit/zoom or check render order', 'dim');
 }
 
-// Hover -> element-name tooltip.
-const _pinTip    = document.getElementById('pinTip');
-const _raycaster = new THREE.Raycaster();
-const _pointer   = new THREE.Vector2();
-renderer.domElement.addEventListener('pointermove', (ev) => {
-  if (!pinGroup.children.length) return;
-  const r = renderer.domElement.getBoundingClientRect();
-  _pointer.x = ((ev.clientX - r.left) / r.width) * 2 - 1;
-  _pointer.y = -((ev.clientY - r.top) / r.height) * 2 + 1;
-  _raycaster.setFromCamera(_pointer, camera);
-  const hit = _raycaster.intersectObjects(pinGroup.children)[0];
-  if (hit) {
-    _pinTip.textContent = hit.object.userData.name;
-    _pinTip.style.left = (ev.clientX + 12) + 'px';
-    _pinTip.style.top  = (ev.clientY + 12) + 'px';
-    _pinTip.classList.add('visible');
-    renderer.domElement.style.cursor = 'pointer';
-  } else {
-    _pinTip.classList.remove('visible');
-    renderer.domElement.style.cursor = '';
-  }
-});
-
 // -- Camera-move state ----------------------------------------------------
-// While a move runs, OrbitControls is detached (the !playing gate in animate)
-// and the camera is driven by the tween; on arrival we re-seat the orbit
-// target and hand control back so free-orbit resumes from the landing pose.
 let MODEL = null, BOX = null, CENTER = null, VIEWS = null, playing = false;
 
-// Target pose {pos, target} for a named button. Vantages frame the whole
-// parcel from a side (or top-down); 'entrance' frames the driveway point.
 function poseFor(name) {
   if (name === 'nadir') {
-    // el 89 (not 90) keeps camera.up = +Z valid; a true straight-down view
-    // with up=Z is a gimbal singularity. Orient the top-down to the entrance
-    // bearing (alpha) so the entryway sits consistently in frame; fall back to
-    // north-up when no bearing is available. (Use alpha+180 to flip which edge
-    // the entry lands on.)
     const az = hasAlpha ? VIEWS.alpha : 0, el = 89;
     return { target: CENTER.clone(), pos: camPos(CENTER, az, el, exactFitDistance(BOX, CENTER, az, el)) };
   }
@@ -388,14 +416,10 @@ function poseFor(name) {
     const az = VIEWS.alpha, el = POLAR_ENT;
     return { target, pos: camPos(target, az, el, exactFitDistance(endBox, target, az, el)) };
   }
-  // vantage oblique on the parcel
   const az = VIEWS[name], el = POLAR_VIEW;
   return { target: CENTER.clone(), pos: camPos(CENTER, az, el, exactFitDistance(BOX, CENTER, az, el)) };
 }
 
-// Smoothly fly the camera from its current pose to `pose`, then hand back to
-// orbit. Straight interpolation of position + look-at ("drag from here to
-// there"); up stays +Z the whole way so OrbitControls' frame stays consistent.
 function flyTo(pose, durationMs) {
   const p0 = camera.position.clone();
   const t0v = controls.target.clone();
@@ -405,7 +429,7 @@ function flyTo(pose, durationMs) {
   const tmpP = new THREE.Vector3(), tmpT = new THREE.Vector3();
   function step(now) {
     const t = Math.min((now - t0) / durationMs, 1);
-    const e = t * t * (3 - 2 * t);   // smoothstep ease in/out
+    const e = t * t * (3 - 2 * t);
     tmpP.lerpVectors(p0, pose.pos, e);
     tmpT.lerpVectors(t0v, pose.target, e);
     camera.position.copy(tmpP);
@@ -424,15 +448,14 @@ function flyTo(pose, durationMs) {
   requestAnimationFrame(step);
 }
 
-// Public: fly to a named view (called from the buttons).
 window.playView = function(name) {
   if (!MODEL || playing) return;
   if (name === 'nadir') { flyTo(poseFor('nadir'), FLY_MS); return; }
   if (name === 'entrance') {
-    if (!hasAlpha || !hasEntrance) { console.warn('[viewer] entrance needs alpha + ent_x/ent_y'); return; }
+    if (!hasAlpha || !hasEntrance) { dbg('entrance needs alpha + ent_x/ent_y', 'warn'); return; }
     flyTo(poseFor('entrance'), FLY_MS); return;
   }
-  if (!hasAlpha) { console.warn('[viewer] no alpha bearing in URL; vantage views unavailable'); return; }
+  if (!hasAlpha) { dbg('no alpha bearing in URL; vantage views unavailable', 'warn'); return; }
   flyTo(poseFor(name), FLY_MS);
 };
 
@@ -442,6 +465,7 @@ dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
 
+dbg('loading GLB...', 'dim');
 loader.load(
   glbUrl,
   function(gltf) {
@@ -452,8 +476,9 @@ loader.load(
     const size = box.getSize(new THREE.Vector3());
     MODEL = model; BOX = box; CENTER = center;
     VIEWS = hasAlpha ? viewAzimuths(alphaParam) : null;
+    dbg('GLB loaded  size(' + size.x.toFixed(1) + ',' + size.y.toFixed(1) + ',' + size.z.toFixed(1) +
+        ')  center(' + center.x.toFixed(1) + ',' + center.y.toFixed(1) + ',' + center.z.toFixed(1) + ')', 'ok');
 
-    // Default resting view: pulled back and up at ~45 deg.
     const camDist = Math.max(size.x, size.y) * 1.4;
     camera.position.set(center.x, center.y - camDist * 0.8, center.z + camDist * 0.8);
     camera.up.set(0, 0, 1);
@@ -473,15 +498,12 @@ loader.load(
       controls.update();
     };
 
-    // Enable only the buttons we have data for. Vantages need alpha; Entrance
-    // needs alpha + the entrance point. Nadir always works.
     const disable = (v) => { const b = document.querySelector('.view-btn[data-view="' + v + '"]'); if (b) b.disabled = true; };
     if (!hasAlpha) { ['alpha','bravo','charlie','delta','entrance'].forEach(disable); }
     else if (!hasEntrance) { disable('entrance'); }
 
-    // Element pins (Layer 1 / Layer 2). Drawn once the model is in the scene so
-    // surfaceZ() can raycast against real geometry.
     if (pinsUrl) loadPins(pinsUrl);
+    else dbg('no pins= param -> pin layer skipped', 'warn');
 
     document.getElementById('loading').classList.add('hidden');
     setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
@@ -496,6 +518,7 @@ loader.load(
     }
   },
   function(err) {
+    dbg('GLB load FAILED -> ' + (err.message || err), 'err');
     showErr(err.message || String(err));
   }
 );
@@ -504,12 +527,11 @@ loader.load(
 function animate() {
   requestAnimationFrame(animate);
   if (!playing) controls.update();
-  // Keep pin dots a constant on-screen size regardless of zoom.
   if (pinGroup.children.length) {
     const wpp = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / window.innerHeight;
     for (const spr of pinGroup.children) {
       const d = camera.position.distanceTo(spr.position);
-      spr.scale.setScalar(wpp * d * PIN_PX * 2);   // diameter ~ 2 * PIN_PX px
+      spr.scale.setScalar(wpp * d * PIN_PX * 2);
     }
   }
   renderer.render(scene, camera);
