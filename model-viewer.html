@@ -493,7 +493,11 @@ loader.load(
     // so interaction continues from the preset instead of snapping away.
     if (!autocapture && hasAlpha) {
       const VIEW_OFFSETS = { alpha: 0, bravo: 90, charlie: 180, delta: 270 };
-      const presetDist = camDist * Math.SQRT2 * 0.8;
+      // Same framing distance the render pipeline was calibrated to
+      // (PARCEL_SIZE_FACTOR 0.718: ~205 m for a 285 m parcel, "confirmed
+      // visually correct") — so a preset matches the rendered oblique's crop
+      // instead of the much wider default-view distance.
+      const presetDist = maxSpan * 0.718;
       let entranceMarker = null;
 
       function setActivePreset(id) {
