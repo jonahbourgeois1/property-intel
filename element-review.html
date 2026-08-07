@@ -129,6 +129,23 @@
     display: flex; flex-direction: column; gap: 6px;
     z-index: 5;
   }
+  /* Live cursor position, in the same x,y percentage space as pins and
+     waypoints — so a Route Fixes note can name an exact coordinate. */
+  .coord {
+    position: absolute; right: 16px; bottom: 16px;
+    z-index: 5;
+    padding: 7px 11px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--ink-faint);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    user-select: none; cursor: copy;
+    opacity: 0.45; transition: opacity 0.12s ease, color 0.12s ease;
+  }
+  .coord.on { opacity: 1; color: var(--ink); }
+  .coord b { color: var(--ink-faint); font-weight: 400; }
   .zoom-btn {
     width: 34px; height: 34px;
     border: 1px solid var(--line);
@@ -173,7 +190,12 @@
   .marker.wp.first { background: var(--wp-first); }
   .marker.wp.last  { background: var(--wp-last); }
   .marker.wp:hover, .marker.wp.active { background: var(--hot); transform: scale(1.3); }
-  .legend h2.route-head { margin-top: 14px; }
+  /* The route legend is a single collapsible block. It must be display:none —
+     not just empty — when there is no route, because .legend ol is flex:1 and
+     an empty second list would otherwise take half the sidebar height and
+     squeeze the element list into the top half. */
+  .route-section { display: none; flex-direction: column; min-height: 0; flex: 1 1 0; }
+  .route-section.on { display: flex; }
   .legend ol.route li .num { background: var(--route); color: #0f1419; }
   .rationale {
     padding: 8px 14px 0; font-size: 12px; line-height: 1.5; color: var(--dim);
@@ -287,6 +309,7 @@
         <svg class="route-svg" id="routeSvg" viewBox="0 0 100 100"
              preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
+      <div class="coord" id="coord" title="Cursor position — click to copy"><b>xy</b> <span id="coordVal">—</span></div>
       <div class="zoom-controls">
         <div class="zoom-btn" id="zoom-in" title="Zoom in">+</div>
         <div class="zoom-btn" id="zoom-out" title="Zoom out">&minus;</div>
@@ -297,9 +320,11 @@
     <aside class="legend">
       <h2>Elements</h2>
       <ol id="list"></ol>
-      <h2 class="route-head" id="routeHead" style="display:none">Route</h2>
-      <ol class="route" id="routeList"></ol>
-      <div class="rationale" id="rationale"></div>
+      <div class="route-section" id="routeSection">
+        <h2 class="route-head">Route</h2>
+        <ol class="route" id="routeList"></ol>
+        <div class="rationale" id="rationale"></div>
+      </div>
       <div class="hint">Hover a marker or row to link the two. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
     </aside>
   </main>
@@ -489,7 +514,7 @@
       frame.appendChild(m);
     });
 
-    document.getElementById('routeHead').style.display = '';
+    document.getElementById('routeSection').classList.add('on');
     var rl = document.getElementById('routeList');
     route.forEach(function (w, i) {
       var role = i === 0 ? 'start' : (i === route.length - 1 ? 'target' : '');
@@ -549,6 +574,55 @@
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
         ') — showing ids only.';
     });
+  // ── Cursor coordinate readout ──────────────────────────────────────────
+  // Reports the cursor position as x,y percentages of the nadir — the exact
+  // space pins and waypoints use — so a correction note can say "move waypoint
+  // 3 to (58.4, 44.1)" instead of describing it in words. getBoundingClientRect
+  // already reflects the zoom/pan transform and the scale is uniform, so the
+  // mapping stays correct at any zoom level without touching the transform state.
+  (function initCoordReadout() {
+    var frame = document.getElementById('frame');
+    var box   = document.getElementById('coord');
+    var val   = document.getElementById('coordVal');
+    if (!frame || !box || !val) return;
+    var last = null;
+
+    function fmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+
+    frame.addEventListener('mousemove', function (e) {
+      var r = frame.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      var x = (e.clientX - r.left) / r.width * 100;
+      var y = (e.clientY - r.top) / r.height * 100;
+      if (x < 0 || x > 100 || y < 0 || y > 100) return;
+      last = { x: x, y: y };
+      val.textContent = fmt(x) + ', ' + fmt(y);
+      box.classList.add('on');
+    });
+    frame.addEventListener('mouseleave', function () { box.classList.remove('on'); });
+
+    // Click the chip (not the image) to copy — keeps drag-to-pan unaffected.
+    box.addEventListener('click', function () {
+      if (!last) return;
+      var text = fmt(last.x) + ', ' + fmt(last.y);
+      var flash = function () {
+        val.textContent = 'copied ' + text;
+        setTimeout(function () { val.textContent = text; }, 900);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(flash, flash);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); } catch (err) {}
+        document.body.removeChild(ta);
+        flash();
+      }
+    });
+  })();
+
   // ── Zoom / pan ─────────────────────────────────────────────────────────
   // Applies a translate+scale transform to #frame. Markers live inside the
   // frame at % coordinates, so they pan and scale with the image for free.
