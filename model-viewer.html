@@ -136,6 +136,20 @@
   .vw-bullets li { font-size: 11px; color: #8a93a2; line-height: 1.6; margin-bottom: 3px; }
   @media (max-width: 640px) { #dir-panel { width: 100%; } }
 
+  /* ── View preset bar (storyboard: alpha/ent params from the sheet) ────── */
+  #preset-bar {
+    display: none; position: fixed; bottom: 48px; left: 50%;
+    transform: translateX(-50%); gap: 6px; z-index: 50;
+  }
+  .pv-btn {
+    background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
+    font-family: monospace; font-size: 11px; padding: 6px 12px;
+    border-radius: 6px; cursor: pointer; transition: color 0.2s, border-color 0.2s;
+  }
+  .pv-btn:hover:not([disabled]) { color: #fff; }
+  .pv-btn.active { color: #f59e0b; border-color: #f59e0b; }
+  .pv-btn[disabled] { opacity: 0.35; cursor: not-allowed; }
+
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
   #debug-panel.collapsed #debug-log, #debug-panel.collapsed #debug-clear { display: none; }
@@ -165,6 +179,13 @@
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
+<div id="preset-bar">
+  <button class="pv-btn" id="pv-alpha"    onclick="goToView('alpha')">Alpha</button>
+  <button class="pv-btn" id="pv-bravo"    onclick="goToView('bravo')">Bravo</button>
+  <button class="pv-btn" id="pv-charlie"  onclick="goToView('charlie')">Charlie</button>
+  <button class="pv-btn" id="pv-delta"    onclick="goToView('delta')">Delta</button>
+  <button class="pv-btn" id="pv-entrance" onclick="goToEntrance()">Entrance</button>
+</div>
 <div id="debug-panel">
   <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
   <div id="debug-log"></div>
@@ -217,6 +238,19 @@ const glbUrl  = params.get('model');
 // additive and everything it adds is gated on `!autocapture`, so a capture
 // run can never be slowed or broken by a failed fetch.
 const propertyId = params.get('property');
+
+// ── Storyboard params (written into the 360 URL by the sheet) ─────────
+// alpha is the property's frontage bearing — the compass azimuth the FRONT
+// (alpha) render was captured from. bravo/charlie/delta are +90/+180/+270
+// from it, the same convention 5-render uses. ent_x/ent_y are the entrance
+// point in the GLB's local frame; they are null for frontage tiers 3/4
+// (a bearing but no point), in which case the Entrance button disables —
+// same contract the storyboard record documents.
+const alphaParam = parseFloat(params.get('alpha'));
+const entXParam  = parseFloat(params.get('ent_x'));
+const entYParam  = parseFloat(params.get('ent_y'));
+const hasAlpha   = !isNaN(alphaParam);
+const hasEnt     = !isNaN(entXParam) && !isNaN(entYParam);
 const wantView   = (params.get('view') || params.get('tab') || '').trim();
 const DT_VIEW    = 'drone-test';
 const ROUTE_HEX  = '#f59e0b';
@@ -452,6 +486,82 @@ loader.load(
     // Store initial camera state for reset
     const initPos = camera.position.clone();
     const initTarget = controls.target.clone();
+
+    // ── View presets (storyboard) ─────────────────────────────────────
+    // Same camera math as the autocapture path: positionCameraCompass at
+    // the requested bearing, then hand the orbit target back to controls
+    // so interaction continues from the preset instead of snapping away.
+    if (!autocapture && hasAlpha) {
+      const VIEW_OFFSETS = { alpha: 0, bravo: 90, charlie: 180, delta: 270 };
+      const presetDist = camDist * Math.SQRT2 * 0.8;
+      let entranceMarker = null;
+
+      function setActivePreset(id) {
+        ['pv-alpha', 'pv-bravo', 'pv-charlie', 'pv-delta', 'pv-entrance']
+          .forEach(function (b) {
+            document.getElementById(b).classList.toggle('active', b === id);
+          });
+      }
+
+      window.goToView = function (which) {
+        const az = (alphaParam + VIEW_OFFSETS[which]) % 360;
+        positionCameraCompass(camera, center, az, 25, presetDist);
+        controls.target.copy(center);
+        controls.update();
+        setActivePreset('pv-' + which);
+        dbg('View preset: ' + which + ' (azimuth ' + az.toFixed(1) + '°)', 'info');
+      };
+
+      window.goToEntrance = function () {
+        if (!hasEnt) return;
+        // Ground height under the entrance from the mesh — latlon_to_local's
+        // z is a sea-level artefact, never a real height.
+        const ray = new THREE.Raycaster();
+        ray.set(new THREE.Vector3(entXParam, entYParam, box.max.z + 100),
+                new THREE.Vector3(0, 0, -1));
+        const hit = ray.intersectObject(model, true)[0];
+        const ez  = hit ? hit.point.z : center.z;
+        const tgt = new THREE.Vector3(entXParam, entYParam, ez);
+
+        if (!entranceMarker) {
+          const S = 128, cv = document.createElement('canvas');
+          cv.width = cv.height = S;
+          const g = cv.getContext('2d');
+          g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
+          g.fillStyle = '#22c55e'; g.fill();
+          g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
+          g.fillStyle = '#0b0e12'; g.font = 'bold 58px monospace';
+          g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.fillText('E', S / 2, S / 2 + 3);
+          entranceMarker = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+          const ms = Math.max(3.0, maxSpan * 0.022);
+          entranceMarker.scale.set(ms, ms, 1);
+          entranceMarker.renderOrder = 3;
+          entranceMarker.position.set(tgt.x, tgt.y, ez + ms * 0.6);
+          scene.add(entranceMarker);
+        }
+
+        positionCameraCompass(camera, tgt, alphaParam, 32,
+                              Math.max(60, maxSpan * 0.35));
+        controls.target.copy(tgt);
+        controls.update();
+        setActivePreset('pv-entrance');
+        dbg('Entrance view: (' + entXParam.toFixed(1) + ', ' + entYParam.toFixed(1) +
+            ') from bearing ' + alphaParam.toFixed(1) + '°', 'info');
+      };
+
+      const bar = document.getElementById('preset-bar');
+      bar.style.display = 'flex';
+      if (!hasEnt) {
+        const eb = document.getElementById('pv-entrance');
+        eb.disabled = true;
+        eb.title = 'No entrance point for this property (frontage tier 3/4)';
+      }
+      dbg('Storyboard presets on — alpha ' + alphaParam.toFixed(2) + '°' +
+          (hasEnt ? ', entrance (' + entXParam + ', ' + entYParam + ')'
+                  : ', no entrance point'), 'ok');
+    }
 
     // Expose reset function to the button
     window.resetView = function() {
