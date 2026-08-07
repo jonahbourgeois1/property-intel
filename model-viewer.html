@@ -106,6 +106,8 @@
   }
   .rd-wp.start { background: #22c55e; }
   .rd-wp.end   { background: #ef4444; color: #fff; }
+  .rd-wp.el { background: #22c55e; }
+  .rd-wp.co { background: #ef4444; color: #fff; }
   .rd-btn {
     width: 100%; margin-top: 10px; padding: 8px 10px; border-radius: 7px;
     border: 1px solid rgba(255,255,255,0.14); background: #12161b;
@@ -124,6 +126,14 @@
   .pin-badge.green { background: #22c55e; }
   .pin-badge.red   { background: #ef4444; color: #fff; }
   .pin-name { font-size: 11.5px; color: #8a93a2; line-height: 1.5; overflow-wrap: anywhere; }
+  .vw-section { margin-top: 12px; }
+  .vw-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .vw-badge { width: 20px; height: 20px; border-radius: 5px; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+  .vw-badge.nadir { background: #8b5cf6; }
+  .vw-label { font-size: 11.5px; font-weight: 600; color: #f0f2f5; }
+  .vw-img { width: 100%; display: block; border-radius: 8px; border: 1px solid rgba(255,255,255,0.10); cursor: zoom-in; }
+  .vw-bullets { margin: 7px 0 0 16px; padding: 0; }
+  .vw-bullets li { font-size: 11px; color: #8a93a2; line-height: 1.6; margin-bottom: 3px; }
   @media (max-width: 640px) { #dir-panel { width: 100%; } }
 
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
@@ -659,6 +669,20 @@ function initDirections(d) {
                   pinSets.concern.length + ' concern' +
                   (pinSets.concern.length === 1 ? '' : 's') + '</div></div></div>' +
               '<div class="rd-body">';
+    // The nadir with every pin ON it — the list below is the legend for this.
+    if (dirNadir) {
+      html += '<div class="rd-figure"><img src="' + escHtml(dirNadir) + '" alt="Property pins" ' +
+                'loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
+              pinSets.element.map(function (p, i) {
+                return '<div class="rd-wp el" style="left:' + Number(p.x) + '%;top:' +
+                       Number(p.y) + '%">' + (ELEMENT_LABELS[i] || (i + 1)) + '</div>';
+              }).join('') +
+              pinSets.concern.map(function (p, i) {
+                return '<div class="rd-wp co" style="left:' + Number(p.x) + '%;top:' +
+                       Number(p.y) + '%">' + (CONCERN_LABELS[i] || (i + 1)) + '</div>';
+              }).join('') +
+              '</div>';
+    }
     if (pinSets.element.length) {
       html += '<div class="pin-group-label">Elements</div>';
       pinSets.element.forEach(function (p, i) {
@@ -683,6 +707,40 @@ function initDirections(d) {
             (dirCorners ? '' : '<div class="rd-note">3D placement needs nadir.local — ' +
               're-run Generate Property Images, then sync again.</div>') +
             '</div></div>';
+  }
+
+  // Oblique views — the four rendered sides plus the overhead, with the
+  // analyst descriptions the sync published. Click an image to open it
+  // full-size in a new tab.
+  const views = [
+    { label: 'Overhead View', badge: 'N', cls: ' nadir', data: d.nadir },
+    { label: 'Alpha Side',    badge: 'A', cls: '', data: d.alpha },
+    { label: 'Bravo Side',    badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie Side',  badge: 'C', cls: '', data: d.charlie },
+    { label: 'Delta Side',    badge: 'D', cls: '', data: d.delta }
+  ].filter(function (v) { return v.data && v.data.url; });
+  if (views.length) {
+    html += '<div class="rd-card" id="vw-card">' +
+              '<div class="rd-head"><div class="rd-num" style="background:#3b82f6;color:#fff">V</div>' +
+                '<div class="rd-titles"><div class="rd-name">Oblique Views</div>' +
+                '<div class="rd-meta">' + views.length + ' rendered view' +
+                (views.length === 1 ? '' : 's') + '</div></div></div>' +
+              '<div class="rd-body">' +
+              views.map(function (v) {
+                const bullets = String(v.data.desc || '').split('|')
+                  .map(function (t) { return t.trim(); })
+                  .filter(function (t) { return t.length > 2; });
+                return '<div class="vw-section">' +
+                  '<div class="vw-head"><div class="vw-badge' + v.cls + '">' + v.badge +
+                    '</div><div class="vw-label">' + escHtml(v.label) + '</div></div>' +
+                  '<img class="vw-img" src="' + escHtml(v.data.url) + '" alt="' + escHtml(v.label) +
+                    '" loading="lazy" onclick="window.open(this.src, \'_blank\')" ' +
+                    'onerror="this.style.display=\'none\'">' +
+                  (bullets.length ? '<ul class="vw-bullets">' + bullets.map(function (b) {
+                    return '<li>' + escHtml(b) + '</li>'; }).join('') + '</ul>' : '') +
+                  '</div>';
+              }).join('') +
+              '</div></div>';
   }
 
   dirList.forEach(function (dir, i) {
