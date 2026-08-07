@@ -689,9 +689,14 @@ function unregisterLayerTargets(layer) {
 (function wirePinLabels() {
   const el = document.getElementById('pin-label');
   let dx = 0, dy = 0;
+  // The label is screen-fixed, so ANY interaction that can move the camera —
+  // a preset button, a panel button, a drag, the zoom wheel — dismisses it.
+  // Capture phase so it fires before the button's own handler.
+  function hideLabel() { el.style.display = 'none'; }
+  document.addEventListener('pointerdown', hideLabel, true);
+  document.addEventListener('wheel', hideLabel, { passive: true });
   renderer.domElement.addEventListener('pointerdown', function (e) {
     dx = e.clientX; dy = e.clientY;
-    el.style.display = 'none';
   });
   renderer.domElement.addEventListener('pointerup', function (e) {
     if (Math.hypot(e.clientX - dx, e.clientY - dy) > 5 || !labelTargets.length) return;
