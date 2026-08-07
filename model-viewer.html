@@ -116,7 +116,31 @@
   .rd-btn.on { background: rgba(245,158,11,0.14); border-color: #f59e0b; color: #f59e0b; }
   .rd-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
   .rd-progress { font-size: 10.5px; color: #f59e0b; font-family: monospace; margin-top: 7px; }
+  .rd-num.pin { background: #22c55e; }
+  .rd-note { font-size: 10.5px; color: #555f6e; font-family: monospace; margin-top: 8px; line-height: 1.55; }
+  .pin-group-label { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; font-family: monospace; margin: 10px 0 6px; }
+  .pin-row { display: flex; align-items: flex-start; gap: 9px; padding: 4px 0; }
+  .pin-badge { width: 19px; height: 19px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #0b0e12; flex-shrink: 0; font-family: monospace; margin-top: 1px; }
+  .pin-badge.green { background: #22c55e; }
+  .pin-badge.red   { background: #ef4444; color: #fff; }
+  .pin-name { font-size: 11.5px; color: #8a93a2; line-height: 1.5; overflow-wrap: anywhere; }
   @media (max-width: 640px) { #dir-panel { width: 100%; } }
+
+  /* ── Debug console — same shape as viewer.html's ──────────────────────── */
+  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  #debug-panel.collapsed #debug-log, #debug-panel.collapsed #debug-clear { display: none; }
+  #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
+  #debug-header span { color: #3b82f6; font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
+  #debug-toggle-btn { color: #3b82f6; font-size: 10px; background: none; border: none; cursor: pointer; }
+  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 180px; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.14) transparent; }
+  .debug-line { padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.03); line-height: 1.5; }
+  .debug-line.info  { color: #8a93a2; }
+  .debug-line.ok    { color: #22c55e; }
+  .debug-line.warn  { color: #f59e0b; }
+  .debug-line.error { color: #ef4444; }
+  .debug-time { color: #555f6e; margin-right: 6px; }
+  #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: #555f6e; font-size: 10px; font-family: monospace; cursor: pointer; text-align: left; width: 100%; }
+  #debug-clear:hover { color: #8a93a2; }
 </style>
 </head>
 <body>
@@ -131,6 +155,11 @@
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
+<div id="debug-panel">
+  <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
+  <div id="debug-log"></div>
+  <button id="debug-clear" onclick="clearDebug()">clear log</button>
+</div>
 <div id="dir-panel">
   <div class="dp-head">
     <div>
@@ -192,6 +221,33 @@ const DATA_ROOT  = (function () {
   return new URL('data/', window.location.href).href;
 })();
 
+// ── Debug console ─────────────────────────────────────────────────────
+// Same shape and behaviour as viewer.html's, so one habit works in both.
+// Hidden in autocapture so it can never appear in a rendered oblique.
+window.dbg = function (msg, type) {
+  type = type || 'info';
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+  const now = new Date();
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+  const line = document.createElement('div');
+  line.className = 'debug-line ' + type;
+  line.innerHTML = '<span class="debug-time">' + t + '</span>' + msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+};
+window.toggleDebug = function () {
+  const p = document.getElementById('debug-panel');
+  const b = document.getElementById('debug-toggle-btn');
+  p.classList.toggle('collapsed');
+  b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
+};
+window.clearDebug = function () {
+  const l = document.getElementById('debug-log');
+  if (l) l.innerHTML = '';
+};
+
 // Optional programmatic camera positioning for headless capture
 // (see capture_obliques.py). azimuth/polar are compass bearing + elevation
 // angle in degrees, both measured the same way compute_frontage.py's
@@ -212,6 +268,7 @@ if (autocapture) {
   // shows up in a screenshot, and don't wait on the 4s hint fade timer.
   document.getElementById('hint').classList.add('hidden');
   document.getElementById('resetBtn').style.display = 'none';
+  document.getElementById('debug-panel').style.display = 'none';
 }
 
 // Same axis convention as positionCameraForDefaultView below: Z-up,
@@ -267,9 +324,26 @@ async function loadProperty() {
 }
 
 const propertyPromise = loadProperty().catch(function (e) {
+  dbg('Property load FAILED: ' + e.message, 'error');
   console.warn('[directions] property load failed:', e.message);
   return null;
 });
+if (propertyId && !autocapture) dbg('Resolving property ' + propertyId.substring(0, 12) + '…', 'info');
+
+// The shared 239-entry pin catalog, resolved exactly as viewer.html resolves
+// it: published pins carry only {id,x,y}, and the id names them.
+const catalogPromise = (propertyId && !autocapture)
+  ? fetch(DATA_ROOT + 'pin-catalog/pins-catalog.json')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (c) {
+        if (!c || !c.pins) { dbg('Pin catalog unavailable', 'warn'); return null; }
+        const byId = {};
+        c.pins.forEach(function (p) { byId[p.id] = p; });
+        dbg('Pin catalog loaded: ' + c.pin_count + ' pins', 'ok');
+        return byId;
+      })
+      .catch(function (e) { dbg('Pin catalog FAILED: ' + e.message, 'warn'); return null; })
+  : Promise.resolve(null);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -379,7 +453,12 @@ loader.load(
     // Hand the loaded scene to the directions layer. No-op when the URL
     // carries no ?property= — the record promise resolves to null.
     modelRoot = model; modelBox = box; modelSpan = maxSpan;
-    propertyPromise.then(function (d) { if (d) initDirections(d); });
+    dbg('Model ready — span ' + maxSpan.toFixed(1) + ' m, ' +
+        'z ' + box.min.z.toFixed(1) + '…' + box.max.z.toFixed(1) + ' m', 'ok');
+    Promise.all([propertyPromise, catalogPromise]).then(function (r) {
+      pinCatalogById = r[1];
+      if (r[0]) initDirections(r[0]); else if (propertyId) dbg('No record found for this property', 'warn');
+    });
 
     // Fade in
     document.getElementById('loading').classList.add('hidden');
@@ -421,28 +500,70 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// ── Responder Directions ──────────────────────────────────────────────
-// A direction is {name, trigger, target, start, route:[{seq,x,y,mx,my}]}.
-// x,y are PERCENTAGES on the nadir image and always present — they drive the
-// 2D preview in the panel. mx,my are the SAME point in the GLB's local frame
-// in metres, written by the sync from the render Lambda's nadir_local
-// corners; a record produced before that existed has no mx,my, so the panel
-// still lists and previews the route and only the 3D button is disabled.
+// ── Responder Directions + property pins ──────────────────────────────
+// A direction is {name, trigger, target, start, route:[{seq,x,y[,mx,my]}]}.
+// A pin is {id,x,y}; the id resolves to a name through the shared 239-entry
+// pin catalog, exactly as viewer.html resolves it.
 //
-// Drawing a route in 3D means finding the ground under each waypoint. The
-// mesh has no height field, so we raycast straight down onto it. That is
-// O(triangles) per ray with no BVH in three.js r128, so the ray count is
-// budgeted (RAY_BUDGET) and spread across animation frames — the canvas keeps
-// rendering and the panel shows progress instead of the tab locking up.
+// x,y are PERCENTAGES on the nadir image and always present — they drive the
+// 2D previews. To place the same point in the 3D model we need metres in the
+// GLB's local frame. Two sources, in order:
+//   1. mx,my on a waypoint, written by the sync (drone-test.gs).
+//   2. nadir.local — the nadir crop's four corners in local metres, published
+//      by the render Lambda. Bilinear interpolation of those corners maps ANY
+//      percentage into the model, which is why pins need no sync change.
+// Four corners rather than two: the local frame is ENU about the CAPTURE's
+// origin, so it is only near-north-up over one parcel. Bilinear absorbs the
+// residual skew (under a centimetre across a 340 x 295 m nadir) exactly.
+//
+// Drawing on the mesh means finding the ground under each point. The mesh has
+// no height field, so we raycast straight down. That is O(triangles) per ray
+// with no BVH in three.js r128, so ray counts are budgeted and spread across
+// animation frames — the canvas keeps rendering and the panel shows progress
+// instead of the tab locking up.
 
 const RAY_BUDGET = 40;
-let dirList = [], dirNadir = '', dirLayer = null, activeDir = -1, dirBusy = false;
+const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
+const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+let dirList = [], dirNadir = '', dirCorners = null;
+let dirLayer = null, activeDir = -1, dirBusy = false;
+let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
+let pinCatalogById = null;
+let groundJobSeq = 0;
 
 function escHtml(t) {
   return String(t == null ? '' : t)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// ── Percentage -> local metres ────────────────────────────────────────
+function cornersOf(d) {
+  const c = d && d.nadir && d.nadir.local;
+  if (!c) return null;
+  const ok = ['nw', 'ne', 'sw', 'se'].every(function (k) {
+    return Array.isArray(c[k]) && c[k].length >= 2 &&
+           isFinite(Number(c[k][0])) && isFinite(Number(c[k][1]));
+  });
+  return ok ? c : null;
+}
+function localFromPct(x, y, c) {
+  const u = Number(x) / 100, v = Number(y) / 100;
+  const w = [(1 - u) * (1 - v), u * (1 - v), (1 - u) * v, u * v];
+  const k = [c.nw, c.ne, c.sw, c.se];
+  let mx = 0, my = 0;
+  for (let i = 0; i < 4; i++) { mx += w[i] * Number(k[i][0]); my += w[i] * Number(k[i][1]); }
+  return { x: mx, y: my };
+}
+// mx,my when the sync wrote them; otherwise interpolate from the corners.
+function toLocal(p) {
+  if (isFinite(Number(p.mx)) && isFinite(Number(p.my))) {
+    return { x: Number(p.mx), y: Number(p.my) };
+  }
+  return dirCorners ? localFromPct(p.x, p.y, dirCorners) : null;
+}
+
 function orderedRoute(d) {
   return (d && Array.isArray(d.route) ? d.route : [])
     .filter(function (w) { return isFinite(Number(w.x)) && isFinite(Number(w.y)); })
@@ -450,24 +571,118 @@ function orderedRoute(d) {
     .sort(function (a, b) { return (Number(a.seq) || 0) - (Number(b.seq) || 0); });
 }
 function metreRoute(d) {
-  const pts = orderedRoute(d).filter(function (w) {
-    return isFinite(Number(w.mx)) && isFinite(Number(w.my));
-  });
+  const pts = orderedRoute(d).map(toLocal).filter(Boolean);
   return pts.length >= 2 ? pts : null;
 }
 
+// ── Shared chunked ground raycast ─────────────────────────────────────
+function cancelGroundJobs() { groundJobSeq++; dirBusy = false; }
+function raycastGround(pts, progressEl, onDone) {
+  const token = ++groundJobSeq;
+  const zTop  = modelBox.max.z + Math.max(50, modelSpan * 0.5);
+  const ray   = new THREE.Raycaster();
+  const down  = new THREE.Vector3(0, 0, -1);
+  const zs    = new Array(pts.length).fill(null);
+  let i = 0;
+  dirBusy = true;
+  (function step() {
+    if (token !== groundJobSeq) return;   // superseded; the new job owns dirBusy
+    const end = Math.min(pts.length, i + 4);
+    for (; i < end; i++) {
+      ray.set(new THREE.Vector3(pts[i].x, pts[i].y, zTop), down);
+      const hit = ray.intersectObject(modelRoot, true)[0];
+      zs[i] = hit ? hit.point.z : null;
+    }
+    if (progressEl) progressEl.textContent =
+      'placing on the mesh… ' + Math.round(i / pts.length * 100) + '%';
+    if (i < pts.length) { requestAnimationFrame(step); return; }
+    if (progressEl) progressEl.textContent = '';
+    dirBusy = false;
+    onDone(zs);
+  })();
+}
+// A ray can miss where the clip cut a hole in the mesh. Fill from the nearest
+// hit on either side rather than dropping the point, so one hole cannot break
+// a route into pieces or drop a pin to the floor.
+function fillGaps(zs) {
+  let seen = null;
+  for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
+  seen = null;
+  for (let i = zs.length - 1; i >= 0; i--) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
+  const floor = modelBox.min.z;
+  for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = floor; }
+  return zs;
+}
+
+// ── Panel ─────────────────────────────────────────────────────────────
+function pinDisplay(p) {
+  if (p.label) return { name: p.label, def: '' };
+  const c = pinCatalogById && pinCatalogById[p.id];
+  return { name: c ? c.name : ('Pin ' + p.id), def: c ? (c.definition || '') : '' };
+}
+function nadirPinSets(d) {
+  const n = (d && d.nadir) || {};
+  if (Array.isArray(n.element_pins) || Array.isArray(n.concern_pins)) {
+    return { element: n.element_pins || [], concern: n.concern_pins || [] };
+  }
+  return { element: Array.isArray(n.pins) ? n.pins : [], concern: [] };
+}
+
 function initDirections(d) {
-  dirList = (d.directions || []).filter(function (x) { return orderedRoute(x).length >= 2; });
-  if (!dirList.length) return;
-  dirNadir = (d.nadir && d.nadir.url) || '';
+  dirCorners = cornersOf(d);
+  dirNadir   = (d.nadir && d.nadir.url) || '';
+  dirList    = (d.directions || []).filter(function (x) { return orderedRoute(x).length >= 2; });
+  pinSets    = nadirPinSets(d);
+  const nPins = pinSets.element.length + pinSets.concern.length;
+  if (!dirList.length && !nPins) { dbg('Record has no pins and no directions', 'warn'); return; }
+
+  dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
+      pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)', 'ok');
+  dbg(dirCorners ? 'nadir.local present — percentages map to model metres'
+                 : 'nadir.local MISSING — 3D placement unavailable', dirCorners ? 'ok' : 'warn');
 
   let html = '';
-  const without3d = dirList.filter(function (x) { return !metreRoute(x); }).length;
-  if (without3d) {
-    html += '<div class="dp-note">' + without3d + ' of ' + dirList.length +
-            ' route(s) have no model coordinates yet. Re-run Generate Property ' +
-            'Images so the render publishes the nadir\'s local corners, then sync ' +
-            'again — the 2D preview works either way.</div>';
+  if (!dirCorners) {
+    html += '<div class="dp-note">This record has no <code>nadir.local</code>, so nothing ' +
+            'can be placed in the 3D model — deploy the render patch, re-run Generate ' +
+            'Property Images, then sync again. The 2D previews below work either way.</div>';
+  }
+
+  // Pins card first: it is the property's vocabulary, and the routes below
+  // are described in terms of it ("TO Pool").
+  if (nPins) {
+    html += '<div class="rd-card" id="pin-card">' +
+              '<div class="rd-head"><div class="rd-num pin">P</div>' +
+                '<div class="rd-titles"><div class="rd-name">Property Pins</div>' +
+                '<div class="rd-meta">' + pinSets.element.length + ' element' +
+                  (pinSets.element.length === 1 ? '' : 's') + ' &middot; ' +
+                  pinSets.concern.length + ' concern' +
+                  (pinSets.concern.length === 1 ? '' : 's') + '</div></div></div>' +
+              '<div class="rd-body">';
+    if (pinSets.element.length) {
+      html += '<div class="pin-group-label">Elements</div>';
+      pinSets.element.forEach(function (p, i) {
+        const disp = pinDisplay(p);
+        html += '<div class="pin-row"><span class="pin-badge green">' +
+                (ELEMENT_LABELS[i] || (i + 1)) + '</span><span class="pin-name">' +
+                escHtml(disp.name) + '</span></div>';
+      });
+    }
+    if (pinSets.concern.length) {
+      html += '<div class="pin-group-label">Concerns</div>';
+      pinSets.concern.forEach(function (p, i) {
+        const disp = pinDisplay(p);
+        html += '<div class="pin-row"><span class="pin-badge red">' +
+                (CONCERN_LABELS[i] || (i + 1)) + '</span><span class="pin-name">' +
+                escHtml(disp.name) + '</span></div>';
+      });
+    }
+    html += '<button class="rd-btn" id="pin-btn" onclick="togglePins3D()"' +
+              (dirCorners ? '' : ' disabled') + '>Show pins in 3D</button>' +
+            '<div class="rd-progress" id="pin-prog"></div>' +
+            (dirCorners ? '' : '<div class="rd-note">3D placement needs nadir.local — ' +
+              're-run Generate Property Images, then sync again.</div>') +
+            '</div></div>';
   }
 
   dirList.forEach(function (dir, i) {
@@ -510,6 +725,7 @@ function initDirections(d) {
                 '<button class="rd-btn" id="rd-btn-' + i + '" onclick="toggleRoute3D(' + i + ')"' +
                   (drawable ? '' : ' disabled') + '>Show in 3D</button>' +
                 '<div class="rd-progress" id="rd-prog-' + i + '"></div>' +
+                (drawable ? '' : '<div class="rd-note">No model coordinates for this route.</div>') +
               '</div>' +
             '</div>';
   });
@@ -517,7 +733,7 @@ function initDirections(d) {
   document.getElementById('dp-body').innerHTML = html;
   document.getElementById('dp-sub').textContent = d.name || '';
   const btn = document.getElementById('dir-toggle');
-  btn.textContent = 'Directions (' + dirList.length + ')';
+  btn.textContent = 'Pins & Directions';
   btn.style.display = 'block';
 }
 
@@ -526,7 +742,88 @@ window.toggleDirPanel = function () {
   document.getElementById('dir-toggle').classList.toggle('on', open);
 };
 
-// ── 3D route ──────────────────────────────────────────────────────────
+// ── Markers ───────────────────────────────────────────────────────────
+function numberSprite(text, bg, fg, worldSize) {
+  const S  = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
+  g.fillStyle = bg; g.fill();
+  g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
+  g.fillStyle = fg; g.font = 'bold 60px monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, S / 2, S / 2 + 3);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+  sp.scale.set(worldSize, worldSize, 1);
+  sp.renderOrder = 3;
+  return sp;
+}
+function disposeLayer(layer) {
+  if (!layer) return;
+  scene.remove(layer);
+  layer.traverse(function (o) {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) {
+      if (o.material.map) o.material.map.dispose();
+      o.material.dispose();
+    }
+  });
+}
+function markerSize() { return Math.max(3.0, modelSpan * 0.022); }
+function liftBy()     { return Math.max(0.35, modelSpan * 0.0022); }
+
+// ── Pins in 3D ────────────────────────────────────────────────────────
+function pinsShown() { return !!(pinLayers.element || pinLayers.concern); }
+function clearPins3D() {
+  disposeLayer(pinLayers.element); disposeLayer(pinLayers.concern);
+  pinLayers = { element: null, concern: null };
+  const b = document.getElementById('pin-btn');
+  const c = document.getElementById('pin-card');
+  if (b) { b.classList.remove('on'); b.textContent = 'Show pins in 3D'; }
+  if (c) c.classList.remove('on');
+  const p = document.getElementById('pin-prog');
+  if (p) p.textContent = '';
+}
+window.togglePins3D = function () {
+  if (dirBusy) { dbg('Busy placing another layer — try again in a moment', 'warn'); return; }
+  if (pinsShown()) { clearPins3D(); dbg('Pins hidden', 'info'); return; }
+  if (!modelRoot || !dirCorners) return;
+
+  const all = pinSets.element.map(function (p, i) {
+        return { p: p, kind: 'element', label: ELEMENT_LABELS[i] || String(i + 1) }; })
+    .concat(pinSets.concern.map(function (p, i) {
+        return { p: p, kind: 'concern', label: CONCERN_LABELS[i] || String(i + 1) }; }));
+  const local = all.map(function (e) { return localFromPct(e.p.x, e.p.y, dirCorners); });
+  if (!local.length) return;
+
+  const prog = document.getElementById('pin-prog');
+  raycastGround(local, prog, function (zs) {
+    fillGaps(zs);
+    const lift = liftBy(), mark = markerSize();
+    pinLayers.element = new THREE.Group();
+    pinLayers.concern = new THREE.Group();
+    all.forEach(function (e, i) {
+      const isConcern = e.kind === 'concern';
+      const sp = numberSprite(e.label, isConcern ? '#ef4444' : '#22c55e',
+                              isConcern ? '#ffffff' : '#0b0e12', mark);
+      sp.position.set(local[i].x, local[i].y, zs[i] + lift + mark * 0.5);
+      sp.name = pinDisplay(e.p).name;
+      (isConcern ? pinLayers.concern : pinLayers.element).add(sp);
+    });
+    scene.add(pinLayers.element); scene.add(pinLayers.concern);
+    window.__pinLayers = pinLayers;
+    const b = document.getElementById('pin-btn');
+    const c = document.getElementById('pin-card');
+    if (b) { b.classList.add('on'); b.textContent = 'Hide pins from 3D'; }
+    if (c) c.classList.add('on');
+    dbg('Pins placed: ' + pinSets.element.length + ' element, ' +
+        pinSets.concern.length + ' concern', 'ok');
+  });
+};
+
+// ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
   const c = document.getElementById('rd-card-' + i);
   const b = document.getElementById('rd-btn-' + i);
@@ -534,17 +831,8 @@ function markCard(i, on) {
   if (b) { b.classList.toggle('on', on); b.textContent = on ? 'Hide from 3D' : 'Show in 3D'; }
 }
 function clearRoute3D() {
-  if (dirLayer) {
-    scene.remove(dirLayer);
-    dirLayer.traverse(function (o) {
-      if (o.geometry) o.geometry.dispose();
-      if (o.material) {
-        if (o.material.map) o.material.map.dispose();
-        o.material.dispose();
-      }
-    });
-    dirLayer = null;
-  }
+  disposeLayer(dirLayer);
+  dirLayer = null;
   if (activeDir >= 0) {
     markCard(activeDir, false);
     const p = document.getElementById('rd-prog-' + activeDir);
@@ -553,10 +841,10 @@ function clearRoute3D() {
   activeDir = -1;
 }
 window.toggleRoute3D = function (i) {
-  if (dirBusy) return;
+  if (dirBusy) { dbg('Busy placing another layer — try again in a moment', 'warn'); return; }
   const wasActive = (activeDir === i);
   clearRoute3D();
-  if (wasActive) return;
+  if (wasActive) { dbg('Route hidden', 'info'); return; }
   const pts = metreRoute(dirList[i]);
   if (!pts || !modelRoot) return;
   activeDir = i;
@@ -570,66 +858,39 @@ window.toggleRoute3D = function (i) {
 function densify(pts) {
   const seg = [];
   for (let i = 0; i < pts.length - 1; i++) {
-    seg.push(Math.hypot(pts[i + 1].mx - pts[i].mx, pts[i + 1].my - pts[i].my));
+    seg.push(Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y));
   }
   const total = seg.reduce(function (a, b) { return a + b; }, 0) || 1;
   const extra = Math.max(0, RAY_BUDGET - pts.length);
   const out = [];
   for (let i = 0; i < pts.length - 1; i++) {
-    out.push({ x: pts[i].mx, y: pts[i].my, wp: i });
+    out.push({ x: pts[i].x, y: pts[i].y, wp: i });
     const n = Math.round(extra * seg[i] / total);
     for (let k = 1; k <= n; k++) {
       const t = k / (n + 1);
-      out.push({ x: pts[i].mx + (pts[i + 1].mx - pts[i].mx) * t,
-                 y: pts[i].my + (pts[i + 1].my - pts[i].my) * t, wp: -1 });
+      out.push({ x: pts[i].x + (pts[i + 1].x - pts[i].x) * t,
+                 y: pts[i].y + (pts[i + 1].y - pts[i].y) * t, wp: -1 });
     }
   }
   const lastPt = pts[pts.length - 1];
-  out.push({ x: lastPt.mx, y: lastPt.my, wp: pts.length - 1 });
+  out.push({ x: lastPt.x, y: lastPt.y, wp: pts.length - 1 });
   return out;
 }
 
 function drapeRoute(pts, idx) {
   const samples = densify(pts);
-  const zTop    = modelBox.max.z + Math.max(50, modelSpan * 0.5);
-  const ray     = new THREE.Raycaster();
-  const down    = new THREE.Vector3(0, 0, -1);
-  const zs      = new Array(samples.length).fill(null);
   const prog    = document.getElementById('rd-prog-' + idx);
-  let i = 0;
-  dirBusy = true;
-
-  (function step() {
-    if (activeDir !== idx) { dirBusy = false; return; }  // cancelled mid-flight
-    const end = Math.min(samples.length, i + 4);
-    for (; i < end; i++) {
-      ray.set(new THREE.Vector3(samples[i].x, samples[i].y, zTop), down);
-      const hit = ray.intersectObject(modelRoot, true)[0];
-      zs[i] = hit ? hit.point.z : null;
-    }
-    if (prog) prog.textContent = 'placing route on the mesh… ' +
-      Math.round(i / samples.length * 100) + '%';
-    if (i < samples.length) { requestAnimationFrame(step); return; }
-    if (prog) prog.textContent = '';
-    dirBusy = false;
+  raycastGround(samples, prog, function (zs) {
+    if (activeDir !== idx) return;
+    fillGaps(zs);
     buildRouteObjects(samples, zs, pts, idx);
-  })();
+  });
 }
 
 function buildRouteObjects(samples, zs, pts, idx) {
-  // A ray can miss where the clip cut a hole in the mesh. Fill from the
-  // nearest hit on either side rather than dropping the point, so one hole
-  // cannot break the route into pieces.
-  let seen = null;
-  for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
-  seen = null;
-  for (let i = zs.length - 1; i >= 0; i--) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
-  const floor = modelBox.min.z;
-  for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = floor; }
-
-  const lift   = Math.max(0.35, modelSpan * 0.0022);
+  const lift   = liftBy();
   const radius = Math.max(0.22, modelSpan * 0.0020);
-  const mark   = Math.max(3.0, modelSpan * 0.022);
+  const mark   = markerSize();
   const vecs   = samples.map(function (s, i) {
     return new THREE.Vector3(s.x, s.y, zs[i] + lift);
   });
@@ -659,24 +920,8 @@ function buildRouteObjects(samples, zs, pts, idx) {
 
   scene.add(dirLayer);
   frameRoute(vecs);
-}
-
-function numberSprite(text, bg, fg, worldSize) {
-  const S  = 128;
-  const cv = document.createElement('canvas');
-  cv.width = cv.height = S;
-  const g = cv.getContext('2d');
-  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
-  g.fillStyle = bg; g.fill();
-  g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
-  g.fillStyle = fg; g.font = 'bold 60px monospace';
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  g.fillText(text, S / 2, S / 2 + 3);
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
-  sp.scale.set(worldSize, worldSize, 1);
-  sp.renderOrder = 3;
-  return sp;
+  dbg('Route drawn: ' + (dirList[idx].name || ('#' + (idx + 1))) +
+      ' (' + pts.length + ' waypoints, ' + samples.length + ' ground samples)', 'ok');
 }
 
 function frameRoute(vecs) {
@@ -690,6 +935,7 @@ function frameRoute(vecs) {
   controls.target.copy(c);
   controls.update();
 }
+
 function showErr(msg) {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('err-msg').textContent = msg;
