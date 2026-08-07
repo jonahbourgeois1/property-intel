@@ -330,17 +330,47 @@ if (autocapture) {
 // "-Y (south)" camera offset). azimuth = compass bearing of the camera's
 // position relative to the model center (i.e. an azimuth of 180/south
 // reproduces this file's original default view when polar=45).
-function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distance) {
+function computeCompassPos(center, azimuthDeg, elevationDeg, distance) {
   const az = THREE.MathUtils.degToRad(azimuthDeg);
   const el = THREE.MathUtils.degToRad(elevationDeg);
   const horiz = distance * Math.cos(el);
-  const up = distance * Math.sin(el);
-  const east = horiz * Math.sin(az);
-  const north = horiz * Math.cos(az);
-
-  camera.position.set(center.x + east, center.y + north, center.z + up);
+  return new THREE.Vector3(center.x + horiz * Math.sin(az),
+                           center.y + horiz * Math.cos(az),
+                           center.z + distance * Math.sin(el));
+}
+function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distance) {
+  camera.position.copy(computeCompassPos(center, azimuthDeg, elevationDeg, distance));
   camera.up.set(0, 0, 1);
   camera.lookAt(center);
+}
+
+// ── Camera fly-to ─────────────────────────────────────────────────────
+// Interactive moves (presets, entrance, reset, route framing) GLIDE to the
+// destination instead of teleporting: position and orbit target tween
+// together over ~1.2 s with ease-in-out, so the eye keeps its bearings.
+// Grabbing the scene or scrolling cancels the flight and hands control
+// straight back. Autocapture never flies — headless capture needs exact,
+// immediate placement, so it keeps calling positionCameraCompass directly.
+let camTween = null;
+function easeInOutCubic(k) {
+  return k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+}
+function flyTo(pos, tgt, ms) {
+  camTween = {
+    t0: performance.now(), ms: ms || 1200,
+    p0: camera.position.clone(), q0: controls.target.clone(),
+    p1: pos.clone(), q1: tgt.clone()
+  };
+}
+function cancelFly() { camTween = null; }
+function stepFly() {
+  const k = Math.min(1, (performance.now() - camTween.t0) / camTween.ms);
+  const e = easeInOutCubic(k);
+  camera.position.lerpVectors(camTween.p0, camTween.p1, e);
+  controls.target.lerpVectors(camTween.q0, camTween.q1, e);
+  camera.up.set(0, 0, 1);
+  camera.lookAt(controls.target);
+  if (k >= 1) { camTween = null; controls.update(); }
 }
 
 // ── Scene setup ───────────────────────────────────────────────────────
@@ -437,6 +467,8 @@ controls.zoomSpeed = 1.0;
 // Cannot go underneath — matches DJI viewer behavior
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2;
+renderer.domElement.addEventListener('pointerdown', cancelFly);
+renderer.domElement.addEventListener('wheel', cancelFly, { passive: true });
 
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
@@ -551,9 +583,7 @@ loader.load(
 
       window.goToView = function (which) {
         const az = (alphaParam + VIEW_OFFSETS[which]) % 360;
-        positionCameraCompass(camera, center, az, 25, presetDist);
-        controls.target.copy(center);
-        controls.update();
+        flyTo(computeCompassPos(center, az, 25, presetDist), center);
         setActivePreset('pv-' + which);
         dbg('View preset: ' + which + ' (azimuth ' + az.toFixed(1) + '°)', 'info');
       };
@@ -563,10 +593,8 @@ loader.load(
         const m  = ensureEntranceMarker();
         const ez = m ? m.userData.groundZ : center.z;
         const tgt = new THREE.Vector3(entXParam, entYParam, ez);
-        positionCameraCompass(camera, tgt, alphaParam, 32,
-                              Math.max(60, maxSpan * 0.35));
-        controls.target.copy(tgt);
-        controls.update();
+        flyTo(computeCompassPos(tgt, alphaParam, 32,
+                                Math.max(60, maxSpan * 0.35)), tgt);
         setActivePreset('pv-entrance');
         dbg('Entrance view: (' + entXParam.toFixed(1) + ', ' + entYParam.toFixed(1) +
             ') from bearing ' + alphaParam.toFixed(1) + '°', 'info');
@@ -587,9 +615,7 @@ loader.load(
 
     // Expose reset function to the button
     window.resetView = function() {
-      camera.position.copy(initPos);
-      controls.target.copy(initTarget);
-      controls.update();
+      flyTo(initPos, initTarget);
     };
 
     // Hand the loaded scene to the directions layer. No-op when the URL
@@ -631,7 +657,7 @@ loader.load(
 // ── Render loop ───────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
-  controls.update();
+  if (camTween) stepFly(); else controls.update();
   renderer.render(scene, camera);
 }
 animate();
@@ -1172,10 +1198,7 @@ function frameRoute(vecs) {
   const c = b.getCenter(new THREE.Vector3());
   const s = b.getSize(new THREE.Vector3());
   const d = Math.max(s.x, s.y, 20) * 1.7;
-  camera.position.set(c.x, c.y - d * 0.8, c.z + d * 0.8);
-  camera.up.set(0, 0, 1);
-  controls.target.copy(c);
-  controls.update();
+  flyTo(new THREE.Vector3(c.x, c.y - d * 0.8, c.z + d * 0.8), c);
 }
 
 function showErr(msg) {
