@@ -150,6 +150,15 @@
   .pv-btn.active { color: #f59e0b; border-color: #f59e0b; }
   .pv-btn[disabled] { opacity: 0.35; cursor: not-allowed; }
 
+  /* ── Pin click label ───────────────────────────────────────────────────── */
+  #pin-label {
+    display: none; position: fixed; z-index: 70; pointer-events: none;
+    background: rgba(10,12,15,0.95); color: #f0f2f5;
+    border: 1px solid #f59e0b; border-radius: 6px; padding: 5px 10px;
+    font-family: monospace; font-size: 11px; white-space: nowrap;
+    transform: translate(-50%, -100%); box-shadow: 0 3px 14px rgba(0,0,0,0.5);
+  }
+
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
   #debug-panel.collapsed #debug-log, #debug-panel.collapsed #debug-clear { display: none; }
@@ -179,6 +188,7 @@
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
+<div id="pin-label"></div>
 <div id="preset-bar">
   <button class="pv-btn" id="pv-alpha"    onclick="goToView('alpha')">Alpha</button>
   <button class="pv-btn" id="pv-bravo"    onclick="goToView('bravo')">Bravo</button>
@@ -493,12 +503,44 @@ loader.load(
     // so interaction continues from the preset instead of snapping away.
     if (!autocapture && hasAlpha) {
       const VIEW_OFFSETS = { alpha: 0, bravo: 90, charlie: 180, delta: 270 };
+      let entranceMarker = null;
+
+      // The entrance marker is permanent scenery, not button feedback: it is
+      // placed as soon as the model is ready so the entrance reads at a
+      // glance, and clicking it (like any pin) names it.
+      function ensureEntranceMarker() {
+        if (entranceMarker || !hasEnt) return entranceMarker;
+        const ray = new THREE.Raycaster();
+        ray.set(new THREE.Vector3(entXParam, entYParam, box.max.z + 100),
+                new THREE.Vector3(0, 0, -1));
+        const hit = ray.intersectObject(model, true)[0];
+        const ez  = hit ? hit.point.z : center.z;
+        const S = 128, cv = document.createElement('canvas');
+        cv.width = cv.height = S;
+        const g = cv.getContext('2d');
+        g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
+        g.fillStyle = '#22c55e'; g.fill();
+        g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
+        g.fillStyle = '#0b0e12'; g.font = 'bold 58px monospace';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText('E', S / 2, S / 2 + 3);
+        entranceMarker = new THREE.Sprite(new THREE.SpriteMaterial({
+          map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+        const ms = Math.max(3.0, maxSpan * 0.022);
+        entranceMarker.scale.set(ms, ms, 1);
+        entranceMarker.renderOrder = 3;
+        entranceMarker.position.set(entXParam, entYParam, ez + ms * 0.6);
+        entranceMarker.name = 'Entrance';
+        entranceMarker.userData.groundZ = ez;
+        scene.add(entranceMarker);
+        registerLabelTarget(entranceMarker);
+        return entranceMarker;
+      }
       // Same framing distance the render pipeline was calibrated to
       // (PARCEL_SIZE_FACTOR 0.718: ~205 m for a 285 m parcel, "confirmed
       // visually correct") — so a preset matches the rendered oblique's crop
       // instead of the much wider default-view distance.
       const presetDist = maxSpan * 0.718;
-      let entranceMarker = null;
 
       function setActivePreset(id) {
         ['pv-alpha', 'pv-bravo', 'pv-charlie', 'pv-delta', 'pv-entrance']
@@ -518,34 +560,9 @@ loader.load(
 
       window.goToEntrance = function () {
         if (!hasEnt) return;
-        // Ground height under the entrance from the mesh — latlon_to_local's
-        // z is a sea-level artefact, never a real height.
-        const ray = new THREE.Raycaster();
-        ray.set(new THREE.Vector3(entXParam, entYParam, box.max.z + 100),
-                new THREE.Vector3(0, 0, -1));
-        const hit = ray.intersectObject(model, true)[0];
-        const ez  = hit ? hit.point.z : center.z;
+        const m  = ensureEntranceMarker();
+        const ez = m ? m.userData.groundZ : center.z;
         const tgt = new THREE.Vector3(entXParam, entYParam, ez);
-
-        if (!entranceMarker) {
-          const S = 128, cv = document.createElement('canvas');
-          cv.width = cv.height = S;
-          const g = cv.getContext('2d');
-          g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
-          g.fillStyle = '#22c55e'; g.fill();
-          g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
-          g.fillStyle = '#0b0e12'; g.font = 'bold 58px monospace';
-          g.textAlign = 'center'; g.textBaseline = 'middle';
-          g.fillText('E', S / 2, S / 2 + 3);
-          entranceMarker = new THREE.Sprite(new THREE.SpriteMaterial({
-            map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
-          const ms = Math.max(3.0, maxSpan * 0.022);
-          entranceMarker.scale.set(ms, ms, 1);
-          entranceMarker.renderOrder = 3;
-          entranceMarker.position.set(tgt.x, tgt.y, ez + ms * 0.6);
-          scene.add(entranceMarker);
-        }
-
         positionCameraCompass(camera, tgt, alphaParam, 32,
                               Math.max(60, maxSpan * 0.35));
         controls.target.copy(tgt);
@@ -557,6 +574,7 @@ loader.load(
 
       const bar = document.getElementById('preset-bar');
       bar.style.display = 'flex';
+      if (hasEnt) ensureEntranceMarker();
       if (!hasEnt) {
         const eb = document.getElementById('pv-entrance');
         eb.disabled = true;
@@ -655,6 +673,42 @@ let dirLayer = null, activeDir = -1, dirBusy = false;
 let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
 let pinCatalogById = null;
 let groundJobSeq = 0;
+
+// ── Click a marker, read its name ─────────────────────────────────────
+// Every placed sprite (pins, entrance, route waypoints) registers here.
+// A click (pointerup within 5 px of pointerdown, so drags don't trigger)
+// raycasts the sprites and shows the full catalog name in a small label.
+let labelTargets = [];
+function registerLabelTarget(sp) { if (sp && sp.name) labelTargets.push(sp); }
+function unregisterLayerTargets(layer) {
+  if (!layer) return;
+  const gone = new Set();
+  layer.traverse(function (o) { gone.add(o); });
+  labelTargets = labelTargets.filter(function (t) { return !gone.has(t); });
+}
+(function wirePinLabels() {
+  const el = document.getElementById('pin-label');
+  let dx = 0, dy = 0;
+  renderer.domElement.addEventListener('pointerdown', function (e) {
+    dx = e.clientX; dy = e.clientY;
+    el.style.display = 'none';
+  });
+  renderer.domElement.addEventListener('pointerup', function (e) {
+    if (Math.hypot(e.clientX - dx, e.clientY - dy) > 5 || !labelTargets.length) return;
+    const r = renderer.domElement.getBoundingClientRect();
+    const m = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1,
+                                -((e.clientY - r.top) / r.height) * 2 + 1);
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(m, camera);
+    const hits = rc.intersectObjects(labelTargets, false);
+    if (!hits.length) return;
+    el.textContent = hits[0].object.name;
+    el.style.left = e.clientX + 'px';
+    el.style.top  = (e.clientY - 14) + 'px';
+    el.style.display = 'block';
+    dbg('Pin: ' + hits[0].object.name, 'info');
+  });
+})();
 
 function escHtml(t) {
   return String(t == null ? '' : t)
@@ -907,6 +961,11 @@ function initDirections(d) {
   const btn = document.getElementById('dir-toggle');
   btn.textContent = 'Pins & Directions';
   btn.style.display = 'block';
+
+  // Pins are permanent scenery, like the entrance marker: place them on load
+  // whenever the record can be placed at all. The panel button stays a toggle
+  // for hiding them.
+  if (dirCorners && nPins && modelRoot) togglePins3D();
 }
 
 window.toggleDirPanel = function () {
@@ -949,6 +1008,7 @@ function liftBy()     { return Math.max(0.35, modelSpan * 0.0022); }
 // ── Pins in 3D ────────────────────────────────────────────────────────
 function pinsShown() { return !!(pinLayers.element || pinLayers.concern); }
 function clearPins3D() {
+  unregisterLayerTargets(pinLayers.element); unregisterLayerTargets(pinLayers.concern);
   disposeLayer(pinLayers.element); disposeLayer(pinLayers.concern);
   pinLayers = { element: null, concern: null };
   const b = document.getElementById('pin-btn');
@@ -982,6 +1042,7 @@ window.togglePins3D = function () {
                               isConcern ? '#ffffff' : '#0b0e12', mark);
       sp.position.set(local[i].x, local[i].y, zs[i] + lift + mark * 0.5);
       sp.name = pinDisplay(e.p).name;
+      registerLabelTarget(sp);
       (isConcern ? pinLayers.concern : pinLayers.element).add(sp);
     });
     scene.add(pinLayers.element); scene.add(pinLayers.concern);
@@ -1003,6 +1064,7 @@ function markCard(i, on) {
   if (b) { b.classList.toggle('on', on); b.textContent = on ? 'Hide from 3D' : 'Show in 3D'; }
 }
 function clearRoute3D() {
+  unregisterLayerTargets(dirLayer);
   disposeLayer(dirLayer);
   dirLayer = null;
   if (activeDir >= 0) {
@@ -1087,6 +1149,9 @@ function buildRouteObjects(samples, zs, pts, idx) {
     const fg = isEnd ? '#ffffff' : '#0b0e12';
     const sp = numberSprite(String(s.wp + 1), bg, fg, mark);
     sp.position.set(s.x, s.y, zs[i] + lift + mark * 0.5);
+    sp.name = (isStart ? 'Start — ' : (isEnd ? 'Target — ' : 'Waypoint ' + (s.wp + 1) + ' — ')) +
+              (dirList[idx].name || ('Route ' + (idx + 1)));
+    registerLabelTarget(sp);
     dirLayer.add(sp);
   });
 
