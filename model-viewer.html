@@ -39,7 +39,6 @@
     transition: opacity 1s ease; z-index: 50;
   }
   #hint.hidden { opacity: 0; }
-
   /* ── Responder Directions ─────────────────────────────────────────────── */
   #dir-toggle {
     display: none; position: fixed; top: 16px; right: 16px; z-index: 60;
@@ -135,7 +134,6 @@
   .vw-bullets { margin: 7px 0 0 16px; padding: 0; }
   .vw-bullets li { font-size: 11px; color: #8a93a2; line-height: 1.6; margin-bottom: 3px; }
   @media (max-width: 640px) { #dir-panel { width: 100%; } }
-
   /* ── View preset bar (storyboard: alpha/ent params from the sheet) ────── */
   #preset-bar {
     display: none; position: fixed; bottom: 48px; left: 50%;
@@ -149,7 +147,6 @@
   .pv-btn:hover:not([disabled]) { color: #fff; }
   .pv-btn.active { color: #f59e0b; border-color: #f59e0b; }
   .pv-btn[disabled] { opacity: 0.35; cursor: not-allowed; }
-
   /* ── Pin click label ───────────────────────────────────────────────────── */
   #pin-label {
     display: none; position: fixed; z-index: 70; pointer-events: none;
@@ -158,9 +155,9 @@
     font-family: monospace; font-size: 11px; white-space: nowrap;
     transform: translate(-50%, -100%); box-shadow: 0 3px 14px rgba(0,0,0,0.5);
   }
-
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
-  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  /* Hidden by default — append &debug=1 to the URL to show it. */
+  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: none; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
   #debug-panel.collapsed #debug-log, #debug-panel.collapsed #debug-clear { display: none; }
   #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
   #debug-header span { color: #3b82f6; font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
@@ -219,7 +216,6 @@
 " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8a93a2'">
   ↑ Reset View
 </button>
-
 <script type="importmap">
 {
   "imports": {
@@ -227,28 +223,22 @@
   }
 }
 </script>
-
 <script type="module">
 import * as THREE from 'three';
-
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
-
 const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
 const { DRACOLoader }    = await import(`${BASE}/loaders/DRACOLoader.js`);
 const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
-
 // ── URL param ─────────────────────────────────────────────────────────
 const params  = new URLSearchParams(window.location.search);
 const glbUrl  = params.get('model');
-
 // ── Optional property record ──────────────────────────────────────────
 // This file's contract has always been `?model=<glb>` plus the headless
 // capture params, and that path is untouched: `?property=<id>` is purely
 // additive and everything it adds is gated on `!autocapture`, so a capture
 // run can never be slowed or broken by a failed fetch.
 const propertyId = params.get('property');
-
 // ── Storyboard params (written into the 360 URL by the sheet) ─────────
 // alpha is the property's frontage bearing — the compass azimuth the FRONT
 // (alpha) render was captured from. bravo/charlie/delta are +90/+180/+270
@@ -274,7 +264,6 @@ const DATA_ROOT  = (function () {
   }
   return new URL('data/', window.location.href).href;
 })();
-
 // ── Debug console ─────────────────────────────────────────────────────
 // Same shape and behaviour as viewer.html's, so one habit works in both.
 // Hidden in autocapture so it can never appear in a rendered oblique.
@@ -301,7 +290,12 @@ window.clearDebug = function () {
   const l = document.getElementById('debug-log');
   if (l) l.innerHTML = '';
 };
-
+// The panel is developer tooling, not responder UI: hidden unless the URL
+// carries &debug=1. dbg() still accumulates lines while hidden, so enabling
+// it after a problem shows everything that already happened.
+if (params.get('debug') === '1') {
+  document.getElementById('debug-panel').style.display = 'flex';
+}
 // Optional programmatic camera positioning for headless capture
 // (see capture_obliques.py). azimuth/polar are compass bearing + elevation
 // angle in degrees, both measured the same way compute_frontage.py's
@@ -312,11 +306,9 @@ const autocapture = params.get('autocapture') === '1';
 const azimuthParam = parseFloat(params.get('azimuth'));
 const polarParam   = parseFloat(params.get('polar'));
 const hasCaptureAngles = !isNaN(azimuthParam) && !isNaN(polarParam);
-
 if (!glbUrl) {
   showErr('No model URL provided. Add ?model=https://... to the URL.');
 }
-
 if (autocapture) {
   // Headless Chromium has no mouse — hide interactive chrome so it never
   // shows up in a screenshot, and don't wait on the 4s hint fade timer.
@@ -324,7 +316,6 @@ if (autocapture) {
   document.getElementById('resetBtn').style.display = 'none';
   document.getElementById('debug-panel').style.display = 'none';
 }
-
 // Same axis convention as positionCameraForDefaultView below: Z-up,
 // +Y = north, +X = east (confirmed by the existing default view's
 // "-Y (south)" camera offset). azimuth = compass bearing of the camera's
@@ -343,7 +334,6 @@ function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distanc
   camera.up.set(0, 0, 1);
   camera.lookAt(center);
 }
-
 // ── Camera fly-to ─────────────────────────────────────────────────────
 // Interactive moves (presets, entrance, reset, route framing) GLIDE to the
 // destination instead of teleporting: position and orbit target tween
@@ -372,7 +362,6 @@ function stepFly() {
   camera.lookAt(controls.target);
   if (k >= 1) { camTween = null; controls.update(); }
 }
-
 // ── Scene setup ───────────────────────────────────────────────────────
 // ── Property fetch ────────────────────────────────────────────────────
 async function fetchJson(url) {
@@ -381,7 +370,6 @@ async function fetchJson(url) {
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.json();
 }
-
 // data/index/{id}.json is the folder index viewer.html already resolves
 // through: it maps a PROPERTY id to a per-view record id. Same identity
 // model here, so one link format serves every viewer.
@@ -392,7 +380,6 @@ async function resolveViaIndex(hash, view) {
   if (!idx || !idx.views || !idx.views[view]) return null;
   return await fetchJson(DATA_ROOT + view + '/' + idx.views[view] + '.json');
 }
-
 // Same resolution order responder-intel.html uses, so any link form works.
 async function loadProperty() {
   if (!propertyId || autocapture) return null;
@@ -406,14 +393,12 @@ async function loadProperty() {
   if (direct) return direct;
   return await fetchJson(DATA_ROOT + 'responder-drone/' + propertyId + '.json');
 }
-
 const propertyPromise = loadProperty().catch(function (e) {
   dbg('Property load FAILED: ' + e.message, 'error');
   console.warn('[directions] property load failed:', e.message);
   return null;
 });
 if (propertyId && !autocapture) dbg('Resolving property ' + propertyId.substring(0, 12) + '…', 'info');
-
 // The shared 239-entry pin catalog, resolved exactly as viewer.html resolves
 // it: published pins carry only {id,x,y}, and the id names them.
 const catalogPromise = (propertyId && !autocapture)
@@ -428,7 +413,6 @@ const catalogPromise = (propertyId && !autocapture)
       })
       .catch(function (e) { dbg('Pin catalog FAILED: ' + e.message, 'warn'); return null; })
   : Promise.resolve(null);
-
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -436,10 +420,8 @@ renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 document.body.appendChild(renderer.domElement);
-
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#111318');
-
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
 // Z-up BEFORE OrbitControls is constructed. OrbitControls caches the camera's
 // up-frame at construction and re-derives orientation from it on every
@@ -449,7 +431,6 @@ const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerH
 // straight down instead of at 45 degrees. Same failure render-viewer.html
 // documents in its AUTOCAPTURE CONTRACT, fixed here by ordering.
 camera.up.set(0, 0, 1);
-
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
@@ -469,41 +450,33 @@ controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2;
 renderer.domElement.addEventListener('pointerdown', cancelFly);
 renderer.domElement.addEventListener('wheel', cancelFly, { passive: true });
-
 // Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffffff, 1.2);
 sun.position.set(1, 2, 2);
 scene.add(sun);
-
 // ── Load GLB ─────────────────────────────────────────────────────────
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
-
 // Filled once the GLB is in the scene; the directions layer needs all three
 // to drape a route (raycast origin height, tube radius, marker size).
 let modelRoot = null, modelBox = null, modelSpan = 0;
-
 loader.load(
   glbUrl,
   function(gltf) {
     const model = gltf.scene;
     scene.add(model);
-
     // Compute bounding box
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-
     // DJI Terra OBJ uses Z-up.
     // Open at ~45° angle matching DJI viewer style — camera offset in Y and Z
     const maxSpan = Math.max(size.x, size.y);
     const camDist = maxSpan * 1.4;
-
     if (autocapture && hasCaptureAngles) {
       // Programmatic framing for oblique capture (alpha/bravo/charlie/delta).
       // Same camDist basis as the default view for consistent scale/crop.
@@ -520,15 +493,12 @@ loader.load(
       camera.lookAt(center);
     }
     camera.updateProjectionMatrix();
-
     // Orbit target = model center
     controls.target.copy(center);
     controls.update();
-
     // Store initial camera state for reset
     const initPos = camera.position.clone();
     const initTarget = controls.target.clone();
-
     // ── View presets (storyboard) ─────────────────────────────────────
     // Same camera math as the autocapture path: positionCameraCompass at
     // the requested bearing, then hand the orbit target back to controls
@@ -536,7 +506,6 @@ loader.load(
     if (!autocapture && hasAlpha) {
       const VIEW_OFFSETS = { alpha: 0, bravo: 90, charlie: 180, delta: 270 };
       let entranceMarker = null;
-
       // The entrance marker is permanent scenery, not button feedback: it is
       // placed as soon as the model is ready so the entrance reads at a
       // glance, and clicking it (like any pin) names it.
@@ -573,21 +542,18 @@ loader.load(
       // visually correct") — so a preset matches the rendered oblique's crop
       // instead of the much wider default-view distance.
       const presetDist = maxSpan * 0.718;
-
       function setActivePreset(id) {
         ['pv-alpha', 'pv-bravo', 'pv-charlie', 'pv-delta', 'pv-entrance']
           .forEach(function (b) {
             document.getElementById(b).classList.toggle('active', b === id);
           });
       }
-
       window.goToView = function (which) {
         const az = (alphaParam + VIEW_OFFSETS[which]) % 360;
         flyTo(computeCompassPos(center, az, 25, presetDist), center);
         setActivePreset('pv-' + which);
         dbg('View preset: ' + which + ' (azimuth ' + az.toFixed(1) + '°)', 'info');
       };
-
       window.goToEntrance = function () {
         if (!hasEnt) return;
         const m  = ensureEntranceMarker();
@@ -599,7 +565,6 @@ loader.load(
         dbg('Entrance view: (' + entXParam.toFixed(1) + ', ' + entYParam.toFixed(1) +
             ') from bearing ' + alphaParam.toFixed(1) + '°', 'info');
       };
-
       const bar = document.getElementById('preset-bar');
       bar.style.display = 'flex';
       if (hasEnt) ensureEntranceMarker();
@@ -612,12 +577,10 @@ loader.load(
           (hasEnt ? ', entrance (' + entXParam + ', ' + entYParam + ')'
                   : ', no entrance point'), 'ok');
     }
-
     // Expose reset function to the button
     window.resetView = function() {
       flyTo(initPos, initTarget);
     };
-
     // Hand the loaded scene to the directions layer. No-op when the URL
     // carries no ?property= — the record promise resolves to null.
     modelRoot = model; modelBox = box; modelSpan = maxSpan;
@@ -627,13 +590,11 @@ loader.load(
       pinCatalogById = r[1];
       if (r[0]) initDirections(r[0]); else if (propertyId) dbg('No record found for this property', 'warn');
     });
-
     // Fade in
     document.getElementById('loading').classList.add('hidden');
     if (!autocapture) {
       setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
     }
-
     // Signal readiness for capture_obliques.py — wait two frames so the
     // canvas has actually painted the positioned view before a screenshot
     // is taken, not just the first uninitialized frame.
@@ -653,7 +614,6 @@ loader.load(
     showErr(err.message || String(err));
   }
 );
-
 // ── Render loop ───────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
@@ -661,13 +621,11 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
-
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
-
 // ── Responder Directions + property pins ──────────────────────────────
 // A direction is {name, trigger, target, start, route:[{seq,x,y[,mx,my]}]}.
 // A pin is {id,x,y}; the id resolves to a name through the shared 239-entry
@@ -689,17 +647,14 @@ window.addEventListener('resize', () => {
 // with no BVH in three.js r128, so ray counts are budgeted and spread across
 // animation frames — the canvas keeps rendering and the panel shows progress
 // instead of the tab locking up.
-
 const RAY_BUDGET = 40;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-
 let dirList = [], dirNadir = '', dirCorners = null;
 let dirLayer = null, activeDir = -1, dirBusy = false;
 let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
 let pinCatalogById = null;
 let groundJobSeq = 0;
-
 // ── Click a marker, read its name ─────────────────────────────────────
 // Every placed sprite (pins, entrance, route waypoints) registers here.
 // A click (pointerup within 5 px of pointerdown, so drags don't trigger)
@@ -740,13 +695,11 @@ function unregisterLayerTargets(layer) {
     dbg('Pin: ' + hits[0].object.name, 'info');
   });
 })();
-
 function escHtml(t) {
   return String(t == null ? '' : t)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-
 // ── Percentage -> local metres ────────────────────────────────────────
 function cornersOf(d) {
   const c = d && d.nadir && d.nadir.local;
@@ -772,7 +725,6 @@ function toLocal(p) {
   }
   return dirCorners ? localFromPct(p.x, p.y, dirCorners) : null;
 }
-
 function orderedRoute(d) {
   return (d && Array.isArray(d.route) ? d.route : [])
     .filter(function (w) { return isFinite(Number(w.x)) && isFinite(Number(w.y)); })
@@ -783,7 +735,6 @@ function metreRoute(d) {
   const pts = orderedRoute(d).map(toLocal).filter(Boolean);
   return pts.length >= 2 ? pts : null;
 }
-
 // ── Shared chunked ground raycast ─────────────────────────────────────
 function cancelGroundJobs() { groundJobSeq++; dirBusy = false; }
 function raycastGround(pts, progressEl, onDone) {
@@ -822,7 +773,6 @@ function fillGaps(zs) {
   for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = floor; }
   return zs;
 }
-
 // ── Panel ─────────────────────────────────────────────────────────────
 function pinDisplay(p) {
   if (p.label) return { name: p.label, def: '' };
@@ -836,7 +786,6 @@ function nadirPinSets(d) {
   }
   return { element: Array.isArray(n.pins) ? n.pins : [], concern: [] };
 }
-
 function initDirections(d) {
   dirCorners = cornersOf(d);
   dirNadir   = (d.nadir && d.nadir.url) || '';
@@ -844,19 +793,16 @@ function initDirections(d) {
   pinSets    = nadirPinSets(d);
   const nPins = pinSets.element.length + pinSets.concern.length;
   if (!dirList.length && !nPins) { dbg('Record has no pins and no directions', 'warn'); return; }
-
   dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
       pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)', 'ok');
   dbg(dirCorners ? 'nadir.local present — percentages map to model metres'
                  : 'nadir.local MISSING — 3D placement unavailable', dirCorners ? 'ok' : 'warn');
-
   let html = '';
   if (!dirCorners) {
     html += '<div class="dp-note">This record has no <code>nadir.local</code>, so nothing ' +
             'can be placed in the 3D model — deploy the render patch, re-run Generate ' +
             'Property Images, then sync again. The 2D previews below work either way.</div>';
   }
-
   // Pins card first: it is the property's vocabulary, and the routes below
   // are described in terms of it ("TO Pool").
   if (nPins) {
@@ -907,7 +853,6 @@ function initDirections(d) {
               're-run Generate Property Images, then sync again.</div>') +
             '</div></div>';
   }
-
   // Oblique views — the four rendered sides plus the overhead, with the
   // analyst descriptions the sync published. Click an image to open it
   // full-size in a new tab.
@@ -941,7 +886,6 @@ function initDirections(d) {
               }).join('') +
               '</div></div>';
   }
-
   dirList.forEach(function (dir, i) {
     const pts  = orderedRoute(dir);
     const last = pts.length - 1;
@@ -950,7 +894,6 @@ function initDirections(d) {
     if (dir.start)  meta.push('FROM ' + escHtml(dir.start));
     if (dir.target) meta.push('TO ' + escHtml(dir.target));
     meta.push(pts.length + ' waypoint' + (pts.length === 1 ? '' : 's'));
-
     let fig = '';
     if (dirNadir) {
       fig = '<div class="rd-figure"><img src="' + escHtml(dirNadir) + '" alt="Route ' + (i + 1) +
@@ -968,7 +911,6 @@ function initDirections(d) {
             }).join('') +
             '</div>';
     }
-
     const drawable = !!metreRoute(dir);
     html += '<div class="rd-card" id="rd-card-' + i + '">' +
               '<div class="rd-head"><div class="rd-num">' + (i + 1) + '</div>' +
@@ -986,24 +928,20 @@ function initDirections(d) {
               '</div>' +
             '</div>';
   });
-
   document.getElementById('dp-body').innerHTML = html;
   document.getElementById('dp-sub').textContent = d.name || '';
   const btn = document.getElementById('dir-toggle');
   btn.textContent = 'Pins & Directions';
   btn.style.display = 'block';
-
   // Pins are permanent scenery, like the entrance marker: place them on load
   // whenever the record can be placed at all. The panel button stays a toggle
   // for hiding them.
   if (dirCorners && nPins && modelRoot) togglePins3D();
 }
-
 window.toggleDirPanel = function () {
   const open = document.getElementById('dir-panel').classList.toggle('open');
   document.getElementById('dir-toggle').classList.toggle('on', open);
 };
-
 // ── Markers ───────────────────────────────────────────────────────────
 function numberSprite(text, bg, fg, worldSize) {
   const S  = 128;
@@ -1035,7 +973,6 @@ function disposeLayer(layer) {
 }
 function markerSize() { return Math.max(3.0, modelSpan * 0.022); }
 function liftBy()     { return Math.max(0.35, modelSpan * 0.0022); }
-
 // ── Pins in 3D ────────────────────────────────────────────────────────
 function pinsShown() { return !!(pinLayers.element || pinLayers.concern); }
 function clearPins3D() {
@@ -1053,14 +990,12 @@ window.togglePins3D = function () {
   if (dirBusy) { dbg('Busy placing another layer — try again in a moment', 'warn'); return; }
   if (pinsShown()) { clearPins3D(); dbg('Pins hidden', 'info'); return; }
   if (!modelRoot || !dirCorners) return;
-
   const all = pinSets.element.map(function (p, i) {
         return { p: p, kind: 'element', label: ELEMENT_LABELS[i] || String(i + 1) }; })
     .concat(pinSets.concern.map(function (p, i) {
         return { p: p, kind: 'concern', label: CONCERN_LABELS[i] || String(i + 1) }; }));
   const local = all.map(function (e) { return localFromPct(e.p.x, e.p.y, dirCorners); });
   if (!local.length) return;
-
   const prog = document.getElementById('pin-prog');
   raycastGround(local, prog, function (zs) {
     fillGaps(zs);
@@ -1086,7 +1021,6 @@ window.togglePins3D = function () {
         pinSets.concern.length + ' concern', 'ok');
   });
 };
-
 // ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
   const c = document.getElementById('rd-card-' + i);
@@ -1116,7 +1050,6 @@ window.toggleRoute3D = function (i) {
   markCard(i, true);
   drapeRoute(pts, i);
 };
-
 // Spread RAY_BUDGET samples over the polyline in proportion to segment
 // length, so a long straight run gets the intermediate ground samples a short
 // turn does not need. Every original waypoint is always a sample.
@@ -1141,7 +1074,6 @@ function densify(pts) {
   out.push({ x: lastPt.x, y: lastPt.y, wp: pts.length - 1 });
   return out;
 }
-
 function drapeRoute(pts, idx) {
   const samples = densify(pts);
   const prog    = document.getElementById('rd-prog-' + idx);
@@ -1151,7 +1083,6 @@ function drapeRoute(pts, idx) {
     buildRouteObjects(samples, zs, pts, idx);
   });
 }
-
 function buildRouteObjects(samples, zs, pts, idx) {
   const lift   = liftBy();
   const radius = Math.max(0.22, modelSpan * 0.0020);
@@ -1159,9 +1090,7 @@ function buildRouteObjects(samples, zs, pts, idx) {
   const vecs   = samples.map(function (s, i) {
     return new THREE.Vector3(s.x, s.y, zs[i] + lift);
   });
-
   dirLayer = new THREE.Group();
-
   const curve = new THREE.CatmullRomCurve3(vecs, false, 'catmullrom', 0.15);
   const tube  = new THREE.TubeGeometry(curve, Math.max(32, vecs.length * 6), radius, 8, false);
   dirLayer.add(new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: ROUTE_HEX })));
@@ -1171,7 +1100,6 @@ function buildRouteObjects(samples, zs, pts, idx) {
     color: ROUTE_HEX, transparent: true, opacity: 0.28, depthTest: false }));
   ghost.renderOrder = 2;
   dirLayer.add(ghost);
-
   const last = pts.length - 1;
   samples.forEach(function (s, i) {
     if (s.wp < 0) return;
@@ -1185,13 +1113,11 @@ function buildRouteObjects(samples, zs, pts, idx) {
     registerLabelTarget(sp);
     dirLayer.add(sp);
   });
-
   scene.add(dirLayer);
   frameRoute(vecs);
   dbg('Route drawn: ' + (dirList[idx].name || ('#' + (idx + 1))) +
       ' (' + pts.length + ' waypoints, ' + samples.length + ' ground samples)', 'ok');
 }
-
 function frameRoute(vecs) {
   const b = new THREE.Box3();
   vecs.forEach(function (v) { b.expandByPoint(v); });
@@ -1200,7 +1126,6 @@ function frameRoute(vecs) {
   const d = Math.max(s.x, s.y, 20) * 1.7;
   flyTo(new THREE.Vector3(c.x, c.y - d * 0.8, c.z + d * 0.8), c);
 }
-
 function showErr(msg) {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('err-msg').textContent = msg;
