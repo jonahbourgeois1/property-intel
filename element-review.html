@@ -33,6 +33,7 @@
 -->
 <style>
   :root {
+    --route: #4ea3ff; --wp-first: #6ee7a8; --wp-last: #ff8f6b;
     --ground:    #1b2027;
     --panel:     #232a33;
     --panel-2:   #2b333e;
@@ -148,6 +149,37 @@
     margin-top: 1px;
   }
 
+  /* ── Responder Directions route overlay (additive; inert without ?route) ── */
+  .route-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;                     /* under the markers (z-index 2/3) */
+  }
+  .route-svg .leg      { stroke: var(--route); stroke-width: 3; fill: none;
+                         stroke-linejoin: round; stroke-linecap: round;
+                         vector-effect: non-scaling-stroke; }
+  .route-svg .leg-halo { stroke: rgba(0,0,0,0.55); stroke-width: 6; fill: none;
+                         stroke-linejoin: round; stroke-linecap: round;
+                         vector-effect: non-scaling-stroke; }
+  .marker.wp {
+    background: var(--route);
+    color: #0f1419;
+    border-color: rgba(15,20,25,0.65);
+    width: 22px; height: 22px; margin: -11px 0 0 -11px;
+    font-size: 11px;
+    z-index: 2;
+  }
+  .marker.wp.first { background: var(--wp-first); }
+  .marker.wp.last  { background: var(--wp-last); }
+  .marker.wp:hover, .marker.wp.active { background: var(--hot); transform: scale(1.3); }
+  .legend h2.route-head { margin-top: 14px; }
+  .legend ol.route li .num { background: var(--route); color: #0f1419; }
+  .rationale {
+    padding: 8px 14px 0; font-size: 12px; line-height: 1.5; color: var(--dim);
+  }
+  .rationale b { color: var(--ink); font-weight: 600; }
+
   .marker {
     position: absolute;
     width: 26px; height: 26px;
@@ -252,6 +284,8 @@
     <section class="stage">
       <div class="frame" id="frame">
         <img id="nadir" alt="Nadir orthophoto">
+        <svg class="route-svg" id="routeSvg" viewBox="0 0 100 100"
+             preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
       <div class="zoom-controls">
         <div class="zoom-btn" id="zoom-in" title="Zoom in">+</div>
@@ -263,6 +297,9 @@
     <aside class="legend">
       <h2>Elements</h2>
       <ol id="list"></ol>
+      <h2 class="route-head" id="routeHead" style="display:none">Route</h2>
+      <ol class="route" id="routeList"></ol>
+      <div class="rationale" id="rationale"></div>
       <div class="hint">Hover a marker or row to link the two. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
     </aside>
   </main>
@@ -288,19 +325,47 @@
   var addr     = qp('addr');
   var acctType = (qp('type') || '').toLowerCase();   // optional: residential|commercial
   var catalogUrl = qp('catalog') || DEFAULT_CATALOG;
+  // Responder Directions: an ordered waypoint list drawn over the same nadir.
+  // Waypoints are {seq,x,y} percentages and carry NO catalog id — the sequence
+  // number is their only identity — so they are rendered separately from the
+  // catalog-resolved element pins.
+  var routeRaw  = qp('route');
+  var rationale = qp('rationale');
 
   if (addr) document.getElementById('addr').textContent = '· ' + addr;
 
   if (!nadirUrl) { fail('No nadir image URL provided.', 'Expected ?nadir=<url>'); return; }
-  if (!pinsRaw)  { fail('No pins provided.', 'Expected ?pins=<json array>'); return; }
-
-  var pins;
-  try {
-    pins = JSON.parse(pinsRaw);
-    if (!Array.isArray(pins)) throw new Error('pins is not an array');
-  } catch (e) {
-    fail('Could not read the pins data.', String(e.message || e));
+  if (!pinsRaw && !routeRaw) {
+    fail('No pins or route provided.', 'Expected ?pins=<json array> and/or ?route=<json array>');
     return;
+  }
+
+  var pins = [];
+  if (pinsRaw) {
+    try {
+      pins = JSON.parse(pinsRaw);
+      if (!Array.isArray(pins)) throw new Error('pins is not an array');
+    } catch (e) {
+      fail('Could not read the pins data.', String(e.message || e));
+      return;
+    }
+  }
+
+  var route = [];
+  if (routeRaw) {
+    try {
+      route = JSON.parse(routeRaw);
+      if (!Array.isArray(route)) throw new Error('route is not an array');
+      route = route.filter(function (w) {
+        return w && isFinite(parseFloat(w.x)) && isFinite(parseFloat(w.y));
+      }).map(function (w, i) {
+        return { seq: isFinite(parseInt(w.seq, 10)) ? parseInt(w.seq, 10) : (i + 1),
+                 x: parseFloat(w.x), y: parseFloat(w.y) };
+      });
+    } catch (e) {
+      fail('Could not read the route data.', String(e.message || e));
+      return;
+    }
   }
 
   document.getElementById('nadir').src = nadirUrl;
@@ -394,6 +459,73 @@
     });
   }
 
+  // Draws the ordered route: a haloed polyline under numbered waypoint markers,
+  // plus a legend listing each leg. Percentages map straight onto the frame
+  // because the SVG uses viewBox 0 0 100 100 with preserveAspectRatio="none";
+  // non-scaling-stroke keeps the line an even width under that distortion and
+  // under zoom.
+  function renderRoute(route) {
+    if (!route.length) return;
+    var frame = document.getElementById('frame');
+    var svg   = document.getElementById('routeSvg');
+    var pts   = route.map(function (w) { return w.x + ',' + w.y; }).join(' ');
+
+    ['leg-halo', 'leg'].forEach(function (cls) {
+      var pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      pl.setAttribute('points', pts);
+      pl.setAttribute('class', cls);
+      svg.appendChild(pl);
+    });
+
+    route.forEach(function (w, i) {
+      var m = document.createElement('div');
+      m.className = 'marker wp' + (i === 0 ? ' first' : '') +
+                    (i === route.length - 1 ? ' last' : '');
+      m.style.left = w.x + '%';
+      m.style.top  = w.y + '%';
+      m.textContent = w.seq;
+      m.dataset.wp = i;
+      m.title = 'Waypoint ' + w.seq + ' — ' + w.x + ', ' + w.y;
+      frame.appendChild(m);
+    });
+
+    document.getElementById('routeHead').style.display = '';
+    var rl = document.getElementById('routeList');
+    route.forEach(function (w, i) {
+      var role = i === 0 ? 'start' : (i === route.length - 1 ? 'target' : '');
+      var li = document.createElement('li');
+      li.dataset.wp = i;
+      li.innerHTML = '<span class="num">' + w.seq + '</span>' +
+        '<span><span class="name">' + (role || ('leg ' + w.seq)) + '</span>' +
+        '<div class="meta">' + w.x + ', ' + w.y + '</div></span>';
+      rl.appendChild(li);
+    });
+
+    var wpMarkers = frame.querySelectorAll('.marker.wp');
+    var wpRows    = rl.querySelectorAll('li');
+    function setWp(idx, on) {
+      if (wpMarkers[idx]) wpMarkers[idx].classList.toggle('active', on);
+      if (wpRows[idx])    wpRows[idx].classList.toggle('active', on);
+    }
+    wpMarkers.forEach(function (m) {
+      var idx = +m.dataset.wp;
+      m.addEventListener('mouseenter', function () { setWp(idx, true); });
+      m.addEventListener('mouseleave', function () { setWp(idx, false); });
+    });
+    wpRows.forEach(function (r) {
+      var idx = +r.dataset.wp;
+      r.addEventListener('mouseenter', function () { setWp(idx, true); });
+      r.addEventListener('mouseleave', function () { setWp(idx, false); });
+    });
+
+    if (rationale) {
+      document.getElementById('rationale').innerHTML =
+        '<b>Rationale:</b> ' + escapeHtml(rationale);
+    }
+    var kicker = document.querySelector('.kicker');
+    if (kicker) kicker.textContent = 'Responder Directions · Route Review';
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
@@ -405,13 +537,14 @@
       if (!r.ok) throw new Error('catalog HTTP ' + r.status);
       return r.json();
     })
-    .then(function (catalog) { render(resolveNames(pins, catalog)); })
+    .then(function (catalog) { render(resolveNames(pins, catalog)); renderRoute(route); })
     .catch(function (e) {
       // Degrade gracefully: still show markers, names as ids.
       render(pins.map(function (p) {
         return { id: p.id, x: p.x, y: p.y, name: 'id ' + p.id, section: '',
                  role: '', types: [], known: false, wrongRole: false, wrongType: false, flag: true };
       }));
+      renderRoute(route);
       var hint = document.querySelector('.hint');
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
         ') — showing ids only.';
