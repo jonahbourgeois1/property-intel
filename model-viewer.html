@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Property 3D Viewer Test</title>
+<title>Property 3D Viewer</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; font-family: monospace; }
@@ -39,48 +39,84 @@
     transition: opacity 1s ease; z-index: 50;
   }
   #hint.hidden { opacity: 0; }
-  /* view buttons (vantages) + the separate Entrance action */
-  #viewButtons {
-    position: fixed; bottom: 16px; left: 16px; z-index: 50;
-    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+
+  /* ── Responder Directions ─────────────────────────────────────────────── */
+  #dir-toggle {
+    display: none; position: fixed; top: 16px; right: 16px; z-index: 60;
+    background: rgba(0,0,0,0.6); color: #f59e0b; border: 1px solid #f59e0b;
+    font-family: monospace; font-size: 11px; padding: 7px 13px;
+    border-radius: 6px; cursor: pointer; transition: background 0.15s;
   }
-  .view-btn {
-    background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
-    font-family: monospace; font-size: 11px; padding: 7px 14px;
-    border-radius: 6px; cursor: pointer; transition: color 0.2s, border-color 0.2s;
+  #dir-toggle:hover { background: rgba(245,158,11,0.16); }
+  #dir-toggle.on { background: rgba(245,158,11,0.22); }
+  #dir-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 55;
+    background: #12161b; border-left: 1px solid rgba(255,255,255,0.10);
+    transform: translateX(100%); transition: transform 0.28s ease;
+    display: flex; flex-direction: column; overflow: hidden;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
-  .view-btn:hover { color: #fff; border-color: #3d4657; }
-  .view-btn:disabled { opacity: 0.35; cursor: default; }
-  /* the Entrance button is an action, not a vantage -- set it apart */
-  .entrance-btn { margin-left: 8px; border-color: #3d5a8a; color: #9db8e0; }
-  .entrance-btn:hover { color: #fff; border-color: #5a82c0; }
-  /* element-pin hover tooltip */
-  #pinTip {
-    position: fixed; z-index: 60; pointer-events: none; display: none;
-    background: rgba(0,0,0,0.82); color: #e6ebf2; font-family: monospace;
-    font-size: 12px; padding: 4px 8px; border-radius: 5px;
-    border: 1px solid #2a3040; white-space: nowrap;
+  #dir-panel.open { transform: translateX(0); }
+  .dp-head {
+    padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0; display: flex; align-items: flex-start; gap: 8px;
   }
-  #pinTip.visible { display: block; }
-  /* debug console overlay */
-  #dbg {
-    position: fixed; top: 10px; left: 10px; z-index: 300;
-    width: 420px; max-width: 46vw; max-height: 70vh; overflow: auto;
-    background: rgba(6,8,11,0.86); color: #b9c2d0; border: 1px solid #2a3040;
-    border-radius: 6px; padding: 8px 10px; font-size: 11px; line-height: 1.45;
-    white-space: pre-wrap; word-break: break-all;
+  .dp-title { font-size: 13px; font-weight: 600; color: #f0f2f5; }
+  .dp-sub { font-size: 10.5px; color: #555f6e; font-family: monospace; margin-top: 3px; }
+  .dp-close {
+    margin-left: auto; background: none; border: none; color: #555f6e;
+    font-size: 15px; cursor: pointer; line-height: 1; padding: 0 2px;
   }
-  #dbg .h { color: #a855f7; font-weight: bold; }
-  #dbg .ok { color: #4ade80; }
-  #dbg .warn { color: #f5a524; }
-  #dbg .err { color: #ef4444; }
-  #dbg .dim { color: #6b7688; }
-  #dbgToggle {
-    position: fixed; top: 10px; left: 10px; z-index: 301; display: none;
-    background: rgba(0,0,0,0.6); color: #a855f7; border: 1px solid #3d4657;
-    font-family: monospace; font-size: 11px; padding: 5px 10px;
-    border-radius: 6px; cursor: pointer;
+  .dp-close:hover { color: #f0f2f5; }
+  .dp-body { overflow-y: auto; flex: 1; scrollbar-width: thin; }
+  .dp-note {
+    margin: 12px 16px 0; font-size: 10.5px; color: #555f6e;
+    font-family: monospace; line-height: 1.55;
   }
+  .rd-card {
+    margin: 12px 16px; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; background: #1a1f27; overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .rd-card.on { border-color: #f59e0b; box-shadow: 0 0 0 1px rgba(245,158,11,0.28); }
+  .rd-head { padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; }
+  .rd-num {
+    width: 22px; height: 22px; border-radius: 50%; background: #f59e0b;
+    color: #0b0e12; display: flex; align-items: center; justify-content: center;
+    font-family: monospace; font-size: 10px; font-weight: 700;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .rd-titles { flex: 1; min-width: 0; }
+  .rd-name { font-size: 12.5px; font-weight: 600; color: #f0f2f5; line-height: 1.35; overflow-wrap: anywhere; }
+  .rd-meta { font-size: 10.5px; color: #555f6e; font-family: monospace; margin-top: 4px; line-height: 1.55; overflow-wrap: anywhere; }
+  .rd-body { padding: 0 14px 14px; }
+  .rd-trigger { font-size: 11.5px; color: #8a93a2; line-height: 1.65; margin-bottom: 10px; }
+  .rd-figure {
+    position: relative; border-radius: 8px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.10); line-height: 0; background: #0b0e12;
+  }
+  .rd-figure img { width: 100%; display: block; }
+  .rd-figure svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .rd-wp {
+    position: absolute; transform: translate(-50%, -50%);
+    width: 18px; height: 18px; border-radius: 50%; background: #f59e0b;
+    color: #0b0e12; border: 2px solid #0b0e12; display: flex;
+    align-items: center; justify-content: center;
+    font-family: monospace; font-size: 9px; font-weight: 700; line-height: 1;
+  }
+  .rd-wp.start { background: #22c55e; }
+  .rd-wp.end   { background: #ef4444; color: #fff; }
+  .rd-btn {
+    width: 100%; margin-top: 10px; padding: 8px 10px; border-radius: 7px;
+    border: 1px solid rgba(255,255,255,0.14); background: #12161b;
+    color: #f0f2f5; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    font-family: inherit; transition: all 0.15s;
+  }
+  .rd-btn:hover:not([disabled]) { background: #1a1f27; border-color: #f59e0b; }
+  .rd-btn.on { background: rgba(245,158,11,0.14); border-color: #f59e0b; color: #f59e0b; }
+  .rd-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .rd-progress { font-size: 10.5px; color: #f59e0b; font-family: monospace; margin-top: 7px; }
+  @media (max-width: 640px) { #dir-panel { width: 100%; } }
 </style>
 </head>
 <body>
@@ -93,57 +129,26 @@
   <strong>Could not load model</strong>
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
-<div id="hint">Left drag to pan - Middle drag to rotate - Right drag to zoom - Wheel to zoom</div>
-<div id="pinTip"></div>
-<div id="dbg"><span class="h">DEBUG</span>  <span class="dim">(press D to hide)</span>
+<div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
+<button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
+<div id="dir-panel">
+  <div class="dp-head">
+    <div>
+      <div class="dp-title">Responder Directions</div>
+      <div class="dp-sub" id="dp-sub"></div>
+    </div>
+    <button class="dp-close" onclick="toggleDirPanel()">&#10005;</button>
+  </div>
+  <div class="dp-body" id="dp-body"></div>
 </div>
-<button id="dbgToggle" onclick="document.getElementById('dbg').style.display='block';this.style.display='none';">DEBUG</button>
 <button id="resetBtn" onclick="resetView()" style="
-  position: fixed; bottom: 56px; right: 16px; z-index: 50;
+  position: fixed; bottom: 48px; right: 16px; z-index: 50;
   background: rgba(0,0,0,0.6); color: #8a93a2; border: 1px solid #2a3040;
   font-family: monospace; font-size: 11px; padding: 6px 12px;
   border-radius: 6px; cursor: pointer; transition: color 0.2s;
 " onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#8a93a2'">
-  Reset View
+  ↑ Reset View
 </button>
-<div id="viewButtons">
-  <button class="view-btn" data-view="nadir"   onclick="playView('nadir')">Nadir</button>
-  <button class="view-btn" data-view="alpha"   onclick="playView('alpha')">Alpha</button>
-  <button class="view-btn" data-view="bravo"   onclick="playView('bravo')">Bravo</button>
-  <button class="view-btn" data-view="charlie" onclick="playView('charlie')">Charlie</button>
-  <button class="view-btn" data-view="delta"   onclick="playView('delta')">Delta</button>
-  <button class="view-btn entrance-btn" data-view="entrance" onclick="playView('entrance')">Entrance</button>
-</div>
-
-<script>
-// -- Debug console (plain script so it exists before the module runs) -----
-(function () {
-  var box = document.getElementById('dbg');
-  var seq = 0;
-  window.dbg = function (msg, cls) {
-    seq++;
-    var line = document.createElement('div');
-    if (cls) line.className = cls;
-    line.textContent = String(msg);
-    box.appendChild(line);
-    box.scrollTop = box.scrollHeight;
-    try { console.log('[dbg] ' + msg); } catch (e) {}
-  };
-  window.addEventListener('error', function (e) {
-    window.dbg('JS ERROR: ' + (e.message || e) + (e.filename ? ' @ ' + e.filename + ':' + e.lineno : ''), 'err');
-  });
-  window.addEventListener('unhandledrejection', function (e) {
-    window.dbg('PROMISE REJECTION: ' + ((e.reason && e.reason.message) || e.reason), 'err');
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'd' || e.key === 'D') {
-      var hidden = box.style.display === 'none';
-      box.style.display = hidden ? 'block' : 'none';
-      document.getElementById('dbgToggle').style.display = hidden ? 'none' : 'block';
-    }
-  });
-})();
-</script>
 
 <script type="importmap">
 {
@@ -155,126 +160,117 @@
 
 <script type="module">
 import * as THREE from 'three';
-dbg('module: three r' + (THREE.REVISION || '?') + ' imported', 'ok');
 
+// Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
-let GLTFLoader, DRACOLoader, OrbitControls;
-try {
-  ({ GLTFLoader }   = await import(`${BASE}/loaders/GLTFLoader.js`));
-  ({ DRACOLoader }  = await import(`${BASE}/loaders/DRACOLoader.js`));
-  ({ OrbitControls } = await import(`${BASE}/controls/OrbitControls.js`));
-  dbg('module: GLTFLoader/DRACOLoader/OrbitControls loaded', 'ok');
-} catch (e) {
-  dbg('module: loader import FAILED -> ' + (e.message || e), 'err');
-  throw e;
-}
 
-// -- URL params -----------------------------------------------------------
-const params   = new URLSearchParams(window.location.search);
-const glbUrl   = params.get('model');
-const alphaParam = parseFloat(params.get('alpha'));
-const hasAlpha   = !isNaN(alphaParam);
-const entXParam  = parseFloat(params.get('ent_x'));
-const entYParam  = parseFloat(params.get('ent_y'));
-const hasEntrance = !isNaN(entXParam) && !isNaN(entYParam);
-const pinsUrl    = params.get('pins');
+const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
+const { DRACOLoader }    = await import(`${BASE}/loaders/DRACOLoader.js`);
+const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
 
-dbg('params: model=' + (glbUrl ? 'set' : 'MISSING') + '  alpha=' + params.get('alpha') +
-    '  ent=(' + params.get('ent_x') + ',' + params.get('ent_y') + ')');
-dbg('params: pins=' + (pinsUrl || '(none)'), pinsUrl ? 'ok' : 'warn');
-if (pinsUrl) {
-  try { dbg('pins: resolves to ' + new URL(pinsUrl, window.location.href).href, 'dim'); }
-  catch (e) { dbg('pins: bad URL -> ' + (e.message || e), 'err'); }
-}
+// ── URL param ─────────────────────────────────────────────────────────
+const params  = new URLSearchParams(window.location.search);
+const glbUrl  = params.get('model');
 
-const num = (k, d) => { const v = parseFloat(params.get(k)); return isNaN(v) ? d : v; };
-const POLAR_VIEW = num('polar', 25);
-const POLAR_ENT  = num('polar_end', 15);
-const END_RADIUS = num('end_radius', 45);
-const FLY_MS     = parseInt(params.get('dur_ms') || '1600', 10);
+// ── Optional property record ──────────────────────────────────────────
+// This file's contract has always been `?model=<glb>` plus the headless
+// capture params, and that path is untouched: `?property=<id>` is purely
+// additive and everything it adds is gated on `!autocapture`, so a capture
+// run can never be slowed or broken by a failed fetch.
+const propertyId = params.get('property');
+const wantView   = (params.get('view') || params.get('tab') || '').trim();
+const DT_VIEW    = 'drone-test';
+const ROUTE_HEX  = '#f59e0b';
+const DATA_ROOT  = (function () {
+  const explicit = params.get('dataRoot');
+  if (explicit) return explicit.replace(/\/*$/, '/');
+  // Relative to wherever this page is served, so one file works on GitHub
+  // Pages and on responder-intel.vyanet.com with no edit.
+  if (window.location.protocol === 'file:') {
+    return 'https://responder-intel.vyanet.com/data/';
+  }
+  return new URL('data/', window.location.href).href;
+})();
+
+// Optional programmatic camera positioning for headless capture
+// (see capture_obliques.py). azimuth/polar are compass bearing + elevation
+// angle in degrees, both measured the same way compute_frontage.py's
+// output uses them: azimuth 0=north/90=east/180=south/270=west, polar =
+// elevation of the camera above the horizon (45 matches the default
+// hand-tuned "DJI-style" framing already used below).
+const autocapture = params.get('autocapture') === '1';
+const azimuthParam = parseFloat(params.get('azimuth'));
+const polarParam   = parseFloat(params.get('polar'));
+const hasCaptureAngles = !isNaN(azimuthParam) && !isNaN(polarParam);
 
 if (!glbUrl) {
   showErr('No model URL provided. Add ?model=https://... to the URL.');
 }
 
-function viewAzimuths(alpha) {
-  return { alpha: alpha % 360, bravo: (alpha + 90) % 360,
-           charlie: (alpha + 180) % 360, delta: (alpha + 270) % 360 };
+if (autocapture) {
+  // Headless Chromium has no mouse — hide interactive chrome so it never
+  // shows up in a screenshot, and don't wait on the 4s hint fade timer.
+  document.getElementById('hint').classList.add('hidden');
+  document.getElementById('resetBtn').style.display = 'none';
 }
 
-function camPos(target, azimuthDeg, elevationDeg, distance) {
+// Same axis convention as positionCameraForDefaultView below: Z-up,
+// +Y = north, +X = east (confirmed by the existing default view's
+// "-Y (south)" camera offset). azimuth = compass bearing of the camera's
+// position relative to the model center (i.e. an azimuth of 180/south
+// reproduces this file's original default view when polar=45).
+function positionCameraCompass(camera, center, azimuthDeg, elevationDeg, distance) {
   const az = THREE.MathUtils.degToRad(azimuthDeg);
   const el = THREE.MathUtils.degToRad(elevationDeg);
   const horiz = distance * Math.cos(el);
   const up = distance * Math.sin(el);
-  return new THREE.Vector3(target.x + horiz * Math.sin(az),
-                           target.y + horiz * Math.cos(az),
-                           target.z + up);
+  const east = horiz * Math.sin(az);
+  const north = horiz * Math.cos(az);
+
+  camera.position.set(center.x + east, center.y + north, center.z + up);
+  camera.up.set(0, 0, 1);
+  camera.lookAt(center);
 }
 
-function exactFitDistance(box, center, azimuthDeg, elevationDeg) {
-  const azr = THREE.MathUtils.degToRad(azimuthDeg);
-  const elr = THREE.MathUtils.degToRad(elevationDeg);
-  const dirCam = new THREE.Vector3(Math.sin(azr)*Math.cos(elr), Math.cos(azr)*Math.cos(elr), Math.sin(elr));
-  const fwd = dirCam.clone().negate();
-  const rightV = new THREE.Vector3().crossVectors(fwd, new THREE.Vector3(0,0,1)).normalize();
-  const upV = new THREE.Vector3().crossVectors(rightV, fwd).normalize();
-  const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
-  const tanH = tanV * camera.aspect;
-  let need = 0;
-  for (const sx of [box.min.x, box.max.x])
-  for (const sy of [box.min.y, box.max.y])
-  for (const sz of [box.min.z, box.max.z]) {
-    const rel = new THREE.Vector3(sx, sy, sz).sub(center);
-    const along = rel.dot(dirCam);
-    need = Math.max(need, along + Math.abs(rel.dot(rightV))/tanH,
-                          along + Math.abs(rel.dot(upV))/tanV);
+// ── Scene setup ───────────────────────────────────────────────────────
+// ── Property fetch ────────────────────────────────────────────────────
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return await res.json();
+}
+
+// data/index/{id}.json is the folder index viewer.html already resolves
+// through: it maps a PROPERTY id to a per-view record id. Same identity
+// model here, so one link format serves every viewer.
+async function resolveViaIndex(hash, view) {
+  let idx = null;
+  try { idx = await fetchJson(DATA_ROOT + 'index/' + hash + '.json'); }
+  catch (e) { return null; }
+  if (!idx || !idx.views || !idx.views[view]) return null;
+  return await fetchJson(DATA_ROOT + view + '/' + idx.views[view] + '.json');
+}
+
+// Same resolution order responder-intel.html uses, so any link form works.
+async function loadProperty() {
+  if (!propertyId || autocapture) return null;
+  if (wantView) {
+    const byView = await resolveViaIndex(propertyId, wantView);
+    if (byView) return byView;
   }
-  return need * 1.04;
+  const byDefault = await resolveViaIndex(propertyId, DT_VIEW);
+  if (byDefault) return byDefault;
+  const direct = await fetchJson(DATA_ROOT + DT_VIEW + '/' + propertyId + '.json');
+  if (direct) return direct;
+  return await fetchJson(DATA_ROOT + 'responder-drone/' + propertyId + '.json');
 }
 
-function findStructureNearPoint(model, allPoints, focusX, focusY, searchRadius, percentile) {
-  const rSq = searchRadius * searchRadius;
-  const nearby = [];
-  for (let i = 0; i < allPoints.length; i += 3) {
-    const dx = allPoints[i] - focusX, dy = allPoints[i + 1] - focusY;
-    if (dx * dx + dy * dy <= rSq) {
-      nearby.push(allPoints[i], allPoints[i + 1], allPoints[i + 2]);
-    }
-  }
-  if (nearby.length === 0) return null;
-  const zs = [];
-  for (let i = 2; i < nearby.length; i += 3) zs.push(nearby[i]);
-  zs.sort((a, b) => a - b);
-  const heightThreshold = zs[Math.floor(percentile * (zs.length - 1))];
-  let sumX = 0, sumY = 0, sumZ = 0, n = 0;
-  for (let i = 0; i < nearby.length; i += 3) {
-    const x = nearby[i], y = nearby[i + 1], z = nearby[i + 2];
-    if (z < heightThreshold) continue;
-    sumX += x; sumY += y; sumZ += z; n++;
-  }
-  if (n === 0) return null;
-  return { center: new THREE.Vector3(sumX / n, sumY / n, sumZ / n) };
-}
+const propertyPromise = loadProperty().catch(function (e) {
+  console.warn('[directions] property load failed:', e.message);
+  return null;
+});
 
-function getAllModelPoints(model) {
-  const pts = [];
-  model.updateMatrixWorld(true);
-  const v = new THREE.Vector3();
-  model.traverse((child) => {
-    if (!child.isMesh || !child.geometry) return;
-    const posAttr = child.geometry.attributes.position;
-    if (!posAttr) return;
-    for (let i = 0; i < posAttr.count; i++) {
-      v.fromBufferAttribute(posAttr, i);
-      v.applyMatrix4(child.matrixWorld);
-      pts.push(v.x, v.y, v.z);
-    }
-  });
-  return pts;
-}
-
-// -- Scene setup ----------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -287,6 +283,13 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color('#111318');
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
+// Z-up BEFORE OrbitControls is constructed. OrbitControls caches the camera's
+// up-frame at construction and re-derives orientation from it on every
+// update(), so a camera made Z-up afterwards has minPolarAngle/maxPolarAngle
+// applied in the WRONG frame: the intended "-Y (south) and +Z (up)" opening
+// offset reads as below-horizon, gets clamped, and the viewer silently opens
+// straight down instead of at 45 degrees. Same failure render-viewer.html
+// documents in its AUTOCAPTURE CONTRACT, fixed here by ordering.
 camera.up.set(0, 0, 1);
 
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -295,245 +298,119 @@ controls.dampingFactor = 0.08;
 controls.screenSpacePanning = true;
 controls.minDistance = 10;
 controls.maxDistance = 5000;
-controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.DOLLY };
+controls.mouseButtons = {
+  LEFT: THREE.MOUSE.PAN,
+  MIDDLE: THREE.MOUSE.ROTATE,
+  RIGHT: THREE.MOUSE.DOLLY
+};
+controls.enableZoom = true;
 controls.zoomSpeed = 1.0;
+// Hard lock: camera can only go from straight down (0) to horizon (90°)
+// Cannot go underneath — matches DJI viewer behavior
 controls.minPolarAngle = 0;
 controls.maxPolarAngle = Math.PI / 2;
 
-controls.enableZoom = false;
-renderer.domElement.addEventListener('wheel', (ev) => {
-  ev.preventDefault();
-  if (playing) return;
-  const step = Math.pow(0.95, controls.zoomSpeed || 1.0);
-  const factor = ev.deltaY < 0 ? step : 1 / step;
-  const off = camera.position.clone().sub(controls.target);
-  let dist = off.length() * factor;
-  dist = Math.min(Math.max(dist, controls.minDistance), controls.maxDistance);
-  off.setLength(dist);
-  camera.position.copy(controls.target).add(off);
-  controls.update();
-}, { passive: false });
-
+// Lighting
 const ambient = new THREE.AmbientLight(0xffffff, 0.7);
 scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffffff, 1.2);
 sun.position.set(1, 2, 2);
 scene.add(sun);
 
-// -- Element pins ---------------------------------------------------------
-const PIN_PX      = 9;
-const ROLE_COLORS = { primary: '#a855f7', concern: '#f5a524' };
-const pinGroup    = new THREE.Group();
-scene.add(pinGroup);
-
-const _pinTexCache = {};
-function pinTexture(hex) {
-  if (_pinTexCache[hex]) return _pinTexCache[hex];
-  const s = 64, c = document.createElement('canvas');
-  c.width = c.height = s;
-  const g = c.getContext('2d');
-  g.beginPath(); g.arc(s / 2, s / 2, s / 2 - 7, 0, Math.PI * 2);
-  g.fillStyle = hex; g.fill();
-  g.lineWidth = 7; g.strokeStyle = 'rgba(255,255,255,0.92)'; g.stroke();
-  const t = new THREE.CanvasTexture(c);
-  _pinTexCache[hex] = t;
-  return t;
-}
-
-// First surface hit straight down through (x, y). Returns {z, hit}.
-function surfaceZ(x, y) {
-  const rc = new THREE.Raycaster(
-    new THREE.Vector3(x, y, BOX.max.z + 1000),
-    new THREE.Vector3(0, 0, -1));
-  const hits = rc.intersectObject(MODEL, true);
-  return hits.length ? { z: hits[0].point.z, hit: 'ray' } : { z: BOX.min.z, hit: 'floor' };
-}
-
-async function loadPins(url) {
-  dbg('--- pins ---', 'h');
-  let pins;
-  try {
-    const resp = await fetch(url);
-    dbg('fetch: HTTP ' + resp.status + (resp.ok ? ' OK' : ' FAIL') +
-        '  type=' + (resp.headers.get('content-type') || '?'), resp.ok ? 'ok' : 'err');
-    if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const text = await resp.text();
-    dbg('body: ' + text.length + ' chars', 'dim');
-    pins = JSON.parse(text);
-  } catch (e) {
-    dbg('LOAD FAILED -> ' + (e.message || e), 'err');
-    dbg('(a 404 here = file not committed / wrong path; a CORS/type error = served wrong)', 'dim');
-    return;
-  }
-  if (!Array.isArray(pins)) { dbg('parsed JSON is not an array (got ' + typeof pins + ')', 'err'); return; }
-  dbg('parsed ' + pins.length + ' pin(s)', 'ok');
-  dbg('model box  min(' + BOX.min.x.toFixed(1) + ',' + BOX.min.y.toFixed(1) + ',' + BOX.min.z.toFixed(1) +
-      ')  max(' + BOX.max.x.toFixed(1) + ',' + BOX.max.y.toFixed(1) + ',' + BOX.max.z.toFixed(1) + ')', 'dim');
-
-  let added = 0, outside = 0;
-  for (const p of pins) {
-    if (typeof p.x !== 'number' || typeof p.y !== 'number') {
-      dbg('skip id=' + p.id + ': x/y not numbers', 'warn'); continue;
-    }
-    const color = ROLE_COLORS[p.role] || ROLE_COLORS.primary;
-    const mat = new THREE.SpriteMaterial({
-      map: pinTexture(color), transparent: true, depthTest: false, depthWrite: false });
-    const spr = new THREE.Sprite(mat);
-    let z, hit;
-    if (typeof p.z === 'number') { z = p.z; hit = 'given'; }
-    else { const s = surfaceZ(p.x, p.y); z = s.z; hit = s.hit; }
-    spr.position.set(p.x, p.y, z);
-    spr.renderOrder = 999;
-    spr.userData = { name: p.name || ('#' + p.id), id: p.id, role: p.role };
-    pinGroup.add(spr);
-    added++;
-    const inX = p.x >= BOX.min.x && p.x <= BOX.max.x;
-    const inY = p.y >= BOX.min.y && p.y <= BOX.max.y;
-    if (!(inX && inY)) outside++;
-    dbg('  + ' + (p.name || ('#' + p.id)) + '  xy(' + p.x + ',' + p.y + ') z=' + z.toFixed(1) +
-        ' [' + hit + ']' + ((inX && inY) ? '' : '  <-- OUTSIDE model box'), (inX && inY) ? '' : 'warn');
-  }
-  dbg('sprites added = ' + added + '  (group=' + pinGroup.children.length + ')', added ? 'ok' : 'err');
-  if (outside) dbg(outside + ' pin(s) fall OUTSIDE the model footprint -> frame/coord mismatch', 'warn');
-  if (added && !outside) dbg('pins are inside the model box; if you cannot see them, orbit/zoom or check render order', 'dim');
-}
-
-// -- Camera-move state ----------------------------------------------------
-let MODEL = null, BOX = null, CENTER = null, VIEWS = null, playing = false;
-
-function poseFor(name) {
-  if (name === 'nadir') {
-    const az = hasAlpha ? VIEWS.alpha : 0, el = 89;
-    return { target: CENTER.clone(), pos: camPos(CENTER, az, el, exactFitDistance(BOX, CENTER, az, el)) };
-  }
-  if (name === 'entrance') {
-    const allPoints = getAllModelPoints(MODEL);
-    const ground = findStructureNearPoint(MODEL, allPoints, entXParam, entYParam, 8.0, 0.0);
-    const target = ground ? ground.center : new THREE.Vector3(entXParam, entYParam, BOX.min.z);
-    const endBox = new THREE.Box3(
-      new THREE.Vector3(target.x - END_RADIUS, target.y - END_RADIUS, BOX.min.z),
-      new THREE.Vector3(target.x + END_RADIUS, target.y + END_RADIUS, BOX.max.z));
-    const az = VIEWS.alpha, el = POLAR_ENT;
-    return { target, pos: camPos(target, az, el, exactFitDistance(endBox, target, az, el)) };
-  }
-  const az = VIEWS[name], el = POLAR_VIEW;
-  return { target: CENTER.clone(), pos: camPos(CENTER, az, el, exactFitDistance(BOX, CENTER, az, el)) };
-}
-
-function flyTo(pose, durationMs) {
-  const p0 = camera.position.clone();
-  const t0v = controls.target.clone();
-  controls.enabled = false;
-  playing = true;
-  const t0 = performance.now();
-  const tmpP = new THREE.Vector3(), tmpT = new THREE.Vector3();
-  function step(now) {
-    const t = Math.min((now - t0) / durationMs, 1);
-    const e = t * t * (3 - 2 * t);
-    tmpP.lerpVectors(p0, pose.pos, e);
-    tmpT.lerpVectors(t0v, pose.target, e);
-    camera.position.copy(tmpP);
-    camera.up.set(0, 0, 1);
-    camera.lookAt(tmpT);
-    camera.updateProjectionMatrix();
-    if (t < 1) {
-      requestAnimationFrame(step);
-    } else {
-      controls.target.copy(pose.target);
-      controls.enabled = true;
-      controls.update();
-      playing = false;
-    }
-  }
-  requestAnimationFrame(step);
-}
-
-window.playView = function(name) {
-  if (!MODEL || playing) return;
-  if (name === 'nadir') { flyTo(poseFor('nadir'), FLY_MS); return; }
-  if (name === 'entrance') {
-    if (!hasAlpha || !hasEntrance) { dbg('entrance needs alpha + ent_x/ent_y', 'warn'); return; }
-    flyTo(poseFor('entrance'), FLY_MS); return;
-  }
-  if (!hasAlpha) { dbg('no alpha bearing in URL; vantage views unavailable', 'warn'); return; }
-  flyTo(poseFor(name), FLY_MS);
-};
-
-// -- Load GLB -------------------------------------------------------------
+// ── Load GLB ─────────────────────────────────────────────────────────
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
 
-dbg('loading GLB...', 'dim');
+// Filled once the GLB is in the scene; the directions layer needs all three
+// to drape a route (raycast origin height, tube radius, marker size).
+let modelRoot = null, modelBox = null, modelSpan = 0;
+
 loader.load(
   glbUrl,
   function(gltf) {
     const model = gltf.scene;
     scene.add(model);
+
+    // Compute bounding box
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
-    MODEL = model; BOX = box; CENTER = center;
-    VIEWS = hasAlpha ? viewAzimuths(alphaParam) : null;
-    dbg('GLB loaded  size(' + size.x.toFixed(1) + ',' + size.y.toFixed(1) + ',' + size.z.toFixed(1) +
-        ')  center(' + center.x.toFixed(1) + ',' + center.y.toFixed(1) + ',' + center.z.toFixed(1) + ')', 'ok');
 
-    const camDist = Math.max(size.x, size.y) * 1.4;
-    camera.position.set(center.x, center.y - camDist * 0.8, center.z + camDist * 0.8);
-    camera.up.set(0, 0, 1);
-    camera.lookAt(center);
+    // DJI Terra OBJ uses Z-up.
+    // Open at ~45° angle matching DJI viewer style — camera offset in Y and Z
+    const maxSpan = Math.max(size.x, size.y);
+    const camDist = maxSpan * 1.4;
+
+    if (autocapture && hasCaptureAngles) {
+      // Programmatic framing for oblique capture (alpha/bravo/charlie/delta).
+      // Same camDist basis as the default view for consistent scale/crop.
+      positionCameraCompass(camera, center, azimuthParam, polarParam, camDist * Math.SQRT2 * 0.8);
+      controls.enabled = false;
+    } else {
+      // Pull camera back and up at ~45° — offset in -Y (south) and +Z (up)
+      camera.position.set(
+        center.x,
+        center.y - camDist * 0.8,  // back
+        center.z + camDist * 0.8   // up
+      );
+      camera.up.set(0, 0, 1);
+      camera.lookAt(center);
+    }
     camera.updateProjectionMatrix();
+
+    // Orbit target = model center
     controls.target.copy(center);
     controls.update();
 
+    // Store initial camera state for reset
     const initPos = camera.position.clone();
     const initTarget = controls.target.clone();
+
+    // Expose reset function to the button
     window.resetView = function() {
-      if (playing) return;
       camera.position.copy(initPos);
-      camera.up.set(0, 0, 1);
       controls.target.copy(initTarget);
-      controls.enabled = true;
       controls.update();
     };
 
-    const disable = (v) => { const b = document.querySelector('.view-btn[data-view="' + v + '"]'); if (b) b.disabled = true; };
-    if (!hasAlpha) { ['alpha','bravo','charlie','delta','entrance'].forEach(disable); }
-    else if (!hasEntrance) { disable('entrance'); }
+    // Hand the loaded scene to the directions layer. No-op when the URL
+    // carries no ?property= — the record promise resolves to null.
+    modelRoot = model; modelBox = box; modelSpan = maxSpan;
+    propertyPromise.then(function (d) { if (d) initDirections(d); });
 
-    if (pinsUrl) loadPins(pinsUrl);
-    else dbg('no pins= param -> pin layer skipped', 'warn');
-
+    // Fade in
     document.getElementById('loading').classList.add('hidden');
-    setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+    if (!autocapture) {
+      setTimeout(() => document.getElementById('hint').classList.add('hidden'), 4000);
+    }
+
+    // Signal readiness for capture_obliques.py — wait two frames so the
+    // canvas has actually painted the positioned view before a screenshot
+    // is taken, not just the first uninitialized frame.
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => { window.__viewerReady = true; });
+      requestAnimationFrame(() => {
+        window.__viewerReady = true;
+      });
     });
   },
   function(xhr) {
     if (xhr.total) {
-      document.getElementById('progress').textContent =
-        Math.round(xhr.loaded / xhr.total * 100) + '%';
+      const pct = Math.round(xhr.loaded / xhr.total * 100);
+      document.getElementById('progress').textContent = pct + '%';
     }
   },
   function(err) {
-    dbg('GLB load FAILED -> ' + (err.message || err), 'err');
     showErr(err.message || String(err));
   }
 );
 
-// -- Render loop ----------------------------------------------------------
+// ── Render loop ───────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
-  if (!playing) controls.update();
-  if (pinGroup.children.length) {
-    const wpp = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) / window.innerHeight;
-    for (const spr of pinGroup.children) {
-      const d = camera.position.distanceTo(spr.position);
-      spr.scale.setScalar(wpp * d * PIN_PX * 2);
-    }
-  }
+  controls.update();
   renderer.render(scene, camera);
 }
 animate();
@@ -544,6 +421,275 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// ── Responder Directions ──────────────────────────────────────────────
+// A direction is {name, trigger, target, start, route:[{seq,x,y,mx,my}]}.
+// x,y are PERCENTAGES on the nadir image and always present — they drive the
+// 2D preview in the panel. mx,my are the SAME point in the GLB's local frame
+// in metres, written by the sync from the render Lambda's nadir_local
+// corners; a record produced before that existed has no mx,my, so the panel
+// still lists and previews the route and only the 3D button is disabled.
+//
+// Drawing a route in 3D means finding the ground under each waypoint. The
+// mesh has no height field, so we raycast straight down onto it. That is
+// O(triangles) per ray with no BVH in three.js r128, so the ray count is
+// budgeted (RAY_BUDGET) and spread across animation frames — the canvas keeps
+// rendering and the panel shows progress instead of the tab locking up.
+
+const RAY_BUDGET = 40;
+let dirList = [], dirNadir = '', dirLayer = null, activeDir = -1, dirBusy = false;
+
+function escHtml(t) {
+  return String(t == null ? '' : t)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function orderedRoute(d) {
+  return (d && Array.isArray(d.route) ? d.route : [])
+    .filter(function (w) { return isFinite(Number(w.x)) && isFinite(Number(w.y)); })
+    .slice()
+    .sort(function (a, b) { return (Number(a.seq) || 0) - (Number(b.seq) || 0); });
+}
+function metreRoute(d) {
+  const pts = orderedRoute(d).filter(function (w) {
+    return isFinite(Number(w.mx)) && isFinite(Number(w.my));
+  });
+  return pts.length >= 2 ? pts : null;
+}
+
+function initDirections(d) {
+  dirList = (d.directions || []).filter(function (x) { return orderedRoute(x).length >= 2; });
+  if (!dirList.length) return;
+  dirNadir = (d.nadir && d.nadir.url) || '';
+
+  let html = '';
+  const without3d = dirList.filter(function (x) { return !metreRoute(x); }).length;
+  if (without3d) {
+    html += '<div class="dp-note">' + without3d + ' of ' + dirList.length +
+            ' route(s) have no model coordinates yet. Re-run Generate Property ' +
+            'Images so the render publishes the nadir\'s local corners, then sync ' +
+            'again — the 2D preview works either way.</div>';
+  }
+
+  dirList.forEach(function (dir, i) {
+    const pts  = orderedRoute(dir);
+    const last = pts.length - 1;
+    const poly = pts.map(function (w) { return Number(w.x) + ',' + Number(w.y); }).join(' ');
+    const meta = [];
+    if (dir.start)  meta.push('FROM ' + escHtml(dir.start));
+    if (dir.target) meta.push('TO ' + escHtml(dir.target));
+    meta.push(pts.length + ' waypoint' + (pts.length === 1 ? '' : 's'));
+
+    let fig = '';
+    if (dirNadir) {
+      fig = '<div class="rd-figure"><img src="' + escHtml(dirNadir) + '" alt="Route ' + (i + 1) +
+            '" loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
+            '<svg viewBox="0 0 100 100" preserveAspectRatio="none">' +
+              '<polyline points="' + poly + '" fill="none" stroke="#0b0e12" stroke-opacity="0.75" ' +
+                'stroke-width="5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>' +
+              '<polyline points="' + poly + '" fill="none" stroke="' + ROUTE_HEX + '" ' +
+                'stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>' +
+            '</svg>' +
+            pts.map(function (w, k) {
+              const cls = k === 0 ? ' start' : (k === last ? ' end' : '');
+              return '<div class="rd-wp' + cls + '" style="left:' + Number(w.x) +
+                     '%;top:' + Number(w.y) + '%">' + (k + 1) + '</div>';
+            }).join('') +
+            '</div>';
+    }
+
+    const drawable = !!metreRoute(dir);
+    html += '<div class="rd-card" id="rd-card-' + i + '">' +
+              '<div class="rd-head"><div class="rd-num">' + (i + 1) + '</div>' +
+                '<div class="rd-titles">' +
+                  '<div class="rd-name">' + escHtml(dir.name || ('Route ' + (i + 1))) + '</div>' +
+                  '<div class="rd-meta">' + meta.join(' &middot; ') + '</div>' +
+                '</div></div>' +
+              '<div class="rd-body">' +
+                (dir.trigger ? '<div class="rd-trigger">' + escHtml(dir.trigger) + '</div>' : '') +
+                fig +
+                '<button class="rd-btn" id="rd-btn-' + i + '" onclick="toggleRoute3D(' + i + ')"' +
+                  (drawable ? '' : ' disabled') + '>Show in 3D</button>' +
+                '<div class="rd-progress" id="rd-prog-' + i + '"></div>' +
+              '</div>' +
+            '</div>';
+  });
+
+  document.getElementById('dp-body').innerHTML = html;
+  document.getElementById('dp-sub').textContent = d.name || '';
+  const btn = document.getElementById('dir-toggle');
+  btn.textContent = 'Directions (' + dirList.length + ')';
+  btn.style.display = 'block';
+}
+
+window.toggleDirPanel = function () {
+  const open = document.getElementById('dir-panel').classList.toggle('open');
+  document.getElementById('dir-toggle').classList.toggle('on', open);
+};
+
+// ── 3D route ──────────────────────────────────────────────────────────
+function markCard(i, on) {
+  const c = document.getElementById('rd-card-' + i);
+  const b = document.getElementById('rd-btn-' + i);
+  if (c) c.classList.toggle('on', on);
+  if (b) { b.classList.toggle('on', on); b.textContent = on ? 'Hide from 3D' : 'Show in 3D'; }
+}
+function clearRoute3D() {
+  if (dirLayer) {
+    scene.remove(dirLayer);
+    dirLayer.traverse(function (o) {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) {
+        if (o.material.map) o.material.map.dispose();
+        o.material.dispose();
+      }
+    });
+    dirLayer = null;
+  }
+  if (activeDir >= 0) {
+    markCard(activeDir, false);
+    const p = document.getElementById('rd-prog-' + activeDir);
+    if (p) p.textContent = '';
+  }
+  activeDir = -1;
+}
+window.toggleRoute3D = function (i) {
+  if (dirBusy) return;
+  const wasActive = (activeDir === i);
+  clearRoute3D();
+  if (wasActive) return;
+  const pts = metreRoute(dirList[i]);
+  if (!pts || !modelRoot) return;
+  activeDir = i;
+  markCard(i, true);
+  drapeRoute(pts, i);
+};
+
+// Spread RAY_BUDGET samples over the polyline in proportion to segment
+// length, so a long straight run gets the intermediate ground samples a short
+// turn does not need. Every original waypoint is always a sample.
+function densify(pts) {
+  const seg = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    seg.push(Math.hypot(pts[i + 1].mx - pts[i].mx, pts[i + 1].my - pts[i].my));
+  }
+  const total = seg.reduce(function (a, b) { return a + b; }, 0) || 1;
+  const extra = Math.max(0, RAY_BUDGET - pts.length);
+  const out = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    out.push({ x: pts[i].mx, y: pts[i].my, wp: i });
+    const n = Math.round(extra * seg[i] / total);
+    for (let k = 1; k <= n; k++) {
+      const t = k / (n + 1);
+      out.push({ x: pts[i].mx + (pts[i + 1].mx - pts[i].mx) * t,
+                 y: pts[i].my + (pts[i + 1].my - pts[i].my) * t, wp: -1 });
+    }
+  }
+  const lastPt = pts[pts.length - 1];
+  out.push({ x: lastPt.mx, y: lastPt.my, wp: pts.length - 1 });
+  return out;
+}
+
+function drapeRoute(pts, idx) {
+  const samples = densify(pts);
+  const zTop    = modelBox.max.z + Math.max(50, modelSpan * 0.5);
+  const ray     = new THREE.Raycaster();
+  const down    = new THREE.Vector3(0, 0, -1);
+  const zs      = new Array(samples.length).fill(null);
+  const prog    = document.getElementById('rd-prog-' + idx);
+  let i = 0;
+  dirBusy = true;
+
+  (function step() {
+    if (activeDir !== idx) { dirBusy = false; return; }  // cancelled mid-flight
+    const end = Math.min(samples.length, i + 4);
+    for (; i < end; i++) {
+      ray.set(new THREE.Vector3(samples[i].x, samples[i].y, zTop), down);
+      const hit = ray.intersectObject(modelRoot, true)[0];
+      zs[i] = hit ? hit.point.z : null;
+    }
+    if (prog) prog.textContent = 'placing route on the mesh… ' +
+      Math.round(i / samples.length * 100) + '%';
+    if (i < samples.length) { requestAnimationFrame(step); return; }
+    if (prog) prog.textContent = '';
+    dirBusy = false;
+    buildRouteObjects(samples, zs, pts, idx);
+  })();
+}
+
+function buildRouteObjects(samples, zs, pts, idx) {
+  // A ray can miss where the clip cut a hole in the mesh. Fill from the
+  // nearest hit on either side rather than dropping the point, so one hole
+  // cannot break the route into pieces.
+  let seen = null;
+  for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
+  seen = null;
+  for (let i = zs.length - 1; i >= 0; i--) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
+  const floor = modelBox.min.z;
+  for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = floor; }
+
+  const lift   = Math.max(0.35, modelSpan * 0.0022);
+  const radius = Math.max(0.22, modelSpan * 0.0020);
+  const mark   = Math.max(3.0, modelSpan * 0.022);
+  const vecs   = samples.map(function (s, i) {
+    return new THREE.Vector3(s.x, s.y, zs[i] + lift);
+  });
+
+  dirLayer = new THREE.Group();
+
+  const curve = new THREE.CatmullRomCurve3(vecs, false, 'catmullrom', 0.15);
+  const tube  = new THREE.TubeGeometry(curve, Math.max(32, vecs.length * 6), radius, 8, false);
+  dirLayer.add(new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: ROUTE_HEX })));
+  // Ghost copy with depth testing off, so the path stays legible where the
+  // residence or a tree stands between it and the camera.
+  const ghost = new THREE.Mesh(tube, new THREE.MeshBasicMaterial({
+    color: ROUTE_HEX, transparent: true, opacity: 0.28, depthTest: false }));
+  ghost.renderOrder = 2;
+  dirLayer.add(ghost);
+
+  const last = pts.length - 1;
+  samples.forEach(function (s, i) {
+    if (s.wp < 0) return;
+    const isStart = s.wp === 0, isEnd = s.wp === last;
+    const bg = isStart ? '#22c55e' : (isEnd ? '#ef4444' : ROUTE_HEX);
+    const fg = isEnd ? '#ffffff' : '#0b0e12';
+    const sp = numberSprite(String(s.wp + 1), bg, fg, mark);
+    sp.position.set(s.x, s.y, zs[i] + lift + mark * 0.5);
+    dirLayer.add(sp);
+  });
+
+  scene.add(dirLayer);
+  frameRoute(vecs);
+}
+
+function numberSprite(text, bg, fg, worldSize) {
+  const S  = 128;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
+  g.fillStyle = bg; g.fill();
+  g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
+  g.fillStyle = fg; g.font = 'bold 60px monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, S / 2, S / 2 + 3);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+  sp.scale.set(worldSize, worldSize, 1);
+  sp.renderOrder = 3;
+  return sp;
+}
+
+function frameRoute(vecs) {
+  const b = new THREE.Box3();
+  vecs.forEach(function (v) { b.expandByPoint(v); });
+  const c = b.getCenter(new THREE.Vector3());
+  const s = b.getSize(new THREE.Vector3());
+  const d = Math.max(s.x, s.y, 20) * 1.7;
+  camera.position.set(c.x, c.y - d * 0.8, c.z + d * 0.8);
+  camera.up.set(0, 0, 1);
+  controls.target.copy(c);
+  controls.update();
+}
 function showErr(msg) {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('err-msg').textContent = msg;
