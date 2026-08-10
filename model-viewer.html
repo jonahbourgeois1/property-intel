@@ -197,6 +197,41 @@
     border-radius: 6px; cursor: pointer;
   }
   .cam-lb-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+  /* ── Camera popup (small, anchored, non-blocking) ───────────────────────
+     Deliberately NOT built like #pin-label. That label is screen-static and
+     has to be dismissed on the first interaction, because a fixed position
+     would drift away from its pin the moment the view moved. This card is
+     re-projected from its marker's world position every frame instead, so it
+     tracks the marker and can stay open while the user keeps orbiting. */
+  #cam-popup {
+    display: none; position: fixed; z-index: 71;
+    transform: translate(-50%, -100%);
+    width: 210px; background: rgba(10,12,15,0.96);
+    border: 1px solid #38bdf8; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.6);
+  }
+  #cam-pop-img {
+    width: 100%; height: 150px; object-fit: cover; display: block;
+    cursor: zoom-in; border-bottom: 1px solid rgba(255,255,255,0.10);
+  }
+  #cam-pop-body { padding: 6px 8px 7px; }
+  #cam-pop-name {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11.5px; font-weight: 600; color: #f0f2f5; line-height: 1.35;
+  }
+  #cam-pop-meta {
+    font-family: monospace; font-size: 9.5px; color: #8a93a2; margin-top: 3px;
+  }
+  #cam-pop-hint {
+    font-family: monospace; font-size: 9px; color: #555f6e; margin-top: 4px;
+  }
+  #cam-pop-close {
+    position: absolute; right: 4px; top: 4px; width: 18px; height: 18px;
+    border: none; border-radius: 4px; background: rgba(10,12,15,0.75);
+    color: #8a93a2; font-size: 12px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #cam-pop-close:hover { color: #f0f2f5; }
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   /* Hidden by default — append &debug=1 to the URL to show it. */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: none; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
@@ -228,6 +263,15 @@
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
 <div id="pin-label"></div>
+<div id="cam-popup">
+  <button id="cam-pop-close" onclick="hideCameraPopup()">&#10005;</button>
+  <img id="cam-pop-img" alt="Camera view" onclick="expandCameraPopup()">
+  <div id="cam-pop-body">
+    <div id="cam-pop-name"></div>
+    <div id="cam-pop-meta"></div>
+    <div id="cam-pop-hint">click image to expand</div>
+  </div>
+</div>
 <div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
   <img id="cam-lb-img" alt="Camera view">
   <div id="cam-lb-title"></div>
@@ -665,10 +709,23 @@ loader.load(
     showErr(err.message || String(err));
   }
 );
+// ── Camera popup state ────────────────────────────────────────────────
+// Declared HERE, above animate(), and not down with the rest of the camera
+// code, because animate() runs synchronously on the line after its definition
+// and reads camPopupIdx on every frame. A `let` declared later would still be
+// in its temporal dead zone at that moment, and `typeof` does NOT make that
+// safe - unlike an undeclared name, a let/const in TDZ throws even under
+// typeof. That throw propagates out of the synchronous animate() call and
+// aborts module evaluation, so every declaration below it silently never
+// happens. Verified in Chromium; keep these two lines above the render loop.
+let camPopupIdx = -1, camPopupWorld = null;
 // ── Render loop ───────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
   if (camTween) stepFly(); else controls.update();
+  // updateCameraPopup is a hoisted function declaration, so calling it from
+  // above its textual position is fine.
+  if (camPopupIdx >= 0) updateCameraPopup();
   renderer.render(scene, camera);
 }
 animate();
@@ -725,6 +782,8 @@ function unregisterLayerTargets(layer) {
   // The label is screen-fixed, so ANY interaction that can move the camera —
   // a preset button, a panel button, a drag, the zoom wheel — dismisses it.
   // Capture phase so it fires before the button's own handler.
+  // NOTE this dismisses #pin-label only. The camera popup is deliberately
+  // exempt: it tracks its marker every frame, so movement does not strand it.
   function hideLabel() { el.style.display = 'none'; }
   document.addEventListener('pointerdown', hideLabel, true);
   document.addEventListener('wheel', hideLabel, { passive: true });
@@ -739,11 +798,13 @@ function unregisterLayerTargets(layer) {
     const rc = new THREE.Raycaster();
     rc.setFromCamera(m, camera);
     const hits = rc.intersectObjects(labelTargets, false);
-    if (!hits.length) return;
+    // A click on bare mesh dismisses the camera card. A DRAG never reaches
+    // here (the 5 px test above bails first), so orbiting keeps it open.
+    if (!hits.length) { hideCameraPopup(); return; }
     const hitObj = hits[0].object;
     if (hitObj.userData && hitObj.userData.camera) {
       const ci = camList.indexOf(hitObj.userData.camera);
-      if (ci >= 0) { openCameraPhoto(ci); return; }
+      if (ci >= 0) { showCameraPopup(ci); return; }
     }
     el.textContent = hits[0].object.name;
     el.style.left = e.clientX + 'px';
@@ -781,7 +842,8 @@ function toLocal(p) {
     return { x: Number(p.mx), y: Number(p.my) };
   }
   return dirCorners ? localFromPct(p.x, p.y, dirCorners) : null;
-}// ── Cameras: lat/lng -> nadir percentage -> local metres ──────────────
+}
+// ── Cameras: lat/lng -> nadir percentage -> local metres ──────────────
 // Camera photos carry real coordinates in their EXIF, so unlike element pins
 // nothing has to guess where they are. The published record already holds both
 // halves of the bridge: nadir.bounds is the crop's lat/lng box, nadir.local is
@@ -1170,7 +1232,7 @@ window.togglePins3D = function () {
         pinSets.concern.length + ' concern', 'ok');
   });
 };
- // ── Security cameras in 3D ──────────────────────────────
+// ── Security cameras in 3D ────────────────────────────────────────────
 // A camera marker is permanent scenery like the pins; the wedge on the
 // ground is its coverage. Heading is degrees clockwise from TRUE north and
 // the local frame is +Y north / +X east, so the maths angle is (90 - heading).
@@ -1214,6 +1276,7 @@ function coverageWedge(cam, gz, lift) {
 }
 function camerasShown() { return !!camLayer; }
 function clearCameras3D() {
+  hideCameraPopup();
   unregisterLayerTargets(camLayer);
   disposeLayer(camLayer);
   camLayer = null;
@@ -1270,6 +1333,73 @@ function camGroundZ(cam) {
   if (gz === null) gz = modelBox ? modelBox.min.z : 0;
   return gz;
 }
+// ── Camera popup (small, anchored, non-blocking) ──────────────────────
+// Clicking a camera marker shows a compact card pinned to that marker rather
+// than a full-screen takeover, so orbiting, panning and zooming all continue
+// underneath it. Clicking the card's image expands to the full lightbox.
+//
+// Unlike the pin-name label this is NOT screen-static: its position is
+// recomputed every frame from the marker's world position, so it tracks the
+// marker as the view moves. That is what lets it stay open during normal
+// viewing instead of having to be dismissed on the first drag.
+// (camPopupIdx / camPopupWorld are declared up beside the render loop - see
+// the note there for why the position matters.)
+function camSpriteFor(cam) {
+  let found = null;
+  if (camLayer) {
+    camLayer.traverse(function (o) {
+      if (o.isSprite && o.userData && o.userData.camera === cam) found = o;
+    });
+  }
+  return found;
+}
+window.showCameraPopup = function (idx) {
+  const cam = camList[idx];
+  if (!cam) return;
+  const sp = camSpriteFor(cam);
+  if (!sp) { openCameraPhoto(idx); return; }   // not placed yet - fall back
+  camPopupIdx = idx;
+  camPopupWorld = sp.position.clone();
+  document.getElementById('cam-pop-img').src = cam.photo || '';
+  document.getElementById('cam-pop-name').textContent = camName(cam, idx);
+  const bits = [];
+  if (isFinite(Number(cam.heading))) {
+    bits.push('facing ' + Number(cam.heading).toFixed(0) + '°');
+  }
+  if (isFinite(Number(cam.fov))) {
+    bits.push(Number(cam.fov).toFixed(0) + '° FOV');
+  }
+  document.getElementById('cam-pop-meta').textContent = bits.join('  ·  ');
+  document.getElementById('cam-popup').style.display = 'block';
+  updateCameraPopup();
+  dbg('Camera popup: ' + camName(cam, idx), 'info');
+};
+window.hideCameraPopup = function () {
+  camPopupIdx = -1;
+  camPopupWorld = null;
+  const el = document.getElementById('cam-popup');
+  if (el) el.style.display = 'none';
+};
+window.expandCameraPopup = function () {
+  if (camPopupIdx < 0) return;
+  const i = camPopupIdx;
+  hideCameraPopup();
+  openCameraPhoto(i);
+};
+// Project the marker's world position into screen pixels. v.z > 1 means the
+// point is behind the camera, in which case the card is hidden rather than
+// smeared to the far edge of the screen.
+function updateCameraPopup() {
+  if (camPopupIdx < 0 || !camPopupWorld) return;
+  const el = document.getElementById('cam-popup');
+  if (!el) return;
+  const v = camPopupWorld.clone().project(camera);
+  if (v.z > 1) { el.style.visibility = 'hidden'; return; }
+  const r = renderer.domElement.getBoundingClientRect();
+  el.style.visibility = 'visible';
+  el.style.left = (r.left + (v.x * 0.5 + 0.5) * r.width) + 'px';
+  el.style.top  = (r.top + (-v.y * 0.5 + 0.5) * r.height - 16) + 'px';
+}
 window.openCameraPhoto = function (idx) {
   const cam = camList[idx];
   if (!cam) return;
@@ -1304,7 +1434,9 @@ window.flyToCamera = function (idx) {
   const tgt = new THREE.Vector3(p.x, p.y, gz);
   const az = isFinite(Number(cam.heading)) ? (Number(cam.heading) + 180) % 360 : 180;
   flyTo(computeCompassPos(tgt, az, 35, Math.max(45, modelSpan * 0.30)), tgt);
-  openCameraPhoto(idx);
+  // Small card rather than the lightbox: a full-screen overlay would hide the
+  // flight the user just asked for.
+  showCameraPopup(idx);
 };
 window.cameraPOV = function () {
   const idx = Number(document.getElementById('cam-lightbox').dataset.idx);
@@ -1324,8 +1456,12 @@ window.cameraPOV = function () {
   dbg('Camera POV: ' + camName(cam, idx) + ' bearing ' +
       Number(cam.heading).toFixed(1) + '°', 'info');
 };
+// Escape peels one layer at a time: the full-screen view first, then the card.
 document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') closeCameraPhoto();
+  if (e.key !== 'Escape') return;
+  const lb = document.getElementById('cam-lightbox');
+  if (lb && lb.classList.contains('open')) { closeCameraPhoto(); return; }
+  hideCameraPopup();
 });
 // ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
