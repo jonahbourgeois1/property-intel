@@ -5,13 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Element Review — Property Intel</title>
 <!--
-  element-review.html — Pass 1 element-pin QA surface (v2, 2026-07-15)
-
+  element-review.html — Pass 1 element-pin QA surface (v3, 2026-08-10)
   Reads a row's data from its own query string and renders the ELEMENT
   pins on the real nadir orthophoto with a numbered-marker + legend-strip
   layout, so an analyst can judge placement/labels at a glance before
   ticking "Elements Reviewed" in the sheet.
-
   Query params:
     nadir  = (required) CloudFront URL of the nadir image
     pins   = (required) URL-encoded JSON array of {id,x,y} element pins
@@ -19,17 +17,31 @@
     type   = (optional) 'residential' | 'commercial' — flags pins whose
              account_type doesn't include this type
     catalog= (optional) override catalog URL (defaults to the live catalog)
-
+    route  = (optional) URL-encoded JSON array of {seq,x,y} waypoints
+    rationale = (optional) free text shown under the route legend
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
   the legend meta line surfaces those and flags a pin that is NOT role=primary
   or that doesn't belong to the requested account type, so a misfiled element
   pin is visible during review. The resolver stays permissive — it displays
   whatever id it is given (even a wrong one) so the reviewer sees the mistake.
-
   Pins carry only catalog ids; names are resolved here from the catalog.
   x,y are percentages (0..100) on the nadir image, so no geographic bounds
   are needed for this overlay.
+  v3 (intake panel): the layout is now THREE columns —
+      Property Intake (left) | nadir stage (centre) | Elements/Route (right).
+  The left column embeds the SurveySparrow "Vyanet-Property-Intake" survey in
+  an iframe pointed at the survey's SHARE url, not at the widget bootstrap
+  (/widget/<token> 302s to widget.js — it is JavaScript, so it cannot be
+  iframed). The page's own ?addr / ?type / ?nadir values are forwarded to the
+  survey as query params so the analyst does not retype the property; those
+  names must match custom variables configured in SurveySparrow, and are
+  ignored harmlessly if they don't. An "open ↗" link and a footer note give a
+  new-tab escape hatch if SurveySparrow ever refuses to be framed. The
+  original widget-launcher snippet is preserved, cleaned, in a comment at the
+  bottom of this file as the alternative mount.
+  Also in v3: fail() now blanks only the stage/legend and keeps the intake
+  column alive, so this page is usable as a bare intake form with no params.
 -->
 <style>
   :root {
@@ -49,7 +61,6 @@
     --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, monospace;
     --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
-
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
@@ -60,7 +71,6 @@
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
   }
-
   header {
     display: flex; align-items: baseline; gap: 14px;
     padding: 14px 20px;
@@ -82,17 +92,71 @@
     font-family: var(--mono); font-size: 12px; color: var(--ink-dim);
   }
   header .count b { color: var(--marker); font-weight: 600; }
-
   main {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 320px;
+    grid-template-columns: 340px minmax(0, 1fr) 320px;
     gap: 0;
     height: calc(100% - 51px);
   }
-  @media (max-width: 760px) {
-    main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; height: auto; }
+  /* Narrow desktop / landscape tablet: shrink both rails, keep 3-up. */
+  @media (max-width: 1180px) {
+    main { grid-template-columns: 300px minmax(0, 1fr) 288px; }
   }
-
+  /* Phone / portrait tablet: stack. The image comes first (order:1) so the
+     review target is what you land on; the form drops to the bottom. The page
+     scrolls here, so overflow must be released on html/body. */
+  @media (max-width: 900px) {
+    html, body { height: auto; overflow: auto; }
+    main {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto;
+      height: auto;
+    }
+    .stage  { order: 1; }
+    .legend { order: 2; border-left: none; border-top: 1px solid var(--line); }
+    .intake { order: 3; border-right: none; border-top: 1px solid var(--line);
+              min-height: 640px; }
+  }
+  /* ── Property Intake panel (left rail) ───────────────────── */
+  .intake {
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    min-height: 0; min-width: 0;
+  }
+  .intake h2 {
+    margin: 0;
+    padding: 14px 18px 10px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .intake h2 .pop {
+    margin-left: auto;
+    letter-spacing: 0.06em; text-transform: none;
+    color: var(--hot); text-decoration: none;
+    border-bottom: 1px dotted var(--hot);
+  }
+  .intake h2 .pop:hover { color: var(--ink); border-bottom-color: var(--ink); }
+  .intake-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    background: #fff;              /* the survey renders light; avoid a flash */
+  }
+  .intake-frame {
+    display: block;
+    width: 100%; height: 100%;
+    border: 0;
+  }
+  .intake-note {
+    padding: 9px 18px;
+    border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--ink-faint);
+  }
+  .intake-note a { color: var(--hot); }
   /* ── Image stage ─────────────────────────────────────────── */
   .stage {
     position: relative;
@@ -122,7 +186,6 @@
     -webkit-user-drag: none;
     pointer-events: none;          /* let drag/wheel hit the frame, not the img */
   }
-
   /* Zoom control cluster (bottom-left of the stage). */
   .zoom-controls {
     position: absolute; left: 16px; bottom: 16px;
@@ -165,7 +228,6 @@
     font-family: var(--mono); font-size: 10px; color: var(--ink-faint);
     margin-top: 1px;
   }
-
   /* ── Responder Directions route overlay (additive; inert without ?route) ── */
   .route-svg {
     position: absolute; inset: 0;
@@ -198,10 +260,9 @@
   .route-section.on { display: flex; }
   .legend ol.route li .num { background: var(--route); color: #0f1419; }
   .rationale {
-    padding: 8px 14px 0; font-size: 12px; line-height: 1.5; color: var(--dim);
+    padding: 8px 14px 0; font-size: 12px; line-height: 1.5; color: var(--ink-dim);
   }
   .rationale b { color: var(--ink); font-weight: 600; }
-
   .marker {
     position: absolute;
     width: 26px; height: 26px;
@@ -228,7 +289,6 @@
     background: var(--warn);
     border-color: rgba(27,32,39,0.7);
   }
-
   /* ── Legend strip ────────────────────────────────────────── */
   .legend {
     background: var(--panel);
@@ -278,7 +338,6 @@
     margin-top: 1px;
   }
   .legend .meta .bad { color: var(--warn); }
-
   .empty, .error {
     padding: 40px 20px; text-align: center; color: var(--ink-dim);
   }
@@ -287,7 +346,6 @@
     display: block; margin-top: 10px;
     font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
   }
-
   .hint {
     padding: 10px 18px;
     border-top: 1px solid var(--line);
@@ -301,8 +359,23 @@
     <h1 id="title">Nadir Elements <span class="addr" id="addr"></span></h1>
     <span class="count" id="count"></span>
   </header>
-
   <main id="app">
+    <aside class="intake" id="intake">
+      <h2>Property Intake
+        <a class="pop" id="intakePop" href="#" target="_blank" rel="noopener"
+           title="Open the intake form in a new tab">open&nbsp;&#8599;</a>
+      </h2>
+      <div class="intake-body">
+        <iframe class="intake-frame" id="intakeFrame"
+                title="Vyanet Property Intake form"
+                referrerpolicy="no-referrer-when-downgrade"
+                allow="clipboard-write; geolocation"></iframe>
+      </div>
+      <div class="intake-note">
+        Prefilled from this row. Form blank?
+        <a id="intakeNoteLink" href="#" target="_blank" rel="noopener">open it in a new tab</a>.
+      </div>
+    </aside>
     <section class="stage">
       <div class="frame" id="frame">
         <img id="nadir" alt="Nadir orthophoto">
@@ -328,23 +401,32 @@
       <div class="hint">Hover a marker or row to link the two. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
     </aside>
   </main>
-
 <script>
 (function () {
   // v2: merged, tagged catalog.
   var DEFAULT_CATALOG = 'https://responder-intel.vyanet.com/data/pin-catalog/pins-catalog.json';
-
+  // v3: the SurveySparrow SHARE url for "Vyanet-Property-Intake". This is the
+  // frameable HTML surface. Do NOT point this at /widget/<token> — that path
+  // 302s to asset.surveysparrow.com/.../widget.js and serves JavaScript.
+  var INTAKE_BASE = 'https://ahartsolutions.surveysparrow.com/s/Vyanet-Property-Intake/tt-WN-rXqQWpoz';
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
   }
-
+  // fail() blanks the review side of the page but deliberately LEAVES the
+  // intake column mounted, so element-review.html with no query string is
+  // still a working intake form rather than a dead error screen.
   function fail(msg, detail) {
-    document.getElementById('app').innerHTML =
-      '<div class="error" style="grid-column:1/-1">' + msg +
-      (detail ? '<code>' + detail + '</code>' : '') + '</div>';
+    var main = document.getElementById('app');
+    var stage = document.querySelector('.stage');
+    var legend = document.querySelector('.legend');
+    if (legend && legend.parentNode) legend.parentNode.removeChild(legend);
+    if (stage) {
+      stage.innerHTML = '<div class="error">' + msg +
+        (detail ? '<code>' + detail + '</code>' : '') + '</div>';
+    }
+    if (main) main.style.gridTemplateColumns = '340px minmax(0, 1fr)';
   }
-
   var nadirUrl = qp('nadir');
   var pinsRaw  = qp('pins');
   var addr     = qp('addr');
@@ -356,15 +438,35 @@
   // catalog-resolved element pins.
   var routeRaw  = qp('route');
   var rationale = qp('rationale');
-
+  // ── Property Intake iframe ─────────────────────────────────────────────
+  // Mounted BEFORE the param guards below so the form survives a fail().
+  // The page's own addr/type/nadir are forwarded as query params; SurveySparrow
+  // maps a query param onto a custom variable of the same name and ignores the
+  // rest, so an unrecognised name is harmless — it just doesn't prefill.
+  (function initIntake() {
+    var frame = document.getElementById('intakeFrame');
+    var pop   = document.getElementById('intakePop');
+    var note  = document.getElementById('intakeNoteLink');
+    if (!frame) return;
+    var q = [];
+    function add(k, v) {
+      if (v) q.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+    }
+    add('address', addr);
+    add('account_type', acctType);
+    add('nadir_url', nadirUrl);
+    add('source', 'element-review');
+    var url = INTAKE_BASE + (q.length ? '?' + q.join('&') : '');
+    frame.src = url;
+    if (pop) pop.href = url;
+    if (note) note.href = url;
+  })();
   if (addr) document.getElementById('addr').textContent = '· ' + addr;
-
   if (!nadirUrl) { fail('No nadir image URL provided.', 'Expected ?nadir=<url>'); return; }
   if (!pinsRaw && !routeRaw) {
     fail('No pins or route provided.', 'Expected ?pins=<json array> and/or ?route=<json array>');
     return;
   }
-
   var pins = [];
   if (pinsRaw) {
     try {
@@ -375,7 +477,6 @@
       return;
     }
   }
-
   var route = [];
   if (routeRaw) {
     try {
@@ -392,9 +493,7 @@
       return;
     }
   }
-
   document.getElementById('nadir').src = nadirUrl;
-
   // Resolve catalog id -> {name, section, role, account_type, ...}. The pin is
   // "flagged" if it isn't a primary/element pin, or (when ?type given) doesn't
   // belong to that account type — surfacing a misfiled pin during review.
@@ -418,7 +517,6 @@
       };
     });
   }
-
   function render(resolved) {
     var frame = document.getElementById('frame');
     var list = document.getElementById('list');
@@ -426,12 +524,10 @@
     document.getElementById('count').innerHTML =
       '<b>' + resolved.length + '</b> element' + (resolved.length === 1 ? '' : 's') +
       (flagged ? ' · <span style="color:var(--warn)">' + flagged + ' flagged</span>' : '');
-
     if (!resolved.length) {
       list.innerHTML = '<div class="empty">No element pins on this row yet.</div>';
       return;
     }
-
     // Markers on the image (percentage placement — no bounds needed).
     resolved.forEach(function (p, i) {
       var m = document.createElement('div');
@@ -443,7 +539,6 @@
       m.title = p.name;
       frame.appendChild(m);
     });
-
     // Legend rows.
     resolved.forEach(function (p, i) {
       var flags = [];
@@ -463,7 +558,6 @@
         flagHtml + '</div></span>';
       list.appendChild(li);
     });
-
     // Two-way hover/active linking between marker and legend row.
     var markers = frame.querySelectorAll('.marker');
     var rows = list.querySelectorAll('li');
@@ -483,7 +577,6 @@
       r.addEventListener('mouseleave', function () { setActive(idx, false); });
     });
   }
-
   // Draws the ordered route: a haloed polyline under numbered waypoint markers,
   // plus a legend listing each leg. Percentages map straight onto the frame
   // because the SVG uses viewBox 0 0 100 100 with preserveAspectRatio="none";
@@ -494,14 +587,12 @@
     var frame = document.getElementById('frame');
     var svg   = document.getElementById('routeSvg');
     var pts   = route.map(function (w) { return w.x + ',' + w.y; }).join(' ');
-
     ['leg-halo', 'leg'].forEach(function (cls) {
       var pl = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
       pl.setAttribute('points', pts);
       pl.setAttribute('class', cls);
       svg.appendChild(pl);
     });
-
     route.forEach(function (w, i) {
       var m = document.createElement('div');
       m.className = 'marker wp' + (i === 0 ? ' first' : '') +
@@ -513,7 +604,6 @@
       m.title = 'Waypoint ' + w.seq + ' — ' + w.x + ', ' + w.y;
       frame.appendChild(m);
     });
-
     document.getElementById('routeSection').classList.add('on');
     var rl = document.getElementById('routeList');
     route.forEach(function (w, i) {
@@ -525,7 +615,6 @@
         '<div class="meta">' + w.x + ', ' + w.y + '</div></span>';
       rl.appendChild(li);
     });
-
     var wpMarkers = frame.querySelectorAll('.marker.wp');
     var wpRows    = rl.querySelectorAll('li');
     function setWp(idx, on) {
@@ -542,7 +631,6 @@
       r.addEventListener('mouseenter', function () { setWp(idx, true); });
       r.addEventListener('mouseleave', function () { setWp(idx, false); });
     });
-
     if (rationale) {
       document.getElementById('rationale').innerHTML =
         '<b>Rationale:</b> ' + escapeHtml(rationale);
@@ -550,13 +638,11 @@
     var kicker = document.querySelector('.kicker');
     if (kicker) kicker.textContent = 'Responder Directions · Route Review';
   }
-
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-
   fetch(catalogUrl)
     .then(function (r) {
       if (!r.ok) throw new Error('catalog HTTP ' + r.status);
@@ -586,9 +672,7 @@
     var val   = document.getElementById('coordVal');
     if (!frame || !box || !val) return;
     var last = null;
-
     function fmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
-
     frame.addEventListener('mousemove', function (e) {
       var r = frame.getBoundingClientRect();
       if (!r.width || !r.height) return;
@@ -600,7 +684,6 @@
       box.classList.add('on');
     });
     frame.addEventListener('mouseleave', function () { box.classList.remove('on'); });
-
     // Click the chip (not the image) to copy — keeps drag-to-pan unaffected.
     box.addEventListener('click', function () {
       if (!last) return;
@@ -622,7 +705,6 @@
       }
     });
   })();
-
   // ── Zoom / pan ─────────────────────────────────────────────────────────
   // Applies a translate+scale transform to #frame. Markers live inside the
   // frame at % coordinates, so they pan and scale with the image for free.
@@ -632,10 +714,8 @@
     var frame = document.getElementById('frame');
     var stage = frame ? frame.parentElement : null;
     if (!frame || !stage) return;
-
     var MIN = 1, MAX = 8;
     var scale = 1, tx = 0, ty = 0;
-
     function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
     function applyTransform() {
       frame.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
@@ -657,7 +737,6 @@
       tx = clamp(tx, minX, maxX);
       ty = clamp(ty, minY, maxY);
     }
-
     // Zoom about a stage-local point (px,py). With origin 0 0, the content
     // point under (px,py) is (px - tx)/scale; keep it under the cursor.
     function zoomAt(px, py, nextScale) {
@@ -674,7 +753,6 @@
       zoomAt(stage.clientWidth / 2, stage.clientHeight / 2, scale * factor);
     }
     function reset() { scale = 1; tx = 0; ty = 0; applyTransform(); }
-
     // Wheel: zoom toward cursor. Bound to the FRAME (the image) so it only
     // fires over the picture, and both prevented + stopped so it never turns
     // into page scroll.
@@ -688,7 +766,6 @@
     }
     frame.addEventListener('wheel', onWheel, { passive: false });
     stage.addEventListener('wheel', onWheel, { passive: false });
-
     // Buttons.
     var bi = document.getElementById('zoom-in'),
         bo = document.getElementById('zoom-out'),
@@ -696,7 +773,6 @@
     if (bi) bi.addEventListener('click', function () { zoomCenter(1.4); });
     if (bo) bo.addEventListener('click', function () { zoomCenter(1 / 1.4); });
     if (br) br.addEventListener('click', reset);
-
     // Drag to pan (only meaningful when zoomed in). Ignore drags that start
     // on a marker so pin clicks still register.
     var dragging = false, sx = 0, sy = 0, stx = 0, sty = 0, moved = false;
@@ -720,11 +796,48 @@
       dragging = false;
       frame.classList.remove('panning');
     });
-
     applyTransform();
   })();
-
 })();
 </script>
+<!--
+  ALTERNATIVE MOUNT — SurveySparrow widget launcher (kept for reference).
+  This is the snippet SurveySparrow hands you, with the markdown auto-linking
+  cleaned out of it (the pasted version had [host](http://host) wrappers around
+  SS_ACCOUNT, n.id and the widget src, plus a /comment/ instead of a real block
+  comment — all of which are syntax errors). Use it INSTEAD of the iframe above
+  only if the widget's display type in SurveySparrow is set to Embed/Inline;
+  popup and button types will float over the page rather than fill the panel.
+
+  <div id="ss_survey_widget"></div>
+  <script id="SS_SCRIPT">
+  function sparrowLaunch(opts) {
+    var e = "ss-widget", t = "script", a = document, r = window, l = localStorage;
+    var s, n, c, rm = a.getElementById('SS_SCRIPT');
+    r.SS_WIDGET_TOKEN = "tt-WN-rXqQWpoz";
+    r.SS_ACCOUNT = "ahartsolutions.surveysparrow.com";
+    r.SS_SURVEY_NAME = "Vyanet-Property-Intake";
+    if (!a.getElementById(e) && !l.getItem('removed-ss-widget-tt-WN-rXqQWpoz')) {
+      var S = function () { S.update(arguments) };
+      S.args = [];
+      S.update = function (e) { S.args.push(e) };
+      r.SparrowLauncher = S;
+      s = a.getElementsByTagName(t);
+      c = s[s.length - 1];
+      n = a.createElement(t);
+      n.type = "text/javascript";
+      n.async = true;
+      n.id = e;
+      n.src = ["https://", "ahartsolutions.surveysparrow.com/widget/",
+               r.SS_WIDGET_TOKEN, "?", "customParams=",
+               JSON.stringify(opts)].join("");
+      c.parentNode.insertBefore(n, c);
+      r.SS_VARIABLES = opts;
+      rm.parentNode.removeChild(rm);
+    }
+  }
+  </script>
+  <script>sparrowLaunch({ /* custom params here */ });</script>
+-->
 </body>
 </html>
