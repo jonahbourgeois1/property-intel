@@ -155,6 +155,48 @@
     font-family: monospace; font-size: 11px; white-space: nowrap;
     transform: translate(-50%, -100%); box-shadow: 0 3px 14px rgba(0,0,0,0.5);
   }
+  /* ── Security cameras ──────────────────────────────────────────────────── */
+  .rd-num.cam { background: #38bdf8; }
+  .rd-wp.cam  { background: #38bdf8; color: #0b0e12; }
+  .cam-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 6px; margin-top: 10px;
+  }
+  .cam-thumb {
+    position: relative; border-radius: 6px; overflow: hidden; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.12); background: #0b0e12;
+    aspect-ratio: 3 / 4; line-height: 0;
+  }
+  .cam-thumb:hover { border-color: #38bdf8; }
+  .cam-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam-thumb-n {
+    position: absolute; left: 4px; top: 4px; min-width: 15px; height: 15px;
+    padding: 0 3px; border-radius: 4px; background: #38bdf8; color: #0b0e12;
+    font-family: monospace; font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  #cam-lightbox {
+    display: none; position: fixed; inset: 0; z-index: 90;
+    background: rgba(6,8,11,0.92); padding: 24px;
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  }
+  #cam-lightbox.open { display: flex; }
+  #cam-lb-img {
+    max-width: min(92vw, 900px); max-height: 74vh; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14); display: block;
+  }
+  #cam-lb-title {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px; font-weight: 600; color: #f0f2f5; text-align: center;
+  }
+  #cam-lb-meta { font-family: monospace; font-size: 11px; color: #8a93a2; }
+  #cam-lb-actions { display: flex; gap: 8px; }
+  .cam-lb-btn {
+    background: #12161b; color: #f0f2f5; border: 1px solid rgba(255,255,255,0.16);
+    font-family: monospace; font-size: 11px; padding: 7px 14px;
+    border-radius: 6px; cursor: pointer;
+  }
+  .cam-lb-btn:hover { border-color: #38bdf8; color: #38bdf8; }
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   /* Hidden by default — append &debug=1 to the URL to show it. */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: none; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
@@ -186,6 +228,15 @@
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
 <div id="pin-label"></div>
+<div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
+  <img id="cam-lb-img" alt="Camera view">
+  <div id="cam-lb-title"></div>
+  <div id="cam-lb-meta"></div>
+  <div id="cam-lb-actions">
+    <button class="cam-lb-btn" id="cam-lb-pov" onclick="cameraPOV()">See what this camera sees</button>
+    <button class="cam-lb-btn" onclick="closeCameraPhoto()">Close</button>
+  </div>
+</div>
 <div id="preset-bar">
   <button class="pv-btn" id="pv-alpha"    onclick="goToView('alpha')">Alpha</button>
   <button class="pv-btn" id="pv-bravo"    onclick="goToView('bravo')">Bravo</button>
@@ -653,6 +704,7 @@ const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 let dirList = [], dirNadir = '', dirCorners = null;
 let dirLayer = null, activeDir = -1, dirBusy = false;
 let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
+let camList = [], camLayer = null, camBounds = null;
 let pinCatalogById = null;
 let groundJobSeq = 0;
 // ── Click a marker, read its name ─────────────────────────────────────
@@ -688,6 +740,11 @@ function unregisterLayerTargets(layer) {
     rc.setFromCamera(m, camera);
     const hits = rc.intersectObjects(labelTargets, false);
     if (!hits.length) return;
+    const hitObj = hits[0].object;
+    if (hitObj.userData && hitObj.userData.camera) {
+      const ci = camList.indexOf(hitObj.userData.camera);
+      if (ci >= 0) { openCameraPhoto(ci); return; }
+    }
     el.textContent = hits[0].object.name;
     el.style.left = e.clientX + 'px';
     el.style.top  = (e.clientY - 14) + 'px';
@@ -724,6 +781,78 @@ function toLocal(p) {
     return { x: Number(p.mx), y: Number(p.my) };
   }
   return dirCorners ? localFromPct(p.x, p.y, dirCorners) : null;
+}// ── Cameras: lat/lng -> nadir percentage -> local metres ──────────────
+// Camera photos carry real coordinates in their EXIF, so unlike element pins
+// nothing has to guess where they are. The published record already holds both
+// halves of the bridge: nadir.bounds is the crop's lat/lng box, nadir.local is
+// that same box's corners in the GLB's local metres. Normalising a coordinate
+// inside the bounds produces exactly the percentage localFromPct() already
+// consumes, so a camera reuses the pin placement path end to end — no capture
+// transform, no registry lookup, no precomputed metres in the record.
+// Checked on this property: bounds and local describe the same rectangle to
+// 0.05 m north-south and 0.55 m east-west across ~300 m.
+function boundsOf(d) {
+  const b = d && d.nadir && d.nadir.bounds;
+  if (!b) return null;
+  const ok = ['north', 'south', 'east', 'west'].every(function (k) {
+    return isFinite(Number(b[k]));
+  });
+  return ok ? b : null;
+}
+function pctFromLatLng(lat, lng, b) {
+  return {
+    x: (Number(lng) - Number(b.west)) / (Number(b.east) - Number(b.west)) * 100,
+    y: (Number(b.north) - Number(lat)) / (Number(b.north) - Number(b.south)) * 100
+  };
+}
+function camLocal(cam) {
+  if (!cam) return null;
+  if (isFinite(Number(cam.mx)) && isFinite(Number(cam.my))) {
+    return { x: Number(cam.mx), y: Number(cam.my) };
+  }
+  if (!camBounds || !dirCorners) return null;
+  if (!isFinite(Number(cam.lat)) || !isFinite(Number(cam.lng))) return null;
+  const p = pctFromLatLng(cam.lat, cam.lng, camBounds);
+  return localFromPct(p.x, p.y, dirCorners);
+}
+function camPct(cam) {
+  if (!camBounds || !isFinite(Number(cam.lat)) || !isFinite(Number(cam.lng))) return null;
+  return pctFromLatLng(cam.lat, cam.lng, camBounds);
+}
+function camName(cam, i) {
+  return cam.label || cam.id || ('Camera ' + (i + 1));
+}
+function buildCameraCardHtml() {
+  if (!camList.length) return '';
+  let html = '<div class="rd-card" id="cam-card">' +
+      '<div class="rd-head"><div class="rd-num cam">C</div>' +
+        '<div class="rd-titles"><div class="rd-name">Security Cameras</div>' +
+        '<div class="rd-meta">' + camList.length + ' camera' +
+          (camList.length === 1 ? '' : 's') + ' &middot; click a photo to view</div>' +
+      '</div></div><div class="rd-body">';
+  if (dirNadir) {
+    html += '<div class="rd-figure"><img src="' + escHtml(dirNadir) + '" alt="Camera positions" ' +
+            'loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
+            camList.map(function (cam, i) {
+              const p = camPct(cam);
+              if (!p) return '';
+              return '<div class="rd-wp cam" style="left:' + p.x.toFixed(2) +
+                     '%;top:' + p.y.toFixed(2) + '%">' + (i + 1) + '</div>';
+            }).join('') + '</div>';
+  }
+  html += '<div class="cam-grid">' +
+      camList.map(function (cam, i) {
+        return '<div class="cam-thumb" onclick="flyToCamera(' + i + ')" ' +
+               'title="' + escHtml(camName(cam, i)) + '">' +
+               '<img src="' + escHtml(cam.photo || '') + '" alt="' + escHtml(camName(cam, i)) +
+               '" loading="lazy" onerror="this.style.display=\'none\'">' +
+               '<span class="cam-thumb-n">' + (i + 1) + '</span></div>';
+      }).join('') + '</div>';
+  html += '<button class="rd-btn" id="cam-btn" onclick="toggleCameras3D()">' +
+            'Show cameras in 3D</button>' +
+          '<div class="rd-progress" id="cam-prog"></div>' +
+          '</div></div>';
+  return html;
 }
 function orderedRoute(d) {
   return (d && Array.isArray(d.route) ? d.route : [])
@@ -791,8 +920,12 @@ function initDirections(d) {
   dirNadir   = (d.nadir && d.nadir.url) || '';
   dirList    = (d.directions || []).filter(function (x) { return orderedRoute(x).length >= 2; });
   pinSets    = nadirPinSets(d);
+  camBounds  = boundsOf(d);
+  camList    = (Array.isArray(d.cameras) ? d.cameras : [])
+                 .filter(function (c) { return !!camLocal(c); });
   const nPins = pinSets.element.length + pinSets.concern.length;
-  if (!dirList.length && !nPins) { dbg('Record has no pins and no directions', 'warn'); return; }
+  if (!dirList.length && !nPins && !camList.length) { dbg('Record has no pins, cameras or directions', 'warn'); return; }
+  if (camList.length) dbg('Cameras in record: ' + camList.length + ' placeable', 'ok');
   dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
       pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)', 'ok');
   dbg(dirCorners ? 'nadir.local present — percentages map to model metres'
@@ -853,6 +986,7 @@ function initDirections(d) {
               're-run Generate Property Images, then sync again.</div>') +
             '</div></div>';
   }
+  html += buildCameraCardHtml();
   // Oblique views — the four rendered sides plus the overhead, with the
   // analyst descriptions the sync published. Click an image to open it
   // full-size in a new tab.
@@ -937,6 +1071,7 @@ function initDirections(d) {
   // whenever the record can be placed at all. The panel button stays a toggle
   // for hiding them.
   if (dirCorners && nPins && modelRoot) togglePins3D();
+  if (camList.length && modelRoot) setTimeout(toggleCameras3D, 0);
 }
 window.toggleDirPanel = function () {
   const open = document.getElementById('dir-panel').classList.toggle('open');
@@ -1021,6 +1156,163 @@ window.togglePins3D = function () {
         pinSets.concern.length + ' concern', 'ok');
   });
 };
+ // ── Security cameras in 3D ──────────────────────────────
+// A camera marker is permanent scenery like the pins; the wedge on the
+// ground is its coverage. Heading is degrees clockwise from TRUE north and
+// the local frame is +Y north / +X east, so the maths angle is (90 - heading).
+// CircleGeometry builds a sector in the XY plane measured counter-clockwise
+// from +X — exactly this frame, with no rotation needed.
+function cameraSprite(text, worldSize) {
+  const S = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d');
+  g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
+  g.fillStyle = '#38bdf8'; g.fill();
+  g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
+  g.fillStyle = '#0b0e12';
+  g.fillRect(S * 0.28, S * 0.30, S * 0.30, S * 0.22);
+  g.beginPath();
+  g.moveTo(S * 0.60, S * 0.37); g.lineTo(S * 0.74, S * 0.29);
+  g.lineTo(S * 0.74, S * 0.55); g.lineTo(S * 0.60, S * 0.47);
+  g.closePath(); g.fill();
+  g.font = 'bold 40px monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, S / 2, S * 0.74);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+  sp.scale.set(worldSize, worldSize, 1);
+  sp.renderOrder = 4;
+  return sp;
+}
+function coverageWedge(cam, gz, lift) {
+  const h = Number(cam.heading);
+  if (!isFinite(h)) return null;
+  const fov = isFinite(Number(cam.fov)) ? Number(cam.fov) : 90;
+  const rng = isFinite(Number(cam.range)) ? Number(cam.range) : 25;
+  const start = THREE.MathUtils.degToRad(90 - h - fov / 2);
+  const geo = new THREE.CircleGeometry(rng, 48, start,
+                                       THREE.MathUtils.degToRad(fov));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    color: 0x38bdf8, transparent: true, opacity: 0.15,
+    depthTest: false, depthWrite: false, side: THREE.DoubleSide }));
+  mesh.renderOrder = 1;
+  return mesh;
+}
+function camerasShown() { return !!camLayer; }
+function clearCameras3D() {
+  unregisterLayerTargets(camLayer);
+  disposeLayer(camLayer);
+  camLayer = null;
+  const b = document.getElementById('cam-btn');
+  const c = document.getElementById('cam-card');
+  if (b) { b.classList.remove('on'); b.textContent = 'Show cameras in 3D'; }
+  if (c) c.classList.remove('on');
+  const p = document.getElementById('cam-prog');
+  if (p) p.textContent = '';
+}
+window.toggleCameras3D = function () {
+  if (dirBusy) { dbg('Busy placing another layer — try again in a moment', 'warn'); return; }
+  if (camerasShown()) { clearCameras3D(); dbg('Cameras hidden', 'info'); return; }
+  if (!modelRoot || !camList.length) return;
+  const pts = camList.map(camLocal);
+  if (!pts.length) { dbg('No camera has usable coordinates', 'warn'); return; }
+  const prog = document.getElementById('cam-prog');
+  raycastGround(pts, prog, function (zs) {
+    fillGaps(zs);
+    const lift = liftBy(), mark = markerSize();
+    camLayer = new THREE.Group();
+    camList.forEach(function (cam, i) {
+      const wedge = coverageWedge(cam, zs[i], lift);
+      if (wedge) {
+        wedge.position.set(pts[i].x, pts[i].y, zs[i] + lift * 0.6);
+        camLayer.add(wedge);
+      }
+      const sp = cameraSprite(String(i + 1), mark);
+      sp.position.set(pts[i].x, pts[i].y, zs[i] + lift + mark * 0.5);
+      sp.name = camName(cam, i);
+      sp.userData.camera = cam;
+      sp.userData.groundZ = zs[i];
+      registerLabelTarget(sp);
+      camLayer.add(sp);
+    });
+    scene.add(camLayer);
+    window.__camLayer = camLayer;
+    const b = document.getElementById('cam-btn');
+    const c = document.getElementById('cam-card');
+    if (b) { b.classList.add('on'); b.textContent = 'Hide cameras from 3D'; }
+    if (c) c.classList.add('on');
+    dbg('Cameras placed: ' + camList.length, 'ok');
+  });
+};
+function camGroundZ(cam) {
+  let gz = null;
+  if (camLayer) {
+    camLayer.traverse(function (o) {
+      if (o.userData && o.userData.camera === cam && isFinite(o.userData.groundZ)) {
+        gz = o.userData.groundZ;
+      }
+    });
+  }
+  if (gz === null) gz = modelBox ? modelBox.min.z : 0;
+  return gz;
+}
+window.openCameraPhoto = function (idx) {
+  const cam = camList[idx];
+  if (!cam) return;
+  const box = document.getElementById('cam-lightbox');
+  document.getElementById('cam-lb-img').src = cam.photo || '';
+  document.getElementById('cam-lb-title').textContent = camName(cam, idx);
+  const bits = [];
+  if (isFinite(Number(cam.heading))) {
+    bits.push('facing ' + Number(cam.heading).toFixed(0) + '°');
+  }
+  if (isFinite(Number(cam.fov))) {
+    bits.push(Number(cam.fov).toFixed(0) + '° field of view');
+  }
+  if (cam.taken) {
+    bits.push(String(cam.taken).replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
+  }
+  document.getElementById('cam-lb-meta').textContent = bits.join('  ·  ');
+  document.getElementById('cam-lb-pov').style.display =
+    isFinite(Number(cam.heading)) ? 'block' : 'none';
+  box.dataset.idx = String(idx);
+  box.classList.add('open');
+  dbg('Camera photo: ' + camName(cam, idx), 'info');
+};
+window.closeCameraPhoto = function () {
+  document.getElementById('cam-lightbox').classList.remove('open');
+};
+window.flyToCamera = function (idx) {
+  const cam = camList[idx];
+  const p = cam && camLocal(cam);
+  if (!p) return;
+  const gz = camGroundZ(cam);
+  const tgt = new THREE.Vector3(p.x, p.y, gz);
+  const az = isFinite(Number(cam.heading)) ? (Number(cam.heading) + 180) % 360 : 180;
+  flyTo(computeCompassPos(tgt, az, 35, Math.max(45, modelSpan * 0.30)), tgt);
+  openCameraPhoto(idx);
+};
+window.cameraPOV = function () {
+  const idx = Number(document.getElementById('cam-lightbox').dataset.idx);
+  const cam = camList[idx];
+  if (!cam || !isFinite(Number(cam.heading))) return;
+  const p = camLocal(cam);
+  if (!p) return;
+  const gz  = camGroundZ(cam);
+  const mh  = isFinite(Number(cam.mount_height)) ? Number(cam.mount_height) : 3;
+  const rng = isFinite(Number(cam.range)) ? Number(cam.range) : 25;
+  const rad = THREE.MathUtils.degToRad(Number(cam.heading));
+  const dir = new THREE.Vector3(Math.sin(rad), Math.cos(rad), 0);
+  const eye = new THREE.Vector3(p.x, p.y, gz + mh).addScaledVector(dir, -5);
+  const tgt = new THREE.Vector3(p.x, p.y, gz).addScaledVector(dir, Math.max(20, rng));
+  flyTo(eye, tgt);
+  closeCameraPhoto();
+  dbg('Camera POV: ' + camName(cam, idx) + ' bearing ' +
+      Number(cam.heading).toFixed(1) + '°', 'info');
+};
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') closeCameraPhoto();
+});
 // ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
   const c = document.getElementById('rd-card-' + i);
