@@ -1071,7 +1071,21 @@ function initDirections(d) {
   // whenever the record can be placed at all. The panel button stays a toggle
   // for hiding them.
   if (dirCorners && nPins && modelRoot) togglePins3D();
-  if (camList.length && modelRoot) setTimeout(toggleCameras3D, 0);
+  if (camList.length && modelRoot) {
+    // Wait for the pin job to actually FINISH, not just for the next tick.
+    // raycastGround holds dirBusy across many animation frames (4 rays per
+    // frame), so a setTimeout(...,0) lands in the middle of it and the camera
+    // layer gets refused by the busy guard. Poll until the queue is idle.
+    (function placeCamerasWhenIdle(tries) {
+      tries = tries || 0;
+      if (dirBusy && tries < 200) {
+        setTimeout(function () { placeCamerasWhenIdle(tries + 1); }, 100);
+        return;
+      }
+      if (dirBusy) { dbg('Gave up waiting to place cameras - layer still busy', 'warn'); return; }
+      toggleCameras3D();
+    })();
+  }
 }
 window.toggleDirPanel = function () {
   const open = document.getElementById('dir-panel').classList.toggle('open');
