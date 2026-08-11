@@ -103,6 +103,23 @@
      count plus additions would exceed it, because validateElementPins_ caps
      the re-pin and would drop the overflow without saying which.
 
+  3. NUMBERED ADDITIONS, LEGEND ROWS, AND A RED REMOVAL CUE.
+     An added pin takes the NEXT pin number (confirmed count + its position),
+     not a "+", so a reviewer can say "pin 7" about something they just placed
+     and every surface agrees. renumberAdded() runs after every add AND every
+     remove — deleting pin 7 of 8 has to renumber the survivor or the badges
+     would disagree with the legend.
+     Added pins also get a row in the Elements legend, so the right panel shows
+     the round's FULL proposal rather than only what Pass 1 produced. Those rows
+     hover-link three ways like the confirmed ones.
+     Setting a pin's verdict to Remove turns the MARKER red (plus the card and
+     the legend row, struck through) via markRemoving(), so a deletion is
+     visible on the image and not only in the rail. .marker.removing and
+     .legend li.removing are declared LAST so red beats amber-flagged,
+     teal-moved, green-added and hover.
+     The header count reports additions too ("6 elements · +2 added") — it was
+     still reporting the Pass 1 figure after a reviewer proposed more pins.
+
   fail() still blanks only the stage/legend and keeps the left column alive,
   so this page degrades to a readable message rather than a dead screen.
 -->
@@ -333,6 +350,9 @@
   .el-card.moved .el-num { background: var(--hot); }
   .el-card.added { border-left-color: var(--good); }
   .el-card.added .el-num { background: var(--good); }
+  .el-card.removing { border-left-color: var(--bad); }
+  .el-card.removing .el-num { background: var(--bad); }
+  .el-card.removing .el-name { text-decoration: line-through; opacity: 0.75; }
   .el-head .grow { flex: 1 1 auto; min-width: 0; }
 
   /* ── Add an element (catalog search + place mode) ─────────── */
@@ -573,6 +593,12 @@
   .marker.drag.dragging { cursor: grabbing; transform: scale(1.3); z-index: 4; }
   .marker.moved { background: var(--hot); box-shadow: 0 0 0 3px rgba(79,209,197,0.3), 0 2px 10px rgba(0,0,0,0.6); }
   .marker.added { background: var(--good); }
+  /* Verdict = remove. Declared LAST so it beats .flag / .moved / .added / hover
+     — a pin the reviewer is deleting should read as red from any other state. */
+  .marker.removing {
+    background: var(--bad);
+    border-color: rgba(27,32,39,0.75);
+  }
   /* The original position of a moved pin. Hollow so it reads as "was here",
      not as another pin. */
   .ghost-marker {
@@ -646,6 +672,17 @@
   .legend li.moved .name::after {
     content: ' \2192 moved';
     font-family: var(--mono); font-size: 10px; color: var(--hot);
+  }
+  /* Added pins get a legend row too, so the right panel is the full picture of
+     what this round proposes — not just what Pass 1 produced. */
+  .legend li.added .num { background: var(--good); }
+  /* Removal cue, last again for the same precedence reason as .marker.removing. */
+  .legend li.removing .num { background: var(--bad); }
+  .legend li.removing .name { text-decoration: line-through; opacity: 0.7; }
+  .legend li.removing .name::after {
+    content: ' \2192 remove';
+    font-family: var(--mono); font-size: 10px; color: var(--bad);
+    text-decoration: none; display: inline-block;
   }
   .legend .name { font-size: 14px; color: var(--ink); }
   .legend .meta {
@@ -934,9 +971,11 @@
     var list = document.getElementById('list');
     var flagged = resolved.filter(function (p) { return p.flag; }).length;
 
-    document.getElementById('count').innerHTML =
-      '<b>' + resolved.length + '</b> element' + (resolved.length === 1 ? '' : 's') +
-      (flagged ? ' · <span style="color:var(--warn)">' + flagged + ' flagged</span>' : '');
+    // elements is assigned by buildForm below, but updateHeaderCount reads it —
+    // so set both inputs before the first call.
+    flaggedCount = flagged;
+    elements = resolved;
+    updateHeaderCount();
 
     if (!resolved.length) {
       list.innerHTML = '<div class="empty">No element pins on this row yet.</div>';
@@ -1062,6 +1101,9 @@
           var next = (state[i].verdict === v) ? '' : v;
           state[i].verdict = next;
           btns.forEach(function (o) { o.classList.toggle('on', o.dataset.v === next); });
+          // v5.1: a pin marked for removal goes RED on all three surfaces, so
+          // the deletion is visible on the image and not only in the rail.
+          markRemoving(i, next === 'remove');
         });
       });
 
@@ -1144,6 +1186,41 @@
     marker.addEventListener('pointercancel', finish);
   }
 
+  // Scoped to #list on purpose: '.legend li' would also match the Route legend's
+  // rows, and once a route is drawn those indices would collide with the pins.
+  function legendRow(idx) {
+    return document.querySelectorAll('#list li')[idx] || null;
+  }
+
+  // v5.1: one call paints "this pin is being removed" on all three surfaces —
+  // marker, critique card, legend row — so the state can't be true in one place
+  // and false in another.
+  function markRemoving(idx, on) {
+    if (elMarkers[idx]) elMarkers[idx].classList.toggle('removing', on);
+    if (elCards[idx]) elCards[idx].classList.toggle('removing', on);
+    var row = legendRow(idx);
+    if (row) row.classList.toggle('removing', on);
+  }
+
+  // v5.1: added pins continue the page's numbering (confirmed count + position),
+  // so a reviewer can say "pin 7" about something they just placed. Called after
+  // every add AND every remove — removing pin 7 of 8 must renumber the survivor,
+  // or the badges would disagree with the legend.
+  function renumberAdded() {
+    added.forEach(function (rec, i) {
+      var n = elements.length + i + 1;
+      rec.seq = n;
+      if (rec.marker) {
+        rec.marker.textContent = n;
+        rec.marker.title = rec.name + ' (added, pin ' + n + ')';
+      }
+      var badge = rec.card && rec.card.querySelector('.el-num');
+      if (badge) badge.textContent = n;
+      var rnum = rec.row && rec.row.querySelector('.num');
+      if (rnum) rnum.textContent = n;
+    });
+  }
+
   // Write a corrected position for element idx: move the marker, drop a ghost
   // at the original spot with a connector, mark every surface that shows this
   // pin, and record it in state.
@@ -1155,7 +1232,7 @@
     m.style.top = y + '%';
     m.classList.add('moved');
     if (card) card.classList.add('moved');
-    var row = document.querySelectorAll('.legend li')[idx];
+    var row = legendRow(idx);
     if (row) row.classList.add('moved');
     ensureGhost(idx, p.x, p.y, x, y);
     syncCoordField(idx);
@@ -1171,7 +1248,7 @@
     m.style.top = p.y + '%';
     m.classList.remove('moved');
     if (card) card.classList.remove('moved');
-    var row = document.querySelectorAll('.legend li')[idx];
+    var row = legendRow(idx);
     // Safe to clear unconditionally now: .moved is only ever set by movePin, so
     // a catalog-flagged pin keeps its amber .flag cue through an undo.
     if (row) row.classList.remove('moved');
@@ -1242,6 +1319,19 @@
   }
 
   function totalPins() { return elements.length + added.length; }
+
+  // The header is the page's one-line summary, so it has to account for
+  // additions — otherwise it keeps reporting the Pass 1 count after a reviewer
+  // has proposed two more pins.
+  var flaggedCount = 0;
+  function updateHeaderCount() {
+    var el = document.getElementById('count');
+    if (!el) return;
+    var n = elements.length;
+    el.innerHTML = '<b>' + n + '</b> element' + (n === 1 ? '' : 's') +
+      (added.length ? ' · <span style="color:var(--good)">+' + added.length + ' added</span>' : '') +
+      (flaggedCount ? ' · <span style="color:var(--warn)">' + flaggedCount + ' flagged</span>' : '');
+  }
 
   function updateAddWarn() {
     var el = document.getElementById('addWarn');
@@ -1352,16 +1442,29 @@
     m.className = 'marker drag added';
     m.style.left = x + '%';
     m.style.top = y + '%';
-    m.textContent = '+';
-    m.title = entry.name + ' (added)';
     frame.appendChild(m);
     rec.marker = m;
+
+    // Legend row, so the right panel shows the round's FULL proposal — the
+    // Pass 1 pins plus whatever the reviewer added.
+    var list = document.getElementById('list');
+    if (list) {
+      var li = document.createElement('li');
+      li.className = 'added';
+      li.innerHTML =
+        '<span class="num"></span>' +
+        '<span><span class="name">' + escapeHtml(entry.name) + '</span>' +
+        '<div class="meta">#' + rec.id +
+          (rec.section ? ' · ' + escapeHtml(rec.section) : '') + ' · ADDED</div></span>';
+      list.appendChild(li);
+      rec.row = li;
+    }
 
     var card = document.createElement('div');
     card.className = 'el-card added';
     card.innerHTML =
       '<div class="el-head">' +
-        '<span class="el-num">+</span>' +
+        '<span class="el-num"></span>' +
         '<div class="grow"><div class="el-name">' + escapeHtml(entry.name) + '</div>' +
         '<div class="el-meta">#' + rec.id +
           (rec.section ? ' · ' + escapeHtml(rec.section) : '') + ' · ADDED</div></div>' +
@@ -1396,13 +1499,29 @@
     }, function (didMove) {
       if (!didMove) { card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); ta.focus(); }
     });
-    m.addEventListener('mouseenter', function () { card.classList.add('active'); });
-    m.addEventListener('mouseleave', function () { card.classList.remove('active'); });
-    card.addEventListener('mouseenter', function () { m.classList.add('active'); });
-    card.addEventListener('mouseleave', function () { m.classList.remove('active'); });
+    // Same three-way linking the confirmed pins get: marker <-> card <-> row.
+    function setAddedActive(on) {
+      m.classList.toggle('active', on);
+      card.classList.toggle('active', on);
+      if (rec.row) rec.row.classList.toggle('active', on);
+    }
+    m.addEventListener('mouseenter', function () { setAddedActive(true); });
+    m.addEventListener('mouseleave', function () { setAddedActive(false); });
+    card.addEventListener('mouseenter', function () { setAddedActive(true); });
+    card.addEventListener('mouseleave', function () { setAddedActive(false); });
+    if (rec.row) {
+      rec.row.addEventListener('mouseenter', function () { setAddedActive(true); });
+      rec.row.addEventListener('mouseleave', function () { setAddedActive(false); });
+      rec.row.addEventListener('click', function () {
+        card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        ta.focus();
+      });
+    }
 
     host.appendChild(card);
     added.push(rec);
+    renumberAdded();
+    updateHeaderCount();
     updateAddWarn();
     if (refreshAddResults) refreshAddResults();
     ta.focus();
@@ -1411,7 +1530,10 @@
   function removeAdded(rec) {
     if (rec.marker && rec.marker.parentNode) rec.marker.parentNode.removeChild(rec.marker);
     if (rec.card && rec.card.parentNode) rec.card.parentNode.removeChild(rec.card);
+    if (rec.row && rec.row.parentNode) rec.row.parentNode.removeChild(rec.row);
     added = added.filter(function (a) { return a !== rec; });
+    renumberAdded();
+    updateHeaderCount();
     updateAddWarn();
     if (refreshAddResults) refreshAddResults();
   }
@@ -1459,7 +1581,9 @@
       // `elements` because they have no published position to correct and no
       // review-page seq — the reviewer chose both.
       added: added.map(function (a) {
-        return { id: a.id, name: a.name, section: a.section || '',
+        // seq continues the page's numbering (confirmed count + position), so a
+        // note saying "pin 7" resolves against the added list too.
+        return { seq: a.seq, id: a.id, name: a.name, section: a.section || '',
                  x: a.x, y: a.y, note: String(a.note || '').trim() };
       }),
       added_count: added.length,
