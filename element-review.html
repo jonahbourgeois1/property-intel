@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Element Review — Property Intel</title>
 <!--
-  element-review.html — Pass 1 element-pin QA surface (v4, 2026-08-11)
+  element-review.html — Pass 1 element-pin QA surface (v5, 2026-08-11)
 
   Reads a row's data from its own query string and renders the ELEMENT
   pins on the real nadir orthophoto with a numbered-marker + legend-strip
@@ -45,7 +45,7 @@
   in an iframe. SUPERSEDED BY v4 — see below. The launcher snippet and the
   share URL are preserved in a comment at the bottom of this file.
 
-  v4 (element critique panel) — THIS REVISION:
+  v4 (element critique panel):
   The left column is no longer an embedded third-party form. It is now a
   NATIVE critique form generated from the page's own data: one labelled field
   per element pin, in the same order and carrying the same number as the
@@ -72,6 +72,36 @@
     * Until CRITIQUE_POST_URL is filled in, Submit reports that the endpoint
       is not configured and "Copy JSON" still yields the exact payload, so
       the shape can be tested against the sheet before anything is deployed.
+
+  v5 (drag to correct + add from catalog) — THIS REVISION:
+  Two additions, both aimed at replacing prose-about-position with position.
+
+  1. DRAG TO CORRECT. Every element marker is draggable. Dragging one writes the
+     new position into a "Corrected position" field on that pin's card (and the
+     field is typeable too — "58.4, 44.1" moves the marker). A hollow GHOST
+     marker stays at the original spot with a dashed connector, so the reviewer
+     can see the correction they made and judge it. The ⟲ button undoes it.
+     A pin that has been moved is marked on the marker, the ghost, the legend
+     row and the card, so the state is never ambiguous.
+
+     ⚠️ COORD_MIN / COORD_MAX (5 / 95) mirror clampCoords() in shared.gs, which
+     is what the pipeline will actually store. The drag is clamped to that box
+     ON PURPOSE: allowing 0–100 here would let a reviewer place a gate at x=2
+     and have the re-pin silently move it to x=5. If clampCoords is ever
+     widened, widen these two constants to match — they are the same decision
+     in two places.
+
+  2. ADD FROM CATALOG. "Add an element" searches the live pin catalog (filtered
+     to role=primary and this property's account_type), then puts the page in
+     PLACE mode — the next click on the nadir drops the new pin there. Ids
+     already on the property are shown but not selectable, because
+     validateElementPins_ dedupes by id and a duplicate would be silently
+     dropped downstream. Added pins get their own marker style, their own card
+     with a remove button, and travel in a separate `added` array.
+
+     ⚠️ PLANE_MAX_PINS is 10 in config.gs. The panel warns once the confirmed
+     count plus additions would exceed it, because validateElementPins_ caps
+     the re-pin and would drop the overflow without saying which.
 
   fail() still blanks only the stage/legend and keeps the left column alive,
   so this page degrades to a readable message rather than a dead screen.
@@ -271,6 +301,100 @@
   .verdict button.on[data-v="fix"]    { background: var(--marker); border-color: var(--marker); }
   .verdict button.on[data-v="remove"] { background: var(--bad); border-color: var(--bad); }
 
+  /* Corrected-position row. Sits directly under the verdict chips and above the
+     critique box: at 340px the rail cannot hold a coordinate field beside a
+     usable textarea without cramping both. */
+  .coord-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+  .coord-row .lab {
+    flex: 0 0 auto;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .intake input.coord-in {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--mono); font-size: 12px;
+    padding: 4px 8px;
+  }
+  .intake input.coord-in.set { border-color: var(--hot); color: var(--hot); }
+  .mini {
+    flex: 0 0 auto;
+    width: 24px; height: 24px;
+    background: var(--ground); color: var(--ink-faint);
+    border: 1px solid var(--line); border-radius: 6px;
+    font-size: 13px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 0.1s ease, border-color 0.1s ease;
+  }
+  .mini:hover { color: var(--ink); border-color: var(--hot); }
+  .mini[disabled] { opacity: 0.35; cursor: default; }
+  .mini[disabled]:hover { color: var(--ink-faint); border-color: var(--line); }
+
+  .el-card.moved .el-num { background: var(--hot); }
+  .el-card.added { border-left-color: var(--good); }
+  .el-card.added .el-num { background: var(--good); }
+  .el-head .grow { flex: 1 1 auto; min-width: 0; }
+
+  /* ── Add an element (catalog search + place mode) ─────────── */
+  .add-bar { padding: 12px 18px 4px; }
+  .add-toggle {
+    width: 100%;
+    background: var(--ground); color: var(--ink-dim);
+    border: 1px dashed var(--line); border-radius: 8px;
+    padding: 8px 0;
+    font-family: var(--sans); font-size: 13px;
+    cursor: pointer;
+    transition: color 0.1s ease, border-color 0.1s ease;
+  }
+  .add-toggle:hover { color: var(--ink); border-color: var(--hot); }
+  .add-toggle[disabled] { opacity: 0.4; cursor: default; }
+  .add-toggle[disabled]:hover { color: var(--ink-dim); border-color: var(--line); }
+  .add-panel { display: none; margin-top: 8px; }
+  .add-panel.on { display: block; }
+  .add-results {
+    list-style: none; margin: 6px 0 0; padding: 0;
+    max-height: 190px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 8px;
+    background: var(--ground);
+  }
+  .add-results li {
+    padding: 7px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(58,68,79,0.5);
+  }
+  .add-results li:last-child { border-bottom: none; }
+  .add-results li:hover { background: var(--panel-2); }
+  .add-results li .rid {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+    margin-left: 6px;
+  }
+  .add-results li.taken { opacity: 0.4; cursor: default; }
+  .add-results li.taken:hover { background: none; }
+  .add-results li.none { color: var(--ink-faint); cursor: default; }
+  .add-results li.none:hover { background: none; }
+  .add-warn {
+    margin-top: 6px;
+    font-family: var(--mono); font-size: 11px; color: var(--warn);
+  }
+
+  /* Place mode: the whole stage becomes a target. */
+  .stage.placing { cursor: crosshair; }
+  .stage.placing .frame { cursor: crosshair; }
+  .place-hint {
+    position: absolute; left: 50%; top: 16px;
+    transform: translateX(-50%);
+    z-index: 6;
+    display: none;
+    padding: 8px 14px;
+    background: var(--hot); color: #10221f;
+    border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+  .place-hint.on { display: block; }
+
   .block { padding: 12px 18px 4px; }
 
   .submit-bar {
@@ -443,6 +567,35 @@
     background: var(--warn);
     border-color: rgba(27,32,39,0.7);
   }
+  /* Draggable element markers. grab/grabbing only on the element pins — route
+     waypoints stay non-draggable. */
+  .marker.drag { cursor: grab; }
+  .marker.drag.dragging { cursor: grabbing; transform: scale(1.3); z-index: 4; }
+  .marker.moved { background: var(--hot); box-shadow: 0 0 0 3px rgba(79,209,197,0.3), 0 2px 10px rgba(0,0,0,0.6); }
+  .marker.added { background: var(--good); }
+  /* The original position of a moved pin. Hollow so it reads as "was here",
+     not as another pin. */
+  .ghost-marker {
+    position: absolute;
+    width: 26px; height: 26px;
+    margin: -13px 0 0 -13px;
+    border-radius: 50%;
+    border: 2px dashed rgba(238,242,246,0.55);
+    background: rgba(27,32,39,0.25);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ghost-line {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .ghost-line line {
+    stroke: rgba(79,209,197,0.7);
+    stroke-width: 2; stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+  }
 
   /* ── Legend strip ────────────────────────────────────────── */
   .legend {
@@ -487,6 +640,13 @@
   }
   .legend li:hover .num, .legend li.active .num { background: var(--hot); }
   .legend li.flag .num { background: var(--warn); }
+  /* A moved pin gets its OWN cue. Reusing .flag here would conflate "this pin
+     is misfiled" with "this pin has been repositioned" — different problems. */
+  .legend li.moved .num { background: var(--hot); }
+  .legend li.moved .name::after {
+    content: ' \2192 moved';
+    font-family: var(--mono); font-size: 10px; color: var(--hot);
+  }
   .legend .name { font-size: 14px; color: var(--ink); }
   .legend .meta {
     font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
@@ -535,6 +695,14 @@
             </label>
           </div>
           <div id="fields"></div>
+          <div class="add-bar">
+            <button type="button" class="add-toggle" id="addToggle">+ Add an element</button>
+            <div class="add-panel" id="addPanel">
+              <input type="text" id="addSearch" placeholder="search the element catalog…">
+              <ul class="add-results" id="addResults"></ul>
+              <div class="add-warn" id="addWarn"></div>
+            </div>
+          </div>
           <label class="f block">
             <span class="lab">Missed elements / general notes</span>
             <textarea id="missed" rows="3"
@@ -555,7 +723,10 @@
         <img id="nadir" alt="Nadir orthophoto">
         <svg class="route-svg" id="routeSvg" viewBox="0 0 100 100"
              preserveAspectRatio="none" aria-hidden="true"></svg>
+        <svg class="ghost-line" id="ghostSvg" viewBox="0 0 100 100"
+             preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
+      <div class="place-hint" id="placeHint"></div>
       <div class="coord" id="coord" title="Cursor position — click to copy"><b>xy</b> <span id="coordVal">—</span></div>
       <div class="zoom-controls">
         <div class="zoom-btn" id="zoom-in" title="Zoom in">+</div>
@@ -573,7 +744,7 @@
         <ol class="route" id="routeList"></ol>
         <div class="rationale" id="rationale"></div>
       </div>
-      <div class="hint">Hover a marker, a field or a row to link all three. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
+      <div class="hint">Hover a marker, a field or a row to link all three. <b>Drag a pin</b> to correct its position — the dashed ring shows where it was. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
     </aside>
   </main>
 
@@ -587,6 +758,14 @@
   // Execute as: Me, Who has access: Anyone). Until then Submit refuses and
   // says so, and "Copy JSON" still gives you the exact payload to test with.
   var CRITIQUE_POST_URL = 'PASTE_THE_APPS_SCRIPT_EXEC_URL_HERE';
+
+  // v5: these MIRROR clampCoords() in shared.gs — the box the pipeline can
+  // actually store. Drags are clamped here so what the reviewer sees is what
+  // the re-pin gets. Widen both together or not at all.
+  var COORD_MIN = 5, COORD_MAX = 95;
+  // v5: PLANE_MAX_PINS in config.gs. validateElementPins_ enforces it and drops
+  // the overflow silently, so the panel warns before that can happen.
+  var MAX_PINS = 10;
 
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
@@ -631,8 +810,22 @@
   // Holds the resolved element list once render() has run, so the submit
   // handler reads the same names/ids/coords the reviewer was looking at.
   var elements = [];
-  // Per-element {verdict, note}. Index-aligned with `elements`.
+  // Per-element {verdict, note, cx, cy}. Index-aligned with `elements`.
+  // cx/cy are the CORRECTED coordinates, null until the pin is moved.
   var state = [];
+  // v5: catalog element vocabulary for the add-search, kept from the fetch.
+  var catalogElements = [];
+  // v5: pins the reviewer added — {id,name,section,x,y,note,marker,card}.
+  var added = [];
+  // v5: the catalog entry awaiting a click on the nadir, or null.
+  var placing = null;
+  // Live marker/card handles so drag, place and hover can all reach each other.
+  var elMarkers = [], elCards = [], ghosts = [];
+  // Set by initAddElement. Adding or removing a pin changes which catalog ids
+  // are "already placed", so the result list must be re-rendered — otherwise a
+  // second click on the same row would queue a duplicate id, which
+  // validateElementPins_ silently drops.
+  var refreshAddResults = null;
 
   (function initFormMeta() {
     var r = document.getElementById('round');
@@ -754,7 +947,7 @@
     // Markers on the image (percentage placement — no bounds needed).
     resolved.forEach(function (p, i) {
       var m = document.createElement('div');
-      m.className = 'marker' + (p.flag ? ' flag' : '');
+      m.className = 'marker drag' + (p.flag ? ' flag' : '');
       m.style.left = p.x + '%';
       m.style.top = p.y + '%';
       m.textContent = (i + 1);
@@ -779,8 +972,15 @@
     var cards = buildForm(resolved);
 
     // Three-way hover/active linking: marker <-> legend row <-> critique card.
-    var markers = frame.querySelectorAll('.marker');
+    // '.marker.drag' rather than '.marker' so route waypoints can never be
+    // indexed into the element arrays.
+    var markers = frame.querySelectorAll('.marker.drag');
     var rows = list.querySelectorAll('li');
+
+    // Published so drag, place mode and resetPin can reach the same handles.
+    elMarkers = Array.prototype.slice.call(markers);
+    elCards = cards;
+    ghosts = resolved.map(function () { return null; });
 
     function setActive(idx, on) {
       if (markers[idx]) markers[idx].classList.toggle('active', on);
@@ -792,10 +992,14 @@
       var idx = +m.dataset.idx;
       m.addEventListener('mouseenter', function () { setActive(idx, true); });
       m.addEventListener('mouseleave', function () { setActive(idx, false); });
-      // Clicking a marker now also brings its critique field into view and
-      // focuses it — the fast path from "that pin is wrong" to typing why.
-      m.addEventListener('click', function () {
-        rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      // v5: drag to correct. makeDraggable reports whether the pointer actually
+      // moved, so a plain click still does the focus-the-field thing and only a
+      // real drag writes a corrected coordinate.
+      makeDraggable(m, function (x, y) {
+        movePin(idx, x, y);
+      }, function (didMove) {
+        if (didMove) return;
+        if (rows[idx]) rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         if (cards[idx]) {
           cards[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
           var ta = cards[idx].querySelector('textarea');
@@ -825,7 +1029,7 @@
     host.innerHTML = '';
 
     elements = resolved;
-    state = resolved.map(function () { return { verdict: '', note: '' }; });
+    state = resolved.map(function () { return { verdict: '', note: '', cx: null, cy: null }; });
 
     var cards = [];
     resolved.forEach(function (p, i) {
@@ -835,13 +1039,18 @@
       card.innerHTML =
         '<div class="el-head">' +
           '<span class="el-num">' + (i + 1) + '</span>' +
-          '<div><div class="el-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="grow"><div class="el-name">' + escapeHtml(p.name) + '</div>' +
           '<div class="el-meta">' + metaHtml(p) + '</div></div>' +
         '</div>' +
         '<div class="verdict">' +
           '<button type="button" data-v="ok">OK</button>' +
           '<button type="button" data-v="fix">Fix</button>' +
           '<button type="button" data-v="remove">Remove</button>' +
+        '</div>' +
+        '<div class="coord-row">' +
+          '<span class="lab">Fix xy</span>' +
+          '<input type="text" class="coord-in" placeholder="drag the pin, or type 58.4, 44.1">' +
+          '<button type="button" class="mini reset" title="Undo the move" disabled>&#8635;</button>' +
         '</div>' +
         '<textarea rows="2" placeholder="Critique for the next round…"></textarea>';
 
@@ -856,6 +1065,20 @@
         });
       });
 
+      // Typing a coordinate is equivalent to dragging to it — same clamp, same
+      // ghost, same state. Someone reading a position off the xy chip should not
+      // have to hunt for the pin to apply it.
+      var cin = card.querySelector('.coord-in');
+      cin.addEventListener('change', function () {
+        var v = String(cin.value || '').trim();
+        if (!v) { resetPin(i); return; }
+        var m = v.split(/[ ,]+/).filter(function (s) { return s !== ''; });
+        var x = parseFloat(m[0]), y = parseFloat(m[1]);
+        if (!isFinite(x) || !isFinite(y)) { syncCoordField(i); return; }
+        movePin(i, clampPct(x), clampPct(y));
+      });
+      card.querySelector('.reset').addEventListener('click', function () { resetPin(i); });
+
       var ta = card.querySelector('textarea');
       ta.addEventListener('input', function () { state[i].note = ta.value; });
 
@@ -863,6 +1086,334 @@
       cards.push(card);
     });
     return cards;
+  }
+
+  // ── v5: drag to correct ────────────────────────────────────────────────
+  // Percentages are the only coordinate space on this page, so a drag is just
+  // "where is the pointer, as a fraction of the frame". getBoundingClientRect
+  // already reflects the zoom/pan transform and the scale is uniform, so this
+  // stays correct at any zoom without reading the transform state — the same
+  // reasoning the xy readout uses.
+
+  function clampPct(n) {
+    return Math.max(COORD_MIN, Math.min(COORD_MAX, Math.round(n * 10) / 10));
+  }
+  function fmtPct(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+
+  function pctFromClient(clientX, clientY) {
+    var frame = document.getElementById('frame');
+    if (!frame) return null;
+    var r = frame.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    return { x: (clientX - r.left) / r.width * 100, y: (clientY - r.top) / r.height * 100 };
+  }
+
+  // Generic pointer drag for a marker. onMove(x,y) fires continuously with
+  // clamped percentages; onEnd(didMove) fires once. Uses pointer events so the
+  // marker keeps receiving moves even when the pointer leaves it, and calls
+  // setPointerCapture so a fast drag can't be lost to the image underneath.
+  function makeDraggable(marker, onMove, onEnd) {
+    var down = false, moved = false, sx = 0, sy = 0;
+    marker.addEventListener('pointerdown', function (e) {
+      if (placing) return;            // place mode owns the next click
+      down = true; moved = false;
+      sx = e.clientX; sy = e.clientY;
+      marker.classList.add('dragging');
+      if (marker.setPointerCapture) { try { marker.setPointerCapture(e.pointerId); } catch (err) {} }
+      e.preventDefault();
+      e.stopPropagation();            // never let initZoomPan start a pan
+    });
+    marker.addEventListener('pointermove', function (e) {
+      if (!down) return;
+      if (!moved && Math.abs(e.clientX - sx) < 3 && Math.abs(e.clientY - sy) < 3) return;
+      moved = true;
+      var p = pctFromClient(e.clientX, e.clientY);
+      if (p) onMove(clampPct(p.x), clampPct(p.y));
+      e.preventDefault();
+    });
+    function finish(e) {
+      if (!down) return;
+      down = false;
+      marker.classList.remove('dragging');
+      if (marker.releasePointerCapture && e && e.pointerId !== undefined) {
+        try { marker.releasePointerCapture(e.pointerId); } catch (err) {}
+      }
+      onEnd(moved);
+    }
+    marker.addEventListener('pointerup', finish);
+    marker.addEventListener('pointercancel', finish);
+  }
+
+  // Write a corrected position for element idx: move the marker, drop a ghost
+  // at the original spot with a connector, mark every surface that shows this
+  // pin, and record it in state.
+  function movePin(idx, x, y) {
+    var p = elements[idx], m = elMarkers[idx], card = elCards[idx];
+    if (!p || !m) return;
+    state[idx].cx = x; state[idx].cy = y;
+    m.style.left = x + '%';
+    m.style.top = y + '%';
+    m.classList.add('moved');
+    if (card) card.classList.add('moved');
+    var row = document.querySelectorAll('.legend li')[idx];
+    if (row) row.classList.add('moved');
+    ensureGhost(idx, p.x, p.y, x, y);
+    syncCoordField(idx);
+    updateAddWarn();
+  }
+
+  // Undo a correction: marker back to the catalog position, ghost and flags off.
+  function resetPin(idx) {
+    var p = elements[idx], m = elMarkers[idx], card = elCards[idx];
+    if (!p || !m) return;
+    state[idx].cx = null; state[idx].cy = null;
+    m.style.left = p.x + '%';
+    m.style.top = p.y + '%';
+    m.classList.remove('moved');
+    if (card) card.classList.remove('moved');
+    var row = document.querySelectorAll('.legend li')[idx];
+    // Safe to clear unconditionally now: .moved is only ever set by movePin, so
+    // a catalog-flagged pin keeps its amber .flag cue through an undo.
+    if (row) row.classList.remove('moved');
+    removeGhost(idx);
+    syncCoordField(idx);
+    updateAddWarn();
+  }
+
+  function syncCoordField(idx) {
+    var card = elCards[idx];
+    if (!card) return;
+    var cin = card.querySelector('.coord-in');
+    var btn = card.querySelector('.reset');
+    var s = state[idx];
+    if (!cin) return;
+    if (s.cx === null || s.cy === null) {
+      cin.value = '';
+      cin.classList.remove('set');
+      if (btn) btn.disabled = true;
+    } else {
+      cin.value = fmtPct(s.cx) + ', ' + fmtPct(s.cy);
+      cin.classList.add('set');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function ensureGhost(idx, ox, oy, nx, ny) {
+    var frame = document.getElementById('frame');
+    var svg = document.getElementById('ghostSvg');
+    if (!frame) return;
+    if (!ghosts[idx]) {
+      var g = document.createElement('div');
+      g.className = 'ghost-marker';
+      g.style.left = ox + '%';
+      g.style.top = oy + '%';
+      var ln = null;
+      if (svg) {
+        ln = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        svg.appendChild(ln);
+      }
+      frame.appendChild(g);
+      ghosts[idx] = { dot: g, line: ln };
+    }
+    var h = ghosts[idx];
+    if (h.line) {
+      h.line.setAttribute('x1', ox); h.line.setAttribute('y1', oy);
+      h.line.setAttribute('x2', nx); h.line.setAttribute('y2', ny);
+    }
+  }
+
+  function removeGhost(idx) {
+    var h = ghosts[idx];
+    if (!h) return;
+    if (h.dot && h.dot.parentNode) h.dot.parentNode.removeChild(h.dot);
+    if (h.line && h.line.parentNode) h.line.parentNode.removeChild(h.line);
+    ghosts[idx] = null;
+  }
+
+  // ── v5: add an element from the catalog ────────────────────────────────
+  // Every id currently on the property — confirmed pins plus additions made in
+  // this session. validateElementPins_ dedupes by id, so offering an id that is
+  // already here would produce a pin the pipeline silently discards.
+  function pinnedIds() {
+    var s = {};
+    elements.forEach(function (p) { s[parseInt(p.id, 10)] = true; });
+    added.forEach(function (a) { s[parseInt(a.id, 10)] = true; });
+    return s;
+  }
+
+  function totalPins() { return elements.length + added.length; }
+
+  function updateAddWarn() {
+    var el = document.getElementById('addWarn');
+    if (!el) return;
+    var n = totalPins();
+    el.textContent = (n > MAX_PINS)
+      ? n + ' pins — the re-pin caps at ' + MAX_PINS + ' and will drop the overflow.'
+      : '';
+  }
+
+  function initAddElement(disabledReason) {
+    var toggle = document.getElementById('addToggle');
+    var panel = document.getElementById('addPanel');
+    var search = document.getElementById('addSearch');
+    var results = document.getElementById('addResults');
+    if (!toggle || !panel || !search || !results) return;
+
+    if (disabledReason) {
+      toggle.disabled = true;
+      toggle.textContent = '+ Add an element (' + disabledReason + ')';
+      return;
+    }
+
+    function renderResults() {
+      var q = String(search.value || '').trim().toLowerCase();
+      var taken = pinnedIds();
+      var hits = catalogElements.filter(function (p) {
+        return !q || String(p.name).toLowerCase().indexOf(q) !== -1 ||
+               String(p.section || '').toLowerCase().indexOf(q) !== -1;
+      }).slice(0, 40);
+      results.innerHTML = '';
+      if (!hits.length) {
+        results.innerHTML = '<li class="none">No element matches "' + escapeHtml(q) + '".</li>';
+        return;
+      }
+      hits.forEach(function (p) {
+        var li = document.createElement('li');
+        var isTaken = !!taken[parseInt(p.id, 10)];
+        li.className = isTaken ? 'taken' : '';
+        li.innerHTML = escapeHtml(p.name) +
+          '<span class="rid">#' + p.id + (p.section ? ' · ' + escapeHtml(p.section) : '') +
+          (isTaken ? ' · already placed' : '') + '</span>';
+        if (!isTaken) li.addEventListener('click', function () { beginPlacement(p); });
+        results.appendChild(li);
+      });
+    }
+
+    toggle.addEventListener('click', function () {
+      var on = panel.classList.toggle('on');
+      if (on) { renderResults(); search.focus(); } else { cancelPlacement(); }
+    });
+    refreshAddResults = renderResults;
+    search.addEventListener('input', renderResults);
+    // Enter must not submit the critique form from inside the search box.
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') e.preventDefault();
+      if (e.key === 'Escape') cancelPlacement();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && placing) cancelPlacement();
+    });
+
+    // Place mode: the next click on the image drops the pin. Bound on the frame
+    // in the CAPTURE phase so it lands before the pan handler sees it.
+    var frame = document.getElementById('frame');
+    if (frame) {
+      frame.addEventListener('click', function (e) {
+        if (!placing) return;
+        var p = pctFromClient(e.clientX, e.clientY);
+        if (!p) return;
+        e.preventDefault();
+        e.stopPropagation();
+        placeAdded(placing, clampPct(p.x), clampPct(p.y));
+        cancelPlacement();
+      }, true);
+    }
+    updateAddWarn();
+  }
+
+  function beginPlacement(entry) {
+    placing = entry;
+    var stage = document.querySelector('.stage');
+    var hint = document.getElementById('placeHint');
+    if (stage) stage.classList.add('placing');
+    if (hint) {
+      hint.textContent = 'Click on the nadir to place "' + entry.name + '"  ·  Esc to cancel';
+      hint.classList.add('on');
+    }
+  }
+
+  function cancelPlacement() {
+    placing = null;
+    var stage = document.querySelector('.stage');
+    var hint = document.getElementById('placeHint');
+    if (stage) stage.classList.remove('placing');
+    if (hint) hint.classList.remove('on');
+  }
+
+  function placeAdded(entry, x, y) {
+    var frame = document.getElementById('frame');
+    var host = document.getElementById('fields');
+    if (!frame || !host) return;
+
+    var rec = { id: parseInt(entry.id, 10), name: entry.name,
+                section: entry.section || '', x: x, y: y, note: '' };
+
+    var m = document.createElement('div');
+    m.className = 'marker drag added';
+    m.style.left = x + '%';
+    m.style.top = y + '%';
+    m.textContent = '+';
+    m.title = entry.name + ' (added)';
+    frame.appendChild(m);
+    rec.marker = m;
+
+    var card = document.createElement('div');
+    card.className = 'el-card added';
+    card.innerHTML =
+      '<div class="el-head">' +
+        '<span class="el-num">+</span>' +
+        '<div class="grow"><div class="el-name">' + escapeHtml(entry.name) + '</div>' +
+        '<div class="el-meta">#' + rec.id +
+          (rec.section ? ' · ' + escapeHtml(rec.section) : '') + ' · ADDED</div></div>' +
+        '<button type="button" class="mini remove" title="Remove this addition">&times;</button>' +
+      '</div>' +
+      '<div class="coord-row">' +
+        '<span class="lab">At xy</span>' +
+        '<input type="text" class="coord-in set" value="' + fmtPct(x) + ', ' + fmtPct(y) + '">' +
+      '</div>' +
+      '<textarea rows="2" placeholder="Why this element belongs here…"></textarea>';
+    rec.card = card;
+
+    var cin = card.querySelector('.coord-in');
+    cin.addEventListener('change', function () {
+      var parts = String(cin.value || '').trim().split(/[ ,]+/).filter(function (s) { return s !== ''; });
+      var nx = parseFloat(parts[0]), ny = parseFloat(parts[1]);
+      if (!isFinite(nx) || !isFinite(ny)) { cin.value = fmtPct(rec.x) + ', ' + fmtPct(rec.y); return; }
+      rec.x = clampPct(nx); rec.y = clampPct(ny);
+      m.style.left = rec.x + '%'; m.style.top = rec.y + '%';
+      cin.value = fmtPct(rec.x) + ', ' + fmtPct(rec.y);
+    });
+    var ta = card.querySelector('textarea');
+    ta.addEventListener('input', function () { rec.note = ta.value; });
+    card.querySelector('.remove').addEventListener('click', function () { removeAdded(rec); });
+
+    // Dragging an added pin just updates its own position — there is no
+    // "original" to ghost against, because the reviewer chose the spot.
+    makeDraggable(m, function (nx, ny) {
+      rec.x = nx; rec.y = ny;
+      m.style.left = nx + '%'; m.style.top = ny + '%';
+      cin.value = fmtPct(nx) + ', ' + fmtPct(ny);
+    }, function (didMove) {
+      if (!didMove) { card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); ta.focus(); }
+    });
+    m.addEventListener('mouseenter', function () { card.classList.add('active'); });
+    m.addEventListener('mouseleave', function () { card.classList.remove('active'); });
+    card.addEventListener('mouseenter', function () { m.classList.add('active'); });
+    card.addEventListener('mouseleave', function () { m.classList.remove('active'); });
+
+    host.appendChild(card);
+    added.push(rec);
+    updateAddWarn();
+    if (refreshAddResults) refreshAddResults();
+    ta.focus();
+  }
+
+  function removeAdded(rec) {
+    if (rec.marker && rec.marker.parentNode) rec.marker.parentNode.removeChild(rec.marker);
+    if (rec.card && rec.card.parentNode) rec.card.parentNode.removeChild(rec.card);
+    added = added.filter(function (a) { return a !== rec; });
+    updateAddWarn();
+    if (refreshAddResults) refreshAddResults();
   }
 
   // ── v4: payload assembly + submit ──────────────────────────────────────
@@ -876,7 +1427,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v4',
+      version: 'v5',
       submitted_at: new Date().toISOString(),
       key: rowKey,
       view: viewName,
@@ -893,19 +1444,33 @@
           name: p.name,
           section: p.section || '',
           x: p.x, y: p.y,
+          // v5: the corrected position, or null when the pin was not moved.
+          // x/y stay as-published so the receiving end can log the delta.
+          corrected_x: state[i] ? state[i].cx : null,
+          corrected_y: state[i] ? state[i].cy : null,
+          moved: !!(state[i] && state[i].cx !== null),
           flagged: !!p.flag,
           flags: flagLabels(p).map(function (s) { return unescapeHtml(s); }),
           verdict: state[i] ? state[i].verdict : '',
           note: state[i] ? (state[i].note || '').trim() : ''
         };
       }),
+      // v5: elements the reviewer added from the catalog. Separate from
+      // `elements` because they have no published position to correct and no
+      // review-page seq — the reviewer chose both.
+      added: added.map(function (a) {
+        return { id: a.id, name: a.name, section: a.section || '',
+                 x: a.x, y: a.y, note: String(a.note || '').trim() };
+      }),
+      added_count: added.length,
       missed: missed.trim()
     };
   }
 
   function hasContent(payload) {
     if (payload.missed) return true;
-    return payload.elements.some(function (e) { return e.verdict || e.note; });
+    if (payload.added.length) return true;
+    return payload.elements.some(function (e) { return e.verdict || e.note || e.moved; });
   }
 
   function setStatus(msg, cls) {
@@ -1078,7 +1643,19 @@
       if (!r.ok) throw new Error('catalog HTTP ' + r.status);
       return r.json();
     })
-    .then(function (catalog) { render(resolveNames(pins, catalog)); renderRoute(route); })
+    .then(function (catalog) {
+      // v5: keep the element vocabulary for the add-search. Same filter the
+      // Apps Script side applies (role=primary + this account type), so the
+      // page can only offer an id Pass 1 would itself be allowed to use.
+      catalogElements = (catalog.pins || []).filter(function (p) {
+        if (p.role !== 'primary') return false;
+        if (!acctType) return true;
+        return Array.isArray(p.account_type) && p.account_type.indexOf(acctType) !== -1;
+      }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      render(resolveNames(pins, catalog));
+      renderRoute(route);
+      initAddElement();
+    })
     .catch(function (e) {
       // Degrade gracefully: still show markers, names as ids.
       render(pins.map(function (p) {
@@ -1086,6 +1663,9 @@
                  role: '', types: [], known: false, wrongRole: false, wrongType: false, flag: true };
       }));
       renderRoute(route);
+      // No catalog means no vocabulary to search, so adding is impossible —
+      // say why instead of offering a control that cannot work.
+      initAddElement('catalog unavailable — cannot add elements');
       var hint = document.querySelector('.hint');
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
         ') — showing ids only.';
