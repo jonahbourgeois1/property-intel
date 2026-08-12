@@ -774,37 +774,21 @@ loader.load(
     // so interaction continues from the preset instead of snapping away.
     if (!autocapture && hasAlpha) {
       const VIEW_OFFSETS = { alpha: 0, bravo: 90, charlie: 180, delta: 270 };
-      let entranceMarker = null;
-      // The entrance marker is permanent scenery, not button feedback: it is
-      // placed as soon as the model is ready so the entrance reads at a
-      // glance, and clicking it (like any pin) names it.
-      function ensureEntranceMarker() {
-        if (entranceMarker || !hasEnt) return entranceMarker;
+      let entranceZ = null;
+      // The entrance is no longer drawn as a marker. It was permanent scenery
+      // the responder never needed to click, and with pin, camera and route
+      // markers all competing for the same ground it was just one more sprite
+      // to look past. The Entrance VIEW still works - it only ever needed the
+      // ground height at that point, so cache that instead of a sprite.
+      function entranceGroundZ() {
+        if (entranceZ !== null) return entranceZ;
+        if (!hasEnt) return center.z;
         const ray = new THREE.Raycaster();
         ray.set(new THREE.Vector3(entXParam, entYParam, box.max.z + 100),
                 new THREE.Vector3(0, 0, -1));
         const hit = ray.intersectObject(model, true)[0];
-        const ez  = hit ? hit.point.z : center.z;
-        const S = 128, cv = document.createElement('canvas');
-        cv.width = cv.height = S;
-        const g = cv.getContext('2d');
-        g.beginPath(); g.arc(S / 2, S / 2, S / 2 - 10, 0, Math.PI * 2);
-        g.fillStyle = '#22c55e'; g.fill();
-        g.lineWidth = 10; g.strokeStyle = '#0b0e12'; g.stroke();
-        g.fillStyle = '#0b0e12'; g.font = 'bold 58px monospace';
-        g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.fillText('E', S / 2, S / 2 + 3);
-        entranceMarker = new THREE.Sprite(new THREE.SpriteMaterial({
-          map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
-        const ms = Math.max(3.0, maxSpan * 0.022);
-        entranceMarker.scale.set(ms, ms, 1);
-        entranceMarker.renderOrder = 3;
-        entranceMarker.position.set(entXParam, entYParam, ez + ms * 0.6);
-        entranceMarker.name = 'Entrance';
-        entranceMarker.userData.groundZ = ez;
-        scene.add(entranceMarker);
-        registerLabelTarget(entranceMarker);
-        return entranceMarker;
+        entranceZ = hit ? hit.point.z : center.z;
+        return entranceZ;
       }
       // Same framing distance the render pipeline was calibrated to
       // (PARCEL_SIZE_FACTOR 0.718: ~205 m for a 285 m parcel, "confirmed
@@ -825,9 +809,7 @@ loader.load(
       };
       window.goToEntrance = function () {
         if (!hasEnt) return;
-        const m  = ensureEntranceMarker();
-        const ez = m ? m.userData.groundZ : center.z;
-        const tgt = new THREE.Vector3(entXParam, entYParam, ez);
+        const tgt = new THREE.Vector3(entXParam, entYParam, entranceGroundZ());
         flyTo(computeCompassPos(tgt, alphaParam, 32,
                                 Math.max(60, maxSpan * 0.35)), tgt);
         setActivePreset('pv-entrance');
@@ -836,7 +818,6 @@ loader.load(
       };
       const bar = document.getElementById('preset-bar');
       bar.style.display = 'flex';
-      if (hasEnt) ensureEntranceMarker();
       if (!hasEnt) {
         const eb = document.getElementById('pv-entrance');
         eb.disabled = true;
