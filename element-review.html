@@ -160,6 +160,41 @@
 
   fail() still blanks only the stage/legend and keeps the left column alive,
   so this page degrades to a readable message rather than a dead screen.
+
+  ────────────────────────────────────────────────────────────────────────────
+  v5.6 (A CORRECTION IS A VERDICT). Found in the first real round filed from
+  the sheet: dragging a marker wrote corrected_x/y but left the verdict empty,
+  and nothing derived it. The row that landed had "Pin n Fix XY" filled with
+  "Pin n Verdict" BLANK for four of nine pins, "Marked Fix" reading 2 against
+  six FIX lines in the note, and OK+Fix+Remove summing to 5 of 9 reviewed.
+  The note was correct, so the re-pin would have been correct; only the
+  structured columns lied — which is worse, because a filter on Pin n Verdict
+  drops the corrections silently.
+
+  THE INVARIANT, now held on both sides of the wire:
+      no element carries a corrected xy with a blank verdict.
+
+  In this file:
+    * movePin() sets verdict='fix' when none is set, records that IT set it
+      (state.autoFix) and repaints the chips via syncVerdictChips() — the panel
+      must always show what will be sent, and the verdict now changes without a
+      click, so the chips cannot be driven from the click handler alone.
+    * resetPin() (the ⟲) clears that verdict again, but ONLY when autoFix is
+      set. A Fix the reviewer tapped deliberately survives an undo of the
+      coordinate, because "this pin is wrong but I cannot place it" is a real
+      thing to say about a pin.
+    * tapping Fix OFF on a pin that carries a correction is REFUSED, with a
+      status line pointing at ⟲. That toggle was the one remaining path back
+      into the bad state.
+    * OK and Remove still win over an auto-Fix, and the setCardLock stash
+      round-trips it: un-OK restores the coordinate, which re-derives the Fix.
+    * ids are always NUMBERS now (idNum). Pins parsed from the sheet cell were
+      strings, pins placed from the catalog were numbers, in the same array.
+  critique-api.gs holds the same invariant independently in
+  critiqueNormalizeVerdicts_ — a corrected xy with no verdict becomes 'fix'
+  before the row or the note is built. Both layers are needed: this file can be
+  served from a browser cache long after it is fixed, which is precisely how the
+  bad row reached the sheet.
 -->
 <style>
   :root {
@@ -1195,7 +1230,9 @@
     host.innerHTML = '';
 
     elements = resolved;
-    state = resolved.map(function () { return { verdict: '', note: '', cx: null, cy: null }; });
+    state = resolved.map(function () {
+      return { verdict: '', note: '', cx: null, cy: null, autoFix: false };
+    });
 
     var cards = [];
     resolved.forEach(function (p, i) {
@@ -1226,7 +1263,17 @@
           var v = b.dataset.v;
           // Click the active chip again to clear it — a mis-tap is undoable.
           var next = (state[i].verdict === v) ? '' : v;
+          // v5.6: EXCEPT clearing Fix on a pin that carries a correction. That
+          // was the one path that could file "Fix XY set, verdict blank". The
+          // undo for a correction is the ⟲ button, which clears both.
+          if (next === '' && v === 'fix' && state[i].cx !== null) {
+            setStatus('Pin ' + (i + 1) + ' has a corrected position — use ⟲ to undo the move.', 'err');
+            return;
+          }
           state[i].verdict = next;
+          // An explicit tap owns the verdict from here on: a later ⟲ must not
+          // silently clear a Fix the reviewer chose themselves.
+          state[i].autoFix = false;
           btns.forEach(function (o) { o.classList.toggle('on', o.dataset.v === next); });
           // v5.1: a pin marked for removal goes RED on all three surfaces, so
           // the deletion is visible on the image and not only in the rail.
@@ -1362,6 +1409,17 @@
     return !!(s && (s.verdict === 'ok' || s.verdict === 'remove'));
   }
 
+  // v5.6: repaint a card's verdict chips from state. movePin / resetPin change
+  // the verdict without a click, so the chips cannot be driven from the click
+  // handler alone — the panel must always show what will be sent.
+  function syncVerdictChips(idx) {
+    var card = elCards[idx], s = state[idx];
+    if (!card || !s) return;
+    card.querySelectorAll('.verdict button').forEach(function (b) {
+      b.classList.toggle('on', b.dataset.v === s.verdict);
+    });
+  }
+
   // v5.2: OK / Remove lock a pin's correction fields.
   // Locking STASHES whatever the reviewer had already entered and clears the
   // live values, rather than disabling fields over data that would still be
@@ -1422,6 +1480,16 @@
     // rather than on the drag handler so BOTH input paths are covered.
     if (isLocked(idx)) return;
     state[idx].cx = x; state[idx].cy = y;
+    // v5.6: a corrected position IS a Fix verdict. Before this, dragging a pin
+    // without also tapping the chip filed a row with "Pin n Fix XY" set and
+    // "Pin n Verdict" blank — the note said FIX, the columns said nothing, and
+    // "Marked Fix" undercounted. isLocked() already returned for ok/remove, so
+    // the only verdict that can be standing here is '' or 'fix'.
+    if (!state[idx].verdict) {
+      state[idx].verdict = 'fix';
+      state[idx].autoFix = true;      // ⟲ may take this back; an explicit tap may not
+      syncVerdictChips(idx);
+    }
     m.style.left = x + '%';
     m.style.top = y + '%';
     m.classList.add('moved');
@@ -1438,6 +1506,14 @@
     var p = elements[idx], m = elMarkers[idx], card = elCards[idx];
     if (!p || !m) return;
     state[idx].cx = null; state[idx].cy = null;
+    // Undo the verdict movePin set on its own, and only that one. A Fix the
+    // reviewer tapped deliberately survives an undo of the coordinate, because
+    // "this pin is wrong but I could not place it" is a real thing to say.
+    if (state[idx].autoFix && state[idx].verdict === 'fix') {
+      state[idx].verdict = '';
+      state[idx].autoFix = false;
+      syncVerdictChips(idx);
+    }
     m.style.left = p.x + '%';
     m.style.top = p.y + '%';
     m.classList.remove('moved');
@@ -1838,6 +1914,14 @@
   // One JSON object per submitted round. `elements` is always the full drawn
   // list (verdict/note may be empty) so the receiving sheet can tell "no
   // comment" apart from "element absent from this round".
+  // Catalog ids are integers. Anything that is not one is passed through
+  // unchanged rather than becoming NaN, so an unrecognised id still reaches the
+  // sheet and can be seen instead of silently vanishing.
+  function idNum(v) {
+    var n = parseInt(v, 10);
+    return isFinite(n) ? n : v;
+  }
+
   function collectPayload() {
     var reviewer = (document.getElementById('reviewer') || {}).value || '';
     var roundEl = document.getElementById('round');
@@ -1845,7 +1929,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v5',
+      version: 'v5.6',
       submitted_at: new Date().toISOString(),
       key: rowKey,
       view: viewName,
@@ -1858,7 +1942,12 @@
       elements: elements.map(function (p, i) {
         return {
           seq: i + 1,
-          id: p.id,
+          // v5.6: a NUMBER, always. Pins parsed out of the sheet cell arrive as
+          // strings while pins placed from the catalog arrive as numbers, so the
+          // payload used to mix "101" and 105 in the same array. The sheet
+          // absorbed it (critiqueBuildRow_ coerces), but anything else reading
+          // this JSON — the real-time refresh next — would have to know that.
+          id: idNum(p.id),
           name: p.name,
           section: p.section || '',
           x: p.x, y: p.y,
@@ -1879,7 +1968,7 @@
       added: added.map(function (a) {
         // seq continues the page's numbering (confirmed count + position), so a
         // note saying "pin 7" resolves against the added list too.
-        return { seq: a.seq, id: a.id, name: a.name, section: a.section || '',
+        return { seq: a.seq, id: idNum(a.id), name: a.name, section: a.section || '',
                  x: a.x, y: a.y, note: String(a.note || '').trim() };
       }),
       added_count: added.length,
