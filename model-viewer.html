@@ -2760,10 +2760,16 @@ function buildRouteObjects(samples, zs, pts, idx) {
 // ── Route flythrough ──────────────────────────────────────────────────
 // The Entrance button flies to one point. This flies the whole route: the
 // camera rides the SAME CatmullRom curve the tube is built from, sitting a few
-// metres behind and above the moving point and looking at where it is about to
-// be. Riding the curve rather than hopping between waypoints is what makes it
-// read as following the path instead of a slideshow of pins - and using the
-// tube's own curve means the camera can never drift off the line that is drawn.
+// metres behind and above the moving point. Riding the curve rather than
+// hopping between waypoints is what makes it read as following the path instead
+// of a slideshow of pins - and using the tube's own curve means the camera can
+// never drift off the line that is drawn.
+//
+// Where the camera GOES and what it LOOKS AT are decided separately. It travels
+// the route, but it holds on the front of the house for the whole approach and
+// only hands over to the destination on the last leg - so a responder watching
+// keeps the building oriented in front of them the entire way in, then arrives
+// looking at the thing they were sent for.
 //
 // getPointAt (not getPoint) is arc-length parameterised, so the pace stays even
 // through tight turns instead of racing the straights and crawling the corners.
@@ -2778,24 +2784,55 @@ function beginTour(i) {
   // translation and yaw - which is what makes drone footage read as steady.
   let topZ = -Infinity;
   for (let n = 0; n <= 32; n++) topZ = Math.max(topZ, routeCurve.getPointAt(n / 32).z);
-  // The shot is framed around the residence - element pin 1 - not around the
-  // moving route point. Locking the aim here rather than per frame means the
-  // house cannot drift out of centre partway through. If the property has no
-  // element pin, the middle of the route stands in for it.
+  // WHAT THE CAMERA FACES ON THE APPROACH - the front of the house.
+  // Three ways to know where that is, best first: the storyboard's entrance
+  // point IS the front door in local metres; failing that, the residence pin
+  // pushed out along the frontage bearing (alpha is the azimuth the FRONT
+  // elevation was shot from, so stepping that way from the centre of the house
+  // lands on its front face); failing both, the residence pin itself.
   const p0 = pinSets.element[0];
   const fl = p0 ? toLocal(p0) : null;
-  const focus = routeCurve.getPointAt(0.5).clone();
-  if (fl) { focus.x = fl.x; focus.y = fl.y; }
-  focus.z = topZ;
+  const face = routeCurve.getPointAt(0.5).clone();
+  let faceSrc = 'route midpoint';
+  if (hasEnt) {
+    face.x = entXParam; face.y = entYParam; faceSrc = 'entrance point';
+  } else if (fl) {
+    face.x = fl.x; face.y = fl.y; faceSrc = 'residence pin';
+    if (hasAlpha) {
+      const a = THREE.MathUtils.degToRad(alphaParam);
+      const off = Math.max(6, modelSpan * 0.04);
+      face.x += off * Math.sin(a); face.y += off * Math.cos(a);
+      faceSrc = 'front of the residence (bearing ' + alphaParam.toFixed(0) + '\u00b0)';
+    }
+  }
+  face.z = topZ;
+  // WHERE IT HANDS OVER - the second-to-last waypoint. The last waypoint is the
+  // destination. Waypoints do not sit at even arc fractions of the curve (a
+  // long driveway leg eats more length than a short one round the house), so
+  // the handover point is found by walking the curve rather than assumed.
+  const wps = metreRoute(dirList[i]) || [];
+  const goal = face.clone();
+  let kSwitch = 1;
+  if (wps.length >= 2) {
+    const g = wps[wps.length - 1];
+    goal.set(g.x, g.y, topZ);
+    const h = wps[wps.length - 2];
+    let best = Infinity;
+    for (let n = 0; n <= 240; n++) {
+      const q = routeCurve.getPointAt(n / 240);
+      const d2 = (q.x - h.x) * (q.x - h.x) + (q.y - h.y) * (q.y - h.y);
+      if (d2 < best) { best = d2; kSwitch = n / 240; }
+    }
+  }
   tour = { i: i, t0: performance.now(), pos: null, tgt: null, baseZ: topZ,
-           focus: focus, out: null,
+           face: face, goal: goal, kSwitch: kSwitch,
            ms: Math.max(6000, Math.min(14000, len / 21 * 1000)) };
   const rise0 = Math.max(70, modelSpan * 0.55) * Math.sin(TOUR_ELEV);
   const b = document.getElementById('rd-tour-' + i);
   if (b) { b.classList.add('on'); b.textContent = 'Stop flythrough'; }
   dbg('Route flythrough: ' + Math.round(len) + ' m over ' +
-      (tour.ms / 1000).toFixed(0) + ' s at ' + Math.round(rise0) + ' m, centred on ' +
-      (fl ? 'the residence' : 'the route midpoint'), 'info');
+      (tour.ms / 1000).toFixed(0) + ' s at ' + Math.round(rise0) + ' m, facing the ' +
+      faceSrc + ' until ' + Math.round(kSwitch * 100) + '% then the target', 'info');
 }
 function stopTour() {
   if (!tour) return;
@@ -2821,34 +2858,24 @@ function stepTour() {
   if (!routeCurve) { stopTour(); return; }
   const k  = Math.min(1, (performance.now() - tour.t0) / tour.ms);
   const at = routeCurve.getPointAt(k);
-  // Camera sits on the far side of the residence from wherever the route
-  // currently is, so the frame always reads camera -> house -> route point.
-  // As the route walks the property that vector rotates, and the shot becomes
-  // an orbit around the house that falls out of the geometry rather than being
-  // scripted separately.
-  const out = at.clone().sub(tour.focus);
-  out.z = 0;
-  const away = out.length();
-  // Passing directly over the anchor there is no far side to be on, so hold the
-  // last good direction instead of letting the camera spin through the
-  // singularity.
-  if (away > 6) { out.divideScalar(away); tour.out = out.clone(); }
-  else if (tour.out) out.copy(tour.out);
-  else out.set(0, 1, 0);
-  // Far enough back that the house and the route point are both in frame: the
-  // pull-back grows with how far the route has wandered from the anchor.
-  const dist  = Math.max(70, modelSpan * 0.55, away + modelSpan * 0.30);
+  const la = routeCurve.getPointAt(Math.min(1, k + 0.05));
+  const dir = la.clone().sub(at);
+  dir.z = 0;
+  if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
+  dir.normalize();
+  const dist  = Math.max(70, modelSpan * 0.55);
   const trail = dist * Math.cos(TOUR_ELEV);
   const rise  = dist * Math.sin(TOUR_ELEV);
-  const want = tour.focus.clone().addScaledVector(out, -trail);
+  const want = at.clone().addScaledVector(dir, -trail);
   want.z = tour.baseZ + rise;        // fixed altitude - no bobbing
   // Damped rather than snapped. A route with a sharp turn would otherwise whip
   // the camera through a huge arc in one frame; easing toward the ideal
-  // position gives the drifting quality the drone shot has.
-  // The aim point is the anchor itself, pinned to the flight altitude's
-  // reference plane, so neither the pitch nor the subject moves - only the
-  // camera's angle around the house changes.
-  const aim = tour.focus.clone(); aim.z = tour.baseZ;
+  // position gives the drifting quality the drone shot has. The same damping is
+  // what turns the handover at the second-to-last waypoint into a pan of about
+  // half a second rather than a cut - no separate transition needed.
+  // Both aim points are pinned to the flight's reference altitude, so the pitch
+  // never rocks either.
+  const aim = (k >= tour.kSwitch ? tour.goal : tour.face).clone();
   if (!tour.pos) { tour.pos = want.clone(); tour.tgt = aim.clone(); }
   else { tour.pos.lerp(want, 0.10); tour.tgt.lerp(aim, 0.15); }
   camera.position.copy(tour.pos);
