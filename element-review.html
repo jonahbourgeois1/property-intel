@@ -120,6 +120,20 @@
      The header count reports additions too ("6 elements · +2 added") — it was
      still reporting the Pass 1 figure after a reviewer proposed more pins.
 
+  4. OK / REMOVE LOCK THE FIX FIELDS (setCardLock).
+     A pin that is correct, or that is being deleted, has nothing to correct — so
+     both verdicts disable that card's "Fix xy" field, its ⟲ and its critique
+     box, and refuse a drag on its marker (guarded in movePin so the typed path
+     is covered too, and in makeDraggable so a locked pin never shows the grab
+     cursor or the drag scale).
+     ⚠️ Locking STASHES anything already entered and clears the live values
+     rather than disabling fields over data that would still be submitted. Two
+     invariants: the panel always shows exactly what will be sent, and flipping
+     back to Fix restores the stash, so a mis-tap costs nothing. A moved pin is
+     also returned to its published position on lock — the marker must not claim
+     a correction the verdict denies. The stash is written ONCE, so OK -> Remove
+     cannot overwrite it with the blanks the first lock wrote.
+
   fail() still blanks only the stage/legend and keeps the left column alive,
   so this page degrades to a readable message rather than a dead screen.
 -->
@@ -269,6 +283,15 @@
     border-color: var(--hot);
   }
   .intake textarea { min-height: 34px; }
+  /* Locked by an OK / Remove verdict. Visibly inert rather than merely
+     unresponsive — a field you can click into but that ignores you is worse
+     than one that plainly refuses. */
+  .intake input[disabled], .intake textarea[disabled] {
+    opacity: 0.45;
+    background: rgba(27,32,39,0.65);
+    cursor: not-allowed;
+  }
+  .el-card.locked .coord-row .lab { opacity: 0.5; }
 
   .el-card {
     padding: 10px 18px 12px;
@@ -590,6 +613,8 @@
   /* Draggable element markers. grab/grabbing only on the element pins — route
      waypoints stay non-draggable. */
   .marker.drag { cursor: grab; }
+  /* A locked pin must not advertise a drag it will refuse. */
+  .marker.drag.locked { cursor: default; }
   .marker.drag.dragging { cursor: grabbing; transform: scale(1.3); z-index: 4; }
   .marker.moved { background: var(--hot); box-shadow: 0 0 0 3px rgba(79,209,197,0.3), 0 2px 10px rgba(0,0,0,0.6); }
   .marker.added { background: var(--good); }
@@ -781,7 +806,7 @@
         <ol class="route" id="routeList"></ol>
         <div class="rationale" id="rationale"></div>
       </div>
-      <div class="hint">Hover a marker, a field or a row to link all three. <b>Drag a pin</b> to correct its position — the dashed ring shows where it was. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
+      <div class="hint">Hover a marker, a field or a row to link all three. <b>Drag a pin</b> to correct its position — the dashed ring shows where it was. <b>OK</b> or <b>Remove</b> locks that pin's fix fields. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
     </aside>
   </main>
 
@@ -1104,6 +1129,9 @@
           // v5.1: a pin marked for removal goes RED on all three surfaces, so
           // the deletion is visible on the image and not only in the rail.
           markRemoving(i, next === 'remove');
+          // v5.2: OK and Remove lock the fix fields — a pin that is correct, or
+          // that is going away, has nothing to correct.
+          setCardLock(i, next === 'ok' || next === 'remove');
         });
       });
 
@@ -1160,13 +1188,16 @@
       if (placing) return;            // place mode owns the next click
       down = true; moved = false;
       sx = e.clientX; sy = e.clientY;
-      marker.classList.add('dragging');
+      // A locked pin still accepts the pointer (so a click can still jump to
+      // its card) but never shows the drag affordance or moves.
+      if (!marker.classList.contains('locked')) marker.classList.add('dragging');
       if (marker.setPointerCapture) { try { marker.setPointerCapture(e.pointerId); } catch (err) {} }
       e.preventDefault();
       e.stopPropagation();            // never let initZoomPan start a pan
     });
     marker.addEventListener('pointermove', function (e) {
       if (!down) return;
+      if (marker.classList.contains('locked')) return;
       if (!moved && Math.abs(e.clientX - sx) < 3 && Math.abs(e.clientY - sy) < 3) return;
       moved = true;
       var p = pctFromClient(e.clientX, e.clientY);
@@ -1224,9 +1255,70 @@
   // Write a corrected position for element idx: move the marker, drop a ghost
   // at the original spot with a connector, mark every surface that shows this
   // pin, and record it in state.
+  function isLocked(idx) {
+    var s = state[idx];
+    return !!(s && (s.verdict === 'ok' || s.verdict === 'remove'));
+  }
+
+  // v5.2: OK / Remove lock a pin's correction fields.
+  // Locking STASHES whatever the reviewer had already entered and clears the
+  // live values, rather than disabling fields over data that would still be
+  // submitted. Two rules make this safe:
+  //   - the panel always shows exactly what will be sent (nothing hidden), and
+  //   - flipping back to Fix restores the stash (nothing lost to a mis-tap).
+  // A correction also contradicts both verdicts, so a moved pin is returned to
+  // its published position — the marker must not claim a fix the verdict denies.
+  var LOCK_PLACEHOLDER = { ok: 'Marked correct — no changes needed.',
+                           remove: 'Marked for removal — no fix required.' };
+  var NOTE_PLACEHOLDER = 'Critique for the next round…';
+
+  function setCardLock(idx, locked) {
+    var card = elCards[idx], s = state[idx], m = elMarkers[idx];
+    if (!card || !s) return;
+    var ta = card.querySelector('textarea');
+    var cin = card.querySelector('.coord-in');
+    var rst = card.querySelector('.reset');
+
+    if (locked) {
+      // Stash once: OK -> Remove must not overwrite the stash with the blanks
+      // the first lock already wrote.
+      if (!s.stash) s.stash = { note: s.note || '', cx: s.cx, cy: s.cy };
+      if (s.cx !== null) resetPin(idx);        // stash first, this nulls cx/cy
+      s.note = '';
+      if (ta) {
+        ta.value = '';
+        ta.placeholder = LOCK_PLACEHOLDER[s.verdict] || '';
+        ta.disabled = true;
+      }
+      if (cin) cin.disabled = true;
+      if (rst) rst.disabled = true;
+      card.classList.add('locked');
+      if (m) m.classList.add('locked');
+    } else {
+      if (ta) { ta.disabled = false; ta.placeholder = NOTE_PLACEHOLDER; }
+      if (cin) cin.disabled = false;
+      card.classList.remove('locked');
+      if (m) m.classList.remove('locked');
+      if (s.stash) {
+        s.note = s.stash.note;
+        if (ta) ta.value = s.stash.note;
+        // movePin checks isLocked, and the verdict has already been cleared by
+        // the caller, so this restores rather than being refused.
+        if (s.stash.cx !== null && s.stash.cx !== undefined) {
+          movePin(idx, s.stash.cx, s.stash.cy);
+        }
+        s.stash = null;
+      }
+      syncCoordField(idx);
+    }
+  }
+
   function movePin(idx, x, y) {
     var p = elements[idx], m = elMarkers[idx], card = elCards[idx];
     if (!p || !m) return;
+    // Refuse a drag or a typed coordinate on a locked pin. The guard lives here
+    // rather than on the drag handler so BOTH input paths are covered.
+    if (isLocked(idx)) return;
     state[idx].cx = x; state[idx].cy = y;
     m.style.left = x + '%';
     m.style.top = y + '%';
