@@ -621,7 +621,7 @@ function flyTo(pos, tgt, ms) {
     p1: pos.clone(), q1: tgt.clone()
   };
 }
-function cancelFly() { camTween = null; }
+function cancelFly() { camTween = null; if (tour) stopTour(); }
 function stepFly() {
   const k = Math.min(1, (performance.now() - camTween.t0) / camTween.ms);
   const e = easeInOutCubic(k);
@@ -874,10 +874,15 @@ loader.load(
 // aborts module evaluation, so every declaration below it silently never
 // happens. Verified in Chromium; keep these two lines above the render loop.
 let camPopupIdx = -1, camPopupWorld = null;
+// Declared up here for the same reason: animate() reads `tour` every frame and
+// runs before the directions section below is evaluated. A `let` down there
+// would still be in its temporal dead zone on frame one, and that throw
+// propagates out of the synchronous animate() call and kills the whole module.
+let routeCurve = null, routeCurveIdx = -1, tour = null;
 // ── Render loop ───────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
-  if (camTween) stepFly(); else controls.update();
+  if (tour) stepTour(); else if (camTween) stepFly(); else controls.update();
   // updateCameraPopup is a hoisted function declaration, so calling it from
   // above its textual position is fine.
   if (camPopupIdx >= 0) updateCameraPopup();
@@ -1282,6 +1287,8 @@ function initDirections(d) {
                 fig +
                 '<button class="rd-btn" id="rd-btn-' + i + '" onclick="toggleRoute3D(' + i + ')"' +
                   (drawable ? '' : ' disabled') + '>Show in 3D</button>' +
+                '<button class="rd-btn" id="rd-tour-' + i + '" onclick="tourRoute(' + i + ')"' +
+                  (drawable ? '' : ' disabled') + '>Walk the route</button>' +
                 '<div class="rd-progress" id="rd-prog-' + i + '"></div>' +
                 (drawable ? '' : '<div class="rd-note">No model coordinates for this route.</div>') +
               '</div></div>';
@@ -2658,6 +2665,8 @@ function markCard(i, on) {
   if (b) { b.classList.toggle('on', on); b.textContent = on ? 'Hide from 3D' : 'Show in 3D'; }
 }
 function clearRoute3D() {
+  if (tour) stopTour();
+  routeCurve = null; routeCurveIdx = -1;
   unregisterLayerTargets(dirLayer);
   disposeLayer(dirLayer);
   dirLayer = null;
@@ -2721,6 +2730,7 @@ function buildRouteObjects(samples, zs, pts, idx) {
   });
   dirLayer = new THREE.Group();
   const curve = new THREE.CatmullRomCurve3(vecs, false, 'catmullrom', 0.15);
+  routeCurve = curve; routeCurveIdx = idx;   // the walkthrough flies this same curve
   const tube  = new THREE.TubeGeometry(curve, Math.max(32, vecs.length * 6), radius, 8, false);
   dirLayer.add(new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: ROUTE_HEX })));
   // Ghost copy with depth testing off, so the path stays legible where the
@@ -2747,6 +2757,82 @@ function buildRouteObjects(samples, zs, pts, idx) {
   dbg('Route drawn: ' + (dirList[idx].name || ('#' + (idx + 1))) +
       ' (' + pts.length + ' waypoints, ' + samples.length + ' ground samples)', 'ok');
 }
+// ── Route walkthrough ─────────────────────────────────────────────────
+// The Entrance button flies to one point. This flies the whole route: the
+// camera rides the SAME CatmullRom curve the tube is built from, sitting a few
+// metres behind and above the moving point and looking at where it is about to
+// be. Riding the curve rather than hopping between waypoints is what makes it
+// read as walking the path instead of a slideshow of pins - and using the
+// tube's own curve means the camera can never drift off the line that is drawn.
+//
+// getPointAt (not getPoint) is arc-length parameterised, so the pace stays even
+// through tight turns instead of racing the straights and crawling the corners.
+function beginTour(i) {
+  if (!routeCurve) return;
+  cancelFly();
+  const len = routeCurve.getLength();
+  tour = { i: i, t0: performance.now(),
+           ms: Math.max(7000, Math.min(28000, len / 11 * 1000)) };
+  const b = document.getElementById('rd-tour-' + i);
+  if (b) { b.classList.add('on'); b.textContent = 'Stop walkthrough'; }
+  dbg('Route walkthrough: ' + Math.round(len) + ' m over ' +
+      (tour.ms / 1000).toFixed(0) + ' s', 'info');
+}
+function stopTour() {
+  if (!tour) return;
+  const i = tour.i;
+  tour = null;                       // cleared first: cancelFly calls back in
+  const b = document.getElementById('rd-tour-' + i);
+  if (b) { b.classList.remove('on'); b.textContent = 'Walk the route'; }
+  const p = document.getElementById('rd-prog-' + i);
+  if (p) p.textContent = '';
+  controls.update();
+}
+function stepTour() {
+  if (!routeCurve) { stopTour(); return; }
+  const k  = Math.min(1, (performance.now() - tour.t0) / tour.ms);
+  const at = routeCurve.getPointAt(k);
+  const la = routeCurve.getPointAt(Math.min(1, k + 0.035));
+  const dir = la.clone().sub(at);
+  dir.z = 0;
+  if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
+  dir.normalize();
+  const trail = Math.max(10, modelSpan * 0.05);   // how far behind the walker
+  const eye   = Math.max(5,  modelSpan * 0.028);  // and how far above
+  const pos = at.clone().addScaledVector(dir, -trail);
+  pos.z = at.z + eye;
+  camera.position.copy(pos);
+  camera.up.set(0, 0, 1);
+  controls.target.copy(la);
+  camera.lookAt(controls.target);
+  const prog = document.getElementById('rd-prog-' + tour.i);
+  if (prog) prog.textContent = 'walking the route… ' + Math.round(k * 100) + '%';
+  if (k >= 1) stopTour();
+}
+// Drawing the route is a chunked raycast that finishes whenever it finishes, so
+// if the path is not on screen yet, start it and wait for the curve to appear
+// rather than assuming it is ready.
+window.tourRoute = function (i) {
+  if (tour) { stopTour(); return; }
+  if (routeCurveIdx === i && routeCurve) { beginTour(i); return; }
+  if (activeDir !== i) toggleRoute3D(i);
+  const btn = document.getElementById('rd-tour-' + i);
+  if (btn) btn.textContent = 'Preparing…';
+  (function waitForPath(n) {
+    n = n || 0;
+    if (routeCurveIdx === i && routeCurve) {
+      if (btn) btn.textContent = 'Walk the route';
+      beginTour(i);
+      return;
+    }
+    if (n > 150) {
+      if (btn) btn.textContent = 'Walk the route';
+      dbg('Route walkthrough: path never became ready', 'warn');
+      return;
+    }
+    setTimeout(function () { waitForPath(n + 1); }, 100);
+  })();
+};
 function frameRoute(vecs) {
   const b = new THREE.Box3();
   vecs.forEach(function (v) { b.expandByPoint(v); });
