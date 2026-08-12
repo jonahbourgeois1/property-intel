@@ -1288,7 +1288,7 @@ function initDirections(d) {
                 '<button class="rd-btn" id="rd-btn-' + i + '" onclick="toggleRoute3D(' + i + ')"' +
                   (drawable ? '' : ' disabled') + '>Show in 3D</button>' +
                 '<button class="rd-btn" id="rd-tour-' + i + '" onclick="tourRoute(' + i + ')"' +
-                  (drawable ? '' : ' disabled') + '>Walk the route</button>' +
+                  (drawable ? '' : ' disabled') + '>Fly the route</button>' +
                 '<div class="rd-progress" id="rd-prog-' + i + '"></div>' +
                 (drawable ? '' : '<div class="rd-note">No model coordinates for this route.</div>') +
               '</div></div>';
@@ -2771,10 +2771,13 @@ function beginTour(i) {
   if (!routeCurve) return;
   cancelFly();
   const len = routeCurve.getLength();
-  tour = { i: i, t0: performance.now(),
-           ms: Math.max(7000, Math.min(28000, len / 11 * 1000)) };
+  // Slower than a walk. The reference footage is a drone circling the property,
+  // and at that framing the eye needs time to read the surroundings, not just
+  // the line.
+  tour = { i: i, t0: performance.now(), pos: null, tgt: null,
+           ms: Math.max(11000, Math.min(32000, len / 7 * 1000)) };
   const b = document.getElementById('rd-tour-' + i);
-  if (b) { b.classList.add('on'); b.textContent = 'Stop walkthrough'; }
+  if (b) { b.classList.add('on'); b.textContent = 'Stop flythrough'; }
   dbg('Route walkthrough: ' + Math.round(len) + ' m over ' +
       (tour.ms / 1000).toFixed(0) + ' s', 'info');
 }
@@ -2783,30 +2786,46 @@ function stopTour() {
   const i = tour.i;
   tour = null;                       // cleared first: cancelFly calls back in
   const b = document.getElementById('rd-tour-' + i);
-  if (b) { b.classList.remove('on'); b.textContent = 'Walk the route'; }
+  if (b) { b.classList.remove('on'); b.textContent = 'Fly the route'; }
   const p = document.getElementById('rd-prog-' + i);
   if (p) p.textContent = '';
   controls.update();
 }
+// Framed like the reference drone footage rather than like a body camera: the
+// camera trails the moving point from an elevated oblique far enough out that
+// the whole property stays in shot, so the route is read IN CONTEXT - which
+// building it passes, which side of the drive it runs down - instead of a
+// close-up of ground texture.
+//
+// TOUR_DIST is a slant range and TOUR_ELEV the angle above horizontal, so the
+// two decompose into a horizontal trail and a height. Distance scales with the
+// model, which keeps the framing consistent across a small lot and a large one.
+const TOUR_ELEV = 38 * Math.PI / 180;
 function stepTour() {
   if (!routeCurve) { stopTour(); return; }
   const k  = Math.min(1, (performance.now() - tour.t0) / tour.ms);
   const at = routeCurve.getPointAt(k);
-  const la = routeCurve.getPointAt(Math.min(1, k + 0.035));
+  const la = routeCurve.getPointAt(Math.min(1, k + 0.05));
   const dir = la.clone().sub(at);
   dir.z = 0;
   if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
   dir.normalize();
-  const trail = Math.max(10, modelSpan * 0.05);   // how far behind the walker
-  const eye   = Math.max(5,  modelSpan * 0.028);  // and how far above
-  const pos = at.clone().addScaledVector(dir, -trail);
-  pos.z = at.z + eye;
-  camera.position.copy(pos);
+  const dist  = Math.max(70, modelSpan * 0.55);
+  const trail = dist * Math.cos(TOUR_ELEV);
+  const rise  = dist * Math.sin(TOUR_ELEV);
+  const want = at.clone().addScaledVector(dir, -trail);
+  want.z = at.z + rise;
+  // Damped rather than snapped. A route with a sharp turn would otherwise whip
+  // the camera through a huge arc in one frame; easing toward the ideal
+  // position gives the drifting quality the drone shot has.
+  if (!tour.pos) { tour.pos = want.clone(); tour.tgt = at.clone(); }
+  else { tour.pos.lerp(want, 0.05); tour.tgt.lerp(at, 0.09); }
+  camera.position.copy(tour.pos);
   camera.up.set(0, 0, 1);
-  controls.target.copy(la);
+  controls.target.copy(tour.tgt);
   camera.lookAt(controls.target);
   const prog = document.getElementById('rd-prog-' + tour.i);
-  if (prog) prog.textContent = 'walking the route… ' + Math.round(k * 100) + '%';
+  if (prog) prog.textContent = 'following the route… ' + Math.round(k * 100) + '%';
   if (k >= 1) stopTour();
 }
 // Drawing the route is a chunked raycast that finishes whenever it finishes, so
@@ -2821,12 +2840,12 @@ window.tourRoute = function (i) {
   (function waitForPath(n) {
     n = n || 0;
     if (routeCurveIdx === i && routeCurve) {
-      if (btn) btn.textContent = 'Walk the route';
+      if (btn) btn.textContent = 'Fly the route';
       beginTour(i);
       return;
     }
     if (n > 150) {
-      if (btn) btn.textContent = 'Walk the route';
+      if (btn) btn.textContent = 'Fly the route';
       dbg('Route walkthrough: path never became ready', 'warn');
       return;
     }
