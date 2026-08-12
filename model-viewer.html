@@ -232,6 +232,76 @@
     display: flex; align-items: center; justify-content: center;
   }
   #cam-pop-close:hover { color: #f0f2f5; }
+  /* ── Weather panel ─────────────────────────────────────────────────────
+     Its own slide-out rather than another card in the property panel: active
+     alerts and wind are operational information a responder wants in one
+     click, not scrolled past pins, cameras, obliques and routes. */
+  #wx-toggle {
+    display: none; position: fixed; top: 16px; right: 168px; z-index: 60;
+    background: rgba(0,0,0,0.6); color: #38bdf8; border: 1px solid #38bdf8;
+    font-family: monospace; font-size: 11px; padding: 7px 13px;
+    border-radius: 6px; cursor: pointer; transition: background 0.15s;
+  }
+  #wx-toggle:hover { background: rgba(56,189,248,0.16); }
+  #wx-toggle.on { background: rgba(56,189,248,0.22); }
+  #wx-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 56;
+    background: #12161b; border-left: 1px solid rgba(255,255,255,0.10);
+    transform: translateX(100%); transition: transform 0.28s ease;
+    display: flex; flex-direction: column; overflow: hidden;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  #wx-panel.open { transform: translateX(0); }
+
+  #wx-body { overflow-y: auto; flex: 1; scrollbar-width: thin; padding-bottom: 16px; }
+  .wx-note {
+    margin: 14px 16px; font-size: 11px; color: #8a93a2;
+    font-family: monospace; line-height: 1.6;
+  }
+  .wx-note a { color: #38bdf8; }
+  .wx-alert {
+    margin: 12px 16px; border: 1px solid #ef4444; border-radius: 9px;
+    background: rgba(239,68,68,0.10); padding: 11px 13px;
+  }
+  .wx-alert.moderate { border-color: #f59e0b; background: rgba(245,158,11,0.10); }
+  .wx-alert-ev {
+    font-size: 12.5px; font-weight: 700; color: #fca5a5; line-height: 1.35;
+  }
+  .wx-alert.moderate .wx-alert-ev { color: #fcd34d; }
+  .wx-alert-hd { font-size: 11px; color: #d5dae2; line-height: 1.55; margin-top: 5px; }
+  .wx-alert-tm { font-size: 10px; color: #8a93a2; font-family: monospace; margin-top: 5px; }
+  .wx-now {
+    margin: 12px 16px; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; background: #1a1f27; padding: 13px 14px;
+  }
+  .wx-now-top { display: flex; align-items: baseline; gap: 10px; }
+  .wx-temp { font-size: 30px; font-weight: 700; color: #f0f2f5; line-height: 1; }
+  .wx-cond { font-size: 12px; color: #d5dae2; line-height: 1.4; }
+  .wx-rows { margin-top: 11px; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
+  .wx-k { font-family: monospace; font-size: 10px; color: #555f6e; text-transform: uppercase; letter-spacing: 0.06em; }
+  .wx-v { font-family: monospace; font-size: 11px; color: #d5dae2; }
+  .wx-v.wind { color: #38bdf8; font-weight: 700; }
+  .wx-obs-src { font-family: monospace; font-size: 9.5px; color: #555f6e; margin-top: 9px; }
+  .wx-period {
+    margin: 0 16px; padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    display: flex; gap: 11px; align-items: flex-start;
+  }
+  .wx-period:last-child { border-bottom: none; }
+  .wx-ico {
+    width: 42px; height: 42px; border-radius: 7px; flex-shrink: 0;
+    background: #0b0e12; border: 1px solid rgba(255,255,255,0.10);
+  }
+  .wx-pd { flex: 1; min-width: 0; }
+  .wx-pd-name { font-size: 11.5px; font-weight: 600; color: #f0f2f5; }
+  .wx-pd-name.night { color: #8a93a2; }
+  .wx-pd-short { font-size: 11px; color: #d5dae2; margin-top: 3px; line-height: 1.45; }
+  .wx-pd-meta { font-family: monospace; font-size: 10px; color: #8a93a2; margin-top: 4px; }
+  .wx-pd-t { font-family: monospace; font-size: 15px; font-weight: 700; color: #f0f2f5; flex-shrink: 0; }
+  .wx-sec {
+    font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em;
+    text-transform: uppercase; font-family: monospace; margin: 16px 16px 2px;
+  }
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   /* Hidden by default — append &debug=1 to the URL to show it. */
   #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: monospace; font-size: 11px; overflow: hidden; display: none; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
@@ -262,6 +332,7 @@
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
+<button id="wx-toggle" onclick="toggleWxPanel()">Weather</button>
 <div id="pin-label"></div>
 <div id="cam-popup">
   <button id="cam-pop-close" onclick="hideCameraPopup()">&#10005;</button>
@@ -292,6 +363,15 @@
   <div id="debug-header" onclick="toggleDebug()"><span>DEBUG CONSOLE</span><button id="debug-toggle-btn">▼</button></div>
   <div id="debug-log"></div>
   <button id="debug-clear" onclick="clearDebug()">clear log</button>
+</div>
+<div id="wx-panel">
+  <div class="dp-head">
+    <div>
+      <div class="dp-title">Weather</div>
+    </div>
+    <button class="dp-close" onclick="toggleWxPanel()">&#10005;</button>
+  </div>
+  <div id="wx-body"></div>
 </div>
 <div id="dir-panel">
   <div class="dp-head">
@@ -1126,6 +1206,7 @@ function initDirections(d) {
   });
   document.getElementById('dp-body').innerHTML = html;
   document.getElementById('dp-sub').textContent = d.name || '';
+  initWeather(d);
   const btn = document.getElementById('dir-toggle');
   btn.textContent = 'Pins & Directions';
   btn.style.display = 'block';
@@ -1152,6 +1233,9 @@ function initDirections(d) {
 window.toggleDirPanel = function () {
   const open = document.getElementById('dir-panel').classList.toggle('open');
   document.getElementById('dir-toggle').classList.toggle('on', open);
+  // The two panels occupy the same edge of the screen, so opening one closes
+  // the other rather than stacking them.
+  if (open) closeWxPanel();
 };
 // ── Markers ───────────────────────────────────────────────────────────
 function numberSprite(text, bg, fg, worldSize) {
@@ -1463,6 +1547,214 @@ document.addEventListener('keydown', function (e) {
   if (lb && lb.classList.contains('open')) { closeCameraPhoto(); return; }
   hideCameraPopup();
 });
+// ── Weather ───────────────────────────────────────────────────────────
+// Sourced from the National Weather Service JSON API (api.weather.gov), NOT
+// from forecast.weather.gov. That page is HTML and cross-origin, so a browser
+// cannot read it; the API serves the same underlying data as JSON with
+// Access-Control-Allow-Origin set, needs no key, and is free of rate limits
+// for this volume.
+//
+// Three calls, chained off one lookup:
+//   /points/{lat},{lon}            -> the grid cell, plus URLs for the rest
+//   .properties.forecast           -> the multi-day period forecast
+//   .properties.observationStations-> nearest station, then its latest obs
+// plus /alerts/active?point= for warnings in force right now.
+//
+// NOTE the API rejects coordinates with more than 4 decimal places, hence the
+// toFixed(4) below - a full-precision lat/lng returns 404 rather than data.
+//
+// Everything is lazy: nothing is requested until the panel is first opened,
+// so the viewer's load time is untouched and a capture run never calls out.
+const WX_API = 'https://api.weather.gov';
+let wxLat = null, wxLng = null, wxLoaded = false, wxLoading = false;
+
+function cToF(c) { return (c === null || c === undefined) ? null : c * 9 / 5 + 32; }
+function kmhToMph(k) { return (k === null || k === undefined) ? null : k * 0.621371; }
+function degToCompass(d) {
+  if (d === null || d === undefined || !isFinite(d)) return '';
+  const pts = ['N','NNE','NE','ENE','E','ESE','SE','SSE',
+               'S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return pts[Math.floor(((Number(d) + 11.25) % 360) / 22.5)];
+}
+function wxTime(iso) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return '';
+  return t.toLocaleString([], { month: 'short', day: 'numeric',
+                                hour: 'numeric', minute: '2-digit' });
+}
+// The property's own coordinates, so every property reports its own local
+// conditions with nothing to configure. Falls back to the centre of the nadir
+// bounds when a record carries no lat/lng.
+function initWeather(d) {
+  if (autocapture) return;
+  let la = Number(d && d.lat), ln = Number(d && d.lng);
+  if (!isFinite(la) || !isFinite(ln)) {
+    const b = boundsOf(d);
+    if (b) { la = (b.north + b.south) / 2; ln = (b.east + b.west) / 2; }
+  }
+  if (!isFinite(la) || !isFinite(ln)) {
+    dbg('No coordinates for weather - button hidden', 'warn');
+    return;
+  }
+  wxLat = la; wxLng = ln;
+  document.getElementById('wx-toggle').style.display = 'block';
+  dbg('Weather ready for ' + la.toFixed(4) + ', ' + ln.toFixed(4), 'ok');
+}
+window.closeWxPanel = function () {
+  document.getElementById('wx-panel').classList.remove('open');
+  document.getElementById('wx-toggle').classList.remove('on');
+};
+window.toggleWxPanel = function () {
+  const p = document.getElementById('wx-panel');
+  const open = p.classList.toggle('open');
+  document.getElementById('wx-toggle').classList.toggle('on', open);
+  if (open) {
+    document.getElementById('dir-panel').classList.remove('open');
+    document.getElementById('dir-toggle').classList.remove('on');
+    if (!wxLoaded && !wxLoading) loadWeather();
+  }
+};
+window.refreshWeather = function () { wxLoaded = false; loadWeather(); };
+async function wxJson(url) {
+  const r = await fetch(url, { headers: { 'Accept': 'application/geo+json' } });
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + url);
+  return await r.json();
+}
+async function loadWeather() {
+  if (!isFinite(wxLat) || !isFinite(wxLng) || wxLoading) return;
+  wxLoading = true;
+  const body = document.getElementById('wx-body');
+  body.innerHTML = '<div class="wx-note">Loading forecast&hellip;</div>';
+  const pt = wxLat.toFixed(4) + ',' + wxLng.toFixed(4);
+  try {
+    const point = await wxJson(WX_API + '/points/' + pt);
+    const pp = (point && point.properties) || {};
+    // The three follow-ups are independent, so fire them together. Each is
+    // caught on its own: a dead observation station must not cost us the
+    // forecast, which is the part that matters most.
+    const [fc, alerts, stations] = await Promise.all([
+      pp.forecast ? wxJson(pp.forecast).catch(function (e) { dbg('Forecast failed: ' + e.message, 'warn'); return null; }) : null,
+      wxJson(WX_API + '/alerts/active?point=' + pt).catch(function () { return null; }),
+      pp.observationStations ? wxJson(pp.observationStations).catch(function () { return null; }) : null
+    ]);
+    let obs = null, stationName = '';
+    const st = stations && stations.features && stations.features[0];
+    if (st && st.properties && st.properties.stationIdentifier) {
+      stationName = st.properties.name || st.properties.stationIdentifier;
+      obs = await wxJson(WX_API + '/stations/' + st.properties.stationIdentifier +
+                         '/observations/latest').catch(function () { return null; });
+    }
+    body.innerHTML = renderWeather(pp, fc, alerts, obs, stationName, pt);
+    wxLoaded = true;
+    dbg('Weather loaded' + (pp.gridId ? ' (' + pp.gridId + ' ' + pp.gridX + ',' + pp.gridY + ')' : ''), 'ok');
+  } catch (e) {
+    body.innerHTML =
+      '<div class="wx-note">Could not reach the National Weather Service.<br><br>' +
+      escHtml(e.message) + '<br><br>' +
+      '<a href="https://forecast.weather.gov/MapClick.php?lat=' + wxLat.toFixed(4) +
+      '&amp;lon=' + wxLng.toFixed(4) + '" target="_blank" rel="noopener">' +
+      'Open the NWS page for this location</a><br><br>' +
+      '<a href="#" onclick="refreshWeather();return false;">Retry</a></div>';
+    dbg('Weather FAILED: ' + e.message, 'error');
+  } finally {
+    wxLoading = false;
+  }
+}
+function renderWeather(pp, fc, alerts, obs, stationName, pt) {
+  let h = '';
+  // ── Active alerts first. For a property whose considerations already flag
+  // high wildfire risk, a Red Flag Warning is the single most useful thing
+  // this panel can show, so nothing is allowed above it.
+  const feats = (alerts && alerts.features) || [];
+  if (feats.length) {
+    h += '<div class="wx-sec">Active alerts</div>';
+    feats.forEach(function (f) {
+      const a = f.properties || {};
+      const sev = String(a.severity || '').toLowerCase();
+      const cls = (sev === 'extreme' || sev === 'severe') ? '' : ' moderate';
+      h += '<div class="wx-alert' + cls + '">' +
+             '<div class="wx-alert-ev">' + escHtml(a.event || 'Alert') + '</div>' +
+             (a.headline ? '<div class="wx-alert-hd">' + escHtml(a.headline) + '</div>' : '') +
+             '<div class="wx-alert-tm">' +
+               (a.severity ? escHtml(a.severity) + ' &middot; ' : '') +
+               (a.ends || a.expires ? 'until ' + escHtml(wxTime(a.ends || a.expires)) : '') +
+             '</div></div>';
+    });
+  }
+  // ── Current conditions
+  const o = (obs && obs.properties) || null;
+  if (o) {
+    const tF  = cToF(o.temperature && o.temperature.value);
+    const wF  = cToF(o.windChill && o.windChill.value);
+    const hI  = cToF(o.heatIndex && o.heatIndex.value);
+    const spd = kmhToMph(o.windSpeed && o.windSpeed.value);
+    const gst = kmhToMph(o.windGust && o.windGust.value);
+    const dir = o.windDirection && o.windDirection.value;
+    const rh  = o.relativeHumidity && o.relativeHumidity.value;
+    h += '<div class="wx-sec">Now</div><div class="wx-now"><div class="wx-now-top">' +
+         '<div class="wx-temp">' + (tF === null ? '--' : Math.round(tF) + '&deg;') + '</div>' +
+         '<div class="wx-cond">' + escHtml(o.textDescription || '') + '</div></div>' +
+         '<div class="wx-rows">';
+    // Wind is called out because it drives fire behaviour and drone launch
+    // decisions - the two operational questions this layer exists to answer.
+    h += '<div class="wx-k">Wind</div><div class="wx-v wind">' +
+         (spd === null ? 'unknown'
+            : (Math.round(spd) === 0 ? 'calm'
+               : degToCompass(dir) + ' ' + Math.round(spd) + ' mph')) +
+         (gst !== null && gst > 0 ? ' (gusting ' + Math.round(gst) + ')' : '') +
+         '</div>';
+    if (rh !== null && rh !== undefined) {
+      h += '<div class="wx-k">Humidity</div><div class="wx-v">' + Math.round(rh) + '%</div>';
+    }
+    if (wF !== null) h += '<div class="wx-k">Wind chill</div><div class="wx-v">' + Math.round(wF) + '&deg;</div>';
+    if (hI !== null) h += '<div class="wx-k">Heat index</div><div class="wx-v">' + Math.round(hI) + '&deg;</div>';
+    h += '</div><div class="wx-obs-src">' +
+         escHtml(stationName || 'station') +
+         (o.timestamp ? ' &middot; ' + escHtml(wxTime(o.timestamp)) : '') +
+         '</div></div>';
+  }
+  // ── Forecast periods
+  const periods = (fc && fc.properties && fc.properties.periods) || [];
+  if (periods.length) {
+    h += '<div class="wx-sec">Forecast</div>';
+    periods.slice(0, 8).forEach(function (p) {
+      const pop = p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value;
+      const meta = [];
+      if (p.windSpeed) meta.push((p.windDirection || '') + ' ' + p.windSpeed);
+      if (pop) meta.push(pop + '% precip');
+      h += '<div class="wx-period">' +
+             (p.icon ? '<img class="wx-ico" src="' + escHtml(p.icon) +
+                       '" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+                     : '<div class="wx-ico"></div>') +
+             '<div class="wx-pd">' +
+               '<div class="wx-pd-name' + (p.isDaytime ? '' : ' night') + '">' +
+                 escHtml(p.name || '') + '</div>' +
+               '<div class="wx-pd-short">' + escHtml(p.shortForecast || '') + '</div>' +
+               (meta.length ? '<div class="wx-pd-meta">' + escHtml(meta.join('  ·  ')) + '</div>' : '') +
+             '</div>' +
+             '<div class="wx-pd-t">' + (p.temperature !== undefined && p.temperature !== null
+                ? p.temperature + '&deg;' + (p.temperatureUnit || '') : '') + '</div>' +
+           '</div>';
+    });
+  }
+  if (!h) {
+    h = '<div class="wx-note">The National Weather Service returned no data for ' +
+        'this location.</div>';
+  }
+  h += '<div class="wx-note">' +
+       (pp.relativeLocation && pp.relativeLocation.properties
+          ? escHtml(pp.relativeLocation.properties.city || '') +
+            (pp.relativeLocation.properties.state ? ', ' + escHtml(pp.relativeLocation.properties.state) : '') + ' &middot; '
+          : '') +
+       (pp.gridId ? escHtml(pp.gridId + ' ' + pp.gridX + ',' + pp.gridY) + '<br>' : '') +
+       escHtml(wxLat.toFixed(4) + ', ' + wxLng.toFixed(4)) +
+       '<br><a href="https://forecast.weather.gov/MapClick.php?lat=' + wxLat.toFixed(4) +
+       '&amp;lon=' + wxLng.toFixed(4) + '" target="_blank" rel="noopener">Full NWS forecast page</a>' +
+       ' &middot; <a href="#" onclick="refreshWeather();return false;">Refresh</a>' +
+       '</div>';
+  return h;
+}
 // ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
   const c = document.getElementById('rd-card-' + i);
