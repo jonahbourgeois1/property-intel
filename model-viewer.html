@@ -379,6 +379,22 @@
   .hz-t { font-size: 11.5px; color: #f0f2f5; line-height: 1.4; overflow-wrap: anywhere; }
   .hz-m { font-family: monospace; font-size: 10px; color: #8a93a2; margin-top: 3px; }
   .hz-dim { color: #555f6e; }
+  .hz-row.hz-click { cursor: pointer; }
+  .hz-row.hz-click:hover .hz-t { color: #fff; }
+  .hz-t .wx-alert-caret { float: right; margin-left: 8px; }
+  .hz-det { font-size: 10.5px; }
+  .wx-temp.sm { font-size: 21px; }
+  .hz-unit { font-size: 13px; font-weight: 600; color: #8a93a2; margin-left: 3px; }
+  .hz-map { margin: 4px 16px 0; border: 1px solid rgba(255,255,255,0.10);
+            border-radius: 10px; background: #0b0e12; padding: 6px 6px 2px; }
+  .hz-map-cap { font-family: monospace; font-size: 9px; color: #555f6e;
+                text-align: center; padding: 2px 0 5px; }
+  .hz-scale { margin: 8px 16px 0; }
+  .hz-scale-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .hz-scale-k { font-family: monospace; font-size: 10px; font-weight: 700; width: 20px; flex-shrink: 0; }
+  .hz-bar { flex: 1; height: 9px; border-radius: 5px; background: rgba(255,255,255,0.07); overflow: hidden; }
+  .hz-bar-f { height: 100%; border-radius: 5px; }
+  .hz-scale-v { font-family: monospace; font-size: 10px; color: #8a93a2; width: 32px; text-align: right; flex-shrink: 0; }
   @media (max-width: 640px) { .hz-panel { width: 100%; } }
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   /* Hidden by default — append &debug=1 to the URL to show it. */
@@ -1966,38 +1982,79 @@ function renderWeather(pp, fc, alerts, obs, stationName, pt) {
   return h;
 }
 // ── Regional hazard panels ────────────────────────────────────────────
-// Five public, key-free sources, each in its own panel. They are declared as a
-// registry rather than hand-built one by one: the rail buttons, the panel
-// divs and the lazy-load bookkeeping are all generated from this list, so a
-// sixth source is one entry plus a loader, not five edits in five places.
+// Five public, key-free sources, each in its own panel. Declared as a registry
+// rather than hand-built one by one: the rail buttons, the panel divs and the
+// lazy-load bookkeeping all generate from this list, so a sixth source is one
+// entry plus a loader, not five edits in five places.
 //
-// Every loader returns an HTML string or throws. Throwing is fine and expected
+// Every loader returns an HTML string or throws. Throwing is expected and fine
 // - openHazard catches it and renders the source's own link plus a retry, so a
 // CORS refusal or an outage degrades to "here is where to look" instead of a
-// blank panel. That matters because CORS could NOT be tested before shipping:
-// the build sandbox has no outbound internet, so the first real load is the
-// first proof that a browser is allowed to read each of these cross-origin.
+// blank panel.
 const HAZARDS = [
   { id: 'quake',   label: 'Earthquakes', accent: '#f97316',
-    site: 'https://earthquake.usgs.gov/earthquakes/map/', siteName: 'USGS earthquake map' },
+    site: 'https://earthquake.usgs.gov/earthquakes/map/', siteName: 'USGS earthquake map',
+    source: 'USGS Earthquake Catalog' },
   { id: 'fire',    label: 'Wildfire',    accent: '#ef4444',
-    site: 'https://www.nifc.gov/fire-information/nfn', siteName: 'NIFC fire information' },
+    site: 'https://www.nifc.gov/fire-information/nfn', siteName: 'NIFC fire information',
+    source: 'NIFC WFIGS interagency perimeters' },
   { id: 'drought', label: 'Drought',     accent: '#eab308',
-    site: 'https://droughtmonitor.unl.edu/', siteName: 'US Drought Monitor' },
+    site: 'https://droughtmonitor.unl.edu/', siteName: 'US Drought Monitor',
+    source: 'US Drought Monitor (UNL)' },
   { id: 'fema',    label: 'FEMA',        accent: '#a78bfa',
-    site: 'https://www.fema.gov/disaster/declarations', siteName: 'FEMA declarations' },
+    site: 'https://www.fema.gov/disaster/declarations', siteName: 'FEMA declarations',
+    source: 'OpenFEMA disaster declarations' },
   { id: 'space',   label: 'Space Wx',    accent: '#2dd4bf',
-    site: 'https://www.spaceweather.gov/', siteName: 'NOAA Space Weather' }
+    site: 'https://www.spaceweather.gov/', siteName: 'NOAA Space Weather Prediction Center',
+    source: 'NOAA SWPC alerts' }
 ];
 const hzState = {};   // id -> {loaded, loading}
 
-// ── shared bits ───────────────────────────────────────────────────────
+// ── shared presentation pieces ────────────────────────────────────────
+// Deliberately reuses the weather panel's classes (wx-sec / wx-now / wx-rows /
+// wx-note) so all seven panels read as one surface rather than five dialects.
 function hzSec(t)   { return '<div class="wx-sec">' + escHtml(t) + '</div>'; }
 function hzNote(t)  { return '<div class="wx-note">' + t + '</div>'; }
 function hzEmpty(t) { return hzNote(escHtml(t)); }
-function hzLink(url, label) {
-  return hzNote('<a href="' + escHtml(url) + '" target="_blank" rel="noopener">' +
-                escHtml(label) + '</a>');
+function hzPlural(n, unit) { return n + ' ' + unit + (Math.abs(n) === 1 ? '' : 's'); }
+// The headline card: one big number and a phrase, then supporting rows. Same
+// shape as the weather panel's "88 deg / Clear", which is what made that panel
+// readable at a glance instead of a list you have to parse.
+function hzHead(big, small, rows, sub) {
+  let h = '<div class="wx-now"><div class="wx-now-top">' +
+          '<div class="wx-temp' + (String(big).length > 4 ? ' sm' : '') + '">' + big + '</div>' +
+          '<div class="wx-cond">' + small + '</div></div>';
+  if (rows && rows.length) {
+    h += '<div class="wx-rows">';
+    rows.forEach(function (r) {
+      h += '<div class="wx-k">' + escHtml(r[0]) + '</div><div class="wx-v' +
+           (r[2] ? ' ' + r[2] : '') + '">' + r[1] + '</div>';
+    });
+    h += '</div>';
+  }
+  if (sub) h += '<div class="wx-obs-src">' + escHtml(sub) + '</div>';
+  return h + '</div>';
+}
+// Every panel ends the same way: where the data came from, a link to the
+// authoritative page, and a refresh. Matches the weather panel's footer.
+function hzFoot(hz, extra) {
+  return '<div class="wx-note">' + (extra ? escHtml(extra) + '<br>' : '') +
+         escHtml(hz.source) +
+         '<br><a href="' + escHtml(hz.site) + '" target="_blank" rel="noopener">' +
+         escHtml(hz.siteName) + '</a>' +
+         ' &middot; <a href="#" onclick="retryHazard(\'' + hz.id + '\');return false;">Refresh</a>' +
+         '</div>';
+}
+function hzRow(badge, badgeCls, title, meta, onclick, idx) {
+  const clickable = onclick ? ' hz-click" onclick="' + onclick : '';
+  return '<div class="hz-row' + (clickable || '"') + '">' +
+           '<div class="hz-badge ' + badgeCls + '">' + badge + '</div>' +
+           '<div class="hz-main"><div class="hz-t">' + title +
+             (onclick ? '<span class="wx-alert-caret" id="hz-c-' + idx + '">&#9660;</span>' : '') +
+           '</div>' +
+             (meta ? '<div class="hz-m">' + meta + '</div>' : '') +
+             (onclick ? '<div class="wx-alert-detail hz-det" id="hz-d-' + idx + '"></div>' : '') +
+           '</div></div>';
 }
 function kmBetween(la1, lo1, la2, lo2) {
   if (![la1, lo1, la2, lo2].every(function (v) { return isFinite(Number(v)); })) return NaN;
@@ -2008,26 +2065,31 @@ function kmBetween(la1, lo1, la2, lo2) {
             Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
 }
-function hzAgo(ms) {
-  const s = (Date.now() - ms) / 1000;
-  if (!isFinite(s)) return '';
-  if (s < 3600)  return Math.max(1, Math.round(s / 60)) + ' min ago';
-  if (s < 86400) return Math.round(s / 3600) + ' hr ago';
-  return Math.round(s / 86400) + ' days ago';
+function bearingTo(la1, lo1, la2, lo2) {
+  const r = Math.PI / 180;
+  const p1 = la1 * r, p2 = la2 * r, dl = (lo2 - lo1) * r;
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (Math.atan2(y, x) / r + 360) % 360;
 }
-function hzRow(badge, badgeCls, title, meta) {
-  return '<div class="hz-row">' +
-           '<div class="hz-badge ' + badgeCls + '">' + badge + '</div>' +
-           '<div class="hz-main"><div class="hz-t">' + title + '</div>' +
-             (meta ? '<div class="hz-m">' + meta + '</div>' : '') +
-           '</div></div>';
+// "1 day ago", never "1 days ago".
+function hzAgo(ms) {
+  const s = (Date.now() - Number(ms)) / 1000;
+  if (!isFinite(s)) return '';
+  if (s < 0) return 'just now';
+  if (s < 90)    return 'just now';
+  if (s < 3600)  return hzPlural(Math.round(s / 60), 'minute') + ' ago';
+  if (s < 86400) return hzPlural(Math.round(s / 3600), 'hour') + ' ago';
+  const d = Math.round(s / 86400);
+  if (d < 45)  return hzPlural(d, 'day') + ' ago';
+  if (d < 400) return hzPlural(Math.round(d / 30), 'month') + ' ago';
+  return hzPlural(Math.round(d / 365), 'year') + ' ago';
 }
 
 // County identity, needed by both FEMA and Drought (each is keyed on county,
 // not on a coordinate). Derived from the NWS points response we already rely
 // on: its `county` property is a zone URL ending in e.g. ORC017 - state OR,
-// county 017 - which combined with the state FIPS gives 41017. Resolved once
-// and cached, so opening both panels costs one lookup.
+// county 017 - which with the state FIPS gives 41017. Resolved once, cached.
 const STATE_FIPS = {AL:'01',AK:'02',AZ:'04',AR:'05',CA:'06',CO:'08',CT:'09',DE:'10',
  DC:'11',FL:'12',GA:'13',HI:'15',ID:'16',IL:'17',IN:'18',IA:'19',KS:'20',KY:'21',
  LA:'22',ME:'23',MD:'24',MA:'25',MI:'26',MN:'27',MS:'28',MO:'29',MT:'30',NE:'31',
@@ -2053,169 +2115,358 @@ async function resolveCounty(lat, lng) {
 }
 
 // ── 1. USGS earthquakes ───────────────────────────────────────────────
-async function loadQuakes(lat, lng) {
+async function loadQuakes(lat, lng, hz) {
   const url = 'https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson' +
     '&latitude=' + lat.toFixed(4) + '&longitude=' + lng.toFixed(4) +
-    '&maxradiuskm=300&minmagnitude=2.5&orderby=time&limit=20';
+    '&maxradiuskm=300&minmagnitude=2.5&orderby=time&limit=30';
   const j = await wxJson(url);
-  const f = (j && j.features) || [];
-  if (!f.length) {
-    return hzEmpty('No magnitude 2.5+ earthquakes within 300 km in the USGS catalogue.');
-  }
-  let h = hzSec('M2.5+ within 300 km');
-  f.forEach(function (q) {
+  const f = ((j && j.features) || []).map(function (q) {
     const p = q.properties || {}, c = (q.geometry && q.geometry.coordinates) || [];
-    const d = kmBetween(lat, lng, c[1], c[0]);
-    const mag = (p.mag === null || p.mag === undefined) ? '?' : Number(p.mag).toFixed(1);
-    const cls = Number(p.mag) >= 5 ? 'big' : (Number(p.mag) >= 4 ? 'mid' : '');
-    const meta = [];
-    if (isFinite(d)) meta.push(Math.round(d) + ' km away');
-    if (c[2] !== undefined && c[2] !== null) meta.push(Math.round(c[2]) + ' km deep');
-    if (p.time) meta.push(hzAgo(Number(p.time)));
-    h += hzRow(mag, cls, escHtml(p.place || 'Unknown location'), escHtml(meta.join('  ·  ')));
+    return { mag: Number(p.mag), place: p.place || 'Unknown location', time: Number(p.time),
+             depth: c[2], url: p.url, km: kmBetween(lat, lng, c[1], c[0]) };
   });
-  return h;
+  if (!f.length) {
+    return hzHead('0', 'No recorded quakes', [['Search', 'M2.5+ within 300 km']]) +
+           hzFoot(hz, 'Nothing in the USGS catalogue for this area.');
+  }
+  const nearest = f.slice().sort(function (a, b) { return a.km - b.km; })[0];
+  const largest = f.slice().sort(function (a, b) { return b.mag - a.mag; })[0];
+  let h = hzHead(
+    isFinite(nearest.km) ? Math.round(nearest.km) + '<span class="hz-unit">km</span>' : '--',
+    'to the nearest recorded quake',
+    [['Nearest', 'M' + nearest.mag.toFixed(1) + ' &middot; ' + hzAgo(nearest.time)],
+     ['Largest', 'M' + largest.mag.toFixed(1) + ' &middot; ' + escHtml(shortPlace(largest.place)) +
+                 ' &middot; ' + hzAgo(largest.time), largest.mag >= 5 ? 'wind' : ''],
+     ['Total',   hzPlural(f.length, 'event') + ' in the search window']],
+    'M2.5+ within 300 km of the property');
+  h += hzSec('Most recent first');
+  f.forEach(function (q) {
+    const cls = q.mag >= 5 ? 'big' : (q.mag >= 4 ? 'mid' : '');
+    const meta = [];
+    if (isFinite(q.km)) meta.push(Math.round(q.km) + ' km away');
+    if (q.depth !== undefined && q.depth !== null) meta.push(Math.round(q.depth) + ' km deep');
+    meta.push(hzAgo(q.time));
+    h += hzRow(isFinite(q.mag) ? q.mag.toFixed(1) : '?', cls,
+               escHtml(q.place), escHtml(meta.join('  ·  ')));
+  });
+  return h + hzFoot(hz);
+}
+function shortPlace(p) {
+  const s = String(p || '');
+  const i = s.indexOf(' of ');
+  return i > 0 ? s.slice(i + 4) : s;
 }
 
 // ── 2. NIFC wildfire perimeters ───────────────────────────────────────
-// ⚠️ This is the one endpoint I could not verify before shipping - the build
-// sandbox's fetch proxy returned 403 before reaching ArcGIS. The shape below
-// follows the WFIGS service definition; if the field names are wrong the panel
-// will say so rather than silently showing nothing.
-async function loadFires(lat, lng) {
-  const env = { xmin: lng - 2, ymin: lat - 2, xmax: lng + 2, ymax: lat + 2,
+// ⚠️ The one endpoint I could not verify before shipping - the build sandbox's
+// fetch proxy returned 403 before reaching ArcGIS. Field names follow the WFIGS
+// service definition. returnCentroid gives us a point per perimeter, which is
+// what makes distance ordering and the mini-map possible.
+async function loadFires(lat, lng, hz) {
+  const env = { xmin: lng - 2.6, ymin: lat - 2.0, xmax: lng + 2.6, ymax: lat + 2.0,
                 spatialReference: { wkid: 4326 } };
   const url = 'https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/' +
     'WFIGS_Interagency_Perimeters_Current/FeatureServer/0/query?f=json&returnGeometry=false' +
-    '&outFields=poly_IncidentName,poly_GISAcres,attr_FireDiscoveryDateTime,attr_POOState' +
+    '&returnCentroid=true&outSR=4326' +
+    '&outFields=poly_IncidentName,poly_GISAcres,attr_FireDiscoveryDateTime,attr_POOState,attr_IncidentTypeCategory' +
     '&where=1%3D1&geometryType=esriGeometryEnvelope&inSR=4326' +
-    '&spatialRel=esriSpatialRelIntersects&resultRecordCount=25' +
+    '&spatialRel=esriSpatialRelIntersects&resultRecordCount=40' +
     '&geometry=' + encodeURIComponent(JSON.stringify(env));
   const j = await wxJson(url);
-  if (j && j.error) {
-    throw new Error('ArcGIS: ' + ((j.error && j.error.message) || 'query rejected'));
-  }
-  const f = (j && j.features) || [];
-  if (!f.length) {
-    return hzEmpty('No current NIFC fire perimeters within about 200 km.') +
-           hzNote('This layer holds mapped perimeters only. A new fire can be burning ' +
-                  'before a perimeter is published - NASA FIRMS satellite detections ' +
-                  'are the faster signal, and they need an API key.');
-  }
-  let h = hzSec('Current perimeters nearby');
-  f.forEach(function (x) {
-    const a = x.attributes || {};
-    const acres = Number(a.poly_GISAcres);
-    const meta = [];
-    if (isFinite(acres)) meta.push(Math.round(acres).toLocaleString() + ' acres');
-    if (a.attr_FireDiscoveryDateTime) meta.push('discovered ' + hzAgo(Number(a.attr_FireDiscoveryDateTime)));
-    if (a.attr_POOState) meta.push(String(a.attr_POOState).replace('US-', ''));
-    h += hzRow('&#128293;', 'fire',
-               escHtml(a.poly_IncidentName || 'Unnamed incident'),
-               escHtml(meta.join('  ·  ')));
+  if (j && j.error) throw new Error('ArcGIS: ' + ((j.error && j.error.message) || 'query rejected'));
+  const fires = ((j && j.features) || []).map(function (x) {
+    const a = x.attributes || {}, c = x.centroid || {};
+    return { name: a.poly_IncidentName || 'Unnamed incident',
+             acres: Number(a.poly_GISAcres),
+             found: Number(a.attr_FireDiscoveryDateTime),
+             state: String(a.attr_POOState || '').replace('US-', ''),
+             lat: Number(c.y), lng: Number(c.x),
+             km: kmBetween(lat, lng, Number(c.y), Number(c.x)),
+             brg: bearingTo(lat, lng, Number(c.y), Number(c.x)) };
+  }).sort(function (a, b) {
+    const ax = isFinite(a.km) ? a.km : 1e9, bx = isFinite(b.km) ? b.km : 1e9;
+    return ax - bx;
   });
-  return h;
+  if (!fires.length) {
+    return hzHead('0', 'mapped perimeters nearby', [['Search', 'about 250 km around the property']]) +
+           hzFoot(hz, 'This layer holds mapped perimeters only. A new fire can burn for ' +
+                      'hours before a perimeter is published - NASA FIRMS satellite ' +
+                      'detections are the faster signal, and need an API key.');
+  }
+  const near = fires[0];
+  const totalAcres = fires.reduce(function (s, f) { return s + (isFinite(f.acres) ? f.acres : 0); }, 0);
+  let h = hzHead(
+    isFinite(near.km) ? Math.round(near.km) + '<span class="hz-unit">km</span>' : '--',
+    'to the nearest active perimeter',
+    [['Nearest', escHtml(near.name) + (isFinite(near.acres) ? ' &middot; ' + Math.round(near.acres).toLocaleString() + ' acres' : ''),
+      near.km < 25 ? 'wind' : ''],
+     ['Bearing', isFinite(near.brg) ? compass16(near.brg) + ' (' + Math.round(near.brg) + '&deg;)' : 'unknown'],
+     ['Nearby',  hzPlural(fires.length, 'fire') + ' &middot; ' + Math.round(totalAcres).toLocaleString() + ' acres total']],
+    'Perimeters intersecting a ~250 km box');
+  h += hzSec('Bearing and distance');
+  h += fireMapSvg(fires);
+  h += hzSec('Closest first');
+  fires.forEach(function (f) {
+    const meta = [];
+    if (isFinite(f.km))    meta.push(Math.round(f.km) + ' km ' + compass16(f.brg));
+    if (isFinite(f.acres)) meta.push(Math.round(f.acres).toLocaleString() + ' acres');
+    if (isFinite(f.found)) meta.push('found ' + hzAgo(f.found));
+    if (f.state)           meta.push(f.state);
+    h += hzRow('&#128293;', 'fire', escHtml(f.name), escHtml(meta.join('  ·  ')));
+  });
+  return h + hzFoot(hz);
+}
+function compass16(d) {
+  if (!isFinite(d)) return '';
+  return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
+         [Math.floor(((Number(d) + 11.25) % 360) / 22.5)];
+}
+// A plan view drawn as inline SVG rather than a tile map: no key, no CDN, no
+// third-party request, and it answers the only question that matters here -
+// how far away is it and which way. Range rings are labelled so distance is
+// readable without a legend; dot area scales with acreage.
+function fireMapSvg(fires) {
+  const S = 296, C = S / 2, R = C - 26;
+  const far = Math.max.apply(null, fires.map(function (f) {
+    return isFinite(f.km) ? f.km : 0; }).concat([40]));
+  const rings = far <= 60 ? [20, 40, 60] : far <= 130 ? [50, 100, 130] : [75, 150, 250];
+  const span = rings[rings.length - 1];
+  let s = '<div class="hz-map"><svg viewBox="0 0 ' + S + ' ' + S + '" width="100%">';
+  rings.forEach(function (km) {
+    const r = R * km / span;
+    s += '<circle cx="' + C + '" cy="' + C + '" r="' + r.toFixed(1) + '" ' +
+         'fill="none" stroke="rgba(255,255,255,0.13)" stroke-dasharray="3 4"></circle>' +
+         '<text x="' + (C + 3) + '" y="' + (C - r + 11).toFixed(1) + '" ' +
+         'fill="#555f6e" font-size="9" font-family="monospace">' + km + ' km</text>';
+  });
+  s += '<line x1="' + C + '" y1="' + (C - R) + '" x2="' + C + '" y2="' + (C + R) +
+       '" stroke="rgba(255,255,255,0.07)"></line>' +
+       '<line x1="' + (C - R) + '" y1="' + C + '" x2="' + (C + R) + '" y2="' + C +
+       '" stroke="rgba(255,255,255,0.07)"></line>' +
+       '<text x="' + C + '" y="12" fill="#8a93a2" font-size="9" font-family="monospace" ' +
+       'text-anchor="middle">N</text>';
+  fires.forEach(function (f) {
+    if (!isFinite(f.km) || !isFinite(f.brg)) return;
+    const r = Math.min(R, R * f.km / span);
+    const a = f.brg * Math.PI / 180;
+    const x = C + r * Math.sin(a), y = C - r * Math.cos(a);
+    const rad = Math.max(3, Math.min(13, Math.sqrt(Math.max(1, f.acres || 1)) / 26));
+    s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + rad.toFixed(1) +
+         '" fill="rgba(239,68,68,0.34)" stroke="#ef4444" stroke-width="1.2">' +
+         '<title>' + escHtml(f.name + ' — ' + Math.round(f.km) + ' km ' + compass16(f.brg)) +
+         '</title></circle>';
+  });
+  // The property last, so it is never hidden under a fire dot.
+  s += '<circle cx="' + C + '" cy="' + C + '" r="4.5" fill="#38bdf8"></circle>' +
+       '<circle cx="' + C + '" cy="' + C + '" r="9" fill="none" stroke="#38bdf8" ' +
+       'stroke-opacity="0.45"></circle>';
+  return s + '</svg><div class="hz-map-cap">Property at centre &middot; north up &middot; ' +
+         'dot size is acreage</div></div>';
 }
 
 // ── 3. US Drought Monitor ─────────────────────────────────────────────
-// Returns CSV, not JSON - verified. Columns:
-// MapDate, FIPS, County, State, None, D0, D1, D2, D3, D4, ValidStart, ValidEnd, ...
-// D0 abnormally dry .. D4 exceptional drought, each a PERCENT OF COUNTY AREA and
-// cumulative (D1 is included inside D0), so the headline figure is the most
-// severe class with a non-zero share.
+// TWO sources tried in order, because the panel failed on first run and the
+// most likely cause is that usdmdataservices.unl.edu does not send CORS headers
+// - it is a data service for analysts, not for browser apps, and no amount of
+// client code fixes a missing Access-Control-Allow-Origin.
+//   1. the USDM ArcGIS feature service - ArcGIS Online enables CORS by default,
+//      and a point query gives the category AT THE PROPERTY rather than a
+//      county average, which is strictly better information
+//   2. the UNL CSV service, kept as a fallback and for the county breakdown
+// If both fail the error names both so we learn which one is the problem.
 const DROUGHT_LABEL = { D0: 'Abnormally dry', D1: 'Moderate drought',
                         D2: 'Severe drought', D3: 'Extreme drought',
                         D4: 'Exceptional drought' };
+const DROUGHT_COLOR = { D0: '#ffff00', D1: '#fcd37f', D2: '#ffaa00',
+                        D3: '#e60000', D4: '#730000' };
 function parseCsv(text) {
   const lines = String(text || '').trim().split(/\r?\n/).filter(function (l) { return l.trim(); });
   if (lines.length < 2) return [];
   const head = lines[0].split(',').map(function (h) { return h.trim().replace(/^"|"$/g, ''); });
   return lines.slice(1).map(function (l) {
-    const cells = l.split(',');
-    const o = {};
-    head.forEach(function (k, i) { o[k] = String(cells[i] == null ? '' : cells[i]).trim().replace(/^"|"$/g, ''); });
+    const cells = l.split(','), o = {};
+    head.forEach(function (k, i) {
+      o[k] = String(cells[i] == null ? '' : cells[i]).trim().replace(/^"|"$/g, '');
+    });
     return o;
   });
 }
 function usdmDate(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear(); }
-async function loadDrought(lat, lng) {
+async function droughtAtPoint(lat, lng) {
+  const g = { x: lng, y: lat, spatialReference: { wkid: 4326 } };
+  const url = 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/' +
+    'USDM_current/FeatureServer/0/query?f=json&returnGeometry=false&outFields=DM' +
+    '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects' +
+    '&where=1%3D1&geometry=' + encodeURIComponent(JSON.stringify(g));
+  const j = await wxJson(url);
+  if (j && j.error) throw new Error((j.error && j.error.message) || 'ArcGIS query rejected');
+  const f = (j && j.features) || [];
+  let worst = -1;
+  f.forEach(function (x) {
+    const dm = Number((x.attributes || {}).DM);
+    if (isFinite(dm) && dm > worst) worst = dm;
+  });
+  return worst;                       // -1 = none, 0..4 = D0..D4
+}
+async function countyDrought(lat, lng) {
   const c = await resolveCounty(lat, lng);
-  if (!c.fips || c.fips.length !== 5) {
-    throw new Error('Could not determine the county FIPS code for this location');
-  }
-  const end = new Date(), start = new Date(Date.now() - 1000 * 60 * 60 * 24 * 70);
+  if (!c.fips || c.fips.length !== 5) throw new Error('county FIPS could not be determined');
+  const end = new Date(), start = new Date(Date.now() - 1000 * 60 * 60 * 24 * 84);
   const url = 'https://usdmdataservices.unl.edu/api/CountyStatistics/' +
     'GetDroughtSeverityStatisticsByAreaPercent?aoi=' + c.fips +
     '&startdate=' + encodeURIComponent(usdmDate(start)) +
     '&enddate=' + encodeURIComponent(usdmDate(end)) + '&statisticsType=1';
   const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status + ' from the US Drought Monitor');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
   const rows = parseCsv(await r.text());
-  if (!rows.length) return hzEmpty('No Drought Monitor data returned for this county.');
   rows.sort(function (a, b) { return (Date.parse(b.MapDate) || 0) - (Date.parse(a.MapDate) || 0); });
-  const now = rows[0];
-  let worst = null;
-  ['D4', 'D3', 'D2', 'D1', 'D0'].forEach(function (k) {
-    if (!worst && Number(now[k]) > 0) worst = k;
-  });
-  let h = hzSec((now.County || 'County') + (now.State ? ', ' + now.State : ''));
-  h += '<div class="wx-now"><div class="wx-now-top">' +
-         '<div class="wx-temp" style="font-size:20px">' +
-           (worst ? worst : 'None') + '</div>' +
-         '<div class="wx-cond">' + (worst ? escHtml(DROUGHT_LABEL[worst]) : 'No drought conditions') +
-         '</div></div><div class="wx-rows">';
-  ['D0', 'D1', 'D2', 'D3', 'D4'].forEach(function (k) {
-    const v = Number(now[k]);
-    if (!isFinite(v) || v <= 0) return;
-    h += '<div class="wx-k">' + k + '</div><div class="wx-v">' + v.toFixed(1) +
-         '% of county <span class="hz-dim">' + escHtml(DROUGHT_LABEL[k]) + '</span></div>';
-  });
-  h += '</div><div class="wx-obs-src">week of ' + escHtml(now.MapDate || '') + '</div></div>';
-  h += hzNote('Percentages are cumulative - the area in D1 is also counted in D0.');
-  return h;
+  return { county: c, rows: rows };
+}
+async function loadDrought(lat, lng, hz) {
+  let point = null, pointErr = '', county = null, countyErr = '';
+  try { point = await droughtAtPoint(lat, lng); } catch (e) { pointErr = e.message; }
+  try { county = await countyDrought(lat, lng); } catch (e) { countyErr = e.message; }
+  if (point === null && !county) {
+    throw new Error('both sources failed. ArcGIS point query: ' + (pointErr || 'unknown') +
+                    ' | UNL CSV service: ' + (countyErr || 'unknown'));
+  }
+  let h = '';
+  const key = (point !== null && point >= 0) ? 'D' + point : null;
+  if (point !== null) {
+    h += hzHead(key ? key : 'None',
+                key ? escHtml(DROUGHT_LABEL[key]) : 'No drought at this location',
+                [['Basis', 'Drought Monitor category at the property']],
+                'Point query, not a county average');
+  }
+  if (county && county.rows.length) {
+    const now = county.rows[0];
+    h += hzSec((now.County || 'County') + (now.State ? ', ' + now.State : '') +
+               ' — week of ' + (now.MapDate || ''));
+    h += '<div class="hz-scale">';
+    ['D0', 'D1', 'D2', 'D3', 'D4'].forEach(function (k) {
+      const v = Math.max(0, Math.min(100, Number(now[k]) || 0));
+      h += '<div class="hz-scale-row">' +
+             '<div class="hz-scale-k" style="color:' + DROUGHT_COLOR[k] + '">' + k + '</div>' +
+             '<div class="hz-bar"><div class="hz-bar-f" style="width:' + v.toFixed(1) +
+               '%;background:' + DROUGHT_COLOR[k] + '"></div></div>' +
+             '<div class="hz-scale-v">' + v.toFixed(0) + '%</div>' +
+           '</div>';
+    });
+    h += '</div>' + hzNote('Share of county area in each category. Cumulative — ' +
+                           'land counted in D1 is also counted in D0.');
+    // Trend gives the number meaning: 41% severe is very different rising than falling.
+    const prior = county.rows[Math.min(county.rows.length - 1, 4)];
+    if (prior && prior !== now) {
+      const dd = (Number(now.D2) || 0) - (Number(prior.D2) || 0);
+      h += hzSec('Trend');
+      h += hzNote('Severe drought (D2+) covers <b>' + (Number(now.D2) || 0).toFixed(0) +
+                  '%</b> of the county, ' +
+                  (Math.abs(dd) < 0.5 ? 'unchanged from' :
+                   (dd > 0 ? '<b>up ' + dd.toFixed(0) + ' points</b> from'
+                           : '<b>down ' + Math.abs(dd).toFixed(0) + ' points</b> from')) +
+                  ' the week of ' + escHtml(prior.MapDate || '') + '.');
+    }
+  }
+  const notes = [];
+  if (pointErr)  notes.push('point query unavailable (' + pointErr + ')');
+  if (countyErr) notes.push('county breakdown unavailable (' + countyErr + ')');
+  return h + hzFoot(hz, notes.join(' · '));
 }
 
 // ── 4. FEMA disaster declarations ─────────────────────────────────────
-async function loadFema(lat, lng) {
+let femaRows = [];
+async function loadFema(lat, lng, hz) {
   const c = await resolveCounty(lat, lng);
-  if (!c.stateFips || !c.countyFips) {
-    throw new Error('Could not determine the county for this location');
-  }
+  if (!c.stateFips || !c.countyFips) throw new Error('Could not determine the county');
   const filt = "fipsStateCode eq '" + c.stateFips + "' and fipsCountyCode eq '" + c.countyFips + "'";
   const url = 'https://www.fema.gov/api/open/v2/DisasterDeclarationsSummaries?$filter=' +
-    encodeURIComponent(filt) + '&$orderby=declarationDate desc&$top=12';
+    encodeURIComponent(filt) + '&$orderby=declarationDate desc&$top=40';
   const j = await wxJson(url);
-  const rows = (j && j.DisasterDeclarationsSummaries) || [];
-  if (!rows.length) {
-    return hzEmpty('No federal disaster declarations on record for this county.');
+  femaRows = (j && j.DisasterDeclarationsSummaries) || [];
+  if (!femaRows.length) {
+    return hzHead('0', 'federal declarations on record', []) + hzFoot(hz);
   }
-  let h = hzSec('Declarations for ' + (rows[0].designatedArea || 'this county'));
-  rows.forEach(function (d) {
-    const yr = String(d.declarationDate || '').slice(0, 4);
+  // What kind of disaster does this county actually get? That is the question a
+  // list of titles answers slowly and a ranked tally answers instantly.
+  const byType = {};
+  femaRows.forEach(function (d) {
+    const k = d.incidentType || 'Other';
+    byType[k] = (byType[k] || 0) + 1;
+  });
+  const top = Object.keys(byType).sort(function (a, b) { return byType[b] - byType[a]; });
+  const newest = femaRows[0];
+  let h = hzHead(String(femaRows.length),
+    'federal declarations for ' + escHtml(String(newest.designatedArea || 'this county').replace(' (County)', ' County')),
+    [['Most recent', escHtml(newest.incidentType || '') + ' &middot; ' +
+        String(newest.declarationDate || '').slice(0, 4)],
+     ['Most common', top.slice(0, 3).map(function (k) {
+        return escHtml(k) + ' (' + byType[k] + ')'; }).join(', ')]],
+    'Since ' + String(femaRows[femaRows.length - 1].declarationDate || '').slice(0, 4));
+  h += hzSec('Newest first — click for detail');
+  femaRows.forEach(function (d, i) {
     const meta = [];
     if (d.femaDeclarationString) meta.push(d.femaDeclarationString);
-    if (d.declarationType) meta.push(d.declarationType === 'DR' ? 'Major disaster'
-                                    : d.declarationType === 'EM' ? 'Emergency'
-                                    : d.declarationType === 'FM' ? 'Fire management' : d.declarationType);
-    h += hzRow(escHtml(yr), 'yr',
+    if (d.incidentType) meta.push(d.incidentType);
+    h += hzRow(String(d.declarationDate || '').slice(0, 4), 'yr',
                escHtml(d.declarationTitle || d.incidentType || 'Declaration'),
-               escHtml(meta.join('  ·  ')));
+               escHtml(meta.join('  ·  ')), 'toggleFema(' + i + ')', 'fema-' + i);
   });
-  return h;
+  return h + hzFoot(hz);
 }
+window.toggleFema = function (i) {
+  const d = document.getElementById('hz-d-fema-' + i);
+  const c = document.getElementById('hz-c-fema-' + i);
+  const r = femaRows[i];
+  if (!d || !r) return;
+  if (!d.getAttribute('data-filled')) {
+    const progs = [];
+    if (r.iaProgramDeclared) progs.push('Individual Assistance');
+    if (r.paProgramDeclared) progs.push('Public Assistance');
+    if (r.hmProgramDeclared) progs.push('Hazard Mitigation');
+    if (r.ihProgramDeclared) progs.push('Individual &amp; Households');
+    const bits = [];
+    if (r.incidentBeginDate) {
+      bits.push('<span class="wx-alert-lbl">Incident</span>' +
+        escHtml(String(r.incidentBeginDate).slice(0, 10)) +
+        (r.incidentEndDate ? ' to ' + escHtml(String(r.incidentEndDate).slice(0, 10)) : ' (open)'));
+    }
+    bits.push('<span class="wx-alert-lbl">Declared</span>' +
+      escHtml(String(r.declarationDate || '').slice(0, 10)) +
+      (r.declarationType ? '  ·  ' + escHtml(r.declarationType === 'DR' ? 'Major disaster'
+        : r.declarationType === 'EM' ? 'Emergency'
+        : r.declarationType === 'FM' ? 'Fire management assistance' : r.declarationType) : ''));
+    bits.push('<span class="wx-alert-lbl">Assistance</span>' +
+      (progs.length ? progs.join(', ') : 'none recorded'));
+    if (r.disasterNumber) {
+      bits.push('<span class="wx-alert-lbl">Reference</span>' +
+        '<a href="https://www.fema.gov/disaster/' + encodeURIComponent(r.disasterNumber) +
+        '" target="_blank" rel="noopener">Disaster ' + escHtml(String(r.disasterNumber)) + '</a>');
+    }
+    d.innerHTML = bits.join('');
+    d.setAttribute('data-filled', '1');
+  }
+  const open = d.classList.toggle('open');
+  if (c) c.classList.toggle('open', open);
+};
 
 // ── 5. NOAA Space Weather ─────────────────────────────────────────────
-// Verified: a flat array of {product_id, issue_datetime, message}. The message
-// is a multi-line operator bulletin, so it is collapsed to its first line and
-// expands on click - the same treatment the NWS alerts get.
-async function loadSpace() {
+async function loadSpace(lat, lng, hz) {
   const j = await wxJson('https://services.swpc.noaa.gov/products/alerts.json');
-  const rows = Array.isArray(j) ? j.slice(0, 12) : [];
-  if (!rows.length) return hzEmpty('No active NOAA space weather bulletins.');
-  let h = hzSec('Latest bulletins');
+  const rows = (Array.isArray(j) ? j : []).slice(0, 15);
+  if (!rows.length) return hzHead('0', 'active bulletins', []) + hzFoot(hz);
+  const newest = rows[0];
+  // Operators care about the scale letter and number (G3, R2, S1) far more than
+  // the bulletin id, so it is lifted out of the message body into the headline.
+  const scale = (String(newest.message || '').match(/\b([GRS][1-5])\b/) || [])[1];
+  let h = hzHead(scale || String(newest.product_id || '?'),
+    scale ? scaleName(scale) : 'most recent bulletin',
+    [['Issued', escHtml(String(newest.issue_datetime || '')) + ' UTC'],
+     ['Active', hzPlural(rows.length, 'bulletin') + ' in the current feed']],
+    'NOAA Space Weather Prediction Center');
+  h += hzSec('Bulletins — click for full text');
   rows.forEach(function (a, i) {
     const msg = String(a.message || '').trim();
-    const first = (msg.split('\n').find(function (l) { return l.trim(); }) || '').trim();
+    const first = (msg.split('\n').filter(function (l) { return l.trim(); })[0] || '').trim();
     h += '<div class="wx-alert moderate">' +
            '<div class="wx-alert-row can-open" onclick="toggleSpace(' + i + ')">' +
              '<div class="wx-alert-ev" style="font-size:11.5px">' +
@@ -2227,7 +2478,12 @@ async function loadSpace() {
            '<div class="wx-alert-detail" id="hz-sp-d-' + i + '">' + escHtml(msg) + '</div>' +
          '</div>';
   });
-  return h;
+  return h + hzFoot(hz);
+}
+function scaleName(s) {
+  const n = { G: 'Geomagnetic storm', R: 'Radio blackout', S: 'Solar radiation storm' }[s[0]];
+  const lvl = ['', 'minor', 'moderate', 'strong', 'severe', 'extreme'][Number(s[1])] || '';
+  return (n || 'Space weather') + (lvl ? ' — ' + lvl : '');
 }
 window.toggleSpace = function (i) {
   const d = document.getElementById('hz-sp-d-' + i);
@@ -2306,15 +2562,15 @@ async function loadHazard(id) {
   st.loading = true;
   body.innerHTML = hzNote('Loading&hellip;');
   try {
-    body.innerHTML = await HZ_LOADERS[id](wxLat, wxLng);
+    body.innerHTML = await HZ_LOADERS[id](wxLat, wxLng, hz);
     st.loaded = true;
     dbg('Hazard loaded: ' + hz.label, 'ok');
   } catch (e) {
     body.innerHTML =
       hzNote('Could not load this source.<br><br>' + escHtml(e.message) +
              '<br><br><a href="' + escHtml(hz.site) + '" target="_blank" rel="noopener">' +
-             escHtml(hz.siteName) + '</a><br><br>' +
-             '<a href="#" onclick="retryHazard(\'' + id + '\');return false;">Retry</a>');
+             escHtml(hz.siteName) + '</a>' +
+             ' &middot; <a href="#" onclick="retryHazard(\'' + id + '\');return false;">Retry</a>');
     dbg('Hazard FAILED (' + hz.label + '): ' + e.message, 'error');
   } finally {
     st.loading = false;
@@ -2324,8 +2580,6 @@ window.retryHazard = function (id) {
   if (hzState[id]) { hzState[id].loaded = false; hzState[id].loading = false; }
   loadHazard(id);
 };
-// Buttons stay hidden until a property with coordinates is resolved - without
-// a lat/lng none of these five can say anything.
 function showHazardButtons() {
   HAZARDS.forEach(function (hz) {
     const b = document.getElementById('hz-btn-' + hz.id);
