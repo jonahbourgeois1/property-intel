@@ -134,6 +134,21 @@
      a correction the verdict denies. The stash is written ONCE, so OK -> Remove
      cannot overwrite it with the blanks the first lock wrote.
 
+  5. REQUEST A CATALOG ELEMENT (initPinRequests).
+     Under the search — where the dead end actually happens — a field for
+     element TYPES that do not exist in the catalog yet. No pin, no coordinates.
+     A failed search offers "Request it" and prefills the name.
+     ⚠️ These travel in their own top-level `pin_requests` array and must NEVER
+     reach the composed Nadir Fixes note: that note is the text fed to Bedrock,
+     and a request for a future catalog entry is not an instruction about THIS
+     property. They are a backend queue for authoring catalog entries later.
+     Requests are de-duped on the normalised name, and a submission consisting
+     of nothing but a request is valid — finding a gap in the vocabulary is
+     worth recording on its own.
+     Note the catalog-unavailable path keeps the panel REACHABLE and disables
+     only the search: a missing catalog makes "this type doesn't exist" more
+     likely to be true, not less.
+
   fail() still blanks only the stage/legend and keeps the left column alive,
   so this page degrades to a readable message rather than a dead screen.
 -->
@@ -419,6 +434,56 @@
   .add-warn {
     margin-top: 6px;
     font-family: var(--mono); font-size: 11px; color: var(--warn);
+  }
+
+  /* ── Request a new catalog element ────────────────────────── */
+  /* Sits under the search because that is where the dead end happens: the
+     reviewer looked for something, it wasn't there. */
+  .req-block {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--line);
+  }
+  .req-block .lab {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 5px;
+  }
+  .req-row { display: flex; gap: 6px; margin-bottom: 5px; }
+  .req-row input { flex: 1 1 auto; min-width: 0; }
+  .req-add {
+    flex: 0 0 auto;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 7px;
+    padding: 0 11px; font-size: 13px; cursor: pointer;
+  }
+  .req-add:hover { border-color: var(--hot); }
+  .req-add[disabled] { opacity: 0.4; cursor: default; }
+  .req-add[disabled]:hover { border-color: var(--line); }
+  .req-list { list-style: none; margin: 6px 0 0; padding: 0; }
+  .req-list li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 6px 8px;
+    background: var(--ground);
+    border: 1px solid var(--line); border-left: 3px solid var(--hot);
+    border-radius: 7px;
+    margin-bottom: 5px;
+    font-size: 13px;
+  }
+  .req-list li .rtext { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+  .req-list li .rnote {
+    display: block;
+    font-family: var(--mono); font-size: 11px; color: var(--ink-faint);
+    margin-top: 1px;
+  }
+  .req-hint {
+    font-family: var(--mono); font-size: 10px; color: var(--ink-faint);
+    line-height: 1.5;
+  }
+  .add-results li.none .reqlink {
+    color: var(--hot); border-bottom: 1px dotted var(--hot); cursor: pointer;
   }
 
   /* Place mode: the whole stage becomes a target. */
@@ -763,6 +828,17 @@
               <input type="text" id="addSearch" placeholder="search the element catalog…">
               <ul class="add-results" id="addResults"></ul>
               <div class="add-warn" id="addWarn"></div>
+              <div class="req-block">
+                <span class="lab">Not in the catalog? Request it</span>
+                <div class="req-row">
+                  <input type="text" id="reqName" placeholder="element name, e.g. Solar Array">
+                  <button type="button" class="req-add" id="reqAdd">Request</button>
+                </div>
+                <input type="text" id="reqNote" placeholder="optional — what it is, or where on this property">
+                <ul class="req-list" id="reqList"></ul>
+                <div class="req-hint">Requests go to the sheet for catalog review. They are
+                  NOT sent to the analysis and place no pin.</div>
+              </div>
             </div>
           </div>
           <label class="f block">
@@ -882,6 +958,10 @@
   var added = [];
   // v5: the catalog entry awaiting a click on the nadir, or null.
   var placing = null;
+  // v5.3: requests for element types that do not exist in the catalog yet.
+  // These place NO pin and are deliberately kept OUT of the analysis note —
+  // they are a backend queue for authoring new catalog entries later.
+  var pinRequests = [];
   // Live marker/card handles so drag, place and hover can all reach each other.
   var elMarkers = [], elCards = [], ghosts = [];
   // Set by initAddElement. Adding or removing a pin changes which catalog ids
@@ -1442,9 +1522,15 @@
     var results = document.getElementById('addResults');
     if (!toggle || !panel || !search || !results) return;
 
+    // A missing catalog kills the SEARCH, not the request queue — the reviewer
+    // must still be able to say "this element type doesn't exist yet", which is
+    // exactly what a failed catalog fetch makes more likely, not less. So the
+    // panel stays reachable and only the result list reports the failure.
     if (disabledReason) {
-      toggle.disabled = true;
-      toggle.textContent = '+ Add an element (' + disabledReason + ')';
+      toggle.textContent = '+ Request an element (search unavailable)';
+      results.innerHTML = '<li class="none">' + escapeHtml(disabledReason) + '</li>';
+      toggle.addEventListener('click', function () { panel.classList.toggle('on'); });
+      initPinRequests();
       return;
     }
 
@@ -1457,7 +1543,18 @@
       }).slice(0, 40);
       results.innerHTML = '';
       if (!hits.length) {
-        results.innerHTML = '<li class="none">No element matches "' + escapeHtml(q) + '".</li>';
+        // The dead end is the whole reason the request field exists, so offer it
+        // right here instead of making the reviewer find it.
+        var li0 = document.createElement('li');
+        li0.className = 'none';
+        li0.innerHTML = 'No element matches "' + escapeHtml(q) + '". ' +
+          (q ? '<span class="reqlink">Request it &#8595;</span>' : '');
+        var lnk = li0.querySelector('.reqlink');
+        if (lnk) lnk.addEventListener('click', function () {
+          var rn = document.getElementById('reqName');
+          if (rn) { rn.value = q; rn.focus(); }
+        });
+        results.appendChild(li0);
         return;
       }
       hits.forEach(function (p) {
@@ -1501,7 +1598,60 @@
         cancelPlacement();
       }, true);
     }
+    initPinRequests();
     updateAddWarn();
+  }
+
+  // ── v5.3: request a catalog element that does not exist yet ────────────
+  // No pin, no coordinates, no analysis. Purely a queue for authoring new
+  // catalog entries later, carried to the sheet in `pin_requests`.
+  function initPinRequests() {
+    var name = document.getElementById('reqName');
+    var note = document.getElementById('reqNote');
+    var btn = document.getElementById('reqAdd');
+    if (!name || !note || !btn) return;
+
+    function fileRequest() {
+      var n = String(name.value || '').trim();
+      if (!n) { name.focus(); return; }
+      // De-dupe on the normalised name so a double-click, or the same idea typed
+      // twice, cannot file it twice.
+      var key = n.toLowerCase();
+      var dupe = pinRequests.some(function (r) { return r.name.toLowerCase() === key; });
+      if (!dupe) pinRequests.push({ name: n, note: String(note.value || '').trim() });
+      name.value = ''; note.value = '';
+      renderRequests();
+      name.focus();
+    }
+
+    btn.addEventListener('click', fileRequest);
+    // Enter must file the request, not submit the whole critique — these inputs
+    // live inside the form.
+    [name, note].forEach(function (el) {
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); fileRequest(); }
+      });
+    });
+    renderRequests();
+  }
+
+  function renderRequests() {
+    var host = document.getElementById('reqList');
+    if (!host) return;
+    host.innerHTML = '';
+    pinRequests.forEach(function (r, i) {
+      var li = document.createElement('li');
+      li.innerHTML =
+        '<span class="rtext">' + escapeHtml(r.name) +
+        (r.note ? '<span class="rnote">' + escapeHtml(r.note) + '</span>' : '') +
+        '</span>' +
+        '<button type="button" class="mini" title="Remove this request">&times;</button>';
+      li.querySelector('button').addEventListener('click', function () {
+        pinRequests.splice(i, 1);
+        renderRequests();
+      });
+      host.appendChild(li);
+    });
   }
 
   function beginPlacement(entry) {
@@ -1680,6 +1830,13 @@
                  x: a.x, y: a.y, note: String(a.note || '').trim() };
       }),
       added_count: added.length,
+      // v5.3: catalog requests. Deliberately a SEPARATE top-level array, not
+      // folded into `missed` — the receiving script must be able to route these
+      // to their own column and keep them out of the analysis note.
+      pin_requests: pinRequests.map(function (r) {
+        return { name: r.name, note: String(r.note || '').trim() };
+      }),
+      pin_requests_count: pinRequests.length,
       missed: missed.trim()
     };
   }
@@ -1687,6 +1844,9 @@
   function hasContent(payload) {
     if (payload.missed) return true;
     if (payload.added.length) return true;
+    // A submission that is ONLY a catalog request is legitimate — the reviewer
+    // found a gap in the vocabulary and that is worth recording on its own.
+    if (payload.pin_requests.length) return true;
     return payload.elements.some(function (e) { return e.verdict || e.note || e.moved; });
   }
 
@@ -1884,7 +2044,7 @@
       renderRoute(route);
       // No catalog means no vocabulary to search, so adding is impossible —
       // say why instead of offering a control that cannot work.
-      initAddElement('catalog unavailable — cannot add elements');
+      initAddElement('Catalog unavailable — search is disabled, but you can still request an element below.');
       var hint = document.querySelector('.hint');
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
         ') — showing ids only.';
