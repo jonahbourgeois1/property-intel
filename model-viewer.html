@@ -53,22 +53,6 @@
     transition: transform 0.28s ease;
   }
   #tab-rail.shifted { transform: translateX(calc(-1 * var(--panel-w))); }
-  #dir-toggle {
-    display: none;
-    background: rgba(0,0,0,0.6); color: #f59e0b; border: 1px solid #f59e0b;
-    font-family: monospace; font-size: 11px; padding: 7px 13px;
-    border-radius: 6px; cursor: pointer; transition: background 0.15s;
-  }
-  #dir-toggle:hover { background: rgba(245,158,11,0.16); }
-  #dir-toggle.on { background: rgba(245,158,11,0.22); }
-  #dir-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: var(--panel-w); z-index: 55;
-    background: #12161b; border-left: 1px solid rgba(255,255,255,0.10);
-    transform: translateX(100%); transition: transform 0.28s ease;
-    display: flex; flex-direction: column; overflow: hidden;
-    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-  }
-  #dir-panel.open { transform: translateX(0); }
   .dp-head {
     padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0; display: flex; align-items: flex-start; gap: 8px;
@@ -149,7 +133,7 @@
   /* Full-width panels on a phone would push the rail off-screen, so it is
      hidden while a panel is open - each panel has its own close button. */
   @media (max-width: 640px) {
-    #dir-panel, #wx-panel { width: 100%; }
+    #wx-panel { width: 100%; }
     #tab-rail.shifted { display: none; }
   }
   /* ── View preset bar (storyboard: alpha/ent params from the sheet) ────── */
@@ -451,7 +435,6 @@
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
 <div id="tab-rail">
-  <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
   <button id="wx-toggle" onclick="toggleWxPanel()">Weather</button>
 </div>
 <div id="pin-label"></div>
@@ -493,16 +476,6 @@
     <button class="dp-close" onclick="toggleWxPanel()">&#10005;</button>
   </div>
   <div id="wx-body"></div>
-</div>
-<div id="dir-panel">
-  <div class="dp-head">
-    <div>
-      <div class="dp-title">Responder Directions</div>
-      <div class="dp-sub" id="dp-sub"></div>
-    </div>
-    <button class="dp-close" onclick="toggleDirPanel()">&#10005;</button>
-  </div>
-  <div class="dp-body" id="dp-body"></div>
 </div>
 <button id="resetBtn" onclick="resetView()" style="
   position: fixed; bottom: 48px; right: 16px; z-index: 50;
@@ -561,7 +534,7 @@ const DATA_ROOT  = (function () {
   return new URL('data/', window.location.href).href;
 })();
 // ── Debug console ─────────────────────────────────────────────────────
-// Same shape and behaviour as viewer.html's, so one habit works in both.
+// Same shape and behavior as viewer.html's, so one habit works in both.
 // Hidden in autocapture so it can never appear in a rendered oblique.
 window.dbg = function (msg, type) {
   type = type || 'info';
@@ -941,10 +914,10 @@ window.addEventListener('resize', () => {
 // pin catalog, exactly as viewer.html resolves it.
 //
 // x,y are PERCENTAGES on the nadir image and always present — they drive the
-// 2D previews. To place the same point in the 3D model we need metres in the
+// 2D previews. To place the same point in the 3D model we need meters in the
 // GLB's local frame. Two sources, in order:
 //   1. mx,my on a waypoint, written by the sync (drone-test.gs).
-//   2. nadir.local — the nadir crop's four corners in local metres, published
+//   2. nadir.local — the nadir crop's four corners in local meters, published
 //      by the render Lambda. Bilinear interpolation of those corners maps ANY
 //      percentage into the model, which is why pins need no sync change.
 // Four corners rather than two: the local frame is ENU about the CAPTURE's
@@ -1019,7 +992,7 @@ function escHtml(t) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
-// ── Percentage -> local metres ────────────────────────────────────────
+// ── Percentage -> local meters ────────────────────────────────────────
 function cornersOf(d) {
   const c = d && d.nadir && d.nadir.local;
   if (!c) return null;
@@ -1044,14 +1017,14 @@ function toLocal(p) {
   }
   return dirCorners ? localFromPct(p.x, p.y, dirCorners) : null;
 }
-// ── Cameras: lat/lng -> nadir percentage -> local metres ──────────────
+// ── Cameras: lat/lng -> nadir percentage -> local meters ──────────────
 // Camera photos carry real coordinates in their EXIF, so unlike element pins
 // nothing has to guess where they are. The published record already holds both
 // halves of the bridge: nadir.bounds is the crop's lat/lng box, nadir.local is
-// that same box's corners in the GLB's local metres. Normalising a coordinate
+// that same box's corners in the GLB's local meters. Normalising a coordinate
 // inside the bounds produces exactly the percentage localFromPct() already
 // consumes, so a camera reuses the pin placement path end to end — no capture
-// transform, no registry lookup, no precomputed metres in the record.
+// transform, no registry lookup, no precomputed meters in the record.
 // Checked on this property: bounds and local describe the same rectangle to
 // 0.05 m north-south and 0.55 m east-west across ~300 m.
 function boundsOf(d) {
@@ -1191,18 +1164,18 @@ function initDirections(d) {
   if (camList.length) dbg('Cameras in record: ' + camList.length + ' placeable', 'ok');
   dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
       pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)', 'ok');
-  dbg(dirCorners ? 'nadir.local present — percentages map to model metres'
+  dbg(dirCorners ? 'nadir.local present — percentages map to model meters'
                  : 'nadir.local MISSING — 3D placement unavailable', dirCorners ? 'ok' : 'warn');
-  let html = '';
+  // Four independent bodies. A tab with nothing to say is left hidden rather
+  // than shown empty, so the rail reflects what this property actually has.
+  let hPins = '', hCams = '', hAna = '', hRoutes = '';
   if (!dirCorners) {
-    html += '<div class="dp-note">This record has no <code>nadir.local</code>, so nothing ' +
-            'can be placed in the 3D model — deploy the render patch, re-run Generate ' +
-            'Property Images, then sync again. The 2D previews below work either way.</div>';
+    hPins += '<div class="dp-note">This record has no <code>nadir.local</code>, so nothing ' +
+             'can be placed in the 3D model — deploy the render patch, re-run Generate ' +
+             'Property Images, then sync again. The 2D previews below work either way.</div>';
   }
-  // Pins card first: it is the property's vocabulary, and the routes below
-  // are described in terms of it ("TO Pool").
   if (nPins) {
-    html += '<div class="rd-card" id="pin-card">' +
+    hPins += '<div class="rd-card" id="pin-card">' +
               '<div class="rd-head"><div class="rd-num pin">P</div>' +
                 '<div class="rd-titles"><div class="rd-name">Property Pins</div>' +
                 '<div class="rd-meta">' + pinSets.element.length + ' element' +
@@ -1210,9 +1183,8 @@ function initDirections(d) {
                   pinSets.concern.length + ' concern' +
                   (pinSets.concern.length === 1 ? '' : 's') + '</div></div></div>' +
               '<div class="rd-body">';
-    // The nadir with every pin ON it — the list below is the legend for this.
     if (dirNadir) {
-      html += '<div class="rd-figure"><img src="' + escHtml(dirNadir) + '" alt="Property pins" ' +
+      hPins += '<div class="rd-figure"><img src="' + escHtml(dirNadir) + '" alt="Property pins" ' +
                 'loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
               pinSets.element.map(function (p, i) {
                 return '<div class="rd-wp el" style="left:' + Number(p.x) + '%;top:' +
@@ -1221,38 +1193,32 @@ function initDirections(d) {
               pinSets.concern.map(function (p, i) {
                 return '<div class="rd-wp co" style="left:' + Number(p.x) + '%;top:' +
                        Number(p.y) + '%">' + (CONCERN_LABELS[i] || (i + 1)) + '</div>';
-              }).join('') +
-              '</div>';
+              }).join('') + '</div>';
     }
     if (pinSets.element.length) {
-      html += '<div class="pin-group-label">Elements</div>';
+      hPins += '<div class="pin-group-label">Elements</div>';
       pinSets.element.forEach(function (p, i) {
-        const disp = pinDisplay(p);
-        html += '<div class="pin-row"><span class="pin-badge green">' +
+        hPins += '<div class="pin-row"><span class="pin-badge green">' +
                 (ELEMENT_LABELS[i] || (i + 1)) + '</span><span class="pin-name">' +
-                escHtml(disp.name) + '</span></div>';
+                escHtml(pinDisplay(p).name) + '</span></div>';
       });
     }
     if (pinSets.concern.length) {
-      html += '<div class="pin-group-label">Concerns</div>';
+      hPins += '<div class="pin-group-label">Concerns</div>';
       pinSets.concern.forEach(function (p, i) {
-        const disp = pinDisplay(p);
-        html += '<div class="pin-row"><span class="pin-badge red">' +
+        hPins += '<div class="pin-row"><span class="pin-badge red">' +
                 (CONCERN_LABELS[i] || (i + 1)) + '</span><span class="pin-name">' +
-                escHtml(disp.name) + '</span></div>';
+                escHtml(pinDisplay(p).name) + '</span></div>';
       });
     }
-    html += '<button class="rd-btn" id="pin-btn" onclick="togglePins3D()"' +
+    hPins += '<button class="rd-btn" id="pin-btn" onclick="togglePins3D()"' +
               (dirCorners ? '' : ' disabled') + '>Show pins in 3D</button>' +
             '<div class="rd-progress" id="pin-prog"></div>' +
             (dirCorners ? '' : '<div class="rd-note">3D placement needs nadir.local — ' +
               're-run Generate Property Images, then sync again.</div>') +
             '</div></div>';
   }
-  html += buildCameraCardHtml();
-  // Oblique views — the four rendered sides plus the overhead, with the
-  // analyst descriptions the sync published. Click an image to open it
-  // full-size in a new tab.
+  hCams = buildCameraCardHtml();
   const views = [
     { label: 'Overhead View', badge: 'N', cls: ' nadir', data: d.nadir },
     { label: 'Alpha Side',    badge: 'A', cls: '', data: d.alpha },
@@ -1261,7 +1227,7 @@ function initDirections(d) {
     { label: 'Delta Side',    badge: 'D', cls: '', data: d.delta }
   ].filter(function (v) { return v.data && v.data.url; });
   if (views.length) {
-    html += '<div class="rd-card" id="vw-card">' +
+    hAna += '<div class="rd-card" id="vw-card">' +
               '<div class="rd-head"><div class="rd-num" style="background:#3b82f6;color:#fff">V</div>' +
                 '<div class="rd-titles"><div class="rd-name">Oblique Views</div>' +
                 '<div class="rd-meta">' + views.length + ' rendered view' +
@@ -1282,6 +1248,22 @@ function initDirections(d) {
                   '</div>';
               }).join('') +
               '</div></div>';
+  }
+  // The written assessment belongs with the imagery it describes, not buried
+  // under four route cards.
+  if (d.considerations) {
+    hAna += '<div class="rd-card"><div class="rd-head"><div class="rd-num" ' +
+            'style="background:#8b5cf6;color:#fff">R</div><div class="rd-titles">' +
+            '<div class="rd-name">Responder Considerations</div></div></div>' +
+            '<div class="rd-body"><div class="rd-trigger">' +
+            escHtml(String(d.considerations)) + '</div></div></div>';
+  }
+  if (d.clarifications) {
+    hAna += '<div class="rd-card"><div class="rd-head"><div class="rd-num" ' +
+            'style="background:#8a93a2;color:#0b0e12">?</div><div class="rd-titles">' +
+            '<div class="rd-name">Needs Clarification</div></div></div>' +
+            '<div class="rd-body"><div class="rd-trigger">' +
+            escHtml(String(d.clarifications)) + '</div></div></div>';
   }
   dirList.forEach(function (dir, i) {
     const pts  = orderedRoute(dir);
@@ -1305,11 +1287,10 @@ function initDirections(d) {
               const cls = k === 0 ? ' start' : (k === last ? ' end' : '');
               return '<div class="rd-wp' + cls + '" style="left:' + Number(w.x) +
                      '%;top:' + Number(w.y) + '%">' + (k + 1) + '</div>';
-            }).join('') +
-            '</div>';
+            }).join('') + '</div>';
     }
     const drawable = !!metreRoute(dir);
-    html += '<div class="rd-card" id="rd-card-' + i + '">' +
+    hRoutes += '<div class="rd-card" id="rd-card-' + i + '">' +
               '<div class="rd-head"><div class="rd-num">' + (i + 1) + '</div>' +
                 '<div class="rd-titles">' +
                   '<div class="rd-name">' + escHtml(dir.name || ('Route ' + (i + 1))) + '</div>' +
@@ -1322,15 +1303,23 @@ function initDirections(d) {
                   (drawable ? '' : ' disabled') + '>Show in 3D</button>' +
                 '<div class="rd-progress" id="rd-prog-' + i + '"></div>' +
                 (drawable ? '' : '<div class="rd-note">No model coordinates for this route.</div>') +
-              '</div>' +
-            '</div>';
+              '</div></div>';
   });
-  document.getElementById('dp-body').innerHTML = html;
-  document.getElementById('dp-sub').textContent = d.name || '';
+  const filled = { pins: hPins, cams: hCams, analysis: hAna, routes: hRoutes };
+  PROP_TABS.forEach(function (t) {
+    const body = document.getElementById('pp-body-' + t.id);
+    const btn  = document.getElementById('pp-btn-' + t.id);
+    const sub  = document.getElementById('pp-sub-' + t.id);
+    if (!body || !btn) return;
+    if (filled[t.id]) {
+      body.innerHTML = filled[t.id];
+      btn.style.display = 'block';
+      if (sub) sub.textContent = d.name || '';
+    } else {
+      btn.style.display = 'none';
+    }
+  });
   initWeather(d);
-  const btn = document.getElementById('dir-toggle');
-  btn.textContent = 'Pins & Directions';
-  btn.style.display = 'block';
   // Pins are permanent scenery, like the entrance marker: place them on load
   // whenever the record can be placed at all. The panel button stays a toggle
   // for hiding them.
@@ -1351,14 +1340,49 @@ function initDirections(d) {
     })();
   }
 }
-window.toggleDirPanel = function () {
-  const p = document.getElementById('dir-panel');
+// The property record used to be one long scrolling panel. It is now four,
+// because pins, cameras, analysis and routes are four different questions and
+// nobody wants to scroll past two of them to reach the third. Same registry
+// pattern as the hazard tabs.
+const PROP_TABS = [
+  { id: 'pins',     label: 'Pins',                accent: '#22c55e' },
+  { id: 'cams',     label: 'Cameras',             accent: '#38bdf8' },
+  { id: 'analysis', label: 'Property Analysis',   accent: '#3b82f6' },
+  { id: 'routes',   label: 'Response Directions', accent: '#f59e0b' }
+];
+function buildPropertyUi() {
+  const rail = document.getElementById('tab-rail');
+  const before = document.getElementById('wx-toggle');
+  PROP_TABS.forEach(function (t) {
+    const b = document.createElement('button');
+    b.id = 'pp-btn-' + t.id;
+    b.className = 'hz-toggle';
+    b.textContent = t.label;
+    b.style.color = t.accent;
+    b.style.borderColor = t.accent;
+    b.onclick = function () { togglePropTab(t.id); };
+    rail.insertBefore(b, before);          // property tabs sit above Weather
+
+    const p = document.createElement('div');
+    p.id = 'pp-panel-' + t.id;
+    p.className = 'hz-panel';
+    p.innerHTML =
+      '<div class="dp-head"><div><div class="dp-title">' + escHtml(t.label) + '</div>' +
+      '<div class="dp-sub" id="pp-sub-' + t.id + '"></div></div>' +
+      '<button class="dp-close">&#10005;</button></div>' +
+      '<div class="hz-body dp-body" id="pp-body-' + t.id + '"></div>';
+    p.querySelector('.dp-close').onclick = function () { togglePropTab(t.id); };
+    document.body.appendChild(p);
+  });
+}
+window.togglePropTab = function (id) {
+  const p = document.getElementById('pp-panel-' + id);
+  const b = document.getElementById('pp-btn-' + id);
+  if (!p) return;
   const open = !p.classList.contains('open');
-  // Every panel shares the same edge of the screen, so opening any one closes
-  // all the others - see closeAllPanels for why that lives in one place.
-  closeAllPanels(open ? 'dir-panel' : null);
+  closeAllPanels(open ? p.id : null);
   p.classList.toggle('open', open);
-  document.getElementById('dir-toggle').classList.toggle('on', open);
+  if (b) b.classList.toggle('on', open);
   syncTabRail();
 };
 // One place decides where the rail sits: beside an open panel, or at the edge
@@ -1718,7 +1742,7 @@ function wxTime(iso) {
                                 hour: 'numeric', minute: '2-digit' });
 }
 // The property's own coordinates, so every property reports its own local
-// conditions with nothing to configure. Falls back to the centre of the nadir
+// conditions with nothing to configure. Falls back to the center of the nadir
 // bounds when a record carries no lat/lng.
 function initWeather(d) {
   if (autocapture) return;
@@ -1965,7 +1989,7 @@ function renderWeather(pp, fc, alerts, obs, stationName, pt) {
          '<div class="wx-temp">' + (tF === null ? '--' : Math.round(tF) + '&deg;') + '</div>' +
          '<div class="wx-cond">' + escHtml(o.textDescription || '') + '</div></div>' +
          '<div class="wx-rows">';
-    // Wind is called out because it drives fire behaviour and drone launch
+    // Wind is called out because it drives fire behavior and drone launch
     // decisions - the two operational questions this layer exists to answer.
     h += '<div class="wx-k">Wind</div><div class="wx-v wind">' +
          (spd === null ? 'unknown'
@@ -2171,7 +2195,7 @@ async function loadQuakes(lat, lng, hz) {
   });
   if (!f.length) {
     return hzHead('0', 'No recorded quakes', [['Search', 'M2.5+ within 300 km']]) +
-           hzFoot(hz, 'Nothing in the USGS catalogue for this area.');
+           hzFoot(hz, 'Nothing in the USGS catalog for this area.');
   }
   const nearest = f.slice().sort(function (a, b) { return a.km - b.km; })[0];
   const largest = f.slice().sort(function (a, b) { return b.mag - a.mag; })[0];
@@ -2290,14 +2314,14 @@ function mercY(lat, z) {
   const r = Number(lat) * Math.PI / 180;
   return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z) * 256;
 }
-function metresPerPx(lat, z) {
+function metersPerPx(lat, z) {
   return 156543.03392 * Math.cos(Number(lat) * Math.PI / 180) / Math.pow(2, z);
 }
 // Pick the tightest zoom that still contains the farthest point, so a cluster
 // of nearby events fills the frame instead of sitting in a dot at the middle.
 function zoomFor(lat, maxKm, sizePx) {
   for (let z = 13; z >= 3; z--) {
-    if ((sizePx / 2) * metresPerPx(lat, z) >= maxKm * 1000 * 1.18) return z;
+    if ((sizePx / 2) * metersPerPx(lat, z) >= maxKm * 1000 * 1.18) return z;
   }
   return 3;
 }
@@ -2332,10 +2356,10 @@ function hzTileMap(lat, lng, points, capExtra) {
         'stroke="#38bdf8" stroke-opacity="0.5"></circle>' +
         '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="4.5" fill="#38bdf8" ' +
         'stroke="#0b0e12" stroke-width="1.4"></circle></svg>';
-  const across = Math.round(W * metresPerPx(lat, z) / 1000);
+  const across = Math.round(W * metersPerPx(lat, z) / 1000);
   return '<div class="hz-map"><div class="hz-tiles" style="width:' + W + 'px;height:' + H + 'px">' +
          tiles + ov + '</div><div class="hz-map-cap">' +
-         escHtml('about ' + across + ' km across · property at centre' +
+         escHtml('about ' + across + ' km across · property at center' +
                  (capExtra ? ' · ' + capExtra : '')) +
          ' &middot; basemap Esri</div></div>';
 }
@@ -2515,9 +2539,9 @@ const UNAVAILABLE = [
         w: 'City addresses, utilities, zoning and public safety layers.' }
     ] },
   { group: 'Reference links', items: [
-      { n: 'Neighbourhood crime map', tag: 'Link', cls: 'link',
+      { n: 'Neighborhood crime map', tag: 'Link', cls: 'link',
         u: 'https://risk.lexisnexis.com/products/community-crime-map',
-        w: 'Reported incidents mapped by neighbourhood.' },
+        w: 'Reported incidents mapped by neighborhood.' },
       { n: 'Bend Police Department', tag: 'Link', cls: 'link',
         u: 'https://bendoregon.gov/departments/public-safety/police/',
         w: 'Local advisories, contacts and online reporting.' }
@@ -2580,8 +2604,10 @@ function buildHazardUi() {
 // Every panel in the app, so opening any one closes the rest. Without a single
 // list this becomes N-squared "close the other one" calls that drift apart.
 function allPanels() {
-  const out = [{ panel: 'dir-panel', btn: 'dir-toggle' },
-               { panel: 'wx-panel',  btn: 'wx-toggle' }];
+  const out = [{ panel: 'wx-panel', btn: 'wx-toggle' }];
+  PROP_TABS.forEach(function (t) {
+    out.push({ panel: 'pp-panel-' + t.id, btn: 'pp-btn-' + t.id });
+  });
   HAZARDS.forEach(function (h) {
     out.push({ panel: 'hz-panel-' + h.id, btn: 'hz-btn-' + h.id });
   });
@@ -2642,7 +2668,7 @@ function showHazardButtons() {
     if (b) b.style.display = 'block';
   });
 }
-if (!autocapture) buildHazardUi();
+if (!autocapture) { buildPropertyUi(); buildHazardUi(); }
 // ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
   const c = document.getElementById('rd-card-' + i);
