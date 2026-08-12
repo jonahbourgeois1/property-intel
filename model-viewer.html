@@ -410,6 +410,10 @@
                color: #555f6e; margin-top: 2px; }
   .hz-seg.on span, .hz-seg.on em { color: #0b0e12; }
   .hz-seg.on em { opacity: 0.75; }
+  .hz-m.hz-wrap { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+                  font-size: 11px; line-height: 1.55; color: #8a93a2; }
+  .hz-t a { color: #f0f2f5; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.22); }
+  .hz-t a:hover { color: #38bdf8; border-bottom-color: #38bdf8; }
   @media (max-width: 640px) { .hz-panel { width: 100%; } }
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   /* Hidden by default — append &debug=1 to the URL to show it. */
@@ -1772,13 +1776,31 @@ async function loadWeather() {
       wxJson(WX_API + '/alerts/active?point=' + pt).catch(function () { return null; }),
       pp.observationStations ? wxJson(pp.observationStations).catch(function () { return null; }) : null
     ]);
-    let obs = null, stationName = '';
-    const st = stations && stations.features && stations.features[0];
-    if (st && st.properties && st.properties.stationIdentifier) {
-      stationName = st.properties.name || st.properties.stationIdentifier;
-      obs = await wxJson(WX_API + '/stations/' + st.properties.stationIdentifier +
-                         '/observations/latest').catch(function () { return null; });
+    // /observations/latest is a trap: an AWOS often files a record with a
+    // timestamp and a sky condition but NULL temperature and wind, which blanked
+    // the whole card. So walk back through recent observations and take the
+    // newest one that actually carries a temperature, trying the next station if
+    // the first has nothing usable.
+    let obs = null, stationName = '', obsNote = '';
+    const sf = (stations && stations.features) || [];
+    for (let i = 0; i < Math.min(3, sf.length) && !obs; i++) {
+      const sp = sf[i].properties || {};
+      if (!sp.stationIdentifier) continue;
+      const list = await wxJson(WX_API + '/stations/' + sp.stationIdentifier +
+                                '/observations?limit=8').catch(function () { return null; });
+      const recs = (list && list.features) || [];
+      for (let k = 0; k < recs.length; k++) {
+        const o = recs[k].properties || {};
+        if (o.temperature && o.temperature.value !== null && o.temperature.value !== undefined) {
+          obs = recs[k];
+          stationName = sp.name || sp.stationIdentifier;
+          if (k > 0) obsNote = 'skipped ' + k + ' incomplete record' + (k === 1 ? '' : 's');
+          if (i > 0) obsNote += (obsNote ? ', ' : '') + 'station ' + (i + 1) + ' of ' + sf.length;
+          break;
+        }
+      }
     }
+    if (obsNote) dbg('Observation: ' + obsNote, 'info');
     body.innerHTML = renderWeather(pp, fc, alerts, obs, stationName, pt);
     wxLoaded = true;
     dbg('Weather loaded' + (pp.gridId ? ' (' + pp.gridId + ' ' + pp.gridX + ',' + pp.gridY + ')' : ''), 'ok');
@@ -2007,21 +2029,21 @@ function renderWeather(pp, fc, alerts, obs, stationName, pt) {
 // CORS refusal or an outage degrades to "here is where to look" instead of a
 // blank panel.
 const HAZARDS = [
-  { id: 'quake',   label: 'Earthquakes', accent: '#f97316',
-    site: 'https://earthquake.usgs.gov/earthquakes/map/', siteName: 'USGS earthquake map',
-    source: 'USGS Earthquake Catalog' },
   { id: 'fire',    label: 'Wildfire',    accent: '#ef4444',
     site: 'https://www.nifc.gov/fire-information/nfn', siteName: 'NIFC fire information',
     source: 'NIFC WFIGS interagency perimeters' },
-  { id: 'drought', label: 'Drought',     accent: '#eab308',
-    site: 'https://droughtmonitor.unl.edu/', siteName: 'US Drought Monitor',
-    source: 'US Drought Monitor (UNL)' },
+  { id: 'quake',   label: 'Earthquakes', accent: '#f97316',
+    site: 'https://earthquake.usgs.gov/earthquakes/map/', siteName: 'USGS earthquake map',
+    source: 'USGS Earthquake Catalog' },
   { id: 'fema',    label: 'FEMA',        accent: '#a78bfa',
     site: 'https://www.fema.gov/disaster/declarations', siteName: 'FEMA declarations',
     source: 'OpenFEMA disaster declarations' },
   { id: 'space',   label: 'Space Wx',    accent: '#2dd4bf',
     site: 'https://www.spaceweather.gov/', siteName: 'NOAA Space Weather Prediction Center',
-    source: 'NOAA SWPC alerts' }
+    source: 'NOAA SWPC alerts' },
+  { id: 'info',    label: 'More sources', accent: '#8a93a2',
+    site: 'https://www.fema.gov/about/openfema/data-sets', siteName: 'OpenFEMA data sets',
+    source: 'Sources reviewed but not yet wired in' }
 ];
 const hzState = {};   // id -> {loaded, loading}
 
@@ -2321,101 +2343,6 @@ function hzTileMap(lat, lng, points, capExtra) {
 //      county average, which is strictly better information
 //   2. the UNL CSV service, kept as a fallback and for the county breakdown
 // If both fail the error names both so we learn which one is the problem.
-const DROUGHT_LABEL = { D0: 'Abnormally dry', D1: 'Moderate drought',
-                        D2: 'Severe drought', D3: 'Extreme drought',
-                        D4: 'Exceptional drought' };
-const DROUGHT_COLOR = { D0: '#ffff00', D1: '#fcd37f', D2: '#ffaa00',
-                        D3: '#e60000', D4: '#730000' };
-function parseCsv(text) {
-  const lines = String(text || '').trim().split(/\r?\n/).filter(function (l) { return l.trim(); });
-  if (lines.length < 2) return [];
-  const head = lines[0].split(',').map(function (h) { return h.trim().replace(/^"|"$/g, ''); });
-  return lines.slice(1).map(function (l) {
-    const cells = l.split(','), o = {};
-    head.forEach(function (k, i) {
-      o[k] = String(cells[i] == null ? '' : cells[i]).trim().replace(/^"|"$/g, '');
-    });
-    return o;
-  });
-}
-function usdmDate(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear(); }
-async function countyDrought(lat, lng) {
-  const c = await resolveCounty(lat, lng);
-  if (!c.fips || c.fips.length !== 5) throw new Error('county FIPS could not be determined');
-  const end = new Date(), start = new Date(Date.now() - 1000 * 60 * 60 * 24 * 84);
-  const url = 'https://usdmdataservices.unl.edu/api/CountyStatistics/' +
-    'GetDroughtSeverityStatisticsByAreaPercent?aoi=' + c.fips +
-    '&startdate=' + encodeURIComponent(usdmDate(start)) +
-    '&enddate=' + encodeURIComponent(usdmDate(end)) + '&statisticsType=1';
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
-  const rows = parseCsv(await r.text());
-  rows.sort(function (a, b) { return (Date.parse(b.MapDate) || 0) - (Date.parse(a.MapDate) || 0); });
-  return { county: c, rows: rows };
-}
-// ⚠️ DROUGHT IS SERVER-SIDE ONLY - established the hard way on 2026-08-12.
-// UNL's own service documentation lists exactly one host, usdmdataservices.unl.edu,
-// and that host sends no Access-Control-Allow-Origin, so a browser refuses the
-// request ("Failed to fetch"). There is no ArcGIS mirror to fall back to - I
-// guessed one and ArcGIS answered "Invalid URL". No amount of client code fixes
-// a missing CORS header, so this panel belongs to the same scheduled-writer job
-// as NASA FIRMS and AirNow: a Lambda fetches it and republishes it to our own
-// origin. Until that exists the panel says so plainly rather than showing a
-// spinner or a stack trace.
-async function loadDrought(lat, lng, hz) {
-  let county = null, why = '';
-  try { county = await countyDrought(lat, lng); } catch (e) { why = e.message; }
-  if (county && county.rows && county.rows.length) return droughtBody(county, hz);
-  let where = '';
-  try {
-    const c = await resolveCounty(lat, lng);
-    where = (c.city ? c.city + ', ' : '') + (c.state || '');
-  } catch (e) { /* location is a nicety here, not a requirement */ }
-  return hzHead('&mdash;', 'not available in the browser', [
-      ['Reason', 'The US Drought Monitor service blocks cross-origin requests'],
-      ['Fix',    'Fetch it server-side and republish, same job as FIRMS']])
-    + hzNote('The Drought Monitor publishes only <code>usdmdataservices.unl.edu</code>, ' +
-             'which sends no CORS header, so the browser refuses the request before it ' +
-             'leaves. This is infrastructure, not a bug in the viewer.' +
-             (why ? '<br><br>Reported: ' + escHtml(why) : ''))
-    + hzNote('<a href="https://droughtmonitor.unl.edu/CurrentMap/StateDroughtMonitor.aspx?' +
-             escHtml((hzCounty && hzCounty.state) || 'OR') +
-             '" target="_blank" rel="noopener">Current map for ' +
-             escHtml(where || 'this state') + '</a>')
-    + hzFoot(hz);
-}
-function droughtBody(county, hz) {
-  const now = county.rows[0];
-  let worst = null;
-  ['D4', 'D3', 'D2', 'D1', 'D0'].forEach(function (k) {
-    if (!worst && Number(now[k]) > 0) worst = k;
-  });
-  let h = hzHead(worst || 'None',
-    worst ? escHtml(DROUGHT_LABEL[worst]) : 'No drought conditions',
-    [['County', escHtml((now.County || '') + (now.State ? ', ' + now.State : ''))],
-     ['Week of', escHtml(now.MapDate || '')]]);
-  h += hzSec('Share of county area');
-  h += '<div class="hz-scale">';
-  ['D0', 'D1', 'D2', 'D3', 'D4'].forEach(function (k) {
-    const v = Math.max(0, Math.min(100, Number(now[k]) || 0));
-    h += '<div class="hz-scale-row">' +
-           '<div class="hz-scale-k" style="color:' + DROUGHT_COLOR[k] + '">' + k + '</div>' +
-           '<div class="hz-bar"><div class="hz-bar-f" style="width:' + v.toFixed(1) +
-             '%;background:' + DROUGHT_COLOR[k] + '"></div></div>' +
-           '<div class="hz-scale-v">' + v.toFixed(0) + '%</div></div>';
-  });
-  h += '</div>' + hzNote('Cumulative — land counted in D1 is also counted in D0.');
-  const prior = county.rows[Math.min(county.rows.length - 1, 4)];
-  if (prior && prior !== now) {
-    const dd = (Number(now.D2) || 0) - (Number(prior.D2) || 0);
-    h += hzSec('Trend') + hzNote('Severe drought (D2+) covers <b>' +
-      (Number(now.D2) || 0).toFixed(0) + '%</b> of the county, ' +
-      (Math.abs(dd) < 0.5 ? 'unchanged from' : (dd > 0 ? '<b>up ' + dd.toFixed(0) +
-        ' points</b> from' : '<b>down ' + Math.abs(dd).toFixed(0) + ' points</b> from')) +
-      ' the week of ' + escHtml(prior.MapDate || '') + '.');
-  }
-  return h + hzFoot(hz);
-}
 // ── 4. FEMA disaster declarations ─────────────────────────────────────
 let femaRows = [];
 async function loadFema(lat, lng, hz) {
@@ -2553,8 +2480,74 @@ window.toggleSpace = function (i) {
   if (c) c.classList.toggle('open', open);
 };
 
-const HZ_LOADERS = { quake: loadQuakes, fire: loadFires, drought: loadDrought,
-                     fema: loadFema, space: loadSpace };
+// ── 6. Sources reviewed but not wired in ──────────────────────────────
+// A tab rather than a footnote, because "why isn't crime data here" is a
+// question that will be asked repeatedly, and the answer is worth keeping in
+// front of whoever asks. Three of these are one Lambda away; the rest are not
+// coming without a different data source.
+const UNAVAILABLE = [
+  { group: 'Needs an API key held server-side',
+    note: 'The viewer is a public repo, so a key in the page is readable by anyone. ' +
+          'One scheduled job holding the keys and republishing the data covers all three.',
+    items: [
+      { n: 'NASA FIRMS', u: 'https://firms.modaps.eosdis.nasa.gov/',
+        w: 'Satellite active-fire detections, updated on each overpass. The fastest ' +
+           'signal there is for a new fire, and the highest-value source on this list ' +
+           'for a property carrying wildfire risk. Free MAP_KEY.' },
+      { n: 'AirNow', u: 'https://www.airnow.gov/',
+        w: 'Official AQI observations and forecasts. Free registered key. Note the NWS ' +
+           'feed already surfaces Air Quality Alerts in the Weather tab - this would add ' +
+           'the actual numbers behind them.' },
+      { n: 'US Drought Monitor', u: 'https://droughtmonitor.unl.edu/',
+        w: 'No key needed, but UNL publishes only usdmdataservices.unl.edu and that host ' +
+           'sends no CORS header, so a browser refuses the request before it leaves. ' +
+           'There is no ArcGIS mirror. Same fix as the two above.' }
+    ] },
+  { group: 'No public API',
+    note: 'Nothing to wire in. These stay as links.',
+    items: [
+      { n: 'LexisNexis Community Crime Map', u: 'https://risk.lexisnexis.com/products/community-crime-map',
+        w: 'Commercial product. No public API, and it blocks embedding.' },
+      { n: 'Bend Police Department', u: 'https://bendoregon.gov/departments/public-safety/police/',
+        w: 'A web page, not a data source.' }
+    ] },
+  { group: 'Possible, but needs a decision first',
+    note: '',
+    items: [
+      { n: 'NOAA Water', u: 'https://water.noaa.gov/',
+        w: 'An NWPS API exists, but it is organised by stream gauge. Someone has to ' +
+           'decide which gauges are relevant to a given property before it means anything.' }
+    ] },
+  { group: 'Not applicable',
+    note: '',
+    items: [
+      { n: 'Dallas Open Data', u: 'https://dev.socrata.com/foundry/www.dallasopendata.com/yn72-daik',
+        w: 'The Socrata API works, but this dataset is Dallas, Texas. A Deschutes County ' +
+           'or City of Bend portal would be the local equivalent.' }
+    ] }
+];
+async function loadInfo(lat, lng, hz) {
+  const total = UNAVAILABLE.reduce(function (n, g) { return n + g.items.length; }, 0);
+  const keyed = (UNAVAILABLE[0] || { items: [] }).items.length;
+  let h = hzHead(String(total), 'sources reviewed, not yet wired in',
+    [['Unblocked by one job', hzPlural(keyed, 'source')],
+     ['Live tabs',            hzPlural(HAZARDS.length - 1, 'source') + ' plus Weather']]);
+  UNAVAILABLE.forEach(function (g) {
+    h += hzSec(g.group);
+    if (g.note) h += hzNote(escHtml(g.note));
+    g.items.forEach(function (it) {
+      h += '<div class="hz-row"><div class="hz-main">' +
+             '<div class="hz-t"><a href="' + escHtml(it.u) + '" target="_blank" ' +
+               'rel="noopener">' + escHtml(it.n) + '</a></div>' +
+             '<div class="hz-m hz-wrap">' + escHtml(it.w) + '</div>' +
+           '</div></div>';
+    });
+  });
+  return h + hzFoot(hz);
+}
+
+const HZ_LOADERS = { quake: loadQuakes, fire: loadFires,
+                     fema: loadFema, space: loadSpace, info: loadInfo };
 
 // ── panel plumbing ────────────────────────────────────────────────────
 function buildHazardUi() {
