@@ -2778,13 +2778,24 @@ function beginTour(i) {
   // translation and yaw - which is what makes drone footage read as steady.
   let topZ = -Infinity;
   for (let n = 0; n <= 32; n++) topZ = Math.max(topZ, routeCurve.getPointAt(n / 32).z);
+  // The shot is framed around the residence - element pin 1 - not around the
+  // moving route point. Locking the aim here rather than per frame means the
+  // house cannot drift out of centre partway through. If the property has no
+  // element pin, the middle of the route stands in for it.
+  const p0 = pinSets.element[0];
+  const fl = p0 ? toLocal(p0) : null;
+  const focus = routeCurve.getPointAt(0.5).clone();
+  if (fl) { focus.x = fl.x; focus.y = fl.y; }
+  focus.z = topZ;
   tour = { i: i, t0: performance.now(), pos: null, tgt: null, baseZ: topZ,
+           focus: focus, out: null,
            ms: Math.max(6000, Math.min(14000, len / 21 * 1000)) };
   const rise0 = Math.max(70, modelSpan * 0.55) * Math.sin(TOUR_ELEV);
   const b = document.getElementById('rd-tour-' + i);
   if (b) { b.classList.add('on'); b.textContent = 'Stop flythrough'; }
   dbg('Route flythrough: ' + Math.round(len) + ' m over ' +
-      (tour.ms / 1000).toFixed(0) + ' s at ' + Math.round(rise0) + ' m', 'info');
+      (tour.ms / 1000).toFixed(0) + ' s at ' + Math.round(rise0) + ' m, centred on ' +
+      (fl ? 'the residence' : 'the route midpoint'), 'info');
 }
 function stopTour() {
   if (!tour) return;
@@ -2810,22 +2821,34 @@ function stepTour() {
   if (!routeCurve) { stopTour(); return; }
   const k  = Math.min(1, (performance.now() - tour.t0) / tour.ms);
   const at = routeCurve.getPointAt(k);
-  const la = routeCurve.getPointAt(Math.min(1, k + 0.05));
-  const dir = la.clone().sub(at);
-  dir.z = 0;
-  if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
-  dir.normalize();
-  const dist  = Math.max(70, modelSpan * 0.55);
+  // Camera sits on the far side of the residence from wherever the route
+  // currently is, so the frame always reads camera -> house -> route point.
+  // As the route walks the property that vector rotates, and the shot becomes
+  // an orbit around the house that falls out of the geometry rather than being
+  // scripted separately.
+  const out = at.clone().sub(tour.focus);
+  out.z = 0;
+  const away = out.length();
+  // Passing directly over the anchor there is no far side to be on, so hold the
+  // last good direction instead of letting the camera spin through the
+  // singularity.
+  if (away > 6) { out.divideScalar(away); tour.out = out.clone(); }
+  else if (tour.out) out.copy(tour.out);
+  else out.set(0, 1, 0);
+  // Far enough back that the house and the route point are both in frame: the
+  // pull-back grows with how far the route has wandered from the anchor.
+  const dist  = Math.max(70, modelSpan * 0.55, away + modelSpan * 0.30);
   const trail = dist * Math.cos(TOUR_ELEV);
   const rise  = dist * Math.sin(TOUR_ELEV);
-  const want = at.clone().addScaledVector(dir, -trail);
+  const want = tour.focus.clone().addScaledVector(out, -trail);
   want.z = tour.baseZ + rise;        // fixed altitude - no bobbing
   // Damped rather than snapped. A route with a sharp turn would otherwise whip
   // the camera through a huge arc in one frame; easing toward the ideal
   // position gives the drifting quality the drone shot has.
-  // The aim point is pinned to the same altitude, so the pitch never rocks
-  // either - only the heading changes as the route turns.
-  const aim = at.clone(); aim.z = tour.baseZ;
+  // The aim point is the anchor itself, pinned to the flight altitude's
+  // reference plane, so neither the pitch nor the subject moves - only the
+  // camera's angle around the house changes.
+  const aim = tour.focus.clone(); aim.z = tour.baseZ;
   if (!tour.pos) { tour.pos = want.clone(); tour.tgt = aim.clone(); }
   else { tour.pos.lerp(want, 0.10); tour.tgt.lerp(aim, 0.15); }
   camera.position.copy(tour.pos);
