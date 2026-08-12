@@ -2730,7 +2730,7 @@ function buildRouteObjects(samples, zs, pts, idx) {
   });
   dirLayer = new THREE.Group();
   const curve = new THREE.CatmullRomCurve3(vecs, false, 'catmullrom', 0.15);
-  routeCurve = curve; routeCurveIdx = idx;   // the walkthrough flies this same curve
+  routeCurve = curve; routeCurveIdx = idx;   // the flythrough flies this same curve
   const tube  = new THREE.TubeGeometry(curve, Math.max(32, vecs.length * 6), radius, 8, false);
   dirLayer.add(new THREE.Mesh(tube, new THREE.MeshBasicMaterial({ color: ROUTE_HEX })));
   // Ghost copy with depth testing off, so the path stays legible where the
@@ -2757,12 +2757,12 @@ function buildRouteObjects(samples, zs, pts, idx) {
   dbg('Route drawn: ' + (dirList[idx].name || ('#' + (idx + 1))) +
       ' (' + pts.length + ' waypoints, ' + samples.length + ' ground samples)', 'ok');
 }
-// ── Route walkthrough ─────────────────────────────────────────────────
+// ── Route flythrough ──────────────────────────────────────────────────
 // The Entrance button flies to one point. This flies the whole route: the
 // camera rides the SAME CatmullRom curve the tube is built from, sitting a few
 // metres behind and above the moving point and looking at where it is about to
 // be. Riding the curve rather than hopping between waypoints is what makes it
-// read as walking the path instead of a slideshow of pins - and using the
+// read as following the path instead of a slideshow of pins - and using the
 // tube's own curve means the camera can never drift off the line that is drawn.
 //
 // getPointAt (not getPoint) is arc-length parameterised, so the pace stays even
@@ -2771,15 +2771,20 @@ function beginTour(i) {
   if (!routeCurve) return;
   cancelFly();
   const len = routeCurve.getLength();
-  // Slower than a walk. The reference footage is a drone circling the property,
-  // and at that framing the eye needs time to read the surroundings, not just
-  // the line.
-  tour = { i: i, t0: performance.now(), pos: null, tgt: null,
-           ms: Math.max(11000, Math.min(32000, len / 7 * 1000)) };
+  // A single flight altitude for the whole run. The route is draped on terrain,
+  // so its z rises and falls with the ground; feeding that straight into the
+  // camera height made the shot bob. Sampling the curve once and flying a fixed
+  // height above its highest point turns the move into pure horizontal
+  // translation and yaw - which is what makes drone footage read as steady.
+  let topZ = -Infinity;
+  for (let n = 0; n <= 32; n++) topZ = Math.max(topZ, routeCurve.getPointAt(n / 32).z);
+  tour = { i: i, t0: performance.now(), pos: null, tgt: null, baseZ: topZ,
+           ms: Math.max(6000, Math.min(14000, len / 21 * 1000)) };
+  const rise0 = Math.max(70, modelSpan * 0.55) * Math.sin(TOUR_ELEV);
   const b = document.getElementById('rd-tour-' + i);
   if (b) { b.classList.add('on'); b.textContent = 'Stop flythrough'; }
-  dbg('Route walkthrough: ' + Math.round(len) + ' m over ' +
-      (tour.ms / 1000).toFixed(0) + ' s', 'info');
+  dbg('Route flythrough: ' + Math.round(len) + ' m over ' +
+      (tour.ms / 1000).toFixed(0) + ' s at ' + Math.round(rise0) + ' m', 'info');
 }
 function stopTour() {
   if (!tour) return;
@@ -2814,12 +2819,15 @@ function stepTour() {
   const trail = dist * Math.cos(TOUR_ELEV);
   const rise  = dist * Math.sin(TOUR_ELEV);
   const want = at.clone().addScaledVector(dir, -trail);
-  want.z = at.z + rise;
+  want.z = tour.baseZ + rise;        // fixed altitude - no bobbing
   // Damped rather than snapped. A route with a sharp turn would otherwise whip
   // the camera through a huge arc in one frame; easing toward the ideal
   // position gives the drifting quality the drone shot has.
-  if (!tour.pos) { tour.pos = want.clone(); tour.tgt = at.clone(); }
-  else { tour.pos.lerp(want, 0.05); tour.tgt.lerp(at, 0.09); }
+  // The aim point is pinned to the same altitude, so the pitch never rocks
+  // either - only the heading changes as the route turns.
+  const aim = at.clone(); aim.z = tour.baseZ;
+  if (!tour.pos) { tour.pos = want.clone(); tour.tgt = aim.clone(); }
+  else { tour.pos.lerp(want, 0.10); tour.tgt.lerp(aim, 0.15); }
   camera.position.copy(tour.pos);
   camera.up.set(0, 0, 1);
   controls.target.copy(tour.tgt);
@@ -2846,7 +2854,7 @@ window.tourRoute = function (i) {
     }
     if (n > 150) {
       if (btn) btn.textContent = 'Fly the route';
-      dbg('Route walkthrough: path never became ready', 'warn');
+      dbg('Route flythrough: path never became ready', 'warn');
       return;
     }
     setTimeout(function () { waitForPath(n + 1); }, 100);
