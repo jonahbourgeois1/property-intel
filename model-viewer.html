@@ -2827,7 +2827,7 @@ function beginTour(i) {
   tour = { i: i, t0: performance.now(), pos: null, tgt: null, baseZ: topZ,
            face: face, goal: goal, kSwitch: kSwitch,
            ms: Math.max(6000, Math.min(14000, len / 21 * 1000)) };
-  const rise0 = Math.max(70, modelSpan * 0.55) * Math.sin(TOUR_ELEV);
+  const rise0 = tourRange() * Math.sin(TOUR_ELEV);
   const b = document.getElementById('rd-tour-' + i);
   if (b) { b.classList.add('on'); b.textContent = 'Stop flythrough'; }
   dbg('Route flythrough: ' + Math.round(len) + ' m over ' +
@@ -2850,10 +2850,19 @@ function stopTour() {
 // building it passes, which side of the drive it runs down - instead of a
 // close-up of ground texture.
 //
-// TOUR_DIST is a slant range and TOUR_ELEV the angle above horizontal, so the
-// two decompose into a horizontal trail and a height. Distance scales with the
-// model, which keeps the framing consistent across a small lot and a large one.
-const TOUR_ELEV = 38 * Math.PI / 180;
+// The angle and the range are not tuned by eye - they are the SAME numbers the
+// Alpha/Bravo/Charlie/Delta view buttons use (`computeCompassPos(center, az, 25,
+// maxSpan * 0.718)`), because those four presets are the framings Jonah picked
+// out as the look he wants. Matching them here means the flythrough reads as a
+// moving version of the stills a responder already knows, and a change to the
+// preset framing later only has to be made in one more place.
+// TOUR_ELEV is the angle above horizontal and tourRange() the slant range, so
+// the two decompose into a horizontal radius and a height. Range scales with
+// the model, which keeps the framing consistent across a small lot and a large
+// one; the 70 m floor stops a tiny parcel from putting the camera inside the
+// roof.
+const TOUR_ELEV = 25 * Math.PI / 180;
+function tourRange() { return Math.max(70, modelSpan * 0.718); }
 function stepTour() {
   if (!routeCurve) { stopTour(); return; }
   const k  = Math.min(1, (performance.now() - tour.t0) / tour.ms);
@@ -2863,19 +2872,35 @@ function stepTour() {
   dir.z = 0;
   if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
   dir.normalize();
-  const dist  = Math.max(70, modelSpan * 0.55);
-  const trail = dist * Math.cos(TOUR_ELEV);
-  const rise  = dist * Math.sin(TOUR_ELEV);
-  const want = at.clone().addScaledVector(dir, -trail);
-  want.z = tour.baseZ + rise;        // fixed altitude - no bobbing
+  // Both aim points are pinned to the flight's reference altitude, so the pitch
+  // never rocks - only the heading changes.
+  const aim = (k >= tour.kSwitch ? tour.goal : tour.face).clone();
+  const range  = tourRange();
+  const radius = range * Math.cos(TOUR_ELEV);
+  const want = at.clone().addScaledVector(dir, -radius);
+  // The route decides which SIDE of the house the camera is on; the preset
+  // range decides how far. Without this cap the opening frames would be shot
+  // from out at the road - the camera trailing an entrance waypoint that is
+  // itself a hundred metres from the building - and the house would be a speck.
+  // Shortening the offset along the line back to the aim point leaves the
+  // bearing untouched and only pulls the camera in, so every frame of the run
+  // sits at the same angle and range as the preset views.
+  // The altitude is fixed, so how far out the camera sits IS the elevation
+  // angle. Clamping the offset between two thirds of the radius and the radius
+  // holds that angle between the preset's 25 degrees and about 35 - the camera
+  // still travels, but a leg that runs straight away from the house can never
+  // swing it round to a near-overhead top-down.
+  const off = want.clone().sub(aim);   // clone: want is rebuilt from it below
+  off.z = 0;
+  if (off.lengthSq() < 1e-6) off.copy(dir).multiplyScalar(-radius);
+  else off.setLength(Math.min(radius, Math.max(radius * 0.66, off.length())));
+  want.copy(aim).add(off);
+  want.z = tour.baseZ + range * Math.sin(TOUR_ELEV);   // fixed altitude - no bobbing
   // Damped rather than snapped. A route with a sharp turn would otherwise whip
   // the camera through a huge arc in one frame; easing toward the ideal
   // position gives the drifting quality the drone shot has. The same damping is
   // what turns the handover at the second-to-last waypoint into a pan of about
   // half a second rather than a cut - no separate transition needed.
-  // Both aim points are pinned to the flight's reference altitude, so the pitch
-  // never rocks either.
-  const aim = (k >= tour.kSwitch ? tour.goal : tour.face).clone();
   if (!tour.pos) { tour.pos = want.clone(); tour.tgt = aim.clone(); }
   else { tour.pos.lerp(want, 0.10); tour.tgt.lerp(aim, 0.15); }
   camera.position.copy(tour.pos);
