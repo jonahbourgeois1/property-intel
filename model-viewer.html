@@ -1724,12 +1724,92 @@ async function loadWeather() {
     wxLoading = false;
   }
 }
+// ── Alert de-duplication ──────────────────────────────────────────────
+// /alerts/active?point= returns one feature per ALERT x ZONE intersection, and
+// a single point routinely sits in several overlapping zones (a county zone and
+// a fire-weather zone, say). The same Air Quality Alert then comes back two or
+// three times, identical except for `areaDesc` and `id`. Separately, an UPDATE
+// can arrive alongside the alert it supersedes.
+//
+// So two passes:
+//   1. drop anything cancelled, already replaced, or referenced as the older
+//      version by a sibling in this same response
+//   2. collapse by content signature - event + text + time window, DELIBERATELY
+//      excluding areaDesc/id, since those are exactly what differs between
+//      zone copies. The surviving copy's areas are unioned so coverage
+//      information is not thrown away.
+function wxNorm(t) {
+  return String(t == null ? '' : t).replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function dedupeAlerts(features) {
+  const list = (features || []).filter(function (f) {
+    const a = (f && f.properties) || {};
+    if (String(a.messageType || '') === 'Cancel') return false;
+    if (a.replacedBy) return false;
+    return true;
+  });
+
+  // Every id any sibling claims to supersede.
+  const superseded = {};
+  list.forEach(function (f) {
+    const refs = (f.properties && f.properties.references) || [];
+    refs.forEach(function (r) {
+      if (!r) return;
+      if (r.identifier) superseded[r.identifier] = true;
+      if (r['@id'])     superseded[r['@id']] = true;
+    });
+  });
+  function isSuperseded(f) {
+    const a = f.properties || {};
+    return !!(superseded[f.id] || superseded[a.id] || superseded[a.identifier]);
+  }
+
+  const order = [], bySig = {};
+  list.forEach(function (f) {
+    if (isSuperseded(f)) return;
+    const a = f.properties || {};
+    const sig = [wxNorm(a.event), wxNorm(a.description), wxNorm(a.instruction),
+                 a.onset || a.effective || '', a.ends || a.expires || ''].join('|');
+    if (!bySig[sig]) { bySig[sig] = f; order.push(sig); return; }
+    // Duplicate zone copy: keep the first, union the areas onto it.
+    const keep = bySig[sig].properties;
+    const seen = {}, areas = [];
+    [keep.areaDesc, a.areaDesc].forEach(function (str) {
+      String(str || '').split(';').forEach(function (x) {
+        const v = x.trim();
+        if (v && !seen[v.toLowerCase()]) { seen[v.toLowerCase()] = true; areas.push(v); }
+      });
+    });
+    if (areas.length) keep.areaDesc = areas.join('; ');
+  });
+
+  const SEV = { extreme: 0, severe: 1, moderate: 2, minor: 3, unknown: 4 };
+  function sevRank(f) {
+    const k = String(((f.properties || {}).severity) || 'unknown').toLowerCase();
+    return (SEV[k] === undefined) ? 5 : SEV[k];
+  }
+  function when(f) {
+    const a = f.properties || {};
+    return Date.parse(a.effective || a.sent || a.onset || '') || 0;
+  }
+  // Most serious first; within a severity, most recently issued first.
+  return order.map(function (k) { return bySig[k]; })
+              .sort(function (x, y) {
+                const d = sevRank(x) - sevRank(y);
+                return d !== 0 ? d : when(y) - when(x);
+              });
+}
 function renderWeather(pp, fc, alerts, obs, stationName, pt) {
   let h = '';
   // ── Active alerts first. For a property whose considerations already flag
   // high wildfire risk, a Red Flag Warning is the single most useful thing
   // this panel can show, so nothing is allowed above it.
-  const feats = (alerts && alerts.features) || [];
+  const raw = (alerts && alerts.features) || [];
+  const feats = dedupeAlerts(raw);
+  if (raw.length !== feats.length) {
+    dbg('Alerts: ' + raw.length + ' returned, ' + feats.length +
+        ' shown (duplicate zone copies / superseded versions collapsed)', 'info');
+  }
   if (feats.length) {
     h += '<div class="wx-sec">Active alerts</div>';
     feats.forEach(function (f, i) {
