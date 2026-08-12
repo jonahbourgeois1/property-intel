@@ -410,6 +410,12 @@
                color: #555f6e; margin-top: 2px; }
   .hz-seg.on span, .hz-seg.on em { color: #0b0e12; }
   .hz-seg.on em { opacity: 0.75; }
+  .hz-tag { float: right; margin-left: 8px; font-family: monospace; font-size: 8.5px;
+             letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 6px;
+             border-radius: 4px; border: 1px solid; }
+  .hz-tag.plan { color: #22c55e; border-color: rgba(34,197,94,0.5);  background: rgba(34,197,94,0.10); }
+  .hz-tag.rev  { color: #38bdf8; border-color: rgba(56,189,248,0.5); background: rgba(56,189,248,0.10); }
+  .hz-tag.link { color: #8a93a2; border-color: rgba(255,255,255,0.18); }
   .hz-m.hz-wrap { font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
                   font-size: 11px; line-height: 1.55; color: #8a93a2; }
   .hz-t a { color: #f0f2f5; text-decoration: none; border-bottom: 1px solid rgba(255,255,255,0.22); }
@@ -2043,7 +2049,7 @@ const HAZARDS = [
     source: 'NOAA SWPC alerts' },
   { id: 'info',    label: 'More sources', accent: '#8a93a2',
     site: 'https://www.fema.gov/about/openfema/data-sets', siteName: 'OpenFEMA data sets',
-    source: 'Sources reviewed but not yet wired in' }
+    source: 'Data sources reviewed for this viewer' }
 ];
 const hzState = {};   // id -> {loaded, loading}
 
@@ -2486,59 +2492,81 @@ window.toggleSpace = function (i) {
 // front of whoever asks. Three of these are one Lambda away; the rest are not
 // coming without a different data source.
 const UNAVAILABLE = [
-  { group: 'Needs an API key held server-side',
-    note: 'The viewer is a public repo, so a key in the page is readable by anyone. ' +
-          'One scheduled job holding the keys and republishing the data covers all three.',
+  { group: 'Planned additions',
+    note: 'Reviewed and confirmed useful. Each needs a data agreement with the ' +
+          'provider before it can appear here automatically.',
     items: [
-      { n: 'NASA FIRMS', u: 'https://firms.modaps.eosdis.nasa.gov/',
-        w: 'Satellite active-fire detections, updated on each overpass. The fastest ' +
-           'signal there is for a new fire, and the highest-value source on this list ' +
-           'for a property carrying wildfire risk. Free MAP_KEY.' },
-      { n: 'AirNow', u: 'https://www.airnow.gov/',
-        w: 'Official AQI observations and forecasts. Free registered key. Note the NWS ' +
-           'feed already surfaces Air Quality Alerts in the Weather tab - this would add ' +
-           'the actual numbers behind them.' },
-      { n: 'US Drought Monitor', u: 'https://droughtmonitor.unl.edu/',
-        w: 'No key needed, but UNL publishes only usdmdataservices.unl.edu and that host ' +
-           'sends no CORS header, so a browser refuses the request before it leaves. ' +
-           'There is no ArcGIS mirror. Same fix as the two above.' }
+      { n: 'Satellite wildfire detection', tag: 'Planned', cls: 'plan',
+        u: 'https://firms.modaps.eosdis.nasa.gov/',
+        w: 'NASA satellites pick up new fires within a few hours of ignition, often well ' +
+           'before crews can map a perimeter. This would give the Wildfire tab an early ' +
+           'warning layer rather than only confirmed fire boundaries.' },
+      { n: 'Air quality index', tag: 'Planned', cls: 'plan',
+        u: 'https://www.airnow.gov/',
+        w: 'Official EPA air quality readings and next-day forecasts. The Weather tab ' +
+           'already shows air quality alerts when they are issued; this adds the actual ' +
+           'numbers behind them, which matters during smoke season.' },
+      { n: 'Drought conditions', tag: 'Planned', cls: 'plan',
+        u: 'https://droughtmonitor.unl.edu/',
+        w: 'Weekly drought severity for the county, from abnormally dry through ' +
+           'exceptional drought. Useful context for fire risk and for water availability ' +
+           'on rural properties.' }
     ] },
-  { group: 'No public API',
-    note: 'Nothing to wire in. These stay as links.',
+  { group: 'Under review',
+    note: 'Data exists and is public. What is not yet settled is which parts of it are ' +
+          'worth showing for a given property.',
     items: [
-      { n: 'LexisNexis Community Crime Map', u: 'https://risk.lexisnexis.com/products/community-crime-map',
-        w: 'Commercial product. No public API, and it blocks embedding.' },
-      { n: 'Bend Police Department', u: 'https://bendoregon.gov/departments/public-safety/police/',
-        w: 'A web page, not a data source.' }
+      { n: 'River levels and flood forecast', tag: 'Reviewing', cls: 'rev',
+        u: 'https://water.noaa.gov/',
+        w: 'The National Water Prediction Service publishes river gauge readings: the ' +
+           'current level, whether it is above action or flood stage, and a forecast crest ' +
+           'with timing. Valuable for a property near a river or in a floodplain, and ' +
+           'close to meaningless for one that is not — so the open question is how far ' +
+           'away a gauge can be before it stops telling you anything.' },
+      { n: 'Deschutes County open data', tag: 'Reviewing', cls: 'rev',
+        u: 'https://data-deschutes.opendata.arcgis.com/',
+        w: 'The county publishes parcel boundaries, zoning, hazard overlays and public ' +
+           'safety layers. Strong candidate for property-specific context such as ' +
+           'wildfire hazard zones and service district boundaries.' },
+      { n: 'City of Bend open data', tag: 'Reviewing', cls: 'rev',
+        u: 'https://data-bendoregon.opendata.arcgis.com/',
+        w: 'City-maintained layers covering addresses, utilities, zoning and public ' +
+           'safety within city limits. Applies to properties inside Bend rather than ' +
+           'rural county addresses.' }
     ] },
-  { group: 'Possible, but needs a decision first',
-    note: '',
+  { group: 'Reference links',
+    note: 'Published for the public but not shared in a form we can display here. ' +
+          'These open in a new tab.',
     items: [
-      { n: 'NOAA Water', u: 'https://water.noaa.gov/',
-        w: 'An NWPS API exists, but it is organised by stream gauge. Someone has to ' +
-           'decide which gauges are relevant to a given property before it means anything.' }
-    ] },
-  { group: 'Not applicable',
-    note: '',
-    items: [
-      { n: 'Dallas Open Data', u: 'https://dev.socrata.com/foundry/www.dallasopendata.com/yn72-daik',
-        w: 'The Socrata API works, but this dataset is Dallas, Texas. A Deschutes County ' +
-           'or City of Bend portal would be the local equivalent.' }
+      { n: 'Neighbourhood crime map', tag: 'Link', cls: 'link',
+        u: 'https://risk.lexisnexis.com/products/community-crime-map',
+        w: 'Reported incidents mapped by neighbourhood, maintained by LexisNexis from ' +
+           'participating agencies.' },
+      { n: 'Bend Police Department', tag: 'Link', cls: 'link',
+        u: 'https://bendoregon.gov/departments/public-safety/police/',
+        w: 'Local advisories, non-emergency contacts and online reporting.' }
     ] }
 ];
 async function loadInfo(lat, lng, hz) {
-  const total = UNAVAILABLE.reduce(function (n, g) { return n + g.items.length; }, 0);
-  const keyed = (UNAVAILABLE[0] || { items: [] }).items.length;
-  let h = hzHead(String(total), 'sources reviewed, not yet wired in',
-    [['Unblocked by one job', hzPlural(keyed, 'source')],
-     ['Live tabs',            hzPlural(HAZARDS.length - 1, 'source') + ' plus Weather']]);
+  let planned = 0, review = 0, links = 0;
+  UNAVAILABLE.forEach(function (g) {
+    g.items.forEach(function (i) {
+      if (i.cls === 'plan') planned++; else if (i.cls === 'rev') review++; else links++;
+    });
+  });
+  let h = hzHead(String(planned + review),
+    'additional data sources being added',
+    [['Planned',       hzPlural(planned, 'source') + ' confirmed useful'],
+     ['Under review',  hzPlural(review, 'source')],
+     ['Reference only', hzPlural(links, 'link')]]);
   UNAVAILABLE.forEach(function (g) {
     h += hzSec(g.group);
     if (g.note) h += hzNote(escHtml(g.note));
     g.items.forEach(function (it) {
       h += '<div class="hz-row"><div class="hz-main">' +
              '<div class="hz-t"><a href="' + escHtml(it.u) + '" target="_blank" ' +
-               'rel="noopener">' + escHtml(it.n) + '</a></div>' +
+               'rel="noopener">' + escHtml(it.n) + '</a>' +
+               '<span class="hz-tag ' + it.cls + '">' + escHtml(it.tag) + '</span></div>' +
              '<div class="hz-m hz-wrap">' + escHtml(it.w) + '</div>' +
            '</div></div>';
     });
