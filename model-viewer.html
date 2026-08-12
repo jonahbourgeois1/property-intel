@@ -40,8 +40,21 @@
   }
   #hint.hidden { opacity: 0; }
   /* ── Responder Directions ─────────────────────────────────────────────── */
+  /* ── Tab rail ───────────────────────────────────────────────────────
+     Both panel toggles live in one vertical rail. When a panel opens the rail
+     slides left by exactly the panel width, so the buttons end up sitting
+     beside the open panel instead of floating on top of its header - which is
+     what forced the header text to dodge them before. The transition matches
+     the panel's 0.28s so they travel together. */
+  :root { --panel-w: 340px; }
+  #tab-rail {
+    position: fixed; top: 16px; right: 16px; z-index: 60;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+    transition: transform 0.28s ease;
+  }
+  #tab-rail.shifted { transform: translateX(calc(-1 * var(--panel-w))); }
   #dir-toggle {
-    display: none; position: fixed; top: 16px; right: 16px; z-index: 60;
+    display: none;
     background: rgba(0,0,0,0.6); color: #f59e0b; border: 1px solid #f59e0b;
     font-family: monospace; font-size: 11px; padding: 7px 13px;
     border-radius: 6px; cursor: pointer; transition: background 0.15s;
@@ -49,7 +62,7 @@
   #dir-toggle:hover { background: rgba(245,158,11,0.16); }
   #dir-toggle.on { background: rgba(245,158,11,0.22); }
   #dir-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 55;
+    position: fixed; top: 0; right: 0; bottom: 0; width: var(--panel-w); z-index: 55;
     background: #12161b; border-left: 1px solid rgba(255,255,255,0.10);
     transform: translateX(100%); transition: transform 0.28s ease;
     display: flex; flex-direction: column; overflow: hidden;
@@ -133,7 +146,12 @@
   .vw-img { width: 100%; display: block; border-radius: 8px; border: 1px solid rgba(255,255,255,0.10); cursor: zoom-in; }
   .vw-bullets { margin: 7px 0 0 16px; padding: 0; }
   .vw-bullets li { font-size: 11px; color: #8a93a2; line-height: 1.6; margin-bottom: 3px; }
-  @media (max-width: 640px) { #dir-panel { width: 100%; } }
+  /* Full-width panels on a phone would push the rail off-screen, so it is
+     hidden while a panel is open - each panel has its own close button. */
+  @media (max-width: 640px) {
+    #dir-panel, #wx-panel { width: 100%; }
+    #tab-rail.shifted { display: none; }
+  }
   /* ── View preset bar (storyboard: alpha/ent params from the sheet) ────── */
   #preset-bar {
     display: none; position: fixed; bottom: 48px; left: 50%;
@@ -237,7 +255,7 @@
      alerts and wind are operational information a responder wants in one
      click, not scrolled past pins, cameras, obliques and routes. */
   #wx-toggle {
-    display: none; position: fixed; top: 16px; right: 168px; z-index: 60;
+    display: none;
     background: rgba(0,0,0,0.6); color: #38bdf8; border: 1px solid #38bdf8;
     font-family: monospace; font-size: 11px; padding: 7px 13px;
     border-radius: 6px; cursor: pointer; transition: background 0.15s;
@@ -245,7 +263,7 @@
   #wx-toggle:hover { background: rgba(56,189,248,0.16); }
   #wx-toggle.on { background: rgba(56,189,248,0.22); }
   #wx-panel {
-    position: fixed; top: 0; right: 0; bottom: 0; width: 340px; z-index: 56;
+    position: fixed; top: 0; right: 0; bottom: 0; width: var(--panel-w); z-index: 56;
     background: #12161b; border-left: 1px solid rgba(255,255,255,0.10);
     transform: translateX(100%); transition: transform 0.28s ease;
     display: flex; flex-direction: column; overflow: hidden;
@@ -270,6 +288,29 @@
   .wx-alert.moderate .wx-alert-ev { color: #fcd34d; }
   .wx-alert-hd { font-size: 11px; color: #d5dae2; line-height: 1.55; margin-top: 5px; }
   .wx-alert-tm { font-size: 10px; color: #8a93a2; font-family: monospace; margin-top: 5px; }
+  .wx-alert-row { display: flex; align-items: flex-start; gap: 8px; }
+  .wx-alert-row.can-open { cursor: pointer; }
+  .wx-alert-caret {
+    margin-left: auto; flex-shrink: 0; color: #8a93a2; font-size: 10px;
+    font-family: monospace; transition: transform 0.15s; line-height: 1.6;
+  }
+  .wx-alert-caret.open { transform: rotate(180deg); }
+  .wx-alert-more { font-size: 9.5px; color: #8a93a2; font-family: monospace; margin-top: 6px; }
+  .wx-alert-detail {
+    display: none; margin-top: 9px; padding-top: 9px;
+    border-top: 1px solid rgba(255,255,255,0.14);
+    font-family: monospace; font-size: 10.5px; color: #d5dae2; line-height: 1.62;
+    /* NWS ships these as hard-wrapped plain text; pre-wrap keeps the agency's
+       own paragraphing instead of collapsing it into a wall. */
+    white-space: pre-wrap; overflow-wrap: anywhere;
+    max-height: 300px; overflow-y: auto; scrollbar-width: thin;
+  }
+  .wx-alert-detail.open { display: block; }
+  .wx-alert-lbl {
+    display: block; font-size: 9.5px; letter-spacing: 0.07em; text-transform: uppercase;
+    color: #8a93a2; margin: 11px 0 3px; font-family: monospace;
+  }
+  .wx-alert-lbl:first-child { margin-top: 0; }
   .wx-now {
     margin: 12px 16px; border: 1px solid rgba(255,255,255,0.14);
     border-radius: 10px; background: #1a1f27; padding: 13px 14px;
@@ -331,8 +372,10 @@
   <span id="err-msg" style="font-size:11px;opacity:0.6;margin-top:6px;"></span>
 </div>
 <div id="hint">Left drag to pan · Middle drag to rotate · Right drag to zoom</div>
-<button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
-<button id="wx-toggle" onclick="toggleWxPanel()">Weather</button>
+<div id="tab-rail">
+  <button id="dir-toggle" onclick="toggleDirPanel()">Directions</button>
+  <button id="wx-toggle" onclick="toggleWxPanel()">Weather</button>
+</div>
 <div id="pin-label"></div>
 <div id="cam-popup">
   <button id="cam-pop-close" onclick="hideCameraPopup()">&#10005;</button>
@@ -1236,7 +1279,16 @@ window.toggleDirPanel = function () {
   // The two panels occupy the same edge of the screen, so opening one closes
   // the other rather than stacking them.
   if (open) closeWxPanel();
+  syncTabRail();
 };
+// One place decides where the rail sits: beside an open panel, or at the edge
+// when nothing is open. Called after every open/close so the two can never
+// disagree.
+function syncTabRail() {
+  const anyOpen = document.getElementById('dir-panel').classList.contains('open') ||
+                  document.getElementById('wx-panel').classList.contains('open');
+  document.getElementById('tab-rail').classList.toggle('shifted', anyOpen);
+}
 // ── Markers ───────────────────────────────────────────────────────────
 function numberSprite(text, bg, fg, worldSize) {
   const S  = 128;
@@ -1604,6 +1656,7 @@ function initWeather(d) {
 window.closeWxPanel = function () {
   document.getElementById('wx-panel').classList.remove('open');
   document.getElementById('wx-toggle').classList.remove('on');
+  syncTabRail();
 };
 window.toggleWxPanel = function () {
   const p = document.getElementById('wx-panel');
@@ -1614,8 +1667,18 @@ window.toggleWxPanel = function () {
     document.getElementById('dir-toggle').classList.remove('on');
     if (!wxLoaded && !wxLoading) loadWeather();
   }
+  syncTabRail();
 };
 window.refreshWeather = function () { wxLoaded = false; loadWeather(); };
+window.toggleAlert = function (i) {
+  const d = document.getElementById('wx-al-d-' + i);
+  const c = document.getElementById('wx-al-c-' + i);
+  const m = document.getElementById('wx-al-m-' + i);
+  if (!d) return;
+  const open = d.classList.toggle('open');
+  if (c) c.classList.toggle('open', open);
+  if (m) m.textContent = open ? 'click to collapse' : 'click for full text';
+};
 async function wxJson(url) {
   const r = await fetch(url, { headers: { 'Accept': 'application/geo+json' } });
   if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + url);
@@ -1669,17 +1732,44 @@ function renderWeather(pp, fc, alerts, obs, stationName, pt) {
   const feats = (alerts && alerts.features) || [];
   if (feats.length) {
     h += '<div class="wx-sec">Active alerts</div>';
-    feats.forEach(function (f) {
+    feats.forEach(function (f, i) {
       const a = f.properties || {};
       const sev = String(a.severity || '').toLowerCase();
       const cls = (sev === 'extreme' || sev === 'severe') ? '' : ' moderate';
+      // The full text is the useful part of an air-quality or red-flag alert -
+      // who it affects, what to do - but it runs to several hundred words, so
+      // it is collapsed behind the headline and opens on click.
+      let detail = '';
+      if (a.areaDesc) {
+        detail += '<span class="wx-alert-lbl">Area</span>' + escHtml(a.areaDesc);
+      }
+      if (a.description) {
+        detail += '<span class="wx-alert-lbl">Details</span>' + escHtml(a.description.trim());
+      }
+      if (a.instruction) {
+        detail += '<span class="wx-alert-lbl">What to do</span>' + escHtml(a.instruction.trim());
+      }
+      const meta = [];
+      if (a.effective) meta.push('from ' + wxTime(a.effective));
+      if (a.senderName) meta.push(a.senderName);
+      if (meta.length) {
+        detail += '<span class="wx-alert-lbl">Issued</span>' + escHtml(meta.join('  ·  '));
+      }
+      const canOpen = !!detail;
       h += '<div class="wx-alert' + cls + '">' +
-             '<div class="wx-alert-ev">' + escHtml(a.event || 'Alert') + '</div>' +
+             '<div class="wx-alert-row' + (canOpen ? ' can-open" onclick="toggleAlert(' + i + ')' : '') + '">' +
+               '<div class="wx-alert-ev">' + escHtml(a.event || 'Alert') + '</div>' +
+               (canOpen ? '<span class="wx-alert-caret" id="wx-al-c-' + i + '">&#9660;</span>' : '') +
+             '</div>' +
              (a.headline ? '<div class="wx-alert-hd">' + escHtml(a.headline) + '</div>' : '') +
              '<div class="wx-alert-tm">' +
                (a.severity ? escHtml(a.severity) + ' &middot; ' : '') +
                (a.ends || a.expires ? 'until ' + escHtml(wxTime(a.ends || a.expires)) : '') +
-             '</div></div>';
+             '</div>' +
+             (canOpen ? '<div class="wx-alert-more" id="wx-al-m-' + i + '">click for full text</div>' +
+                        '<div class="wx-alert-detail" id="wx-al-d-' + i + '">' + detail + '</div>'
+                      : '') +
+           '</div>';
     });
   }
   // ── Current conditions
