@@ -772,7 +772,8 @@
           </label>
         </div>
         <div class="submit-bar">
-          <button type="submit" class="btn primary" id="submitBtn">Submit critique</button>
+          <button type="submit" class="btn primary" id="submitBtn"
+            title="Files this round to the Element Critique tab and composes the Nadir Fixes note">Rerun analysis</button>
           <button type="button" class="btn" id="copyBtn"
             title="Copy the exact JSON this page would send">Copy JSON</button>
           <div class="status" id="status"></div>
@@ -1728,7 +1729,7 @@
       var payload = collectPayload();
 
       if (!hasContent(payload)) {
-        setStatus('Nothing to submit yet — set a verdict or write a note first.', 'err');
+        setStatus('Nothing to send yet — set a verdict, move a pin, add one, or write a note.', 'err');
         return;
       }
       if (!configured) {
@@ -1737,7 +1738,7 @@
       }
 
       btn.disabled = true;
-      setStatus('Sending round ' + payload.round + '…');
+      setStatus('Filing round ' + payload.round + '…');
 
       // Content-Type text/plain keeps this a CORS "simple request", so the
       // browser sends no OPTIONS preflight — Apps Script cannot answer one.
@@ -1759,10 +1760,12 @@
           try {
             var j = JSON.parse(t);
             if (j && j.ok === false) { ok = false; note = j.error || 'rejected'; }
-            else if (j && j.rows) note = j.rows + ' rows written';
+            else if (j && j.message) note = j.message;
           } catch (err) { /* a non-JSON 200 is still a success */ }
           if (!ok) { setStatus('Rejected: ' + note, 'err'); btn.disabled = false; return; }
-          setStatus('Round ' + payload.round + ' submitted' + (note ? ' — ' + note : '') + '.', 'ok');
+          // Prefer the server's own message: it knows whether a re-pin was
+          // actually queued or whether the rerun is still a manual step.
+          setStatus(note || ('Round ' + payload.round + ' filed.'), 'ok');
           btn.disabled = false;
         })
         .catch(function (err) {
