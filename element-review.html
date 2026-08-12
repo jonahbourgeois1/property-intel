@@ -162,6 +162,48 @@
   so this page degrades to a readable message rather than a dead screen.
 
   ────────────────────────────────────────────────────────────────────────────
+  v5.7 (THE ITERATION LOOP CLOSES). The page can now show the NEXT round of pins
+  without a reload, which is what this whole surface was built toward.
+
+  Three parts:
+
+  1. render() IS RE-ENTRANT. It used to append markers, legend rows, ghosts and
+     cards and assume exactly one pass per page load; a second call stacked two
+     sets of pins on the image while elMarkers/elCards still indexed the first.
+     clearOverlay() is the teardown, and render() calls it first thing. It reuses
+     removeAdded() and removeGhost() rather than duplicating their DOM surgery,
+     scopes its sweep to '.marker.drag' so ROUTE waypoints survive, and resets
+     elements/state/added/elMarkers/elCards/ghosts.
+     ⚠️ pinRequests deliberately SURVIVE a re-render: "this element type is not in
+     the catalog" is about the vocabulary, not about this round's pins.
+
+  2. PINS CAN COME FROM THE API. fetchElements() calls ?route=elements, resolving
+     the row by `key` if present and by `addr` otherwise — and `addr` is already in
+     every review link the sheet builds, so this works before Satellite.gs is
+     patched to send &key=.
+     ⚠️ ?pins= still WINS when present. It needs no network and it is exactly what
+     the reviewer was sent; silently substituting a live read would change what
+     they are reviewing out from under them. The API is the fallback and the
+     refresh path, not a replacement.
+
+  3. rev POLLING. After a round is filed, the page polls ?route=elements every 20s
+     for up to 10 minutes (the re-pin trigger runs every 5) and compares `rev`, the
+     server's MD5 of the elements cell. The page never decides for itself whether
+     two pin arrays differ — that is the server's fingerprint to give.
+     ⚠️ A refresh DESTROYS the panel, so it is never silent when there is anything
+     to lose. panelFingerprint() is compared against the snapshot taken AT SUBMIT:
+     unchanged means the panel holds only what was already filed, so the new round
+     applies immediately; anything else and it waits behind a "Load them" button.
+     An earlier attempt used "has the reviewer typed anything?" and was wrong in
+     the case that matters most — right after a submit the panel still holds the
+     round just filed, so it never auto-applied at all.
+     The round number comes from the server's `next_round` (derived from the log's
+     Round column), not from incrementing locally, so it stays right when a round
+     was filed from another tab.
+     window.__redraw / __pollNow / __state exist ONLY under ?debug=1, so the
+     headless suite need not wait 20s per assertion.
+
+  ────────────────────────────────────────────────────────────────────────────
   v5.6 (A CORRECTION IS A VERDICT). Found in the first real round filed from
   the sheet: dragging a marker wrote corrected_x/y but left the verdict empty,
   and nothing derived it. The row that landed had "Pin n Fix XY" filled with
@@ -583,6 +625,24 @@
   .status.ok  { color: var(--good); }
   .status.err { color: var(--bad); }
 
+  /* v5.7: the "a new round is ready" offer. Collapsed to nothing until it has
+     something to say, so it never occupies space or attracts a click while
+     empty. Teal rather than amber: a re-pin arriving is good news, not a
+     warning. */
+  .refresh-bar { display: none; }
+  .refresh-bar.on {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 0 0 10px; padding: 9px 11px;
+    background: rgba(79, 209, 197, 0.10);
+    border: 1px solid var(--hot);
+    border-radius: var(--radius);
+    font-size: 12px; color: var(--ink);
+  }
+  .refresh-bar span { flex: 1 1 auto; }
+  .btn.small { padding: 4px 9px; font-size: 11px; }
+  .btn.ghost { background: transparent; color: var(--ink-dim); }
+  .btn.ghost:hover { color: var(--ink); }
+
   /* ── Image stage ─────────────────────────────────────────── */
   .stage {
     position: relative;
@@ -857,6 +917,10 @@
         <span class="chip" id="roundChip"></span>
       </h2>
       <form class="intake-body" id="critiqueForm" autocomplete="off">
+        <!-- v5.7: filled in only when a new round of pins is waiting and there is
+             unsaved work that a refresh would destroy. Empty and invisible
+             otherwise — a dead "Load" button invites a click that does nothing. -->
+        <div class="refresh-bar" id="refreshBar"></div>
         <div class="form-scroll" id="formScroll">
           <div class="rev-meta">
             <label class="f grow">
@@ -1025,6 +1089,15 @@
   // second click on the same row would queue a duplicate id, which
   // validateElementPins_ silently drops.
   var refreshAddResults = null;
+  // v5.7: the catalog as fetched, kept so a REFRESH can re-resolve new pins
+  // without a second network round trip. resolveNames() needs it, and a refresh
+  // that silently fell back to "id 148" for every pin would look like data loss.
+  var catalogRaw = null;
+  // v5.7: the server's fingerprint of the elements cell (4-byte MD5). A refresh
+  // is warranted exactly when this changes — comparing pin arrays ourselves would
+  // mean deciding what "different" means, which is the server's job.
+  var lastRev = null;
+  var pollTimer = null;
 
   (function initFormMeta() {
     var r = document.getElementById('round');
@@ -1045,9 +1118,19 @@
 
   if (addr) document.getElementById('addr').textContent = '· ' + addr;
 
+  // v5.7: pins may now arrive from the API instead of the URL, so "no pins in the
+  // query string" is only fatal if there is also no way to ASK for them. The API
+  // resolves a row by key, name or address — and `addr` is already in every
+  // review link the sheet builds, which is why this works before Satellite.gs
+  // has been patched to send &key=.
+  var canFetchPins = !!(CRITIQUE_POST_URL && CRITIQUE_POST_URL.indexOf('PASTE_') !== 0 &&
+                        (rowKey || addr));
+
   if (!nadirUrl) { fail('No nadir image URL provided.', 'Expected ?nadir=&lt;url&gt;'); return; }
-  if (!pinsRaw && !routeRaw) {
-    fail('No pins or route provided.', 'Expected ?pins=&lt;json array&gt; and/or ?route=&lt;json array&gt;');
+  if (!pinsRaw && !routeRaw && !canFetchPins) {
+    fail('No pins or route provided.',
+         'Expected ?pins=&lt;json array&gt; and/or ?route=&lt;json array&gt;, ' +
+         'or a ?key= / ?addr= this page can look up.');
     return;
   }
 
@@ -1128,7 +1211,58 @@
     if (host) host.innerHTML = '<div class="empty small">' + escapeHtml(msg) + '</div>';
   }
 
+  // ── v5.7: tear down everything render() built ───────────────────────────
+  // render() used to be a one-shot: it APPENDED markers, legend rows, ghosts and
+  // cards and assumed it ran exactly once per page load. Calling it twice stacked
+  // two sets of pins on the image with the index arrays pointing at the first
+  // set. This is the teardown that makes a second pass safe, and it is the whole
+  // reason the live refresh can exist.
+  //
+  // It deliberately reuses removeAdded() and removeGhost() rather than
+  // re-implementing their DOM surgery: those two already know every node a pin
+  // owns, and a second copy of that knowledge would rot.
+  function clearOverlay() {
+    var frame = document.getElementById('frame');
+    var list = document.getElementById('list');
+    var svg = document.getElementById('ghostSvg');
+
+    // PLACE mode must not survive a re-render: the catalog entry it was holding
+    // may not even belong to the new round.
+    cancelPlacement();
+
+    // Added pins FIRST. removeAdded() unpicks the marker, the card and the
+    // legend row together AND mutates `added`, so iterate over a copy.
+    added.slice().forEach(removeAdded);
+    for (var i = 0; i < ghosts.length; i++) removeGhost(i);
+
+    if (frame) {
+      // Belt to the braces above: anything left wearing our classes goes, in
+      // case an index drifted out of `ghosts` or `added`. Scoped to
+      // '.marker.drag' because ROUTE waypoints live in this same frame and are
+      // not ours to remove — the same reasoning as render()'s own selector.
+      each(frame.querySelectorAll('.marker.drag, .ghost-marker'), function (n) {
+        if (n.parentNode) n.parentNode.removeChild(n);
+      });
+    }
+    // The connector lines. #ghostSvg holds nothing but ours, so empty it.
+    if (svg) { while (svg.firstChild) svg.removeChild(svg.firstChild); }
+    if (list) list.innerHTML = '';
+
+    elements = []; state = []; elMarkers = []; elCards = []; ghosts = [];
+    added = [];
+    flaggedCount = 0;
+    // pinRequests deliberately SURVIVE. "this element type is missing from the
+    // catalog" is an observation about the vocabulary, not about this round's
+    // pins, and a re-pin does not answer it. Wiping them would silently discard
+    // something the reviewer typed.
+  }
+
+  // querySelectorAll returns a NodeList, and NodeList.forEach is absent in older
+  // browsers. One helper beats a slice() at every call site.
+  function each(nodes, fn) { Array.prototype.forEach.call(nodes, fn); }
+
   function render(resolved) {
+    clearOverlay();
     var frame = document.getElementById('frame');
     var list = document.getElementById('list');
     var flagged = resolved.filter(function (p) { return p.flag; }).length;
@@ -1175,7 +1309,11 @@
     // Three-way hover/active linking: marker <-> legend row <-> critique card.
     // '.marker.drag' rather than '.marker' so route waypoints can never be
     // indexed into the element arrays.
-    var markers = frame.querySelectorAll('.marker.drag');
+    // ':not(.added)' matters now that render() can run more than once: an added
+    // pin also wears '.marker.drag', so without it a stale addition would take a
+    // slot in elMarkers and shift every index past it. clearOverlay() removes
+    // them first, but the selector should not depend on that having happened.
+    var markers = frame.querySelectorAll('.marker.drag:not(.added)');
     var rows = list.querySelectorAll('li');
 
     // Published so drag, place mode and resetPin can reach the same handles.
@@ -1929,7 +2067,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v5.6',
+      version: 'v5.7',
       submitted_at: new Date().toISOString(),
       key: rowKey,
       view: viewName,
@@ -1990,6 +2128,144 @@
     // found a gap in the vocabulary and that is worth recording on its own.
     if (payload.pin_requests.length) return true;
     return payload.elements.some(function (e) { return e.verdict || e.note || e.moved; });
+  }
+
+  // ── v5.7: pick up the next round without a reload ──────────────────────────
+  // The loop Jonah asked for at the outset: file a critique, the re-pin runs, and
+  // the viewer shows the new pins. `rev` (the server's MD5 of the elements cell)
+  // is the trigger — the page never has to decide for itself whether two pin
+  // arrays are "different".
+  //
+  // ⚠️ A refresh DESTROYS the panel, so it is never silent when there is anything
+  // to lose. Right after a submit the state is expendable (it was just filed), so
+  // it applies immediately; if the reviewer has started typing again, the new
+  // round waits behind a button. Losing typed critique to a background timer
+  // would be the worst possible bug in this feature.
+  var POLL_EVERY_MS = 20000;
+  var POLL_FOR_MS = 10 * 60 * 1000;   // a re-pin trigger runs every 5 min; allow two
+  var filedFingerprint = null;
+
+  // Everything about the panel a refresh would destroy, as one comparable string.
+  //
+  // ⚠️ This replaced a "has the reviewer typed anything?" check, which was WRONG
+  // in the one case that matters most: straight after a submit the panel still
+  // holds the round that was just filed, so "has content" was always true and the
+  // refresh never applied on its own — the opposite of the intent. What matters
+  // is not whether there is content but whether it has CHANGED since it was filed.
+  // A fingerprint also beats an event listener on input/pointerdown: panning the
+  // image or tapping zoom is not an edit, and typing something then deleting it
+  // leaves nothing to protect.
+  function panelFingerprint() {
+    var p = collectPayload();
+    return JSON.stringify({
+      e: p.elements.map(function (x) {
+        return [x.id, x.verdict, x.note, x.corrected_x, x.corrected_y];
+      }),
+      a: p.added.map(function (x) { return [x.id, x.x, x.y, x.note]; }),
+      m: p.missed,
+      // reviewer and round are deliberately OUT: they are about who is reviewing,
+      // not about the pins, and a refresh does not disturb them.
+      r: p.pin_requests.map(function (x) { return [x.name, x.note]; })
+    });
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    setRefreshBanner(null);
+  }
+
+  // The offer, when a refresh cannot be applied unasked. Built here rather than
+  // sitting in the markup because it must not exist when there is nothing to
+  // offer — a dead "Load" button invites a click that does nothing.
+  function setRefreshBanner(pinsReady, nextRound) {
+    var host = document.getElementById('refreshBar');
+    if (!host) return;
+    if (!pinsReady) { host.className = 'refresh-bar'; host.innerHTML = ''; return; }
+    host.className = 'refresh-bar on';
+    host.innerHTML = '<span>A new round of pins is ready (' + pinsReady.length +
+      ').</span> <button type="button" class="btn small" id="loadNewPins">Load them</button>' +
+      '<button type="button" class="btn small ghost" id="dismissNewPins">Not yet</button>';
+    host.querySelector('#loadNewPins').addEventListener('click', function () {
+      applyRefresh(pinsReady, nextRound);
+    });
+    host.querySelector('#dismissNewPins').addEventListener('click', function () {
+      // Dismiss the OFFER, not the knowledge that the row moved on. lastRev was
+      // already advanced, so this will not nag again for the same round.
+      setRefreshBanner(null);
+      setStatus('Staying on the current round. Reload the page when you want the new pins.');
+    });
+  }
+
+  function applyRefresh(newPins, nextRound) {
+    setRefreshBanner(null);
+    pins = newPins;
+    drawPins(pins);                       // render() calls clearOverlay() first
+    // The panel is now blank, so the filed snapshot must move with it — otherwise
+    // the NEXT rev change would compare against a round that is no longer on
+    // screen and needlessly demote an auto-refresh to a banner.
+    filedFingerprint = panelFingerprint();
+
+    // A new set of pins is a new round. PREFER the server's `next_round`: it is
+    // derived from the log's own Round column for this key, so it stays right
+    // when a round was filed from another tab or the page has been reloaded.
+    // Incrementing locally is only the fallback.
+    var r = document.getElementById('round');
+    if (r) {
+      var n = parseInt(nextRound, 10);
+      if (!(isFinite(n) && n > 0)) {
+        var cur = parseInt(r.value, 10);
+        n = isFinite(cur) ? cur + 1 : 1;
+      }
+      r.value = n;
+      var chip = document.getElementById('roundChip');
+      if (chip) chip.textContent = 'round ' + r.value;
+    }
+    setStatus(newPins.length + ' new pin(s) loaded — this is round ' +
+              (r ? r.value : '?') + '.', 'ok');
+  }
+
+  // Run one poll cycle now instead of waiting for the interval. Split out of
+  // startPolling so a test can drive the refresh without a 20-second wait — see
+  // the ?debug=1 seam below.
+  var pollOnce = function () {};
+
+  function startPolling() {
+    if (!canFetchPins) return;
+    stopPolling();
+    var until = Date.now() + POLL_FOR_MS;
+
+    var tick = function () {
+      return fetchElements().then(function (j) {
+        var rev = j.rev || null;
+        if (!rev || rev === lastRev) return;      // nothing new on the row
+        lastRev = rev;                            // advance FIRST, so one change asks once
+        // Untouched since it was filed → the panel holds nothing the reviewer
+        // would miss, so take the new round straight away. Otherwise offer it and
+        // let them decide when to lose what they have typed.
+        if (panelFingerprint() === filedFingerprint) applyRefresh(j.pins, j.next_round);
+        else setRefreshBanner(j.pins, j.next_round);
+      }, function () { /* a failed poll is not worth interrupting anyone over */ });
+    };
+    pollOnce = tick;
+
+    pollTimer = setInterval(function () {
+      if (Date.now() > until) { stopPolling(); return; }
+      tick();
+    }, POLL_EVERY_MS);
+  }
+
+  // ── Test seam ─────────────────────────────────────────────────────────────
+  // Two internals exposed ONLY under ?debug=1, so the headless suite can force a
+  // re-render and a poll instead of waiting 20 seconds per assertion. Gated
+  // rather than always-on: a global on a public page is an API someone will
+  // eventually depend on, and neither of these is one.
+  if (qp('debug') === '1') {
+    window.__redraw = function (rawPins) { pins = rawPins; drawPins(rawPins); };
+    window.__pollNow = function () { startPolling(); return pollOnce(); };
+    window.__state = function () {
+      return { rev: lastRev, polling: !!pollTimer, pins: pins.length,
+               added: added.length, requests: pinRequests.length };
+    };
   }
 
   function setStatus(msg, cls) {
@@ -2077,6 +2353,14 @@
           // actually queued or whether the rerun is still a manual step.
           setStatus(note || ('Round ' + payload.round + ' filed.'), 'ok');
           btn.disabled = false;
+          // v5.7: the round is filed, so from here the row may change under us —
+          // start watching for the re-pin. Whether the rerun is automated or run
+          // by hand from the sheet menu, `rev` moves when the pins do, and this
+          // is the only moment we know to start looking.
+          // Snapshot the panel AS FILED first: anything matching this is safe to
+          // throw away, anything else is work the reviewer has not sent yet.
+          filedFingerprint = panelFingerprint();
+          startPolling();
         })
         .catch(function (err) {
           setStatus('Submit failed: ' + String(err.message || err), 'err');
@@ -2167,6 +2451,42 @@
       .replace(/&amp;/g, '&');
   }
 
+  // ── v5.7: draw a pin array, resolved against whatever catalog we have ─────
+  // The ONE place pins become markers. Both the initial load and every refresh go
+  // through it, so a refreshed round cannot render differently from a fresh one.
+  function drawPins(rawPins) {
+    if (catalogRaw) {
+      render(resolveNames(rawPins, catalogRaw));
+    } else {
+      // Catalog unavailable: ids only, every pin flagged. Same shape resolveNames
+      // returns so nothing downstream has to know which path it came from.
+      render(rawPins.map(function (p) {
+        return { id: p.id, x: p.x, y: p.y, name: 'id ' + p.id, section: '',
+                 role: '', types: [], known: false, wrongRole: false, wrongType: false, flag: true };
+      }));
+    }
+  }
+
+  // ── v5.7: ask the API for this row's current pins ─────────────────────────
+  // GET with no custom headers is a CORS simple request, so no preflight — the
+  // same constraint the POST works under. Resolution order is key, then address:
+  // `key` is exact, `addr` is what today's review links actually carry.
+  function fetchElements() {
+    var u = CRITIQUE_POST_URL + '?route=elements&' +
+            (rowKey ? 'key=' + encodeURIComponent(rowKey)
+                    : 'addr=' + encodeURIComponent(addr));
+    return fetch(u, { redirect: 'follow' })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        var j;
+        try { j = JSON.parse(t); }
+        catch (e) { throw new Error('the endpoint did not return JSON (' + t.slice(0, 120) + ')'); }
+        if (!j || j.ok === false) throw new Error(j && j.error ? j.error : 'lookup failed');
+        if (!Array.isArray(j.pins)) throw new Error('no pins in the response');
+        return j;
+      });
+  }
+
   fetch(catalogUrl)
     .then(function (r) {
       if (!r.ok) throw new Error('catalog HTTP ' + r.status);
@@ -2176,29 +2496,64 @@
       // v5: keep the element vocabulary for the add-search. Same filter the
       // Apps Script side applies (role=primary + this account type), so the
       // page can only offer an id Pass 1 would itself be allowed to use.
+      catalogRaw = catalog;
       catalogElements = (catalog.pins || []).filter(function (p) {
         if (p.role !== 'primary') return false;
         if (!acctType) return true;
         return Array.isArray(p.account_type) && p.account_type.indexOf(acctType) !== -1;
       }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
-      render(resolveNames(pins, catalog));
-      renderRoute(route);
       initAddElement();
+      boot();
     })
     .catch(function (e) {
       // Degrade gracefully: still show markers, names as ids.
-      render(pins.map(function (p) {
-        return { id: p.id, x: p.x, y: p.y, name: 'id ' + p.id, section: '',
-                 role: '', types: [], known: false, wrongRole: false, wrongType: false, flag: true };
-      }));
-      renderRoute(route);
+      catalogRaw = null;
       // No catalog means no vocabulary to search, so adding is impossible —
       // say why instead of offering a control that cannot work.
       initAddElement('Catalog unavailable — search is disabled, but you can still request an element below.');
       var hint = document.querySelector('.hint');
       if (hint) hint.innerHTML = 'Catalog unavailable (' + escapeHtml(String(e.message || e)) +
         ') — showing ids only.';
+      boot();
     });
+
+  // ── v5.7: first paint ─────────────────────────────────────────────────────
+  // ?pins= still WINS when present. It is what every link the sheet builds today
+  // carries, it needs no network, and it is exactly what the reviewer was sent —
+  // silently replacing it with a live read would change what they are reviewing
+  // out from under them. The API is the fallback, and the refresh path.
+  function boot() {
+    renderRoute(route);
+    if (pinsRaw) {
+      drawPins(pins);
+      // Learn the current rev in the background so a later refresh has something
+      // to compare against. A failure here is not worth a message: the page is
+      // already fully usable and nothing has been asked for yet.
+      if (canFetchPins) {
+        fetchElements().then(function (j) { lastRev = j.rev || null; }, function () {});
+      }
+      return;
+    }
+    setStatus('Loading pins…');
+    fetchElements().then(function (j) {
+      lastRev = j.rev || null;
+      pins = j.pins;
+      drawPins(pins);
+      if (j.address && !addr) {
+        addr = j.address;
+        var el = document.getElementById('addr');
+        if (el) el.textContent = '· ' + j.address;
+      }
+      setStatus(j.pins.length + ' pin(s) loaded from the sheet' +
+                (j.fixes_pending ? ' — a re-pin is still pending on this row.' : '.'), 'ok');
+    }, function (err) {
+      // No pins in the URL and none from the API: there is nothing to review, so
+      // say which lookup failed rather than showing an empty image.
+      fail('Could not load this row&rsquo;s pins.',
+           escapeHtml(String(err.message || err)) +
+           ' (looked up by ' + (rowKey ? 'key' : 'address') + ')');
+    });
+  }
 
   // ── Cursor coordinate readout ──────────────────────────────────────────
   // Reports the cursor position as x,y percentages of the nadir — the exact
