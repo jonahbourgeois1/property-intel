@@ -568,11 +568,14 @@
     touch-action: none;
   }
   .frame.panning { cursor: grabbing; }
+  /* v5.5: the image fills the frame exactly, and fitFrame() sizes the FRAME.
+     It used to be the other way round — width/height auto capped by
+     max-height:calc(100vh - 130px) — which made the displayed size depend on the
+     source resolution: a 640x640 nadir was never scaled up, and a high-res or
+     non-square crop hit the viewport cap and left margins. */
   .frame img {
     display: block;
-    max-width: 100%;
-    max-height: calc(100vh - 130px);
-    width: auto; height: auto;
+    width: 100%; height: 100%;
     user-select: none;
     -webkit-user-drag: none;
     pointer-events: none;          /* let drag/wheel hit the frame, not the img */
@@ -879,7 +882,7 @@
       <div class="zoom-controls">
         <div class="zoom-btn" id="zoom-in" title="Zoom in">+</div>
         <div class="zoom-btn" id="zoom-out" title="Zoom out">&minus;</div>
-        <div class="zoom-btn reset" id="zoom-reset" title="Reset view">1:1</div>
+        <div class="zoom-btn reset" id="zoom-reset" title="Reset to fit">Fit</div>
         <div class="zoom-level" id="zoom-level">100%</div>
       </div>
     </section>
@@ -2149,6 +2152,58 @@
     });
   })();
 
+  // ── v5.5: fit the nadir to the stage, whatever its resolution ──────────
+  // The frame is set to the largest box of the image's own aspect ratio that
+  // fits the stage, and the image fills that box. Display is therefore a
+  // function of the STAGE, not of the source pixels: a 640x640 satellite nadir
+  // and a 2048x2048 render of the same crop occupy exactly the same area.
+  //
+  // ⚠️ Why not simply `object-fit: contain` on a stage-filling image — pins,
+  // ghosts, added markers and the route SVG are all positioned in PERCENTAGES
+  // OF .frame. object-fit letterboxes the picture INSIDE the element, so .frame
+  // would no longer equal the painted image and every pin would shift by the
+  // letterbox offset. The frame has to stay exactly the painted box, which
+  // means measuring the fit rather than delegating it to the browser.
+  var afterFrameFit = null;   // set by initZoomPan, so pan limits re-clamp
+
+  function fitFrame() {
+    var frame = document.getElementById('frame');
+    var img = document.getElementById('nadir');
+    var stage = frame ? frame.parentElement : null;
+    if (!frame || !img || !stage) return;
+    var natW = img.naturalWidth, natH = img.naturalHeight;
+    if (!natW || !natH) return;            // not loaded yet, or broken
+
+    var cs = window.getComputedStyle(stage);
+    var padX = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+    var padY = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+    var availW = stage.clientWidth - padX;
+    // In the stacked (<=900px) layout the stage has NO fixed height — it grows to
+    // fit the frame — so deriving the frame's height from it would be circular.
+    // Fit by width there, bounded so a tall crop can't run off the screen.
+    var stacked = window.innerWidth <= 900;
+    var availH = stacked ? Math.round(window.innerHeight * 0.7) : stage.clientHeight - padY;
+    if (!(availW > 0)) return;
+    if (!(availH > 0)) availH = Infinity;
+
+    var scale = Math.min(availW / natW, availH / natH);
+    frame.style.width = Math.round(natW * scale) + 'px';
+    frame.style.height = Math.round(natH * scale) + 'px';
+    if (afterFrameFit) afterFrameFit();
+  }
+
+  (function initFrameFit() {
+    var img = document.getElementById('nadir');
+    if (!img) return;
+    img.addEventListener('load', fitFrame);
+    if (img.complete) fitFrame();          // already cached: load will not fire
+    var t = null;
+    window.addEventListener('resize', function () {
+      if (t) clearTimeout(t);
+      t = setTimeout(fitFrame, 80);
+    });
+  })();
+
   // ── Zoom / pan ─────────────────────────────────────────────────────────
   // Applies a translate+scale transform to #frame. Markers live inside the
   // frame at % coordinates, so they pan and scale with the image for free.
@@ -2204,6 +2259,10 @@
     }
 
     function reset() { scale = 1; tx = 0; ty = 0; applyTransform(); }
+
+    // A re-fit changes the frame's base size, so the pan limits computed from
+    // offsetWidth/offsetHeight have to be recalculated.
+    afterFrameFit = function () { constrainPan(); applyTransform(); };
 
     // Wheel: zoom toward cursor. Bound to the FRAME (the image) so it only
     // fires over the picture, and both prevented + stopped so it never turns
