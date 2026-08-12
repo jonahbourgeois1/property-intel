@@ -2492,59 +2492,35 @@ window.toggleSpace = function (i) {
 // front of whoever asks. Three of these are one Lambda away; the rest are not
 // coming without a different data source.
 const UNAVAILABLE = [
-  { group: 'Planned additions',
-    note: 'Reviewed and confirmed useful. Each needs a data agreement with the ' +
-          'provider before it can appear here automatically.',
-    items: [
+  { group: 'Planned additions', items: [
       { n: 'Satellite wildfire detection', tag: 'Planned', cls: 'plan',
         u: 'https://firms.modaps.eosdis.nasa.gov/',
-        w: 'NASA satellites pick up new fires within a few hours of ignition, often well ' +
-           'before crews can map a perimeter. This would give the Wildfire tab an early ' +
-           'warning layer rather than only confirmed fire boundaries.' },
+        w: 'New fire detections within hours of ignition.' },
       { n: 'Air quality index', tag: 'Planned', cls: 'plan',
         u: 'https://www.airnow.gov/',
-        w: 'Official EPA air quality readings and next-day forecasts. The Weather tab ' +
-           'already shows air quality alerts when they are issued; this adds the actual ' +
-           'numbers behind them, which matters during smoke season.' },
+        w: 'EPA air quality readings and forecasts.' },
       { n: 'Drought conditions', tag: 'Planned', cls: 'plan',
         u: 'https://droughtmonitor.unl.edu/',
-        w: 'Weekly drought severity for the county, from abnormally dry through ' +
-           'exceptional drought. Useful context for fire risk and for water availability ' +
-           'on rural properties.' }
+        w: 'Weekly drought severity for the county.' }
     ] },
-  { group: 'Under review',
-    note: 'Data exists and is public. What is not yet settled is which parts of it are ' +
-          'worth showing for a given property.',
-    items: [
+  { group: 'Under review', items: [
       { n: 'River levels and flood forecast', tag: 'Reviewing', cls: 'rev',
         u: 'https://water.noaa.gov/',
-        w: 'The National Water Prediction Service publishes river gauge readings: the ' +
-           'current level, whether it is above action or flood stage, and a forecast crest ' +
-           'with timing. Valuable for a property near a river or in a floodplain, and ' +
-           'close to meaningless for one that is not — so the open question is how far ' +
-           'away a gauge can be before it stops telling you anything.' },
+        w: 'River gauge levels, flood stage and forecast crest.' },
       { n: 'Deschutes County open data', tag: 'Reviewing', cls: 'rev',
         u: 'https://data-deschutes.opendata.arcgis.com/',
-        w: 'The county publishes parcel boundaries, zoning, hazard overlays and public ' +
-           'safety layers. Strong candidate for property-specific context such as ' +
-           'wildfire hazard zones and service district boundaries.' },
+        w: 'County parcels, zoning, hazard overlays and public safety layers.' },
       { n: 'City of Bend open data', tag: 'Reviewing', cls: 'rev',
         u: 'https://data-bendoregon.opendata.arcgis.com/',
-        w: 'City-maintained layers covering addresses, utilities, zoning and public ' +
-           'safety within city limits. Applies to properties inside Bend rather than ' +
-           'rural county addresses.' }
+        w: 'City addresses, utilities, zoning and public safety layers.' }
     ] },
-  { group: 'Reference links',
-    note: 'Published for the public but not shared in a form we can display here. ' +
-          'These open in a new tab.',
-    items: [
+  { group: 'Reference links', items: [
       { n: 'Neighbourhood crime map', tag: 'Link', cls: 'link',
         u: 'https://risk.lexisnexis.com/products/community-crime-map',
-        w: 'Reported incidents mapped by neighbourhood, maintained by LexisNexis from ' +
-           'participating agencies.' },
+        w: 'Reported incidents mapped by neighbourhood.' },
       { n: 'Bend Police Department', tag: 'Link', cls: 'link',
         u: 'https://bendoregon.gov/departments/public-safety/police/',
-        w: 'Local advisories, non-emergency contacts and online reporting.' }
+        w: 'Local advisories, contacts and online reporting.' }
     ] }
 ];
 async function loadInfo(lat, lng, hz) {
@@ -2561,7 +2537,6 @@ async function loadInfo(lat, lng, hz) {
      ['Reference only', hzPlural(links, 'link')]]);
   UNAVAILABLE.forEach(function (g) {
     h += hzSec(g.group);
-    if (g.note) h += hzNote(escHtml(g.note));
     g.items.forEach(function (it) {
       h += '<div class="hz-row"><div class="hz-main">' +
              '<div class="hz-t"><a href="' + escHtml(it.u) + '" target="_blank" ' +
