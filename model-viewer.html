@@ -395,6 +395,21 @@
   .hz-bar { flex: 1; height: 9px; border-radius: 5px; background: rgba(255,255,255,0.07); overflow: hidden; }
   .hz-bar-f { height: 100%; border-radius: 5px; }
   .hz-scale-v { font-family: monospace; font-size: 10px; color: #8a93a2; width: 32px; text-align: right; flex-shrink: 0; }
+  .hz-tiles { position: relative; overflow: hidden; border-radius: 8px; background: #0b0e12; }
+  /* Topo tiles are built for white UIs; this drops them into the panel's
+     palette so markers stay the brightest thing on the map. */
+  .hz-tile { position: absolute; width: 256px; height: 256px; display: block;
+             filter: grayscale(0.45) brightness(0.62) contrast(1.06); }
+  .hz-ov { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .hz-meter { display: flex; gap: 4px; margin: 10px 16px 0; }
+  .hz-seg { flex: 1; border: 1px solid rgba(255,255,255,0.16); border-radius: 6px;
+            background: rgba(255,255,255,0.04); padding: 6px 2px 5px; text-align: center; }
+  .hz-seg span { display: block; font-family: monospace; font-size: 11px; font-weight: 700;
+                 color: #8a93a2; }
+  .hz-seg em { display: block; font-style: normal; font-family: monospace; font-size: 8px;
+               color: #555f6e; margin-top: 2px; }
+  .hz-seg.on span, .hz-seg.on em { color: #0b0e12; }
+  .hz-seg.on em { opacity: 0.75; }
   @media (max-width: 640px) { .hz-panel { width: 100%; } }
   /* ── Debug console — same shape as viewer.html's ──────────────────────── */
   /* Hidden by default — append &debug=1 to the URL to show it. */
@@ -2078,7 +2093,7 @@ function hzAgo(ms) {
   if (!isFinite(s)) return '';
   if (s < 0) return 'just now';
   if (s < 90)    return 'just now';
-  if (s < 3600)  return hzPlural(Math.round(s / 60), 'minute') + ' ago';
+  if (s < 5400)  return hzPlural(Math.round(s / 60), 'minute') + ' ago';
   if (s < 86400) return hzPlural(Math.round(s / 3600), 'hour') + ' ago';
   const d = Math.round(s / 86400);
   if (d < 45)  return hzPlural(d, 'day') + ' ago';
@@ -2123,7 +2138,8 @@ async function loadQuakes(lat, lng, hz) {
   const f = ((j && j.features) || []).map(function (q) {
     const p = q.properties || {}, c = (q.geometry && q.geometry.coordinates) || [];
     return { mag: Number(p.mag), place: p.place || 'Unknown location', time: Number(p.time),
-             depth: c[2], url: p.url, km: kmBetween(lat, lng, c[1], c[0]) };
+             depth: c[2], url: p.url, lat: Number(c[1]), lng: Number(c[0]),
+             km: kmBetween(lat, lng, c[1], c[0]) };
   });
   if (!f.length) {
     return hzHead('0', 'No recorded quakes', [['Search', 'M2.5+ within 300 km']]) +
@@ -2139,6 +2155,14 @@ async function loadQuakes(lat, lng, hz) {
                  ' &middot; ' + hzAgo(largest.time), largest.mag >= 5 ? 'wind' : ''],
      ['Total',   hzPlural(f.length, 'event') + ' in the search window']],
     'M2.5+ within 300 km of the property');
+  h += hzSec('Where they were');
+  h += hzTileMap(lat, lng, f.map(function (q) {
+    return { lat: q.lat, lng: q.lng, km: q.km,
+             r: Math.max(3.5, Math.min(14, Math.pow(Math.max(1, q.mag), 1.9) / 2.6)),
+             fill: q.mag >= 5 ? 'rgba(239,68,68,0.45)' : 'rgba(249,115,22,0.38)',
+             stroke: q.mag >= 5 ? '#ef4444' : '#f97316',
+             label: 'M' + q.mag.toFixed(1) + ' — ' + q.place };
+  }), 'dot size is magnitude');
   h += hzSec('Most recent first');
   f.forEach(function (q) {
     const cls = q.mag >= 5 ? 'big' : (q.mag >= 4 ? 'mid' : '');
@@ -2203,8 +2227,13 @@ async function loadFires(lat, lng, hz) {
      ['Bearing', isFinite(near.brg) ? compass16(near.brg) + ' (' + Math.round(near.brg) + '&deg;)' : 'unknown'],
      ['Nearby',  hzPlural(fires.length, 'fire') + ' &middot; ' + Math.round(totalAcres).toLocaleString() + ' acres total']],
     'Perimeters intersecting a ~250 km box');
-  h += hzSec('Bearing and distance');
-  h += fireMapSvg(fires);
+  h += hzSec('Where they are');
+  h += hzTileMap(lat, lng, fires.map(function (f) {
+    return { lat: f.lat, lng: f.lng, km: f.km,
+             r: Math.max(4, Math.min(15, Math.sqrt(Math.max(1, f.acres || 1)) / 24)),
+             fill: 'rgba(239,68,68,0.42)', stroke: '#ef4444',
+             label: f.name + ' — ' + Math.round(f.km) + ' km ' + compass16(f.brg) };
+  }), 'dot size is acreage');
   h += hzSec('Closest first');
   fires.forEach(function (f) {
     const meta = [];
@@ -2221,49 +2250,67 @@ function compass16(d) {
   return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW']
          [Math.floor(((Number(d) + 11.25) % 360) / 22.5)];
 }
-// A plan view drawn as inline SVG rather than a tile map: no key, no CDN, no
-// third-party request, and it answers the only question that matters here -
-// how far away is it and which way. Range rings are labelled so distance is
-// readable without a legend; dot area scales with acreage.
-function fireMapSvg(fires) {
-  const S = 296, C = S / 2, R = C - 26;
-  const far = Math.max.apply(null, fires.map(function (f) {
-    return isFinite(f.km) ? f.km : 0; }).concat([40]));
-  const rings = far <= 60 ? [20, 40, 60] : far <= 130 ? [50, 100, 130] : [75, 150, 250];
-  const span = rings[rings.length - 1];
-  let s = '<div class="hz-map"><svg viewBox="0 0 ' + S + ' ' + S + '" width="100%">';
-  rings.forEach(function (km) {
-    const r = R * km / span;
-    s += '<circle cx="' + C + '" cy="' + C + '" r="' + r.toFixed(1) + '" ' +
-         'fill="none" stroke="rgba(255,255,255,0.13)" stroke-dasharray="3 4"></circle>' +
-         '<text x="' + (C + 3) + '" y="' + (C - r + 11).toFixed(1) + '" ' +
-         'fill="#555f6e" font-size="9" font-family="monospace">' + km + ' km</text>';
-  });
-  s += '<line x1="' + C + '" y1="' + (C - R) + '" x2="' + C + '" y2="' + (C + R) +
-       '" stroke="rgba(255,255,255,0.07)"></line>' +
-       '<line x1="' + (C - R) + '" y1="' + C + '" x2="' + (C + R) + '" y2="' + C +
-       '" stroke="rgba(255,255,255,0.07)"></line>' +
-       '<text x="' + C + '" y="12" fill="#8a93a2" font-size="9" font-family="monospace" ' +
-       'text-anchor="middle">N</text>';
-  fires.forEach(function (f) {
-    if (!isFinite(f.km) || !isFinite(f.brg)) return;
-    const r = Math.min(R, R * f.km / span);
-    const a = f.brg * Math.PI / 180;
-    const x = C + r * Math.sin(a), y = C - r * Math.cos(a);
-    const rad = Math.max(3, Math.min(13, Math.sqrt(Math.max(1, f.acres || 1)) / 26));
-    s += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + rad.toFixed(1) +
-         '" fill="rgba(239,68,68,0.34)" stroke="#ef4444" stroke-width="1.2">' +
-         '<title>' + escHtml(f.name + ' — ' + Math.round(f.km) + ' km ' + compass16(f.brg)) +
-         '</title></circle>';
-  });
-  // The property last, so it is never hidden under a fire dot.
-  s += '<circle cx="' + C + '" cy="' + C + '" r="4.5" fill="#38bdf8"></circle>' +
-       '<circle cx="' + C + '" cy="' + C + '" r="9" fill="none" stroke="#38bdf8" ' +
-       'stroke-opacity="0.45"></circle>';
-  return s + '</svg><div class="hz-map-cap">Property at centre &middot; north up &middot; ' +
-         'dot size is acreage</div></div>';
+// A real basemap, not a radar sweep. Tiles are plain <img> elements, which is
+// the whole trick: images are not subject to CORS, so a basemap needs no key,
+// no library and no cross-origin permission - unlike every JSON feed here.
+// Markers are an SVG overlay positioned by the same Web Mercator maths the
+// tiles use, so they land exactly on the geography underneath.
+const TILE_BASE = 'https://server.arcgisonline.com/ArcGIS/rest/services/' +
+                  'World_Topo_Map/MapServer/tile/';
+function mercX(lon, z) { return (Number(lon) + 180) / 360 * Math.pow(2, z) * 256; }
+function mercY(lat, z) {
+  const r = Number(lat) * Math.PI / 180;
+  return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z) * 256;
 }
-
+function metresPerPx(lat, z) {
+  return 156543.03392 * Math.cos(Number(lat) * Math.PI / 180) / Math.pow(2, z);
+}
+// Pick the tightest zoom that still contains the farthest point, so a cluster
+// of nearby events fills the frame instead of sitting in a dot at the middle.
+function zoomFor(lat, maxKm, sizePx) {
+  for (let z = 13; z >= 3; z--) {
+    if ((sizePx / 2) * metresPerPx(lat, z) >= maxKm * 1000 * 1.18) return z;
+  }
+  return 3;
+}
+function hzTileMap(lat, lng, points, capExtra) {
+  const W = 306, H = 268;
+  const far = Math.max.apply(null, points.map(function (p) {
+    return isFinite(p.km) ? p.km : 0; }).concat([6]));
+  const z = zoomFor(lat, far, Math.min(W, H));
+  const left = mercX(lng, z) - W / 2, top = mercY(lat, z) - H / 2;
+  const n = Math.pow(2, z);
+  let tiles = '';
+  for (let ty = Math.floor(top / 256); ty <= Math.floor((top + H) / 256); ty++) {
+    if (ty < 0 || ty >= n) continue;
+    for (let tx = Math.floor(left / 256); tx <= Math.floor((left + W) / 256); tx++) {
+      const wx = ((tx % n) + n) % n;   // wrap at the date line
+      tiles += '<img class="hz-tile" alt="" loading="lazy" src="' +
+               TILE_BASE + z + '/' + ty + '/' + wx + '" style="left:' +
+               Math.round(tx * 256 - left) + 'px;top:' + Math.round(ty * 256 - top) + 'px">';
+    }
+  }
+  let ov = '<svg class="hz-ov" viewBox="0 0 ' + W + ' ' + H + '">';
+  points.forEach(function (pt) {
+    if (!isFinite(pt.lat) || !isFinite(pt.lng)) return;
+    const x = mercX(pt.lng, z) - left, y = mercY(pt.lat, z) - top;
+    if (x < -20 || y < -20 || x > W + 20 || y > H + 20) return;
+    ov += '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' +
+          (pt.r || 5).toFixed(1) + '" fill="' + pt.fill + '" stroke="' + pt.stroke +
+          '" stroke-width="1.3"><title>' + escHtml(pt.label || '') + '</title></circle>';
+  });
+  // The property last so nothing can cover it.
+  ov += '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="9" fill="none" ' +
+        'stroke="#38bdf8" stroke-opacity="0.5"></circle>' +
+        '<circle cx="' + (W / 2) + '" cy="' + (H / 2) + '" r="4.5" fill="#38bdf8" ' +
+        'stroke="#0b0e12" stroke-width="1.4"></circle></svg>';
+  const across = Math.round(W * metresPerPx(lat, z) / 1000);
+  return '<div class="hz-map"><div class="hz-tiles" style="width:' + W + 'px;height:' + H + 'px">' +
+         tiles + ov + '</div><div class="hz-map-cap">' +
+         escHtml('about ' + across + ' km across · property at centre' +
+                 (capExtra ? ' · ' + capExtra : '')) +
+         ' &middot; basemap Esri</div></div>';
+}
 // ── 3. US Drought Monitor ─────────────────────────────────────────────
 // TWO sources tried in order, because the panel failed on first run and the
 // most likely cause is that usdmdataservices.unl.edu does not send CORS headers
@@ -2292,22 +2339,6 @@ function parseCsv(text) {
   });
 }
 function usdmDate(d) { return (d.getMonth() + 1) + '/' + d.getDate() + '/' + d.getFullYear(); }
-async function droughtAtPoint(lat, lng) {
-  const g = { x: lng, y: lat, spatialReference: { wkid: 4326 } };
-  const url = 'https://services9.arcgis.com/RHVPKKiFTONKtxq3/arcgis/rest/services/' +
-    'USDM_current/FeatureServer/0/query?f=json&returnGeometry=false&outFields=DM' +
-    '&geometryType=esriGeometryPoint&inSR=4326&spatialRel=esriSpatialRelIntersects' +
-    '&where=1%3D1&geometry=' + encodeURIComponent(JSON.stringify(g));
-  const j = await wxJson(url);
-  if (j && j.error) throw new Error((j.error && j.error.message) || 'ArcGIS query rejected');
-  const f = (j && j.features) || [];
-  let worst = -1;
-  f.forEach(function (x) {
-    const dm = Number((x.attributes || {}).DM);
-    if (isFinite(dm) && dm > worst) worst = dm;
-  });
-  return worst;                       // -1 = none, 0..4 = D0..D4
-}
 async function countyDrought(lat, lng) {
   const c = await resolveCounty(lat, lng);
   if (!c.fips || c.fips.length !== 5) throw new Error('county FIPS could not be determined');
@@ -2322,57 +2353,69 @@ async function countyDrought(lat, lng) {
   rows.sort(function (a, b) { return (Date.parse(b.MapDate) || 0) - (Date.parse(a.MapDate) || 0); });
   return { county: c, rows: rows };
 }
+// ⚠️ DROUGHT IS SERVER-SIDE ONLY - established the hard way on 2026-08-12.
+// UNL's own service documentation lists exactly one host, usdmdataservices.unl.edu,
+// and that host sends no Access-Control-Allow-Origin, so a browser refuses the
+// request ("Failed to fetch"). There is no ArcGIS mirror to fall back to - I
+// guessed one and ArcGIS answered "Invalid URL". No amount of client code fixes
+// a missing CORS header, so this panel belongs to the same scheduled-writer job
+// as NASA FIRMS and AirNow: a Lambda fetches it and republishes it to our own
+// origin. Until that exists the panel says so plainly rather than showing a
+// spinner or a stack trace.
 async function loadDrought(lat, lng, hz) {
-  let point = null, pointErr = '', county = null, countyErr = '';
-  try { point = await droughtAtPoint(lat, lng); } catch (e) { pointErr = e.message; }
-  try { county = await countyDrought(lat, lng); } catch (e) { countyErr = e.message; }
-  if (point === null && !county) {
-    throw new Error('both sources failed. ArcGIS point query: ' + (pointErr || 'unknown') +
-                    ' | UNL CSV service: ' + (countyErr || 'unknown'));
-  }
-  let h = '';
-  const key = (point !== null && point >= 0) ? 'D' + point : null;
-  if (point !== null) {
-    h += hzHead(key ? key : 'None',
-                key ? escHtml(DROUGHT_LABEL[key]) : 'No drought at this location',
-                [['Basis', 'Drought Monitor category at the property']],
-                'Point query, not a county average');
-  }
-  if (county && county.rows.length) {
-    const now = county.rows[0];
-    h += hzSec((now.County || 'County') + (now.State ? ', ' + now.State : '') +
-               ' — week of ' + (now.MapDate || ''));
-    h += '<div class="hz-scale">';
-    ['D0', 'D1', 'D2', 'D3', 'D4'].forEach(function (k) {
-      const v = Math.max(0, Math.min(100, Number(now[k]) || 0));
-      h += '<div class="hz-scale-row">' +
-             '<div class="hz-scale-k" style="color:' + DROUGHT_COLOR[k] + '">' + k + '</div>' +
-             '<div class="hz-bar"><div class="hz-bar-f" style="width:' + v.toFixed(1) +
-               '%;background:' + DROUGHT_COLOR[k] + '"></div></div>' +
-             '<div class="hz-scale-v">' + v.toFixed(0) + '%</div>' +
-           '</div>';
-    });
-    h += '</div>' + hzNote('Share of county area in each category. Cumulative — ' +
-                           'land counted in D1 is also counted in D0.');
-    // Trend gives the number meaning: 41% severe is very different rising than falling.
-    const prior = county.rows[Math.min(county.rows.length - 1, 4)];
-    if (prior && prior !== now) {
-      const dd = (Number(now.D2) || 0) - (Number(prior.D2) || 0);
-      h += hzSec('Trend');
-      h += hzNote('Severe drought (D2+) covers <b>' + (Number(now.D2) || 0).toFixed(0) +
-                  '%</b> of the county, ' +
-                  (Math.abs(dd) < 0.5 ? 'unchanged from' :
-                   (dd > 0 ? '<b>up ' + dd.toFixed(0) + ' points</b> from'
-                           : '<b>down ' + Math.abs(dd).toFixed(0) + ' points</b> from')) +
-                  ' the week of ' + escHtml(prior.MapDate || '') + '.');
-    }
-  }
-  const notes = [];
-  if (pointErr)  notes.push('point query unavailable (' + pointErr + ')');
-  if (countyErr) notes.push('county breakdown unavailable (' + countyErr + ')');
-  return h + hzFoot(hz, notes.join(' · '));
+  let county = null, why = '';
+  try { county = await countyDrought(lat, lng); } catch (e) { why = e.message; }
+  if (county && county.rows && county.rows.length) return droughtBody(county, hz);
+  let where = '';
+  try {
+    const c = await resolveCounty(lat, lng);
+    where = (c.city ? c.city + ', ' : '') + (c.state || '');
+  } catch (e) { /* location is a nicety here, not a requirement */ }
+  return hzHead('&mdash;', 'not available in the browser', [
+      ['Reason', 'The US Drought Monitor service blocks cross-origin requests'],
+      ['Fix',    'Fetch it server-side and republish, same job as FIRMS']])
+    + hzNote('The Drought Monitor publishes only <code>usdmdataservices.unl.edu</code>, ' +
+             'which sends no CORS header, so the browser refuses the request before it ' +
+             'leaves. This is infrastructure, not a bug in the viewer.' +
+             (why ? '<br><br>Reported: ' + escHtml(why) : ''))
+    + hzNote('<a href="https://droughtmonitor.unl.edu/CurrentMap/StateDroughtMonitor.aspx?' +
+             escHtml((hzCounty && hzCounty.state) || 'OR') +
+             '" target="_blank" rel="noopener">Current map for ' +
+             escHtml(where || 'this state') + '</a>')
+    + hzFoot(hz);
 }
-
+function droughtBody(county, hz) {
+  const now = county.rows[0];
+  let worst = null;
+  ['D4', 'D3', 'D2', 'D1', 'D0'].forEach(function (k) {
+    if (!worst && Number(now[k]) > 0) worst = k;
+  });
+  let h = hzHead(worst || 'None',
+    worst ? escHtml(DROUGHT_LABEL[worst]) : 'No drought conditions',
+    [['County', escHtml((now.County || '') + (now.State ? ', ' + now.State : ''))],
+     ['Week of', escHtml(now.MapDate || '')]]);
+  h += hzSec('Share of county area');
+  h += '<div class="hz-scale">';
+  ['D0', 'D1', 'D2', 'D3', 'D4'].forEach(function (k) {
+    const v = Math.max(0, Math.min(100, Number(now[k]) || 0));
+    h += '<div class="hz-scale-row">' +
+           '<div class="hz-scale-k" style="color:' + DROUGHT_COLOR[k] + '">' + k + '</div>' +
+           '<div class="hz-bar"><div class="hz-bar-f" style="width:' + v.toFixed(1) +
+             '%;background:' + DROUGHT_COLOR[k] + '"></div></div>' +
+           '<div class="hz-scale-v">' + v.toFixed(0) + '%</div></div>';
+  });
+  h += '</div>' + hzNote('Cumulative — land counted in D1 is also counted in D0.');
+  const prior = county.rows[Math.min(county.rows.length - 1, 4)];
+  if (prior && prior !== now) {
+    const dd = (Number(now.D2) || 0) - (Number(prior.D2) || 0);
+    h += hzSec('Trend') + hzNote('Severe drought (D2+) covers <b>' +
+      (Number(now.D2) || 0).toFixed(0) + '%</b> of the county, ' +
+      (Math.abs(dd) < 0.5 ? 'unchanged from' : (dd > 0 ? '<b>up ' + dd.toFixed(0) +
+        ' points</b> from' : '<b>down ' + Math.abs(dd).toFixed(0) + ' points</b> from')) +
+      ' the week of ' + escHtml(prior.MapDate || '') + '.');
+  }
+  return h + hzFoot(hz);
+}
 // ── 4. FEMA disaster declarations ─────────────────────────────────────
 let femaRows = [];
 async function loadFema(lat, lng, hz) {
@@ -2395,13 +2438,14 @@ async function loadFema(lat, lng, hz) {
   });
   const top = Object.keys(byType).sort(function (a, b) { return byType[b] - byType[a]; });
   const newest = femaRows[0];
+  const since = String(femaRows[femaRows.length - 1].declarationDate || '').slice(0, 4);
   let h = hzHead(String(femaRows.length),
-    'federal declarations for ' + escHtml(String(newest.designatedArea || 'this county').replace(' (County)', ' County')),
-    [['Most recent', escHtml(newest.incidentType || '') + ' &middot; ' +
+    'federal declarations since ' + escHtml(since),
+    [['County',      escHtml(String(newest.designatedArea || 'this county').replace(' (County)', ' County'))],
+     ['Most recent', escHtml(newest.incidentType || '') + ' &middot; ' +
         String(newest.declarationDate || '').slice(0, 4)],
      ['Most common', top.slice(0, 3).map(function (k) {
-        return escHtml(k) + ' (' + byType[k] + ')'; }).join(', ')]],
-    'Since ' + String(femaRows[femaRows.length - 1].declarationDate || '').slice(0, 4));
+        return escHtml(k) + ' (' + byType[k] + ')'; }).join(', ')]]);
   h += hzSec('Newest first — click for detail');
   femaRows.forEach(function (d, i) {
     const meta = [];
@@ -2463,6 +2507,7 @@ async function loadSpace(lat, lng, hz) {
     [['Issued', escHtml(String(newest.issue_datetime || '')) + ' UTC'],
      ['Active', hzPlural(rows.length, 'bulletin') + ' in the current feed']],
     'NOAA Space Weather Prediction Center');
+  if (scale) h += spaceMeter(scale);
   h += hzSec('Bulletins — click for full text');
   rows.forEach(function (a, i) {
     const msg = String(a.message || '').trim();
@@ -2479,6 +2524,21 @@ async function loadSpace(lat, lng, hz) {
          '</div>';
   });
   return h + hzFoot(hz);
+}
+// NOAA's space weather scales run 1-5 within three families, and the number is
+// the whole message. A lit segment bar says "3 of 5, and here is what 5 would
+// mean" in one glance, which a bulletin id never does.
+function spaceMeter(sc) {
+  const fam = sc.charAt(0), lvl = Number(sc.charAt(1));
+  const cols = ['#22c55e', '#eab308', '#f59e0b', '#f97316', '#ef4444'];
+  const words = ['minor', 'moderate', 'strong', 'severe', 'extreme'];
+  let h = '<div class="hz-meter">';
+  for (let i = 1; i <= 5; i++) {
+    h += '<div class="hz-seg' + (i <= lvl ? ' on' : '') + '"' +
+         (i <= lvl ? ' style="background:' + cols[i - 1] + ';border-color:' + cols[i - 1] + '"' : '') +
+         '><span>' + fam + i + '</span><em>' + words[i - 1] + '</em></div>';
+  }
+  return h + '</div>';
 }
 function scaleName(s) {
   const n = { G: 'Geomagnetic storm', R: 'Radio blackout', S: 'Solar radiation storm' }[s[0]];
