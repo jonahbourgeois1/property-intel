@@ -99,9 +99,18 @@
      dropped downstream. Added pins get their own marker style, their own card
      with a remove button, and travel in a separate `added` array.
 
-     ⚠️ PLANE_MAX_PINS is 10 in config.gs. The panel warns once the confirmed
-     count plus additions would exceed it, because validateElementPins_ caps
-     the re-pin and would drop the overflow without saying which.
+     ⚠️ TWO DIFFERENT CEILINGS, do not conflate them.
+     PIN_HARD_LIMIT (12) = CRITIQUE_PIN_SLOTS in critique-api.gs, the number of
+     per-pin column groups the sheet has. Adding is BLOCKED there — three guards
+     (the result list, beginPlacement, placeAdded), because placeAdded is the
+     only function that creates a pin and must hold the invariant on its own.
+     There is no overflow column any more: past 12 a pin cannot be recorded at
+     all, and the script refuses the whole submission rather than dropping it.
+     The toggle is NOT disabled at the limit — it also opens the catalog REQUEST
+     field, and a reviewer who has hit the ceiling is the likeliest to need it.
+     REPIN_CAP (10) = PLANE_MAX_PINS in config.gs, what a re-pin will EMIT.
+     Lower than the hard limit, so pins 11 and 12 are recordable but may not
+     survive the next round. Advisory text only.
 
   3. NUMBERED ADDITIONS, LEGEND ROWS, AND A RED REMOVAL CUE.
      An added pin takes the NEXT pin number (confirmed count + its position),
@@ -902,9 +911,18 @@
   // actually store. Drags are clamped here so what the reviewer sees is what
   // the re-pin gets. Widen both together or not at all.
   var COORD_MIN = 5, COORD_MAX = 95;
-  // v5: PLANE_MAX_PINS in config.gs. validateElementPins_ enforces it and drops
-  // the overflow silently, so the panel warns before that can happen.
-  var MAX_PINS = 10;
+  // v5.4: the HARD limit — CRITIQUE_PIN_SLOTS in critique-api.gs, the number of
+  // per-pin column groups the sheet has. Adding is blocked at this number, not
+  // warned about: past it there is nowhere for the pin to be recorded and the
+  // script refuses the whole submission.
+  var PIN_HARD_LIMIT = 12;
+  // PLANE_MAX_PINS in config.gs — what a RE-PIN will emit. Lower than the hard
+  // limit, so pins 11 and 12 are recordable but may not survive the next round.
+  // Advisory only.
+  var REPIN_CAP = 10;
+  // Set when the catalog fetch failed: the toggle label then reports that search
+  // is unavailable and must not be overwritten by the pin-count label.
+  var searchUnavailable = false;
 
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
@@ -1506,13 +1524,32 @@
       (flaggedCount ? ' · <span style="color:var(--warn)">' + flaggedCount + ' flagged</span>' : '');
   }
 
+  function atPinLimit() { return totalPins() >= PIN_HARD_LIMIT; }
+
   function updateAddWarn() {
-    var el = document.getElementById('addWarn');
-    if (!el) return;
     var n = totalPins();
-    el.textContent = (n > MAX_PINS)
-      ? n + ' pins — the re-pin caps at ' + MAX_PINS + ' and will drop the overflow.'
-      : '';
+    var capped = atPinLimit();
+    var el = document.getElementById('addWarn');
+    if (el) {
+      el.textContent = capped
+        ? n + ' of ' + PIN_HARD_LIMIT + ' pins — the limit. Remove one to add another.'
+        : (n > REPIN_CAP
+            ? n + ' pins — a re-pin emits at most ' + REPIN_CAP + ', so the last ' +
+              (n - REPIN_CAP) + ' may not survive the round.'
+            : '');
+    }
+    // The toggle is deliberately NOT disabled at the limit: it also opens the
+    // catalog REQUEST field, and a reviewer who has hit the ceiling is exactly
+    // the one most likely to need it. Adding is blocked in the three places that
+    // can actually create a pin — the result list, beginPlacement and
+    // placeAdded — so the button opening a panel costs nothing.
+    var toggle = document.getElementById('addToggle');
+    if (toggle && !searchUnavailable) {
+      toggle.textContent = capped
+        ? '+ Request an element (' + n + ' of ' + PIN_HARD_LIMIT + ' pins)'
+        : '+ Add an element';
+    }
+    if (capped) cancelPlacement();
   }
 
   function initAddElement(disabledReason) {
@@ -1527,6 +1564,7 @@
     // exactly what a failed catalog fetch makes more likely, not less. So the
     // panel stays reachable and only the result list reports the failure.
     if (disabledReason) {
+      searchUnavailable = true;
       toggle.textContent = '+ Request an element (search unavailable)';
       results.innerHTML = '<li class="none">' + escapeHtml(disabledReason) + '</li>';
       toggle.addEventListener('click', function () { panel.classList.toggle('on'); });
@@ -1557,14 +1595,19 @@
         results.appendChild(li0);
         return;
       }
+      // At the limit every row is unselectable, and says which reason applies —
+      // "already placed" and "pin limit reached" are different problems with
+      // different fixes.
+      var capped = atPinLimit();
       hits.forEach(function (p) {
         var li = document.createElement('li');
         var isTaken = !!taken[parseInt(p.id, 10)];
-        li.className = isTaken ? 'taken' : '';
+        var blocked = isTaken || capped;
+        li.className = blocked ? 'taken' : '';
         li.innerHTML = escapeHtml(p.name) +
           '<span class="rid">#' + p.id + (p.section ? ' · ' + escapeHtml(p.section) : '') +
-          (isTaken ? ' · already placed' : '') + '</span>';
-        if (!isTaken) li.addEventListener('click', function () { beginPlacement(p); });
+          (isTaken ? ' · already placed' : (capped ? ' · pin limit reached' : '')) + '</span>';
+        if (!blocked) li.addEventListener('click', function () { beginPlacement(p); });
         results.appendChild(li);
       });
     }
@@ -1655,6 +1698,9 @@
   }
 
   function beginPlacement(entry) {
+    // Guard 2 of 3. The result row is already unselectable at the limit; this
+    // catches a stale list (opened before the 12th pin was placed).
+    if (atPinLimit()) { updateAddWarn(); if (refreshAddResults) refreshAddResults(); return; }
     placing = entry;
     var stage = document.querySelector('.stage');
     var hint = document.getElementById('placeHint');
@@ -1677,6 +1723,10 @@
     var frame = document.getElementById('frame');
     var host = document.getElementById('fields');
     if (!frame || !host) return;
+    // Guard 3 of 3, the one that actually protects the invariant: this is the
+    // only function that creates a pin, so the count can never exceed the limit
+    // however placement was reached.
+    if (atPinLimit()) { cancelPlacement(); updateAddWarn(); return; }
 
     var rec = { id: parseInt(entry.id, 10), name: entry.name,
                 section: entry.section || '', x: x, y: y, note: '' };
