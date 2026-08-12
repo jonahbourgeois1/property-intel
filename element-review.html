@@ -2063,6 +2063,14 @@
             var j = JSON.parse(t);
             if (j && j.ok === false) { ok = false; note = j.error || 'rejected'; }
             else if (j && j.message) note = j.message;
+            // v5.6: log which VIEWER build sent the round and which SERVER build
+            // accepted it. Console, not the status line — a reviewer does not
+            // care, but when the two disagree it explains everything, and this
+            // page can be served from a browser cache long after it is fixed.
+            if (window.console && console.log) {
+              console.log('[element-review] viewer ' + payload.version +
+                          ' -> server ' + ((j && j.build) || 'build not reported (pre-v5.6 deployment)'));
+            }
           } catch (err) { /* a non-JSON 200 is still a success */ }
           if (!ok) { setStatus('Rejected: ' + note, 'err'); btn.disabled = false; return; }
           // Prefer the server's own message: it knows whether a re-pin was
