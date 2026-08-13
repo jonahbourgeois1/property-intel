@@ -2824,14 +2824,81 @@ function beginTour(i) {
       if (d2 < best) { best = d2; kSwitch = n / 240; }
     }
   }
-  tour = { i: i, t0: performance.now(), tPrev: 0, tgt: null, ang: null, baseZ: topZ,
+  // THE CAMERA PATH IS WORKED OUT HERE, ONCE, as a function of how far along
+  // the route we are. Nothing chases anything at run time.
+  //
+  // That is the whole reason the motion is fluid. The previous versions damped
+  // the camera toward an ideal derived from the route's tangent, and a tangent
+  // is discontinuous at a corner - it rotates ninety degrees in the space of a
+  // couple of metres. A follower will always show that corner no matter how
+  // heavily it is damped, because the thing it is following jumps. Smoothing
+  // the schedule up front instead means there is nothing left to show.
+  const R0 = tourRange();
+  const N = 64;
+  const bear = [];
+  for (let n = 0; n <= N; n++) {
+    const t = n / N;
+    const q  = routeCurve.getPointAt(t);
+    // The bearing is the route point's own bearing from the aim point - NOT the
+    // route's tangent. The tangent was the source of every version of the
+    // snapping: it is the derivative of the path, so it swings hardest exactly
+    // where the path bends, and multiplying it by a range of a couple of
+    // hundred metres threw the camera right across the property at each corner.
+    // A position's bearing from a fixed point turns gently even when the path
+    // it belongs to turns sharply. It also puts the camera on the same side as
+    // the route, so the leg being flown reads in the foreground with the
+    // building behind it - the way the reference stills are composed.
+    const uu = kSwitch >= 1 ? 0
+             : Math.min(1, Math.max(0, (t - kSwitch) / (1 - kSwitch)));
+    const c  = face.clone().lerp(goal, ease(uu));
+    // Close to the aim point there is no meaningful bearing - and the end of a
+    // route is exactly that case, since the destination IS the aim by then. The
+    // raw angle spins through most of a turn over the last few samples, and
+    // with the ends pinned that garbage was being locked in as the schedule's
+    // finish. Hold the last good heading instead: the camera simply keeps its
+    // approach bearing and closes in, which is how the arrival should read.
+    const dx = q.x - c.x, dy = q.y - c.y;
+    let a = (n && dx * dx + dy * dy < (R0 * 0.08) * (R0 * 0.08))
+          ? bear[n - 1]
+          : Math.atan2(dy, dx);
+    // Unwrap as we go: a raw atan2 series jumps by a full turn at the cut, and
+    // smoothing across that jump would swing the camera the wrong way round.
+    if (n) {
+      while (a - bear[n - 1] >  Math.PI) a -= 2 * Math.PI;
+      while (a - bear[n - 1] < -Math.PI) a += 2 * Math.PI;
+    }
+    bear.push(a);
+  }
+  // Diffuse. Each corner shows up in the raw series as a near-vertical step;
+  // forty passes of a [1 2 1] kernel with the ends pinned turns each into a
+  // gentle S, so the sweep still follows the route without reproducing its
+  // kinks. Cheap - 64 samples, done once per press of the button.
+  for (let pass = 0; pass < 40; pass++) {
+    const cp = bear.slice();
+    for (let n = 1; n < N; n++) bear[n] = 0.25 * cp[n - 1] + 0.5 * cp[n] + 0.25 * cp[n + 1];
+  }
+  // Then pull the schedule most of the way toward a CONSTANT-RATE sweep.
+  // Diffusion alone still leaves the pan bunched wherever the route happens to
+  // bend - dead flat down a long driveway, then most of the turn crammed into
+  // two seconds. Blending toward a straight ramp keeps the direction and the
+  // start and end headings the route implies, but spreads the movement evenly
+  // across the run. An even rate is what actually reads as fluid; the eye
+  // notices a pan speeding up and slowing down far more than it notices the
+  // camera being a little ahead of or behind the leg being flown.
+  const b0 = bear[0], b1 = bear[N], RAMP = 0.75;
+  for (let n = 0; n <= N; n++) {
+    bear[n] = bear[n] * (1 - RAMP) + (b0 + (b1 - b0) * (n / N)) * RAMP;
+  }
+  tour = { i: i, t0: performance.now(), baseZ: topZ, bear: bear,
            face: face, goal: goal, kSwitch: kSwitch,
+           r0: R0, r1: tourRangeIn(),
            ms: Math.max(6000, Math.min(14000, len / 21 * 1000)) };
-  const rise0 = tourRange() * Math.sin(TOUR_ELEV);
+  const rise0 = tourRangeIn() * Math.sin(TOUR_ELEV);
   const b = document.getElementById('rd-tour-' + i);
   if (b) { b.classList.add('on'); b.textContent = 'Stop flythrough'; }
   dbg('Route flythrough: ' + Math.round(len) + ' m over ' +
-      (tour.ms / 1000).toFixed(0) + ' s at ' + Math.round(rise0) + ' m, facing the ' +
+      (tour.ms / 1000).toFixed(0) + ' s, closing from ' + Math.round(R0) + ' m to ' +
+      Math.round(tour.r1) + ' m (' + Math.round(rise0) + ' m up), facing the ' +
       faceSrc + ' until ' + Math.round(kSwitch * 100) + '% then the target', 'info');
 }
 function stopTour() {
@@ -2862,84 +2929,50 @@ function stopTour() {
 // one; the 70 m floor stops a tiny parcel from putting the camera inside the
 // roof.
 const TOUR_ELEV = 25 * Math.PI / 180;
-function tourRange() { return Math.max(70, modelSpan * 0.718); }
-// Smoothing constants, all in SECONDS - not per-frame fractions. A per-frame
-// lerp silently runs twice as fast on a 120 Hz display as on a 60 Hz one, so
-// the same route would feel different on two machines; these are converted
-// against the real frame delta below.
-const TOUR_TAU_ANG = 0.55;                    // how fast the camera swings round
-const TOUR_TAU_TGT = 0.35;                    // how fast the aim slides over
-const TOUR_SWING   = 45 * Math.PI / 180;      // hard ceiling, radians per second
+// Opens at the preset framing - the whole property in shot, the angle of the
+// Alpha/Bravo/Charlie/Delta stills - and closes to well inside the Entrance
+// button's range by the end, so the shot ARRIVES at the destination instead of
+// stopping short of it.
+function tourRange()  { return Math.max(70, modelSpan * 0.718); }
+function tourRangeIn() { return Math.max(45, modelSpan * 0.26); }
+// Smoothstep. Used for the timing of the whole move, for the crossfade from the
+// house to the destination, and for the push-in - so every one of them starts
+// and ends at zero rate instead of stepping into motion.
+function ease(t) { return t * t * (3 - 2 * t); }
+// The bearing schedule is precomputed per run and sampled here.
+function tourBearing(t) {
+  const b = tour.bear, N = b.length - 1;
+  const x = Math.min(N, Math.max(0, t * N));
+  const i = Math.min(N - 1, Math.floor(x));
+  return b[i] + (b[i + 1] - b[i]) * (x - i);
+}
 function stepTour() {
   if (!routeCurve) { stopTour(); return; }
-  const now = performance.now();
-  // Frame delta, clamped so a tab that was backgrounded for a second does not
-  // resume by teleporting the camera through a whole swing.
-  const dt = Math.min(0.05, (now - (tour.tPrev || now)) / 1000);
-  tour.tPrev = now;
-  const k  = Math.min(1, (now - tour.t0) / tour.ms);
-  const at = routeCurve.getPointAt(k);
-  const la = routeCurve.getPointAt(Math.min(1, k + 0.05));
-  const dir = la.clone().sub(at);
-  dir.z = 0;
-  if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
-  dir.normalize();
-  // WHAT IT LOOKS AT: the front of the house, then the destination from the
-  // second-to-last waypoint on. The centre is eased rather than switched, so
-  // the handover is a pan and not a cut - and because the camera orbits this
-  // same eased point, the switch cannot pop the camera either.
-  const aim = (k >= tour.kSwitch ? tour.goal : tour.face);
-  if (!tour.tgt) tour.tgt = aim.clone();
-  else tour.tgt.lerp(aim, 1 - Math.exp(-dt / TOUR_TAU_TGT));
-  const c = tour.tgt;
-  // WHERE IT SITS: the preset range and elevation, at a BEARING around that
-  // centre. Damping the bearing instead of the raw position is what removes
-  // the snapping. The old code eased toward `at - dir * radius` directly, and
-  // at a corner that ideal point swings most of the way round the property
-  // inside a few frames - the camera then chased it in one lurch per waypoint.
-  // An angle cannot take a shortcut across the middle, and the rate ceiling
-  // below bounds how fast it may travel, so a right-angle turn in the path
-  // becomes a steady arc instead of a jump.
-  const range  = tourRange();
+  const k = Math.min(1, (performance.now() - tour.t0) / tour.ms);
+  // e is still "fraction along the route" - easing only changes the timing, so
+  // the move breathes in and out instead of starting and stopping at speed.
+  const e = ease(k);
+  // Aim: the front of the house, crossfading to the destination across the last
+  // leg. A blend, not a switch - and it lands exactly on the destination at the
+  // end of the run rather than somewhere near it.
+  const u = tour.kSwitch >= 1 ? 0
+          : Math.min(1, Math.max(0, (e - tour.kSwitch) / (1 - tour.kSwitch)));
+  const aim = tour.face.clone().lerp(tour.goal, ease(u));
+  // Range closes over the whole run, so the property is established wide and
+  // the destination is arrived at close. The elevation angle is held, so this
+  // is a steady descent rather than any kind of bob.
+  const range  = tour.r0 + (tour.r1 - tour.r0) * ease(e);
   const radius = range * Math.cos(TOUR_ELEV);
-  const trail  = at.clone().addScaledVector(dir, -radius);
-  const wantAng = Math.atan2(trail.y - c.y, trail.x - c.x);
-  let d = 0;
-  if (tour.ang === null) tour.ang = wantAng;
-  else {
-    d = wantAng - tour.ang;
-    while (d >  Math.PI) d -= 2 * Math.PI;   // always take the short way round
-    while (d < -Math.PI) d += 2 * Math.PI;
-    const step = d * (1 - Math.exp(-dt / TOUR_TAU_ANG));
-    const cap  = TOUR_SWING * dt;
-    tour.ang += Math.max(-cap, Math.min(cap, step));
-  }
-  camera.position.set(c.x + Math.cos(tour.ang) * radius,
-                      c.y + Math.sin(tour.ang) * radius,
-                      tour.baseZ + range * Math.sin(TOUR_ELEV));  // fixed altitude
+  const ang    = tourBearing(e);
+  camera.position.set(aim.x + Math.cos(ang) * radius,
+                      aim.y + Math.sin(ang) * radius,
+                      tour.baseZ + range * Math.sin(TOUR_ELEV));
   camera.up.set(0, 0, 1);
-  controls.target.copy(c);
+  controls.target.copy(aim);
   camera.lookAt(controls.target);
   const prog = document.getElementById('rd-prog-' + tour.i);
-  if (prog) prog.textContent = 'following the route\u2026 ' + Math.round(k * 100) + '%';
-  // The route running out is not the end of the shot. Both the aim and the
-  // bearing are damped, so at k=1 they are still a little behind; cutting there
-  // leaves the destination off-centre and the pan frozen halfway. Hold until
-  // they have caught up - or 2.5 s, whichever comes first - then land exactly
-  // on the destination so the frame the responder is left looking at is the
-  // pin they were sent to.
-  if (k >= 1) {
-    // Capped at 1.2 s so the whole run still lands inside the 8-10 s Jonah
-    // asked for. What has to be right by then is the aim - the bearing may
-    // still be easing when it lands, and that reads as a drone settling.
-    const settled = c.distanceTo(aim) < Math.max(0.5, radius * 0.005) &&
-                    Math.abs(d) < 0.03;
-    if (settled || now - tour.t0 > tour.ms + 1200) {
-      controls.target.copy(aim);
-      camera.lookAt(controls.target);
-      stopTour();
-    }
-  }
+  if (prog) prog.textContent = 'following the route\u2026 ' + Math.round(e * 100) + '%';
+  if (k >= 1) stopTour();
 }
 // Drawing the route is a chunked raycast that finishes whenever it finishes, so
 // if the path is not on screen yet, start it and wait for the curve to appear
