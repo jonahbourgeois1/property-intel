@@ -452,7 +452,6 @@
   <div id="cam-lb-title"></div>
   <div id="cam-lb-meta"></div>
   <div id="cam-lb-actions">
-    <button class="cam-lb-btn" id="cam-lb-pov" onclick="cameraPOV()">See what this camera sees</button>
     <button class="cam-lb-btn" onclick="closeCameraPhoto()">Close</button>
   </div>
 </div>
@@ -1647,9 +1646,6 @@ window.openCameraPhoto = function (idx) {
     bits.push(String(cam.taken).replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
   }
   document.getElementById('cam-lb-meta').textContent = bits.join('  ·  ');
-  document.getElementById('cam-lb-pov').style.display =
-    isFinite(Number(cam.heading)) ? 'block' : 'none';
-  box.dataset.idx = String(idx);
   box.classList.add('open');
   dbg('Camera photo: ' + camName(cam, idx), 'info');
 };
@@ -1667,24 +1663,6 @@ window.flyToCamera = function (idx) {
   // Small card rather than the lightbox: a full-screen overlay would hide the
   // flight the user just asked for.
   showCameraPopup(idx);
-};
-window.cameraPOV = function () {
-  const idx = Number(document.getElementById('cam-lightbox').dataset.idx);
-  const cam = camList[idx];
-  if (!cam || !isFinite(Number(cam.heading))) return;
-  const p = camLocal(cam);
-  if (!p) return;
-  const gz  = camGroundZ(cam);
-  const mh  = isFinite(Number(cam.mount_height)) ? Number(cam.mount_height) : 3;
-  const rng = isFinite(Number(cam.range)) ? Number(cam.range) : 25;
-  const rad = THREE.MathUtils.degToRad(Number(cam.heading));
-  const dir = new THREE.Vector3(Math.sin(rad), Math.cos(rad), 0);
-  const eye = new THREE.Vector3(p.x, p.y, gz + mh).addScaledVector(dir, -5);
-  const tgt = new THREE.Vector3(p.x, p.y, gz).addScaledVector(dir, Math.max(20, rng));
-  flyTo(eye, tgt);
-  closeCameraPhoto();
-  dbg('Camera POV: ' + camName(cam, idx) + ' bearing ' +
-      Number(cam.heading).toFixed(1) + '°', 'info');
 };
 // Escape peels one layer at a time: the full-screen view first, then the card.
 document.addEventListener('keydown', function (e) {
