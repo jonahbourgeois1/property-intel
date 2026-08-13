@@ -2824,7 +2824,7 @@ function beginTour(i) {
       if (d2 < best) { best = d2; kSwitch = n / 240; }
     }
   }
-  tour = { i: i, t0: performance.now(), pos: null, tgt: null, baseZ: topZ,
+  tour = { i: i, t0: performance.now(), tPrev: 0, tgt: null, ang: null, baseZ: topZ,
            face: face, goal: goal, kSwitch: kSwitch,
            ms: Math.max(6000, Math.min(14000, len / 21 * 1000)) };
   const rise0 = tourRange() * Math.sin(TOUR_ELEV);
@@ -2863,53 +2863,83 @@ function stopTour() {
 // roof.
 const TOUR_ELEV = 25 * Math.PI / 180;
 function tourRange() { return Math.max(70, modelSpan * 0.718); }
+// Smoothing constants, all in SECONDS - not per-frame fractions. A per-frame
+// lerp silently runs twice as fast on a 120 Hz display as on a 60 Hz one, so
+// the same route would feel different on two machines; these are converted
+// against the real frame delta below.
+const TOUR_TAU_ANG = 0.55;                    // how fast the camera swings round
+const TOUR_TAU_TGT = 0.35;                    // how fast the aim slides over
+const TOUR_SWING   = 45 * Math.PI / 180;      // hard ceiling, radians per second
 function stepTour() {
   if (!routeCurve) { stopTour(); return; }
-  const k  = Math.min(1, (performance.now() - tour.t0) / tour.ms);
+  const now = performance.now();
+  // Frame delta, clamped so a tab that was backgrounded for a second does not
+  // resume by teleporting the camera through a whole swing.
+  const dt = Math.min(0.05, (now - (tour.tPrev || now)) / 1000);
+  tour.tPrev = now;
+  const k  = Math.min(1, (now - tour.t0) / tour.ms);
   const at = routeCurve.getPointAt(k);
   const la = routeCurve.getPointAt(Math.min(1, k + 0.05));
   const dir = la.clone().sub(at);
   dir.z = 0;
   if (dir.lengthSq() < 1e-8) dir.set(0, 1, 0);
   dir.normalize();
-  // Both aim points are pinned to the flight's reference altitude, so the pitch
-  // never rocks - only the heading changes.
-  const aim = (k >= tour.kSwitch ? tour.goal : tour.face).clone();
+  // WHAT IT LOOKS AT: the front of the house, then the destination from the
+  // second-to-last waypoint on. The centre is eased rather than switched, so
+  // the handover is a pan and not a cut - and because the camera orbits this
+  // same eased point, the switch cannot pop the camera either.
+  const aim = (k >= tour.kSwitch ? tour.goal : tour.face);
+  if (!tour.tgt) tour.tgt = aim.clone();
+  else tour.tgt.lerp(aim, 1 - Math.exp(-dt / TOUR_TAU_TGT));
+  const c = tour.tgt;
+  // WHERE IT SITS: the preset range and elevation, at a BEARING around that
+  // centre. Damping the bearing instead of the raw position is what removes
+  // the snapping. The old code eased toward `at - dir * radius` directly, and
+  // at a corner that ideal point swings most of the way round the property
+  // inside a few frames - the camera then chased it in one lurch per waypoint.
+  // An angle cannot take a shortcut across the middle, and the rate ceiling
+  // below bounds how fast it may travel, so a right-angle turn in the path
+  // becomes a steady arc instead of a jump.
   const range  = tourRange();
   const radius = range * Math.cos(TOUR_ELEV);
-  const want = at.clone().addScaledVector(dir, -radius);
-  // The route decides which SIDE of the house the camera is on; the preset
-  // range decides how far. Without this cap the opening frames would be shot
-  // from out at the road - the camera trailing an entrance waypoint that is
-  // itself a hundred metres from the building - and the house would be a speck.
-  // Shortening the offset along the line back to the aim point leaves the
-  // bearing untouched and only pulls the camera in, so every frame of the run
-  // sits at the same angle and range as the preset views.
-  // The altitude is fixed, so how far out the camera sits IS the elevation
-  // angle. Clamping the offset between two thirds of the radius and the radius
-  // holds that angle between the preset's 25 degrees and about 35 - the camera
-  // still travels, but a leg that runs straight away from the house can never
-  // swing it round to a near-overhead top-down.
-  const off = want.clone().sub(aim);   // clone: want is rebuilt from it below
-  off.z = 0;
-  if (off.lengthSq() < 1e-6) off.copy(dir).multiplyScalar(-radius);
-  else off.setLength(Math.min(radius, Math.max(radius * 0.66, off.length())));
-  want.copy(aim).add(off);
-  want.z = tour.baseZ + range * Math.sin(TOUR_ELEV);   // fixed altitude - no bobbing
-  // Damped rather than snapped. A route with a sharp turn would otherwise whip
-  // the camera through a huge arc in one frame; easing toward the ideal
-  // position gives the drifting quality the drone shot has. The same damping is
-  // what turns the handover at the second-to-last waypoint into a pan of about
-  // half a second rather than a cut - no separate transition needed.
-  if (!tour.pos) { tour.pos = want.clone(); tour.tgt = aim.clone(); }
-  else { tour.pos.lerp(want, 0.10); tour.tgt.lerp(aim, 0.15); }
-  camera.position.copy(tour.pos);
+  const trail  = at.clone().addScaledVector(dir, -radius);
+  const wantAng = Math.atan2(trail.y - c.y, trail.x - c.x);
+  let d = 0;
+  if (tour.ang === null) tour.ang = wantAng;
+  else {
+    d = wantAng - tour.ang;
+    while (d >  Math.PI) d -= 2 * Math.PI;   // always take the short way round
+    while (d < -Math.PI) d += 2 * Math.PI;
+    const step = d * (1 - Math.exp(-dt / TOUR_TAU_ANG));
+    const cap  = TOUR_SWING * dt;
+    tour.ang += Math.max(-cap, Math.min(cap, step));
+  }
+  camera.position.set(c.x + Math.cos(tour.ang) * radius,
+                      c.y + Math.sin(tour.ang) * radius,
+                      tour.baseZ + range * Math.sin(TOUR_ELEV));  // fixed altitude
   camera.up.set(0, 0, 1);
-  controls.target.copy(tour.tgt);
+  controls.target.copy(c);
   camera.lookAt(controls.target);
   const prog = document.getElementById('rd-prog-' + tour.i);
-  if (prog) prog.textContent = 'following the route… ' + Math.round(k * 100) + '%';
-  if (k >= 1) stopTour();
+  if (prog) prog.textContent = 'following the route\u2026 ' + Math.round(k * 100) + '%';
+  // The route running out is not the end of the shot. Both the aim and the
+  // bearing are damped, so at k=1 they are still a little behind; cutting there
+  // leaves the destination off-centre and the pan frozen halfway. Hold until
+  // they have caught up - or 2.5 s, whichever comes first - then land exactly
+  // on the destination so the frame the responder is left looking at is the
+  // pin they were sent to.
+  if (k >= 1) {
+    // Capped at 1.2 s so the whole run still lands inside the 8-10 s Jonah
+    // asked for. What has to be right by then is the aim - the bearing may
+    // still be easing when it lands, and that reads as a drone settling.
+    const settled = c.distanceTo(aim) < Math.max(0.5, radius * 0.005) &&
+                    Math.abs(d) < 0.03;
+    if (settled || now - tour.t0 > tour.ms + 1200) {
+      controls.target.copy(aim);
+      camera.lookAt(controls.target);
+      stopTour();
+    }
+  }
 }
 // Drawing the route is a chunked raycast that finishes whenever it finishes, so
 // if the path is not on screen yet, start it and wait for the curve to appear
