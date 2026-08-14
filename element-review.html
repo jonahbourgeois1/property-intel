@@ -2073,7 +2073,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v5.8',
+      version: 'v5.9',
       submitted_at: new Date().toISOString(),
       // Both travel, though the server trusts NEITHER: it re-derives the key from
       // the row it matched, so a stale link cannot misfile a critique. These are
@@ -2326,7 +2326,11 @@
       }
 
       btn.disabled = true;
-      setStatus('Filing round ' + payload.round + '…');
+      // The inline re-pin is a Bedrock vision call — about ten seconds. Without
+      // saying so, a silent disabled button reads as a hung page and invites a
+      // second click.
+      setStatus('Filing round ' + payload.round +
+                ' and re-running the analysis… this takes about 10 seconds.');
 
       // Content-Type text/plain keeps this a CORS "simple request", so the
       // browser sends no OPTIONS preflight — Apps Script cannot answer one.
@@ -2355,7 +2359,10 @@
             // page can be served from a browser cache long after it is fixed.
             if (window.console && console.log) {
               console.log('[element-review] viewer ' + payload.version +
-                          ' -> server ' + ((j && j.build) || 'build not reported (pre-v5.6 deployment)'));
+                          ' -> server ' + ((j && j.build) || 'build not reported (pre-v5.6 deployment)') +
+                          (j && j.rerun_mode ? ', rerun ' + j.rerun_mode : '') +
+                          (j && j.rerun_ran === false && j.rerun_error
+                            ? ' — RE-PIN FAILED: ' + j.rerun_error : ''));
             }
           } catch (err) { /* a non-JSON 200 is still a success */ }
           if (!ok) { setStatus('Rejected: ' + note, 'err'); btn.disabled = false; return; }
@@ -2363,6 +2370,20 @@
           // actually queued or whether the rerun is still a manual step.
           setStatus(note || ('Round ' + payload.round + ' filed.'), 'ok');
           btn.disabled = false;
+
+          // ⭐ v5.9: the server may have run the re-pin INLINE and handed the new
+          // round straight back. Draw it now rather than waiting up to 20 s for a
+          // poll to notice — the reviewer just watched the button spin for it.
+          //
+          // lastRev is advanced FIRST so the poll that follows sees no change and
+          // does not redraw the same round a second time.
+          if (j && j.rerun_ran === true && Array.isArray(j.pins)) {
+            if (j.rev) lastRev = j.rev;
+            filedFingerprint = panelFingerprint();   // what is on screen was just filed
+            applyRefresh(j.pins, (payload.round || 1) + 1);
+            setStatus(note + ' The image now shows the new round.', 'ok');
+            return;                                  // no polling needed; it already happened
+          }
           // v5.7: the round is filed, so from here the row may change under us —
           // start watching for the re-pin. Whether the rerun is automated or run
           // by hand from the sheet menu, `rev` moves when the pins do, and this
