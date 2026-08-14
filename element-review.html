@@ -2548,11 +2548,33 @@
     renderRoute(route);
     if (pinsRaw) {
       drawPins(pins);
-      // Learn the current rev in the background so a later refresh has something
-      // to compare against. A failure here is not worth a message: the page is
-      // already fully usable and nothing has been asked for yet.
+      // Learn the current rev (and the site_no) in the background so a later
+      // refresh has something to compare against.
+      //
+      // ⚠️ This is quiet in the UI on purpose — the page is already fully usable
+      // and the reviewer has not asked for anything — but it must not be SILENT,
+      // because a failure here disables the whole refresh loop. The link carries
+      // an address; if that string does not match the sheet's cell the lookup
+      // finds no row, and without this line the only symptom would be pins that
+      // never update, hours later, with nothing to point at.
       if (canFetchPins) {
-        fetchElements().then(function (j) { lastRev = j.rev || null; }, function () {});
+        fetchElements().then(function (j) {
+          lastRev = j.rev || null;
+          if (window.console) {
+            console.log('[element-review] identity OK — site_no ' + (j.site_no || '?') +
+                        ', row ' + (j.row || '?') + ', rev ' + (j.rev || '?') +
+                        ', ' + j.pins.length + ' pin(s) on the sheet' +
+                        (j.pins.length !== pins.length
+                          ? ' (the LINK carries ' + pins.length + ' — it is a snapshot)' : ''));
+          }
+        }, function (err) {
+          if (window.console) {
+            console.warn('[element-review] identity lookup FAILED, so live refresh is ' +
+                         'disabled for this session: ' + String(err.message || err) +
+                         ' — looked up by ' + (siteNo ? 'site_no' : rowKey ? 'key' : 'address') +
+                         (addr ? ' "' + addr + '"' : ''));
+          }
+        });
       }
       return;
     }
