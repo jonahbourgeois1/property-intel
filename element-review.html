@@ -366,6 +366,7 @@
     color: var(--ink-faint);
     margin-bottom: 4px;
   }
+  .intake select,
   .intake input[type="text"],
   .intake input[type="number"],
   .intake textarea {
@@ -379,7 +380,23 @@
     font-size: 13px; line-height: 1.45;
     resize: vertical;
   }
-  .intake input:focus, .intake textarea:focus {
+  /* A native select ignores the shared padding/height rules just enough to sit a
+     pixel off from the Round box beside it, so pin the height and re-add the
+     arrow the appearance reset removes. */
+  .intake select {
+    appearance: none; -webkit-appearance: none;
+    height: 30px; padding-right: 26px; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-dim) 50%),
+                      linear-gradient(135deg, var(--ink-dim) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 13px, calc(100% - 9px) 13px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+  /* Unset is a state to SEE, not to discover on submit. */
+  .intake select:invalid, .intake select[data-empty="1"] { color: var(--ink-faint); }
+  .intake select option { background: var(--panel); color: var(--ink); }
+
+  .intake input:focus, .intake select:focus, .intake textarea:focus {
     outline: none;
     border-color: var(--hot);
   }
@@ -925,7 +942,16 @@
           <div class="rev-meta">
             <label class="f grow">
               <span class="lab">Reviewer</span>
-              <input type="text" id="reviewer" placeholder="initials or name">
+              <!-- v6.0: a fixed team, so a dropdown rather than free text. Typed
+                   names produced "JB", "jonah", "" and an unattributable round;
+                   a closed list makes the Reviewer column groupable. -->
+              <select id="reviewer">
+                <option value="">Select…</option>
+                <option value="Eleanor">Eleanor</option>
+                <option value="Ross">Ross</option>
+                <option value="Jonah">Jonah</option>
+                <option value="Steve">Steve</option>
+              </select>
             </label>
             <label class="f narrow">
               <span class="lab">Round</span>
@@ -1104,6 +1130,40 @@
   // mean deciding what "different" means, which is the server's job.
   var lastRev = null;
   var pollTimer = null;
+
+  // v6.0: the reviewer picker remembers itself.
+  // A team validating hundreds of properties would otherwise re-select on every
+  // page, and the one they forget is the round that files unattributed. The
+  // remembered name is VISIBLE in the dropdown, so a shared machine shows who it
+  // thinks you are rather than hiding it.
+  //
+  // Wrapped because storage can throw outright — private browsing, or a policy
+  // that blocks it. A picker that remembers nothing is a minor annoyance; one
+  // that breaks the page is not.
+  var REVIEWER_STORE = 'vyanet-element-review-reviewer';
+  function readStoredReviewer() {
+    try { return window.localStorage.getItem(REVIEWER_STORE) || ''; }
+    catch (e) { return ''; }
+  }
+  function storeReviewer(v) {
+    try { window.localStorage.setItem(REVIEWER_STORE, v); } catch (e) { /* fine */ }
+  }
+
+  (function initReviewer() {
+    var sel = document.getElementById('reviewer');
+    if (!sel) return;
+    var mark = function () { sel.setAttribute('data-empty', sel.value ? '0' : '1'); };
+    var saved = readStoredReviewer();
+    // Only restore a name still ON the list — the roster can change, and a
+    // silently-unselected dropdown would look like the page had forgotten how to
+    // work rather than like the name had gone.
+    if (saved) {
+      var found = Array.prototype.some.call(sel.options, function (o) { return o.value === saved; });
+      if (found) sel.value = saved;
+    }
+    mark();
+    sel.addEventListener('change', function () { mark(); storeReviewer(sel.value); });
+  })();
 
   (function initFormMeta() {
     var r = document.getElementById('round');
@@ -2073,7 +2133,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v5.9',
+      version: 'v6.0',
       submitted_at: new Date().toISOString(),
       // Both travel, though the server trusts NEITHER: it re-derives the key from
       // the row it matched, so a stale link cannot misfile a critique. These are
@@ -2322,6 +2382,17 @@
       }
       if (!configured) {
         setStatus('Endpoint not configured — CRITIQUE_POST_URL is still the placeholder.', 'err');
+        return;
+      }
+
+      // v6.0: REQUIRED. Rounds used to file with a blank Reviewer, so the note
+      // read "round 1 (analyst, …)" and nothing could be traced to a person.
+      // With a four-name dropdown the cost of asking is one click, and Monday is
+      // four reviewers working the same sheet.
+      var who = document.getElementById('reviewer');
+      if (who && !who.value) {
+        setStatus('Choose a reviewer before filing — the round is recorded against a name.', 'err');
+        who.focus();
         return;
       }
 
