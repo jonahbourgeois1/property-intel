@@ -1063,6 +1063,12 @@
   // v4: row identity + round, echoed into the submitted payload so the
   // critique can be filed against the right satellite-sheet row.
   var rowKey   = qp('key') || '';
+  // ⭐ v5.8: site_no is the Satellite sheet's identity as of the 2026-08-13 rekey
+  // (a property id is now hashId(slug(site_no))). Accept either spelling of the
+  // param. It is the BEST lookup — exact, needs no salt, and readable in the
+  // sheet — but the link does not carry it yet, so it is learned from the first
+  // API response and used for every poll after that.
+  var siteNo   = qp('site_no') || qp('site') || '';
   var viewName = qp('view') || '';
   var roundIn  = parseInt(qp('round'), 10);
 
@@ -1124,7 +1130,7 @@
   // review link the sheet builds, which is why this works before Satellite.gs
   // has been patched to send &key=.
   var canFetchPins = !!(CRITIQUE_POST_URL && CRITIQUE_POST_URL.indexOf('PASTE_') !== 0 &&
-                        (rowKey || addr));
+                        (siteNo || rowKey || addr));
 
   if (!nadirUrl) { fail('No nadir image URL provided.', 'Expected ?nadir=&lt;url&gt;'); return; }
   if (!pinsRaw && !routeRaw && !canFetchPins) {
@@ -2067,8 +2073,12 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v5.7',
+      version: 'v5.8',
       submitted_at: new Date().toISOString(),
+      // Both travel, though the server trusts NEITHER: it re-derives the key from
+      // the row it matched, so a stale link cannot misfile a critique. These are
+      // here so the request is self-describing in a log.
+      site_no: siteNo,
       key: rowKey,
       view: viewName,
       address: addr || '',
@@ -2471,10 +2481,17 @@
   // GET with no custom headers is a CORS simple request, so no preflight — the
   // same constraint the POST works under. Resolution order is key, then address:
   // `key` is exact, `addr` is what today's review links actually carry.
+  // Most exact first. Address is last because it is the only one that can be
+  // ambiguous — though far less so since the sheet was rebuilt to one row per
+  // physical address.
+  function lookupParam() {
+    if (siteNo) return 'site_no=' + encodeURIComponent(siteNo);
+    if (rowKey) return 'key=' + encodeURIComponent(rowKey);
+    return 'addr=' + encodeURIComponent(addr);
+  }
+
   function fetchElements() {
-    var u = CRITIQUE_POST_URL + '?route=elements&' +
-            (rowKey ? 'key=' + encodeURIComponent(rowKey)
-                    : 'addr=' + encodeURIComponent(addr));
+    var u = CRITIQUE_POST_URL + '?route=elements&' + lookupParam();
     return fetch(u, { redirect: 'follow' })
       .then(function (r) { return r.text(); })
       .then(function (t) {
@@ -2483,6 +2500,11 @@
         catch (e) { throw new Error('the endpoint did not return JSON (' + t.slice(0, 120) + ')'); }
         if (!j || j.ok === false) throw new Error(j && j.error ? j.error : 'lookup failed');
         if (!Array.isArray(j.pins)) throw new Error('no pins in the response');
+        // Upgrade the lookup for every subsequent call. The first request may have
+        // gone out by address; once the row has told us its site_no there is no
+        // reason to keep matching on a string that could, in principle, tie.
+        if (j.site_no && !siteNo) siteNo = String(j.site_no);
+        if (j.key && !rowKey) rowKey = String(j.key);
         return j;
       });
   }
