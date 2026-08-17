@@ -1072,7 +1072,7 @@
         <ol class="route" id="routeList"></ol>
         <div class="rationale" id="rationale"></div>
       </div>
-      <div class="hint">Hover a marker, a field or a row to link all three. <b>Drag a pin</b> to correct its position — the dashed ring shows where it was. <b>OK</b> or <b>Remove</b> locks that pin's fix fields. Numbers are review labels only. Amber = flagged (not a primary/element pin, or wrong property type).</div>
+      <div class="hint">Hover a marker, a field or a row to link all three. <b>Drag a pin</b> to correct its position — the dashed ring shows where it was. <b>OK</b> or <b>Remove</b> locks that pin's fix fields. Numbers are review labels only. Amber = the pin's id is not in the catalog at all.</div>
     </aside>
   </main>
 
@@ -1293,18 +1293,32 @@
     (catalog.pins || []).forEach(function (p) { byId[p.id] = p; });
     return pins.map(function (p) {
       var entry = byId[p.id] || {};
+      // v6.2: A PIN IS FLAGGED ONLY IF ITS ID IS NOT IN THE CATALOG.
+      //
+      // Two flags were removed here, along with the wrongRole / wrongType fields
+      // that drove them. Pass 1's vocabulary is now the whole 239-pin catalog
+      // (satFetchPinCatalog_, 2026-08-26), which makes a role=concern pin such as
+      // Driveway (186) or Parking lot (206), and a residential-only pin such as
+      // Entry (30) on a commercial row, legitimate Pass 1 output. Keeping the
+      // flags would have amber-flagged the two MOST-REQUESTED elements of the
+      // first review round as mistakes — teaching reviewers to distrust exactly
+      // the pins they had asked for.
+      //
+      // role and section are still carried and still shown on the meta line, so a
+      // reviewer can see that Driveway sits in Access & Movement. They just no
+      // longer mean "wrong". To re-narrow either gate, do it in
+      // satFetchPinCatalog_ (server side, where Pass 1 is actually constrained)
+      // and only then mirror it here — never here alone, or the page will refuse
+      // ids the model is still emitting.
       var known = !!entry.name;
-      var role = entry.role || '';
-      var types = Array.isArray(entry.account_type) ? entry.account_type : [];
-      var wrongRole = !!(known && role !== 'primary');
-      var wrongType = !!(known && acctType && types.indexOf(acctType) === -1);
       return {
         id: p.id, x: p.x, y: p.y,
         name: entry.name || ('Unknown id ' + p.id),
         section: entry.section || '',
-        role: role, types: types,
-        known: known, wrongRole: wrongRole, wrongType: wrongType,
-        flag: !known || wrongRole || wrongType
+        role: entry.role || '',
+        types: Array.isArray(entry.account_type) ? entry.account_type : [],
+        known: known,
+        flag: !known
       };
     });
   }
@@ -1312,13 +1326,11 @@
   // Why a shared helper: the legend row and the critique card must never
   // disagree about whether a pin is flagged or why. One source, two readers.
   function flagLabels(p) {
-    var flags = [];
-    if (!p.known) flags.push('NOT IN CATALOG');
-    else {
-      if (p.wrongRole) flags.push('NOT AN ELEMENT (' + escapeHtml(p.role) + ')');
-      if (p.wrongType) flags.push('NOT ' + escapeHtml(acctType.toUpperCase()));
-    }
-    return flags;
+    // One flag left, since v6.2 — see resolvePins. Kept as an array-returning
+    // helper rather than collapsed to a string: the legend row and the critique
+    // card must never disagree about whether a pin is flagged or why, and a
+    // second flag is likelier to come back than this one is to go away.
+    return p.known ? [] : ['NOT IN CATALOG'];
   }
 
   function metaHtml(p) {
@@ -2188,7 +2200,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v6.1',
+      version: 'v6.2',
       submitted_at: new Date().toISOString(),
       // Both travel, though the server trusts NEITHER: it re-derives the key from
       // the row it matched, so a stale link cannot misfile a critique. These are
@@ -2838,7 +2850,7 @@
       // returns so nothing downstream has to know which path it came from.
       render(rawPins.map(function (p) {
         return { id: p.id, x: p.x, y: p.y, name: 'id ' + p.id, section: '',
-                 role: '', types: [], known: false, wrongRole: false, wrongType: false, flag: true };
+                 role: '', types: [], known: false, flag: true };
       }));
     }
   }
@@ -2881,15 +2893,19 @@
       return r.json();
     })
     .then(function (catalog) {
-      // v5: keep the element vocabulary for the add-search. Same filter the
-      // Apps Script side applies (role=primary + this account type), so the
-      // page can only offer an id Pass 1 would itself be allowed to use.
+      // The vocabulary the add-search offers. It must match what Pass 1 is
+      // allowed to emit, or a reviewer can add a pin the next re-pin will throw
+      // away as invalid.
+      //
+      // v6.2: that is now the WHOLE catalog. This filter used to mirror the
+      // Apps Script gate (role=primary + this account type) and was the direct
+      // cause of the free-text requests on 2026-08-17 — a reviewer on a
+      // commercial property searched "entryway", got nothing, and typed it into
+      // the request box instead. 96 of 178 primary pins reached a commercial row.
+      // satFetchPinCatalog_ now hands Pass 1 all 239, so this must too.
       catalogRaw = catalog;
-      catalogElements = (catalog.pins || []).filter(function (p) {
-        if (p.role !== 'primary') return false;
-        if (!acctType) return true;
-        return Array.isArray(p.account_type) && p.account_type.indexOf(acctType) !== -1;
-      }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      catalogElements = (catalog.pins || [])
+        .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
       initAddElement();
       boot();
     })
