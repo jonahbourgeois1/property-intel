@@ -473,6 +473,7 @@
   <img id="cam-lb-img" alt="Camera view">
   <div id="cam-lb-title"></div>
   <div id="cam-lb-meta"></div>
+  <span id="cam-lb-live" class="cam-live-tag"></span>
   <div id="cam-lb-actions">
     <button class="cam-lb-btn" onclick="closeCameraPhoto()">Close</button>
   </div>
@@ -561,6 +562,21 @@ const LIVE_MS     = Math.max(200, parseInt(params.get('livems'), 10) || 500);
 // without re-publishing the record each time.
 const chektDevice  = (params.get('chektdev') || '').trim();
 const chektChannel = params.get('chektch');
+// A CHEKT token carries the camera it is good for in its own payload: `sub` is
+// the device MAC and `channel` the input. Reading it means a test link needs
+// ONE thing pasted - the token - instead of a token plus a MAC that has to
+// agree with it, which is a mismatch waiting to happen. The signature is not
+// checked and does not need to be: this is routing, not authorisation, and
+// CHEKT re-validates the token on every request regardless.
+function jwtClaims(t) {
+  try {
+    const seg = String(t).split('.')[1];
+    if (!seg) return null;
+    const b = seg.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b + '==='.slice((b.length + 3) % 4)));
+  } catch (e) { return null; }
+}
+const chektClaims = chektToken ? jwtClaims(chektToken) : null;
 const DATA_ROOT  = (function () {
   const explicit = params.get('dataRoot');
   if (explicit) return explicit.replace(/\/*$/, '/');
@@ -602,6 +618,21 @@ window.clearDebug = function () {
 // it after a problem shows everything that already happened.
 if (params.get('debug') === '1') {
   document.getElementById('debug-panel').style.display = 'flex';
+}
+// Say up front what the token is for and when it dies. Every failure so far has
+// been one of these two facts being different from what was assumed, and the
+// answer was sitting in the token the whole time.
+if (chektToken) {
+  if (!chektClaims) {
+    dbg('CHEKT token present but unreadable — is it the whole token?', 'warn');
+  } else {
+    const exp = chektClaims.exp ? new Date(chektClaims.exp * 1000) : null;
+    const dead = exp && exp.getTime() < Date.now();
+    dbg('CHEKT token: camera ' + chektClaims.sub + ' ch' + chektClaims.channel +
+        (chektClaims.site_id ? ', site ' + chektClaims.site_id : '') +
+        (exp ? ', expires ' + exp.toLocaleTimeString() : ''), dead ? 'error' : 'ok');
+    if (dead) dbg('That token has ALREADY EXPIRED — grab a fresh one', 'error');
+  }
 }
 // Optional programmatic camera positioning for headless capture
 // (see capture_obliques.py). azimuth/polar are compass bearing + elevation
@@ -1639,10 +1670,13 @@ let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false, liveFrames = 
 function camLive(cam) {
   if (!chektToken) return null;
   const l = cam && cam.live;
-  const device = chektDevice || (l && l.device);
+  // Explicit URL override wins; then the token's own claim, because the token
+  // is the thing that will actually be accepted; the record last, since its
+  // MAC is only as good as whoever typed it.
+  const device = chektDevice || (chektClaims && chektClaims.sub) || (l && l.device);
   if (!device) return null;
-  const ch = (chektChannel !== null && chektChannel !== '')
-           ? Number(chektChannel)
+  const ch = (chektChannel !== null && chektChannel !== '') ? Number(chektChannel)
+           : (chektClaims && chektClaims.channel !== undefined) ? chektClaims.channel
            : (l && l.channel !== undefined && l.channel !== null) ? l.channel : 0;
   return { device: String(device), channel: isFinite(ch) ? ch : 0 };
 }
@@ -1654,12 +1688,22 @@ function liveUrl(cam) {
          path + '?access_token=' + encodeURIComponent(chektToken);
 }
 
+// The live loop paints into whichever view is on screen: the full-size one if
+// it is open, otherwise the small card. Keeping this in one place is what lets
+// expand carry the feed across instead of dropping back to the still.
+function liveImgEl() {
+  const lb = document.getElementById('cam-lightbox');
+  return document.getElementById(
+    lb && lb.classList.contains('open') ? 'cam-lb-img' : 'cam-pop-img');
+}
 function setLiveStatus(text, cls) {
-  const el = document.getElementById('cam-pop-live');
-  if (!el) return;
-  el.textContent = text || '';
-  el.className = 'cam-live-tag' + (cls ? ' ' + cls : '');
-  el.style.display = text ? 'inline-block' : 'none';
+  ['cam-pop-live', 'cam-lb-live'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'cam-live-tag' + (cls ? ' ' + cls : '');
+    el.style.display = text ? 'inline-block' : 'none';
+  });
 }
 
 // Bumping liveSeq is what makes an in-flight response harmless: every fetch
@@ -1680,7 +1724,7 @@ function liveFail(msg, why) {
   const i = liveIdx;
   stopLive();
   setLiveStatus('live unavailable', 'bad');
-  const cam = camList[i], img = document.getElementById('cam-pop-img');
+  const cam = camList[i], img = liveImgEl();
   if (cam && img) img.src = cam.photo || '';   // fall back to the still
 }
 
@@ -1712,7 +1756,7 @@ async function liveTick() {
     const j = await r.json();
     if (mySeq !== liveSeq) return;
     if (!j || !j.data) { liveFail('CHEKT returned no image data'); return; }
-    const img = document.getElementById('cam-pop-img');
+    const img = liveImgEl();
     if (img) {
       img.src = (j.base64Encoded === false) ? j.data
                                             : 'data:image/jpeg;base64,' + j.data;
@@ -1754,7 +1798,7 @@ window.toggleLive = function () {
   if (liveIdx >= 0) {
     const i = liveIdx;
     stopLive();
-    const cam = camList[i], img = document.getElementById('cam-pop-img');
+    const cam = camList[i], img = liveImgEl();
     if (cam && img) img.src = cam.photo || '';
     return;
   }
@@ -1801,8 +1845,13 @@ window.hideCameraPopup = function () {
 window.expandCameraPopup = function () {
   if (camPopupIdx < 0) return;
   const i = camPopupIdx;
-  hideCameraPopup();
+  const wasLive = (liveIdx === i);
+  hideCameraPopup();          // this stops the loop, hence the restart below
   openCameraPhoto(i);
+  // Carry the feed into the full-size view. Clicking a moving picture and being
+  // handed a photograph is the opposite of what the click promises - and the
+  // full-size view is exactly where someone wants live, not the thumbnail.
+  if (wasLive) startLive(i);
 };
 // Project the marker's world position into screen pixels. v.z > 1 means the
 // point is behind the camera, in which case the card is hidden rather than
@@ -1840,6 +1889,10 @@ window.openCameraPhoto = function (idx) {
 };
 window.closeCameraPhoto = function () {
   document.getElementById('cam-lightbox').classList.remove('open');
+  // Closing a SIZE is not closing the camera: if a feed was running, drop back
+  // to the small card with it still going rather than out to the bare model.
+  const i = liveIdx;
+  if (i >= 0) showCameraPopup(i);
 };
 window.flyToCamera = function (idx) {
   const cam = camList[idx];
