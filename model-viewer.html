@@ -554,6 +554,13 @@ const CHEKT_API   = 'https://api.chekt.com/api/v1/snapshots/';
 const chektToken  = params.get('chekt') || '';
 const chektProxy  = (params.get('proxy') || '').replace(/\/*$/, '');
 const LIVE_MS     = Math.max(200, parseInt(params.get('livems'), 10) || 500);
+// &chektdev=<mac> / &chektch=<n> override the camera the record names. A CHEKT
+// token is bound to ONE device (its `sub` claim) and one channel, so a token
+// for camera A is refused on camera B however fresh it is. These let a test
+// link point at whichever camera the token in hand actually belongs to,
+// without re-publishing the record each time.
+const chektDevice  = (params.get('chektdev') || '').trim();
+const chektChannel = params.get('chektch');
 const DATA_ROOT  = (function () {
   const explicit = params.get('dataRoot');
   if (explicit) return explicit.replace(/\/*$/, '/');
@@ -1630,10 +1637,14 @@ let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false, liveFrames = 
 // carries a token. Both halves are required, so a viewer URL shared without
 // the token degrades to the still photo instead of erroring.
 function camLive(cam) {
+  if (!chektToken) return null;
   const l = cam && cam.live;
-  if (!l || !l.device || !chektToken) return null;
-  return { device: String(l.device),
-           channel: (l.channel === undefined || l.channel === null) ? 0 : l.channel };
+  const device = chektDevice || (l && l.device);
+  if (!device) return null;
+  const ch = (chektChannel !== null && chektChannel !== '')
+           ? Number(chektChannel)
+           : (l && l.channel !== undefined && l.channel !== null) ? l.channel : 0;
+  return { device: String(device), channel: isFinite(ch) ? ch : 0 };
 }
 function liveUrl(cam) {
   const l = camLive(cam);
@@ -1683,9 +1694,18 @@ async function liveTick() {
   try {
     const r = await fetch(url, { mode: 'cors', cache: 'no-store' });
     if (mySeq !== liveSeq) return;
-    if (r.status === 401 || r.status === 403) {
-      liveFail('CHEKT rejected the token - it has probably expired',
-               'HTTP ' + r.status);
+    if (r.status === 401) {
+      liveFail('CHEKT rejected the token - expired or malformed', 'HTTP 401');
+      return;
+    }
+    if (r.status === 403) {
+      // Authenticated, but not for THIS camera. Worth spelling out: the token
+      // carries the one device it is good for in its `sub` claim, and reading
+      // 403 as "expired" sends you hunting for a fresh token forever.
+      const want = (camLive(cam) || {}).device;
+      liveFail('that token is valid but belongs to a different camera - its ' +
+               'sub claim has to equal ' + want +
+               ' (decode the token to see which device it is for)', 'HTTP 403');
       return;
     }
     if (!r.ok) { liveFail('CHEKT returned an error', 'HTTP ' + r.status); return; }
@@ -1766,8 +1786,9 @@ window.showCameraPopup = function (idx) {
   const lb = document.getElementById('cam-pop-live-btn');
   if (lb) lb.style.display = liveUrl(cam) ? 'block' : 'none';
   updateCameraPopup();
+  const lv = camLive(cam);
   dbg('Camera popup: ' + camName(cam, idx) +
-      (liveUrl(cam) ? ' - live available' : ''), 'info');
+      (lv ? ' - live available (' + lv.device + ' ch' + lv.channel + ')' : ''), 'info');
   if (liveUrl(cam)) startLive(idx);
 };
 window.hideCameraPopup = function () {
