@@ -227,6 +227,26 @@
   #cam-pop-hint {
     font-family: monospace; font-size: 9px; color: #555f6e; margin-top: 4px;
   }
+  /* Live controls. Red rather than the camera layer's blue: this is the one
+     thing on the card that is happening RIGHT NOW, and it should not read as
+     just another camera affordance. */
+  .cam-live-tag {
+    display: none; font-family: monospace; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.08em; padding: 2px 6px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.18); color: #8a93a2; margin-top: 4px;
+  }
+  .cam-live-tag.on  { color: #ef4444; border-color: #ef4444;
+                      background: rgba(239,68,68,0.12); }
+  .cam-live-tag.bad { color: #f59e0b; border-color: rgba(245,158,11,0.5); }
+  #cam-pop-live-btn {
+    display: none; width: 100%; margin-top: 6px; padding: 5px 8px;
+    border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
+    background: #12161b; color: #f0f2f5; font-family: monospace;
+    font-size: 10px; cursor: pointer;
+  }
+  #cam-pop-live-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+  #cam-pop-live-btn.on { background: rgba(239,68,68,0.14);
+                         border-color: #ef4444; color: #ef4444; }
   #cam-pop-close {
     position: absolute; right: 4px; top: 4px; width: 18px; height: 18px;
     border: none; border-radius: 4px; background: rgba(10,12,15,0.75);
@@ -445,6 +465,8 @@
     <div id="cam-pop-name"></div>
     <div id="cam-pop-meta"></div>
     <div id="cam-pop-hint">click image to expand</div>
+    <span id="cam-pop-live" class="cam-live-tag"></span>
+    <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
   </div>
 </div>
 <div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
@@ -522,6 +544,16 @@ const hasEnt     = !isNaN(entXParam) && !isNaN(entYParam);
 const wantView   = (params.get('view') || params.get('tab') || '').trim();
 const DT_VIEW    = 'drone-test';
 const ROUTE_HEX  = '#f59e0b';
+// ── Live camera view parameters ───────────────────────────────────────
+// &chekt=<jwt>   the CHEKT access token. Never committed to the record - a
+//                record lives in a public repo forever, a link does not.
+// &proxy=<base>  optional same-origin proxy, if the browser refuses the
+//                cross-origin call to api.chekt.com.
+// &livems=<ms>   frame interval, default 500 ms (2 fps).
+const CHEKT_API   = 'https://api.chekt.com/api/v1/snapshots/';
+const chektToken  = params.get('chekt') || '';
+const chektProxy  = (params.get('proxy') || '').replace(/\/*$/, '');
+const LIVE_MS     = Math.max(200, parseInt(params.get('livems'), 10) || 500);
 const DATA_ROOT  = (function () {
   const explicit = params.get('dataRoot');
   if (explicit) return explicit.replace(/\/*$/, '/');
@@ -1582,11 +1614,139 @@ function camSpriteFor(cam) {
   }
   return found;
 }
+// ── Live camera view (CHEKT snapshot polling) ─────────────────────────
+// CHEKT's monitoring portal serves no video stream. Its "live view" is a fast
+// sequence of single JPEG stills, one request each, from
+//   GET api.chekt.com/api/v1/snapshots/{bridgeMac}/{channel}?access_token=<JWT>
+// answering {snapshotTimestamp, data:"<base64 jpeg>", base64Encoded:true}.
+// So live here is an <img> on a timer, not a <video>: no player library, no
+// hls.js, no WebRTC. It is also why the frame cannot be handed straight to an
+// <img src> - the body is JSON with the image inside it, so it has to be
+// fetched and unwrapped into a data: URL.
+
+let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false, liveFrames = 0;
+
+// A camera is live-capable only when the record names its bridge AND the link
+// carries a token. Both halves are required, so a viewer URL shared without
+// the token degrades to the still photo instead of erroring.
+function camLive(cam) {
+  const l = cam && cam.live;
+  if (!l || !l.device || !chektToken) return null;
+  return { device: String(l.device),
+           channel: (l.channel === undefined || l.channel === null) ? 0 : l.channel };
+}
+function liveUrl(cam) {
+  const l = camLive(cam);
+  if (!l) return '';
+  const path = encodeURIComponent(l.device) + '/' + encodeURIComponent(l.channel);
+  return (chektProxy ? chektProxy + '/' : CHEKT_API) +
+         path + '?access_token=' + encodeURIComponent(chektToken);
+}
+
+function setLiveStatus(text, cls) {
+  const el = document.getElementById('cam-pop-live');
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = 'cam-live-tag' + (cls ? ' ' + cls : '');
+  el.style.display = text ? 'inline-block' : 'none';
+}
+
+// Bumping liveSeq is what makes an in-flight response harmless: every fetch
+// captures the sequence it started under and discards itself if that number
+// moved while it was in the air. Without it, switching cameras mid-request
+// paints the old camera's frame into the new camera's card.
+function stopLive() {
+  liveSeq++;
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  liveIdx = -1; liveBusy = false; liveFrames = 0;
+  const b = document.getElementById('cam-pop-live-btn');
+  if (b) { b.classList.remove('on'); b.textContent = 'Go live'; }
+  setLiveStatus('', '');
+}
+
+function liveFail(msg, why) {
+  dbg('Live view stopped - ' + msg + (why ? ' (' + why + ')' : ''), 'warn');
+  const i = liveIdx;
+  stopLive();
+  setLiveStatus('live unavailable', 'bad');
+  const cam = camList[i], img = document.getElementById('cam-pop-img');
+  if (cam && img) img.src = cam.photo || '';   // fall back to the still
+}
+
+async function liveTick() {
+  if (liveBusy || liveIdx < 0) return;
+  if (document.hidden) return;      // never poll a tab nobody is looking at
+  const mySeq = liveSeq, cam = camList[liveIdx];
+  const url = liveUrl(cam);
+  if (!url) { liveFail('no live endpoint for this camera'); return; }
+  liveBusy = true;
+  try {
+    const r = await fetch(url, { mode: 'cors', cache: 'no-store' });
+    if (mySeq !== liveSeq) return;
+    if (r.status === 401 || r.status === 403) {
+      liveFail('CHEKT rejected the token - it has probably expired',
+               'HTTP ' + r.status);
+      return;
+    }
+    if (!r.ok) { liveFail('CHEKT returned an error', 'HTTP ' + r.status); return; }
+    const j = await r.json();
+    if (mySeq !== liveSeq) return;
+    if (!j || !j.data) { liveFail('CHEKT returned no image data'); return; }
+    const img = document.getElementById('cam-pop-img');
+    if (img) {
+      img.src = (j.base64Encoded === false) ? j.data
+                                            : 'data:image/jpeg;base64,' + j.data;
+    }
+    liveFrames++;
+    setLiveStatus('LIVE', 'on');
+    if (liveFrames === 1) {
+      dbg('Live view running: ' + camName(cam, liveIdx) + ' at ' +
+          Math.round(1000 / LIVE_MS) + ' fps', 'ok');
+    }
+  } catch (e) {
+    if (mySeq !== liveSeq) return;
+    // A cross-origin refusal reaches the page as a bare TypeError with no
+    // status at all - which is exactly what a missing Access-Control-Allow-
+    // Origin looks like from in here. Name it rather than saying "failed",
+    // because the fix for that one case is a proxy and nothing else.
+    liveFail(chektProxy
+      ? 'could not reach the proxy'
+      : 'the browser blocked the call to api.chekt.com - that is CORS, so ' +
+        'this camera needs a proxy in front of it', e.message);
+  } finally {
+    liveBusy = false;
+  }
+}
+
+function startLive(idx) {
+  stopLive();
+  const cam = camList[idx];
+  if (!cam || !liveUrl(cam)) return;
+  liveIdx = idx;
+  const b = document.getElementById('cam-pop-live-btn');
+  if (b) { b.classList.add('on'); b.textContent = 'Stop live'; }
+  setLiveStatus('connecting…', '');
+  liveTick();
+  liveTimer = setInterval(liveTick, LIVE_MS);
+}
+
+window.toggleLive = function () {
+  if (liveIdx >= 0) {
+    const i = liveIdx;
+    stopLive();
+    const cam = camList[i], img = document.getElementById('cam-pop-img');
+    if (cam && img) img.src = cam.photo || '';
+    return;
+  }
+  if (camPopupIdx >= 0) startLive(camPopupIdx);
+};
+
 window.showCameraPopup = function (idx) {
   const cam = camList[idx];
   if (!cam) return;
   const sp = camSpriteFor(cam);
   if (!sp) { openCameraPhoto(idx); return; }   // not placed yet - fall back
+  stopLive();                       // this card is for a different camera now
   camPopupIdx = idx;
   camPopupWorld = sp.position.clone();
   document.getElementById('cam-pop-img').src = cam.photo || '';
@@ -1600,10 +1760,18 @@ window.showCameraPopup = function (idx) {
   }
   document.getElementById('cam-pop-meta').textContent = bits.join('  ·  ');
   document.getElementById('cam-popup').style.display = 'block';
+  // The control only appears for a camera that has a feed AND on a link that
+  // carries a token, so a plainly-shared viewer URL shows the photo and
+  // nothing else.
+  const lb = document.getElementById('cam-pop-live-btn');
+  if (lb) lb.style.display = liveUrl(cam) ? 'block' : 'none';
   updateCameraPopup();
-  dbg('Camera popup: ' + camName(cam, idx), 'info');
+  dbg('Camera popup: ' + camName(cam, idx) +
+      (liveUrl(cam) ? ' - live available' : ''), 'info');
+  if (liveUrl(cam)) startLive(idx);
 };
 window.hideCameraPopup = function () {
+  stopLive();
   camPopupIdx = -1;
   camPopupWorld = null;
   const el = document.getElementById('cam-popup');
@@ -1646,6 +1814,9 @@ window.openCameraPhoto = function (idx) {
     bits.push(String(cam.taken).replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
   }
   document.getElementById('cam-lb-meta').textContent = bits.join('  ·  ');
+  document.getElementById('cam-lb-pov').style.display =
+    isFinite(Number(cam.heading)) ? 'block' : 'none';
+  box.dataset.idx = String(idx);
   box.classList.add('open');
   dbg('Camera photo: ' + camName(cam, idx), 'info');
 };
@@ -2780,7 +2951,7 @@ function beginTour(i) {
       const a = THREE.MathUtils.degToRad(alphaParam);
       const off = Math.max(6, modelSpan * 0.04);
       face.x += off * Math.sin(a); face.y += off * Math.cos(a);
-      faceSrc = 'front of the residence (bearing ' + alphaParam.toFixed(0) + '\u00b0)';
+      faceSrc = 'front of the residence (bearing ' + alphaParam.toFixed(0) + '°)';
     }
   }
   face.z = topZ;
@@ -2949,7 +3120,7 @@ function stepTour() {
   controls.target.copy(aim);
   camera.lookAt(controls.target);
   const prog = document.getElementById('rd-prog-' + tour.i);
-  if (prog) prog.textContent = 'following the route\u2026 ' + Math.round(e * 100) + '%';
+  if (prog) prog.textContent = 'following the route… ' + Math.round(e * 100) + '%';
   if (k >= 1) stopTour();
 }
 // Drawing the route is a chunked raycast that finishes whenever it finishes, so
