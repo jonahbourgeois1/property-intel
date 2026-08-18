@@ -1835,9 +1835,6 @@ window.openCameraPhoto = function (idx) {
     bits.push(String(cam.taken).replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3'));
   }
   document.getElementById('cam-lb-meta').textContent = bits.join('  ·  ');
-  document.getElementById('cam-lb-pov').style.display =
-    isFinite(Number(cam.heading)) ? 'block' : 'none';
-  box.dataset.idx = String(idx);
   box.classList.add('open');
   dbg('Camera photo: ' + camName(cam, idx), 'info');
 };
