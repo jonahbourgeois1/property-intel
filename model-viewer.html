@@ -2238,10 +2238,6 @@ async function renderLmClips() {
     // underneath. preload="metadata" keeps N clips from downloading N mp4s
     // up front while the live streams are running.
     div.innerHTML = lmClipList.length ? lmClipList.map(function (e, i) {
-      const meta = [];
-      if (e.trigger) meta.push(escHtml(String(e.trigger)));
-      if (e.status) meta.push(escHtml(String(e.status)));
-      if (e.zone) meta.push('zone ' + escHtml(String(e.zone)));
       return '<div class="lm-clip">' +
         (e.mp4 ? '<video controls playsinline preload="metadata"' +
           (e.thumbnail ? ' poster="' + escHtml(e.thumbnail) + '"' : '') +
@@ -2249,7 +2245,6 @@ async function renderLmClips() {
         '<div class="lm-clip-meta">' +
           '<div class="lm-clip-name">' + escHtml(e.device_name || 'Camera') + '</div>' +
           '<div class="lm-clip-line">' + escHtml(wxTime(e.event_time)) + '</div>' +
-          (meta.length ? '<div class="lm-clip-line">' + meta.join(' &middot; ') + '</div>' : '') +
         '</div></div>';
     }).join('') : '<div class="rd-note">no video events in the last 7 days</div>';
     // One recording at a time: starting a clip pauses any other that is playing.
