@@ -1555,6 +1555,9 @@ function initDirections(d) {
     // raycastGround holds dirBusy across many animation frames (4 rays per
     // frame), so a setTimeout(...,0) lands in the middle of it and the camera
     // layer gets refused by the busy guard. Poll until the queue is idle.
+    // Indicators should be truthful from the first frame, so the roster and
+    // the week's clips start loading NOW - not on the first pin click.
+    prefetchLiveLayer();
     (function placeCamerasWhenIdle(tries) {
       tries = tries || 0;
       if (dirBusy && tries < 200) {
@@ -1722,12 +1725,21 @@ function camTexture(text, liveDot, eventDot) {
   g.font = 'bold 40px monospace';
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(text, S / 2, S * 0.74);
-  // live: red dot, top-right, drawn bright or dim - swapping between the two
-  // textures is what makes it flash.
+  // live: recording-LED red, top-right, drawn bright-with-glow or near-dark -
+  // swapping between the two textures is what makes it blink like a REC light.
   if (liveDot) {
     g.beginPath(); g.arc(S * 0.80, S * 0.20, S * 0.13, 0, Math.PI * 2);
-    g.fillStyle = liveDot === 'on' ? '#ef4444' : 'rgba(239,68,68,0.25)';
-    g.fill();
+    if (liveDot === 'on') {
+      g.fillStyle = '#ff0000';
+      g.save();
+      g.shadowColor = 'rgba(255,0,0,0.9)'; g.shadowBlur = 14;
+      g.fill();
+      g.restore();
+      g.fill();
+    } else {
+      g.fillStyle = 'rgba(255,0,0,0.18)';
+      g.fill();
+    }
     g.lineWidth = 5; g.strokeStyle = '#0b0e12'; g.stroke();
   }
   // event: amber dot, top-left, steady - present means a recent recorded clip.
@@ -1834,6 +1846,9 @@ window.toggleCameras3D = function () {
     if (b) { b.classList.add('on'); b.textContent = 'Hide cameras from 3D'; }
     if (c) c.classList.add('on');
     dbg('Cameras placed: ' + camList.length, 'ok');
+    // If the prefetched clips landed before the sprites existed, this is the
+    // moment their amber dots catch up.
+    updateEventIndicators();
   });
 };
 function camGroundZ(cam) {
@@ -1916,6 +1931,22 @@ async function gwEnsureLive() {
   gwLiveMap = m; gwLiveAt = Date.now();
   dbg('Gateway: ' + Object.keys(m).length + ' live camera(s) for this property', 'ok');
   return m;
+}
+// Background prefetch at page open: roster first (it is the name<->mac join),
+// then the clips week. ensureClips repaints the amber dots when it lands, so
+// the markers are already labelled by the time anyone reaches for a pin.
+// Runs once; a cancelled passcode prompt just means the indicators wait for
+// the first click like they used to.
+let gwPrefetched = false;
+function prefetchLiveLayer() {
+  if (gwPrefetched || GW_OFF || !propertyId) return;
+  gwPrefetched = true;
+  (async function () {
+    try {
+      await gwEnsureLive();
+      await ensureClips(false);
+    } catch (e) { dbg('Live-layer prefetch failed: ' + e.message, 'warn'); }
+  })();
 }
 
 let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false,
