@@ -345,6 +345,16 @@
   #cam-pop-live-btn:hover { border-color: #38bdf8; color: #38bdf8; }
   #cam-pop-live-btn.on { background: rgba(239,68,68,0.14);
                          border-color: #ef4444; color: #ef4444; }
+  /* A card with video is working space, not a label - double it. */
+  #cam-popup.big { width: 420px; }
+  #cam-popup.big #cam-pop-img { height: 300px; }
+  #cam-pop-event {
+    display: none; align-items: center; gap: 8px; margin-top: 7px;
+  }
+  #cam-pop-event .gw-watch { margin-left: 0; }
+  #cam-pop-event-time {
+    font-family: monospace; font-size: 10px; color: #8a93a2;
+  }
   #cam-pop-close {
     position: absolute; right: 4px; top: 4px; width: 18px; height: 18px;
     border: none; border-radius: 4px; background: rgba(10,12,15,0.75);
@@ -565,6 +575,10 @@
     <div id="cam-pop-hint">click image to expand</div>
     <span id="cam-pop-live" class="cam-live-tag"></span>
     <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
+    <div id="cam-pop-event">
+      <button class="gw-watch" onclick="watchPinEvent()">Watch event</button>
+      <span id="cam-pop-event-time"></span>
+    </div>
   </div>
 </div>
 <button id="live-tab" onclick="toggleLiveMode()">LIVE FEED</button>
@@ -1664,7 +1678,7 @@ window.togglePins3D = function () {
 // the local frame is +Y north / +X east, so the maths angle is (90 - heading).
 // CircleGeometry builds a sector in the XY plane measured counter-clockwise
 // from +X — exactly this frame, with no rotation needed.
-function cameraSprite(text, worldSize) {
+function camTexture(text, liveDot, eventDot) {
   const S = 128, cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
@@ -1680,11 +1694,55 @@ function cameraSprite(text, worldSize) {
   g.font = 'bold 40px monospace';
   g.textAlign = 'center'; g.textBaseline = 'middle';
   g.fillText(text, S / 2, S * 0.74);
+  // live: red dot, top-right, drawn bright or dim - swapping between the two
+  // textures is what makes it flash.
+  if (liveDot) {
+    g.beginPath(); g.arc(S * 0.80, S * 0.20, S * 0.13, 0, Math.PI * 2);
+    g.fillStyle = liveDot === 'on' ? '#ef4444' : 'rgba(239,68,68,0.25)';
+    g.fill();
+    g.lineWidth = 5; g.strokeStyle = '#0b0e12'; g.stroke();
+  }
+  // event: amber dot, top-left, steady - present means a recent recorded clip.
+  if (eventDot) {
+    g.beginPath(); g.arc(S * 0.20, S * 0.20, S * 0.11, 0, Math.PI * 2);
+    g.fillStyle = '#f59e0b'; g.fill();
+    g.lineWidth = 5; g.strokeStyle = '#0b0e12'; g.stroke();
+  }
+  return new THREE.CanvasTexture(cv);
+}
+let camFlashSprites = [], camFlashTimer = null, camFlashOn = true;
+function cameraSprite(text, worldSize) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({
-    map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+    map: camTexture(text, null, false), depthTest: false, transparent: true }));
   sp.scale.set(worldSize, worldSize, 1);
   sp.renderOrder = 4;
   return sp;
+}
+// (Re)build a marker's texture pair from what we currently know about its
+// camera: live-capable -> flashing red dot; recent clip -> steady amber dot.
+function decorateCamSprite(sp, cam, idx) {
+  const isLive = !!(camLive(cam) && liveAvailable(cam));
+  const hasEvent = !!sp.userData.hasEvent;
+  const label = String(idx + 1);
+  if (sp.material.map) sp.material.map.dispose();
+  if (sp.userData.texOff) sp.userData.texOff.dispose();
+  if (isLive) {
+    sp.userData.texOn  = camTexture(label, 'on',  hasEvent);
+    sp.userData.texOff = camTexture(label, 'off', hasEvent);
+    sp.material.map = camFlashOn ? sp.userData.texOn : sp.userData.texOff;
+    if (camFlashSprites.indexOf(sp) < 0) camFlashSprites.push(sp);
+    if (!camFlashTimer) {
+      camFlashTimer = setInterval(function () {
+        camFlashOn = !camFlashOn;
+        camFlashSprites.forEach(function (x) {
+          if (x.userData.texOn) x.material.map = camFlashOn ? x.userData.texOn : x.userData.texOff;
+        });
+      }, 600);
+    }
+  } else {
+    sp.material.map = camTexture(label, null, hasEvent);
+  }
+  sp.material.needsUpdate = true;
 }
 function coverageWedge(cam, gz, lift) {
   const h = Number(cam.heading);
@@ -1703,6 +1761,8 @@ function coverageWedge(cam, gz, lift) {
 function camerasShown() { return !!camLayer; }
 function clearCameras3D() {
   hideCameraPopup();
+  if (camFlashTimer) { clearInterval(camFlashTimer); camFlashTimer = null; }
+  camFlashSprites = [];
   unregisterLayerTargets(camLayer);
   disposeLayer(camLayer);
   camLayer = null;
@@ -1735,6 +1795,7 @@ window.toggleCameras3D = function () {
       sp.name = camName(cam, i);
       sp.userData.camera = cam;
       sp.userData.groundZ = zs[i];
+      decorateCamSprite(sp, cam, i);
       registerLabelTarget(sp);
       camLayer.add(sp);
     });
@@ -2011,6 +2072,77 @@ window.toggleLive = function () {
   if (camPopupIdx >= 0) startLive(camPopupIdx);
 };
 
+// ── Clips cache + per-pin events ──────────────────────────────────────
+// One fetch feeds three surfaces: the Live Feed rail, the amber event dots on
+// pins, and the Watch-event row in a camera card. Cached 50 minutes - the
+// S3 links inside expire at 60.
+let gwClipsCache = null, gwClipsAt = 0;
+async function ensureClips(force) {
+  if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
+    return gwClipsCache;
+  }
+  const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
+  gwClipsCache = j.events || [];
+  gwClipsAt = Date.now();
+  updateEventIndicators();
+  return gwClipsCache;
+}
+// Clips carry the camera NAME; pins carry the camera MAC. The roster from
+// /live is the bridge between the two.
+function eventsForDevice(mac) {
+  if (!gwClipsCache || !gwLiveMap || !mac) return [];
+  const cam = gwLiveMap[String(mac).toUpperCase()];
+  if (!cam || !cam.name) return [];
+  return gwClipsCache.filter(function (e) { return e.device_name === cam.name; });
+}
+// Repaint every camera marker's event dot from the current clips cache.
+function updateEventIndicators() {
+  if (!camLayer) return;
+  camLayer.traverse(function (o) {
+    if (!o.isSprite || !o.userData || !o.userData.camera) return;
+    const cam = o.userData.camera;
+    const l = camLive(cam);
+    const has = !!(l && eventsForDevice(l.device).length);
+    if (has !== !!o.userData.hasEvent) {
+      o.userData.hasEvent = has;
+      decorateCamSprite(o, cam, camList.indexOf(cam));
+    }
+  });
+}
+// The Watch-event row on the open card: newest clip for THIS pin's camera.
+let camPopupEvent = null;
+async function fillPinEvent(idx) {
+  const cam = camList[idx], l = camLive(cam);
+  const row = document.getElementById('cam-pop-event');
+  if (!row) return;
+  camPopupEvent = null;
+  row.style.display = 'none';
+  if (!l || GW_OFF || !propertyId) return;
+  try {
+    await gwEnsureLive();
+    await ensureClips(false);
+  } catch (e) { return; }
+  if (camPopupIdx !== idx) return;   // user moved on while we fetched
+  const evs = eventsForDevice(l.device);
+  if (!evs.length) return;
+  camPopupEvent = evs[0];
+  document.getElementById('cam-pop-event-time').textContent = wxTime(camPopupEvent.event_time);
+  row.style.display = 'flex';
+}
+// Plays over the card; the live stream keeps running and the card returns
+// when the recording is closed.
+window.watchPinEvent = function () {
+  const e = camPopupEvent;
+  if (!e || !e.mp4) return;
+  lbStandaloneLive = false;
+  lbShowVideo(e.mp4);
+  document.getElementById('cam-lb-title').textContent =
+    (e.device_name || 'Camera') + ' — recorded event';
+  document.getElementById('cam-lb-meta').textContent = wxTime(e.event_time);
+  document.getElementById('cam-lightbox').classList.add('open');
+  dbg('Pin event playback: ' + (e.device_name || ''), 'info');
+};
+
 // ── Lightbox helpers: photo <-> video <-> standalone live ─────────────
 function lbShowImage() {
   const v = document.getElementById('cam-lb-video');
@@ -2054,8 +2186,7 @@ window.loadGwSections = async function () {
     dbg('Gateway live roster failed: ' + e.message, 'warn');
   }
   try {
-    const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
-    gwClipList = j.events || [];
+    gwClipList = await ensureClips(true);
     clipDiv.innerHTML = '<div class="pin-group-label">Recent clips (7 days)</div>' +
       (gwClipList.length ? gwClipList.map(function (e, i) {
         return '<div class="gw-row">' +
@@ -2231,8 +2362,7 @@ async function renderLmClips() {
   const div = document.getElementById('lm-clips');
   div.innerHTML = '<div class="rd-note">loading clips&hellip;</div>';
   try {
-    const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
-    lmClipList = j.events || [];
+    lmClipList = await ensureClips(true);
     // Inline players, not buttons: every clip sits in the rail ready to play,
     // poster = the event thumbnail, with whatever metadata the gateway sent
     // underneath. preload="metadata" keeps N clips from downloading N mp4s
@@ -2293,7 +2423,15 @@ window.showCameraPopup = function (idx) {
     bits.push(Number(cam.fov).toFixed(0) + '° FOV');
   }
   document.getElementById('cam-pop-meta').textContent = bits.join('  ·  ');
-  document.getElementById('cam-popup').style.display = 'block';
+  const popEl = document.getElementById('cam-popup');
+  popEl.style.display = 'block';
+  // A card that is about to show video doubles in size - it is working space
+  // now, not a label.
+  popEl.classList.toggle('big', liveAvailable(cam));
+  const evRow = document.getElementById('cam-pop-event');
+  if (evRow) evRow.style.display = 'none';
+  camPopupEvent = null;
+  fillPinEvent(idx);
   // The control only appears for a camera that has a feed AND on a link that
   // carries a token, so a plainly-shared viewer URL shows the photo and
   // nothing else.
