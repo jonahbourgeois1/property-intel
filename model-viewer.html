@@ -348,12 +348,12 @@
   /* A card with video is working space, not a label - double it. */
   #cam-popup.big { width: 420px; }
   #cam-popup.big #cam-pop-img { height: 300px; }
-  #cam-pop-event {
-    display: none; align-items: center; gap: 8px; margin-top: 7px;
-  }
-  #cam-pop-event .gw-watch { margin-left: 0; }
+  #cam-pop-event { display: none; margin-top: 8px; }
+  #cam-pop-event-hd { margin: 0 0 5px; }
+  #cam-pop-event-row { display: flex; align-items: center; gap: 8px; }
+  #cam-pop-event-row .rd-btn { margin-top: 0; flex: 1; }
   #cam-pop-event-time {
-    font-family: monospace; font-size: 10px; color: #8a93a2;
+    font-family: monospace; font-size: 10px; color: #8a93a2; flex-shrink: 0;
   }
   #cam-pop-close {
     position: absolute; right: 4px; top: 4px; width: 18px; height: 18px;
@@ -576,8 +576,11 @@
     <span id="cam-pop-live" class="cam-live-tag"></span>
     <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
     <div id="cam-pop-event">
-      <button class="gw-watch" onclick="watchPinEvent()">Watch event</button>
-      <span id="cam-pop-event-time"></span>
+      <div class="pin-group-label" id="cam-pop-event-hd">Recent events</div>
+      <div id="cam-pop-event-row">
+        <button class="rd-btn" id="cam-pop-event-btn" onclick="watchPinEvent()">Watch event</button>
+        <span id="cam-pop-event-time"></span>
+      </div>
     </div>
   </div>
 </div>
@@ -1926,6 +1929,10 @@ function liveImgEl() {
   return document.getElementById(
     lb && lb.classList.contains('open') ? 'cam-lb-img' : 'cam-pop-img');
 }
+function setCardBig(on) {
+  const el = document.getElementById('cam-popup');
+  if (el) el.classList.toggle('big', !!on);
+}
 function setLiveStatus(text, cls) {
   ['cam-pop-live', 'cam-lb-live'].forEach(function (id) {
     const el = document.getElementById(id);
@@ -1947,6 +1954,7 @@ function stopLive() {
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
   clearImgHooks();
   liveIdx = -1; liveBusy = false; liveFrames = 0; liveMode = '';
+  setCardBig(false);
   const b = document.getElementById('cam-pop-live-btn');
   if (b) { b.classList.remove('on'); b.textContent = 'Go live'; }
   setLiveStatus('', '');
@@ -1993,6 +2001,7 @@ async function liveTick() {
     }
     liveFrames++;
     setLiveStatus('LIVE', 'on');
+    setCardBig(true);
     if (liveFrames === 1) {
       dbg('Live view (snapshot polling): ' + camName(cam, liveIdx) + ' at ' +
           Math.round(1000 / LIVE_MS) + ' fps', 'ok');
@@ -2017,6 +2026,7 @@ function startMjpeg(idx, url) {
     if (liveIdx === idx && liveMode === 'mjpeg') {
       liveFrames++;
       setLiveStatus('LIVE', 'on');
+      setCardBig(true);
       if (liveFrames === 1) dbg('Live (MJPEG stream): ' + camName(camList[idx], idx), 'ok');
     }
   };
@@ -2127,7 +2137,7 @@ async function fillPinEvent(idx) {
   if (!evs.length) return;
   camPopupEvent = evs[0];
   document.getElementById('cam-pop-event-time').textContent = wxTime(camPopupEvent.event_time);
-  row.style.display = 'flex';
+  row.style.display = 'block';
 }
 // Plays over the card; the live stream keeps running and the card returns
 // when the recording is closed.
@@ -2425,9 +2435,9 @@ window.showCameraPopup = function (idx) {
   document.getElementById('cam-pop-meta').textContent = bits.join('  ·  ');
   const popEl = document.getElementById('cam-popup');
   popEl.style.display = 'block';
-  // A card that is about to show video doubles in size - it is working space
-  // now, not a label.
-  popEl.classList.toggle('big', liveAvailable(cam));
+  // The card opens at standard size and only doubles when the first live
+  // frame actually lands - a stream that never connects stays a normal card.
+  popEl.classList.remove('big');
   const evRow = document.getElementById('cam-pop-event');
   if (evRow) evRow.style.display = 'none';
   camPopupEvent = null;
