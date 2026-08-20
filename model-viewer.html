@@ -187,6 +187,26 @@
     max-width: min(92vw, 900px); max-height: 74vh; border-radius: 10px;
     border: 1px solid rgba(255,255,255,0.14); display: block;
   }
+  #cam-lb-video {
+    max-width: min(92vw, 900px); max-height: 74vh; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14); display: none; background: #000;
+  }
+  .gw-row {
+    display: flex; align-items: center; gap: 9px; padding: 5px 0;
+  }
+  .gw-row img {
+    width: 64px; height: 36px; object-fit: cover; border-radius: 5px;
+    border: 1px solid rgba(255,255,255,0.10); flex-shrink: 0;
+  }
+  .gw-name { font-size: 11.5px; color: #8a93a2; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
+  .gw-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; flex-shrink: 0; }
+  .gw-dot.off { background: #ef4444; }
+  .gw-watch {
+    margin-left: auto; flex-shrink: 0; background: #12161b; color: #f0f2f5;
+    border: 1px solid rgba(255,255,255,0.16); font-family: monospace;
+    font-size: 10px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+  }
+  .gw-watch:hover { border-color: #38bdf8; color: #38bdf8; }
   #cam-lb-title {
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-size: 14px; font-weight: 600; color: #f0f2f5; text-align: center;
@@ -471,6 +491,7 @@
 </div>
 <div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
   <img id="cam-lb-img" alt="Camera view">
+  <video id="cam-lb-video" controls playsinline preload="metadata"></video>
   <div id="cam-lb-title"></div>
   <div id="cam-lb-meta"></div>
   <span id="cam-lb-live" class="cam-live-tag"></span>
@@ -577,6 +598,13 @@ function jwtClaims(t) {
   } catch (e) { return null; }
 }
 const chektClaims = chektToken ? jwtClaims(chektToken) : null;
+// ── Live gateway (chekt-viewer-gateway Lambda) ────────────────────────
+// The viewer never holds a CHEKT credential. It asks OUR gateway - passcode
+// in a header, never in the URL - and receives only disposable, scoped URLs:
+// per-camera MJPEG links whose tokens die in 60 minutes, and 1-hour S3 clip
+// links. &gw= overrides the endpoint; &gw=0 disables the gateway entirely.
+const GW_URL = (params.get('gw') || 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws').replace(/\/+$/, '');
+const GW_OFF = params.get('gw') === '0';
 const DATA_ROOT  = (function () {
   const explicit = params.get('dataRoot');
   if (explicit) return explicit.replace(/\/*$/, '/');
@@ -1139,7 +1167,11 @@ function buildCameraCardHtml() {
                '" loading="lazy" onerror="this.style.display=\'none\'">' +
                '<span class="cam-thumb-n">' + (i + 1) + '</span></div>';
       }).join('') + '</div>';
-  html += '<button class="rd-btn" id="cam-btn" onclick="toggleCameras3D()">' +
+  html += '<button class="rd-btn" id="gw-btn" onclick="loadGwSections()">' +
+            'Live cameras &amp; recent clips&hellip;</button>' +
+          '<div id="gw-live-rows"></div>' +
+          '<div id="gw-clip-rows"></div>' +
+          '<button class="rd-btn" id="cam-btn" onclick="toggleCameras3D()">' +
             'Show cameras in 3D</button>' +
           '<div class="rd-progress" id="cam-prog"></div>' +
           '</div></div>';
@@ -1652,45 +1684,87 @@ function camSpriteFor(cam) {
   }
   return found;
 }
-// ── Live camera view (CHEKT snapshot polling) ─────────────────────────
-// CHEKT's monitoring portal serves no video stream. Its "live view" is a fast
-// sequence of single JPEG stills, one request each, from
-//   GET api.chekt.com/api/v1/snapshots/{bridgeMac}/{channel}?access_token=<JWT>
-// answering {snapshotTimestamp, data:"<base64 jpeg>", base64Encoded:true}.
-// So live here is an <img> on a timer, not a <video>: no player library, no
-// hls.js, no WebRTC. It is also why the frame cannot be handed straight to an
-// <img src> - the body is JSON with the image inside it, so it has to be
-// fetched and unwrapped into a data: URL.
+// ── Live camera layer ─────────────────────────────────────────────────
+// Two live sources, tried in this order:
+//   1. GATEWAY (preferred) - our chekt-viewer-gateway Lambda returns per-camera
+//      MJPEG URLs. MJPEG is multipart JPEG that a browser <img> renders
+//      natively: set src once and frames flow. No timer, no polling, no JSON.
+//   2. TOKEN fallback (&chekt=) - the original snapshot poller, kept for
+//      testing without the gateway. One JPEG per request, unwrapped from a
+//      JSON envelope into a data: URL.
+// Either way the viewer never holds the dealer key; the worst a leaked page
+// URL exposes is nothing, and a leaked stream URL dies inside the hour.
 
-let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false, liveFrames = 0;
+function gwPasscode(force) {
+  let k = null;
+  try { k = sessionStorage.getItem('vyViewerKey'); } catch (e) {}
+  if (!k || force) {
+    k = window.prompt('Viewer passcode');
+    if (k) { k = k.trim(); try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {} }
+  }
+  return (k || '').trim();
+}
+// One retry on 401: a mistyped passcode re-prompts once instead of dying.
+async function gwGet(path) {
+  if (GW_OFF) throw new Error('gateway disabled by &gw=0');
+  let k = gwPasscode(false);
+  if (!k) throw new Error('no passcode entered');
+  let r = await fetch(GW_URL + path, { headers: { 'x-viewer-key': k } });
+  if (r.status === 401) {
+    try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+    k = gwPasscode(true);
+    if (!k) throw new Error('no passcode entered');
+    r = await fetch(GW_URL + path, { headers: { 'x-viewer-key': k } });
+  }
+  if (!r.ok) throw new Error('gateway HTTP ' + r.status);
+  return await r.json();
+}
+// The camera list is cached for 50 minutes - the embedded stream tokens live
+// for 60, so a refetch always lands before the URLs in hand go stale.
+let gwLiveMap = null, gwLiveAt = 0;
+async function gwEnsureLive() {
+  if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
+  const j = await gwGet('/live?property=' + encodeURIComponent(propertyId));
+  const m = {};
+  (j.cameras || []).forEach(function (c) {
+    if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
+  });
+  gwLiveMap = m; gwLiveAt = Date.now();
+  dbg('Gateway: ' + Object.keys(m).length + ' live camera(s) for this property', 'ok');
+  return m;
+}
 
-// A camera is live-capable only when the record names its bridge AND the link
-// carries a token. Both halves are required, so a viewer URL shared without
-// the token degrades to the still photo instead of erroring.
+let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false,
+    liveFrames = 0, liveMode = '', lbStandaloneLive = false;
+
+// Which CHEKT camera does this record entry point at? URL override first,
+// then the token's own sub claim, then the record. A token is OPTIONAL now -
+// with the gateway on, the record's device MAC is enough.
 function camLive(cam) {
-  if (!chektToken) return null;
   const l = cam && cam.live;
-  // Explicit URL override wins; then the token's own claim, because the token
-  // is the thing that will actually be accepted; the record last, since its
-  // MAC is only as good as whoever typed it.
   const device = chektDevice || (chektClaims && chektClaims.sub) || (l && l.device);
   if (!device) return null;
   const ch = (chektChannel !== null && chektChannel !== '') ? Number(chektChannel)
            : (chektClaims && chektClaims.channel !== undefined) ? chektClaims.channel
            : (l && l.channel !== undefined && l.channel !== null) ? l.channel : 0;
-  return { device: String(device), channel: isFinite(ch) ? ch : 0 };
+  return { device: String(device).toUpperCase(), channel: isFinite(ch) ? ch : 0 };
 }
-function liveUrl(cam) {
+function tokenSnapshotUrl(cam) {
+  if (!chektToken) return '';
   const l = camLive(cam);
   if (!l) return '';
   const path = encodeURIComponent(l.device) + '/' + encodeURIComponent(l.channel);
   return (chektProxy ? chektProxy + '/' : CHEKT_API) +
          path + '?access_token=' + encodeURIComponent(chektToken);
 }
+function liveAvailable(cam) {
+  if (!camLive(cam)) return false;
+  return (!GW_OFF && !!propertyId) || !!chektToken;
+}
 
-// The live loop paints into whichever view is on screen: the full-size one if
-// it is open, otherwise the small card. Keeping this in one place is what lets
-// expand carry the feed across instead of dropping back to the still.
+// The live picture paints into whichever view is on screen: the full-size one
+// if it is open, otherwise the small card. This is what lets expand carry the
+// feed across instead of dropping back to the still.
 function liveImgEl() {
   const lb = document.getElementById('cam-lightbox');
   return document.getElementById(
@@ -1705,15 +1779,18 @@ function setLiveStatus(text, cls) {
     el.style.display = text ? 'inline-block' : 'none';
   });
 }
+function clearImgHooks() {
+  ['cam-pop-img', 'cam-lb-img'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) { el.onload = null; el.onerror = null; }
+  });
+}
 
-// Bumping liveSeq is what makes an in-flight response harmless: every fetch
-// captures the sequence it started under and discards itself if that number
-// moved while it was in the air. Without it, switching cameras mid-request
-// paints the old camera's frame into the new camera's card.
 function stopLive() {
   liveSeq++;
   if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
-  liveIdx = -1; liveBusy = false; liveFrames = 0;
+  clearImgHooks();
+  liveIdx = -1; liveBusy = false; liveFrames = 0; liveMode = '';
   const b = document.getElementById('cam-pop-live-btn');
   if (b) { b.classList.remove('on'); b.textContent = 'Go live'; }
   setLiveStatus('', '');
@@ -1728,11 +1805,12 @@ function liveFail(msg, why) {
   if (cam && img) img.src = cam.photo || '';   // fall back to the still
 }
 
+// ── Source 2: the snapshot poller (token mode only) ───────────────────
 async function liveTick() {
-  if (liveBusy || liveIdx < 0) return;
+  if (liveBusy || liveIdx < 0 || liveMode !== 'poll') return;
   if (document.hidden) return;      // never poll a tab nobody is looking at
   const mySeq = liveSeq, cam = camList[liveIdx];
-  const url = liveUrl(cam);
+  const url = tokenSnapshotUrl(cam);
   if (!url) { liveFail('no live endpoint for this camera'); return; }
   liveBusy = true;
   try {
@@ -1743,13 +1821,9 @@ async function liveTick() {
       return;
     }
     if (r.status === 403) {
-      // Authenticated, but not for THIS camera. Worth spelling out: the token
-      // carries the one device it is good for in its `sub` claim, and reading
-      // 403 as "expired" sends you hunting for a fresh token forever.
       const want = (camLive(cam) || {}).device;
       liveFail('that token is valid but belongs to a different camera - its ' +
-               'sub claim has to equal ' + want +
-               ' (decode the token to see which device it is for)', 'HTTP 403');
+               'sub claim has to equal ' + want, 'HTTP 403');
       return;
     }
     if (!r.ok) { liveFail('CHEKT returned an error', 'HTTP ' + r.status); return; }
@@ -1764,15 +1838,11 @@ async function liveTick() {
     liveFrames++;
     setLiveStatus('LIVE', 'on');
     if (liveFrames === 1) {
-      dbg('Live view running: ' + camName(cam, liveIdx) + ' at ' +
+      dbg('Live view (snapshot polling): ' + camName(cam, liveIdx) + ' at ' +
           Math.round(1000 / LIVE_MS) + ' fps', 'ok');
     }
   } catch (e) {
     if (mySeq !== liveSeq) return;
-    // A cross-origin refusal reaches the page as a bare TypeError with no
-    // status at all - which is exactly what a missing Access-Control-Allow-
-    // Origin looks like from in here. Name it rather than saying "failed",
-    // because the fix for that one case is a proxy and nothing else.
     liveFail(chektProxy
       ? 'could not reach the proxy'
       : 'the browser blocked the call to api.chekt.com - that is CORS, so ' +
@@ -1782,16 +1852,57 @@ async function liveTick() {
   }
 }
 
-function startLive(idx) {
+// ── Source 1: MJPEG via the gateway ───────────────────────────────────
+function startMjpeg(idx, url) {
+  liveMode = 'mjpeg';
+  const img = liveImgEl();
+  if (!img) return;
+  img.onload = function () {
+    if (liveIdx === idx && liveMode === 'mjpeg') {
+      liveFrames++;
+      setLiveStatus('LIVE', 'on');
+      if (liveFrames === 1) dbg('Live (MJPEG stream): ' + camName(camList[idx], idx), 'ok');
+    }
+  };
+  img.onerror = function () {
+    if (liveIdx !== idx) return;
+    dbg('MJPEG stream failed - trying snapshot fallback', 'warn');
+    clearImgHooks();
+    startPollerOrFail(idx);
+  };
+  img.src = url;
+}
+function startPollerOrFail(idx) {
+  if (tokenSnapshotUrl(camList[idx])) {
+    liveMode = 'poll';
+    liveTick();
+    liveTimer = setInterval(liveTick, LIVE_MS);
+  } else {
+    liveFail('no live source for this camera');
+  }
+}
+
+async function startLive(idx) {
   stopLive();
-  const cam = camList[idx];
-  if (!cam || !liveUrl(cam)) return;
+  const cam = camList[idx], l = camLive(cam);
+  if (!cam || !l) return;
   liveIdx = idx;
   const b = document.getElementById('cam-pop-live-btn');
   if (b) { b.classList.add('on'); b.textContent = 'Stop live'; }
   setLiveStatus('connecting…', '');
-  liveTick();
-  liveTimer = setInterval(liveTick, LIVE_MS);
+  if (!GW_OFF && propertyId) {
+    try {
+      const m = await gwEnsureLive();
+      if (liveIdx !== idx) return;
+      const g = m[l.device];
+      if (g && g.mjpeg_url) { startMjpeg(idx, g.mjpeg_url); return; }
+      dbg('Gateway has no camera ' + l.device + ' at this property - trying token fallback', 'warn');
+    } catch (e) {
+      if (liveIdx !== idx) return;
+      dbg('Gateway unavailable: ' + e.message, 'warn');
+    }
+  }
+  startPollerOrFail(idx);
 }
 
 window.toggleLive = function () {
@@ -1803,6 +1914,97 @@ window.toggleLive = function () {
     return;
   }
   if (camPopupIdx >= 0) startLive(camPopupIdx);
+};
+
+// ── Lightbox helpers: photo <-> video <-> standalone live ─────────────
+function lbShowImage() {
+  const v = document.getElementById('cam-lb-video');
+  if (v) { try { v.pause(); } catch (e) {} v.removeAttribute('src'); v.load(); v.style.display = 'none'; }
+  const im = document.getElementById('cam-lb-img');
+  if (im) im.style.display = 'block';
+}
+function lbShowVideo(src) {
+  const im = document.getElementById('cam-lb-img');
+  if (im) im.style.display = 'none';
+  const v = document.getElementById('cam-lb-video');
+  if (v) { v.style.display = 'block'; v.src = src; v.play().catch(function () {}); }
+}
+
+// ── Cameras panel: live roster + recent clips via the gateway ─────────
+// Loaded on demand (a button), so opening the panel never prompts for the
+// passcode - only asking for live content does.
+let gwLiveList = [], gwClipList = [];
+window.loadGwSections = async function () {
+  const btn = document.getElementById('gw-btn');
+  const liveDiv = document.getElementById('gw-live-rows');
+  const clipDiv = document.getElementById('gw-clip-rows');
+  if (!liveDiv || !clipDiv) return;
+  if (btn) btn.textContent = 'Loading…';
+  try {
+    const m = await gwEnsureLive();
+    gwLiveList = Object.keys(m).map(function (k) { return m[k]; });
+    liveDiv.innerHTML = '<div class="pin-group-label">Live cameras</div>' +
+      (gwLiveList.length ? gwLiveList.map(function (c, i) {
+        return '<div class="gw-row">' +
+          '<span class="gw-dot' + (c.status === 'online' ? '' : ' off') + '"></span>' +
+          '<span class="gw-name">' + escHtml(c.name || c.mac) + '</span>' +
+          '<button class="gw-watch" onclick="watchGwLive(' + i + ')">Watch live</button></div>';
+      }).join('') : '<div class="rd-note">none online</div>');
+  } catch (e) {
+    liveDiv.innerHTML = '<div class="rd-note">Live cameras unavailable - ' + escHtml(e.message) + '</div>';
+    dbg('Gateway live roster failed: ' + e.message, 'warn');
+  }
+  try {
+    const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
+    gwClipList = j.events || [];
+    clipDiv.innerHTML = '<div class="pin-group-label">Recent clips (7 days)</div>' +
+      (gwClipList.length ? gwClipList.map(function (e, i) {
+        return '<div class="gw-row">' +
+          (e.thumbnail ? '<img src="' + escHtml(e.thumbnail) + '" alt="" loading="lazy" ' +
+            'onerror="this.style.display=\'none\'">' : '') +
+          '<span class="gw-name">' + escHtml(e.device_name || 'Camera') +
+            '<br><span style="font-family:monospace;font-size:9.5px;color:#555f6e">' +
+            escHtml(wxTime(e.event_time)) + '</span></span>' +
+          (e.mp4 ? '<button class="gw-watch" onclick="playGwClip(' + i + ')">Play</button>' : '') +
+          '</div>';
+      }).join('') : '<div class="rd-note">no video events in the last 7 days</div>');
+    // The mp4/thumbnail links are S3 presigned URLs that expire in an hour;
+    // pressing the button again refetches everything fresh.
+    if (btn) btn.textContent = 'Refresh live & clips';
+  } catch (e) {
+    clipDiv.innerHTML = '<div class="rd-note">Clips unavailable - ' + escHtml(e.message) + '</div>';
+    if (btn) btn.textContent = 'Live cameras & recent clips…';
+    dbg('Gateway clips failed: ' + e.message, 'warn');
+  }
+};
+window.watchGwLive = function (i) {
+  const c = gwLiveList[i];
+  if (!c || !c.mjpeg_url) return;
+  stopLive();
+  lbStandaloneLive = true;
+  lbShowImage();
+  const im = document.getElementById('cam-lb-img');
+  if (im) {
+    im.onload = function () { setLiveStatus('LIVE', 'on'); };
+    im.onerror = function () { setLiveStatus('live unavailable', 'bad'); };
+    im.src = c.mjpeg_url;
+  }
+  document.getElementById('cam-lb-title').textContent = c.name || c.mac;
+  document.getElementById('cam-lb-meta').textContent = 'live stream · CHEKT camera';
+  document.getElementById('cam-lightbox').classList.add('open');
+  dbg('Standalone live view: ' + (c.name || c.mac), 'info');
+};
+window.playGwClip = function (i) {
+  const e = gwClipList[i];
+  if (!e || !e.mp4) return;
+  stopLive();
+  lbStandaloneLive = false;
+  lbShowVideo(e.mp4);
+  document.getElementById('cam-lb-title').textContent =
+    (e.device_name || 'Camera') + ' — recorded clip';
+  document.getElementById('cam-lb-meta').textContent = wxTime(e.event_time);
+  document.getElementById('cam-lightbox').classList.add('open');
+  dbg('Clip playback: ' + (e.device_name || '') + ' ' + (e.event_time || ''), 'info');
 };
 
 window.showCameraPopup = function (idx) {
@@ -1828,12 +2030,12 @@ window.showCameraPopup = function (idx) {
   // carries a token, so a plainly-shared viewer URL shows the photo and
   // nothing else.
   const lb = document.getElementById('cam-pop-live-btn');
-  if (lb) lb.style.display = liveUrl(cam) ? 'block' : 'none';
+  if (lb) lb.style.display = liveAvailable(cam) ? 'block' : 'none';
   updateCameraPopup();
   const lv = camLive(cam);
   dbg('Camera popup: ' + camName(cam, idx) +
-      (lv ? ' - live available (' + lv.device + ' ch' + lv.channel + ')' : ''), 'info');
-  if (liveUrl(cam)) startLive(idx);
+      (lv && liveAvailable(cam) ? ' - live available (' + lv.device + ' ch' + lv.channel + ')' : ''), 'info');
+  if (liveAvailable(cam)) startLive(idx);
 };
 window.hideCameraPopup = function () {
   stopLive();
@@ -1889,8 +2091,17 @@ window.openCameraPhoto = function (idx) {
 };
 window.closeCameraPhoto = function () {
   document.getElementById('cam-lightbox').classList.remove('open');
-  // Closing a SIZE is not closing the camera: if a feed was running, drop back
-  // to the small card with it still going rather than out to the bare model.
+  // A hidden <video> keeps playing and a hidden MJPEG <img> keeps streaming,
+  // so both are actively shut off, not just hidden.
+  lbShowImage();
+  const im = document.getElementById('cam-lb-img');
+  if (lbStandaloneLive) {
+    if (im) { im.onload = null; im.onerror = null; im.src = ''; }
+    lbStandaloneLive = false;
+    setLiveStatus('', '');
+  }
+  // Closing a SIZE is not closing the camera: if a pin feed was running, drop
+  // back to the small card with it still going rather than out to the model.
   const i = liveIdx;
   if (i >= 0) showCameraPopup(i);
 };
