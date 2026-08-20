@@ -267,7 +267,19 @@
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
   #lm-clips { overflow-y: auto; flex: 1; padding: 0 14px 14px; scrollbar-width: thin; }
-  #lm-clips .gw-row { cursor: default; }
+  .lm-clip {
+    margin: 12px 0; border: 1px solid rgba(255,255,255,0.12); border-radius: 9px;
+    overflow: hidden; background: #0b0e12;
+  }
+  .lm-clip video {
+    width: 100%; display: block; aspect-ratio: 16 / 9; background: #000;
+  }
+  .lm-clip-meta { padding: 8px 10px 9px; }
+  .lm-clip-name { font-size: 12px; font-weight: 600; color: #f0f2f5; line-height: 1.35; }
+  .lm-clip-line {
+    font-family: monospace; font-size: 10px; color: #8a93a2; margin-top: 3px;
+    line-height: 1.5; overflow-wrap: anywhere;
+  }
   @media (max-width: 800px) {
     #live-mode.open { flex-direction: column; }
     #lm-side { width: 100%; height: 40%; border-left: none;
@@ -2151,6 +2163,9 @@ function lmCloseStreams() {
     img.onload = null; img.onerror = null; img.src = '';
   });
   document.getElementById('lm-main').innerHTML = '';
+  document.querySelectorAll('#lm-clips video').forEach(function (v) {
+    try { v.pause(); } catch (e) {}
+  });
 }
 window.toggleLiveMode = function () {
   const lm = document.getElementById('live-mode');
@@ -2218,16 +2233,34 @@ async function renderLmClips() {
   try {
     const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
     lmClipList = j.events || [];
+    // Inline players, not buttons: every clip sits in the rail ready to play,
+    // poster = the event thumbnail, with whatever metadata the gateway sent
+    // underneath. preload="metadata" keeps N clips from downloading N mp4s
+    // up front while the live streams are running.
     div.innerHTML = lmClipList.length ? lmClipList.map(function (e, i) {
-      return '<div class="gw-row">' +
-        (e.thumbnail ? '<img src="' + escHtml(e.thumbnail) + '" alt="" loading="lazy" ' +
-          'onerror="this.style.display=\'none\'">' : '') +
-        '<span class="gw-name">' + escHtml(e.device_name || 'Camera') +
-          '<br><span style="font-family:monospace;font-size:9.5px;color:#555f6e">' +
-          escHtml(wxTime(e.event_time)) + '</span></span>' +
-        (e.mp4 ? '<button class="gw-watch" onclick="playLmClip(' + i + ')">Play</button>' : '') +
-        '</div>';
+      const meta = [];
+      if (e.trigger) meta.push(escHtml(String(e.trigger)));
+      if (e.status) meta.push(escHtml(String(e.status)));
+      if (e.zone) meta.push('zone ' + escHtml(String(e.zone)));
+      return '<div class="lm-clip">' +
+        (e.mp4 ? '<video controls playsinline preload="metadata"' +
+          (e.thumbnail ? ' poster="' + escHtml(e.thumbnail) + '"' : '') +
+          ' src="' + escHtml(e.mp4) + '"></video>' : '') +
+        '<div class="lm-clip-meta">' +
+          '<div class="lm-clip-name">' + escHtml(e.device_name || 'Camera') + '</div>' +
+          '<div class="lm-clip-line">' + escHtml(wxTime(e.event_time)) + '</div>' +
+          (meta.length ? '<div class="lm-clip-line">' + meta.join(' &middot; ') + '</div>' : '') +
+        '</div></div>';
     }).join('') : '<div class="rd-note">no video events in the last 7 days</div>';
+    // One recording at a time: starting a clip pauses any other that is playing.
+    if (!div.dataset.playHook) {
+      div.dataset.playHook = '1';
+      div.addEventListener('play', function (ev) {
+        div.querySelectorAll('video').forEach(function (v) {
+          if (v !== ev.target) v.pause();
+        });
+      }, true);
+    }
   } catch (e) {
     div.innerHTML = '<div class="rd-note">Clips unavailable - ' + escHtml(e.message) + '</div>';
     dbg('Live mode clips failed: ' + e.message, 'warn');
