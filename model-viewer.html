@@ -280,6 +280,26 @@
     font-family: monospace; font-size: 10px; color: #8a93a2; margin-top: 3px;
     line-height: 1.5; overflow-wrap: anywhere;
   }
+  /* Everything past the first N preloaded players lists as a light row that
+     turns into a player when tapped - so a long week never loads 60 videos. */
+  .lm-older {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #8a93a2; margin: 16px 2px 6px;
+  }
+  .lm-clip.lm-lite {
+    display: flex; align-items: center; gap: 9px; padding: 8px 11px;
+    margin: 6px 0; cursor: pointer;
+  }
+  .lm-clip.lm-lite:hover { background: #171c23; border-color: rgba(255,255,255,0.22); }
+  .lm-lite-play { color: #ff5252; font-size: 9px; flex-shrink: 0; }
+  .lm-lite-name {
+    font-size: 11.5px; font-weight: 600; color: #f0f2f5; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lm-lite-time {
+    font-family: monospace; font-size: 10px; color: #8a93a2;
+    flex-shrink: 0; white-space: nowrap;
+  }
   @media (max-width: 800px) {
     #live-mode.open { flex-direction: column; }
     #lm-side { width: 100%; height: 40%; border-left: none;
@@ -2099,7 +2119,8 @@ async function ensureClips(force) {
   // than the list means the rail is NOT the whole story.
   if (j.clips_mode) {
     dbg('Clips: ' + gwClipsCache.length + ' shown of ' + (j.total_found || gwClipsCache.length) +
-        ' found, mode ' + j.clips_mode, j.clips_mode === 'filtered' ? 'ok' : 'warn');
+        ' found, mode ' + j.clips_mode + (j.truncated ? ' (truncated)' : ''),
+        j.clips_mode === 'filtered' && !j.truncated ? 'ok' : 'warn');
   }
   updateEventIndicators();
   return gwClipsCache;
@@ -2204,8 +2225,9 @@ window.loadGwSections = async function () {
   }
   try {
     gwClipList = await ensureClips(true);
+    // The panel shows the newest dozen; the Live Feed tab carries the full week.
     clipDiv.innerHTML = '<div class="pin-group-label">Recent clips (7 days)</div>' +
-      (gwClipList.length ? gwClipList.map(function (e, i) {
+      (gwClipList.length ? gwClipList.slice(0, 12).map(function (e, i) {
         return '<div class="gw-row">' +
           (e.thumbnail ? '<img src="' + escHtml(e.thumbnail) + '" alt="" loading="lazy" ' +
             'onerror="this.style.display=\'none\'">' : '') +
@@ -2214,7 +2236,11 @@ window.loadGwSections = async function () {
             escHtml(wxTime(e.event_time)) + '</span></span>' +
           (e.mp4 ? '<button class="gw-watch" onclick="playGwClip(' + i + ')">Play</button>' : '') +
           '</div>';
-      }).join('') : '<div class="rd-note">no video events in the last 7 days</div>');
+      }).join('') +
+      (gwClipList.length > 12
+        ? '<div class="rd-note">+' + (gwClipList.length - 12) +
+          ' more in the Live Feed tab</div>' : '')
+      : '<div class="rd-note">no video events in the last 7 days</div>');
     // The mp4/thumbnail links are S3 presigned URLs that expire in an hour;
     // pressing the button again refetches everything fresh.
     if (btn) btn.textContent = 'Refresh live & clips';
@@ -2375,25 +2401,56 @@ async function openLiveMode() {
   dbg('Live mode: ' + list.length + ' streams', 'info');
   renderLmClips();
 }
+// A full clip card: inline player, poster = event thumbnail, metadata under.
+// preload="metadata" keeps a card from downloading its whole mp4 up front.
+function lmClipCard(e, i) {
+  return '<div class="lm-clip" id="lm-clip-' + i + '">' +
+    (e.mp4 ? '<video controls playsinline preload="metadata"' +
+      (e.thumbnail ? ' poster="' + escHtml(e.thumbnail) + '"' : '') +
+      ' src="' + escHtml(e.mp4) + '"></video>' : '') +
+    '<div class="lm-clip-meta">' +
+      '<div class="lm-clip-name">' + escHtml(e.device_name || 'Camera') + '</div>' +
+      '<div class="lm-clip-line">' + escHtml(wxTime(e.event_time)) + '</div>' +
+    '</div></div>';
+}
+// A tap on an older row swaps it in place for a real card and starts it.
+window.expandLmClip = function (i) {
+  const e = lmClipList[i];
+  const row = document.getElementById('lm-clip-' + i);
+  if (!e || !e.mp4 || !row) return;
+  row.outerHTML = lmClipCard(e, i);
+  const card = document.getElementById('lm-clip-' + i);
+  const v = card ? card.querySelector('video') : null;
+  if (v) v.play().catch(function () {});
+  dbg('Clip expanded: ' + (e.device_name || '') + ' ' + wxTime(e.event_time), 'info');
+};
+const LM_PRELOAD = 10;   // newest N open as players; the rest expand on tap
 async function renderLmClips() {
   const div = document.getElementById('lm-clips');
   div.innerHTML = '<div class="rd-note">loading clips&hellip;</div>';
   try {
     lmClipList = await ensureClips(true);
-    // Inline players, not buttons: every clip sits in the rail ready to play,
-    // poster = the event thumbnail, with whatever metadata the gateway sent
-    // underneath. preload="metadata" keeps N clips from downloading N mp4s
-    // up front while the live streams are running.
-    div.innerHTML = lmClipList.length ? lmClipList.map(function (e, i) {
-      return '<div class="lm-clip">' +
-        (e.mp4 ? '<video controls playsinline preload="metadata"' +
-          (e.thumbnail ? ' poster="' + escHtml(e.thumbnail) + '"' : '') +
-          ' src="' + escHtml(e.mp4) + '"></video>' : '') +
-        '<div class="lm-clip-meta">' +
-          '<div class="lm-clip-name">' + escHtml(e.device_name || 'Camera') + '</div>' +
-          '<div class="lm-clip-line">' + escHtml(wxTime(e.event_time)) + '</div>' +
-        '</div></div>';
-    }).join('') : '<div class="rd-note">no video events in the last 7 days</div>';
+    // The whole week is in the rail, but only the newest LM_PRELOAD clips are
+    // real <video> elements (posters + metadata load per card). Everything
+    // older is a one-line row under an "Older clips" divider that becomes a
+    // player the moment it is tapped - so 60 clips cost 10 clips' bandwidth.
+    const head = lmClipList.slice(0, LM_PRELOAD);
+    const tail = lmClipList.slice(LM_PRELOAD);
+    div.innerHTML = lmClipList.length
+      ? head.map(function (e, i) { return lmClipCard(e, i); }).join('') +
+        (tail.length
+          ? '<div class="lm-older">Older clips (' + tail.length + ')</div>' +
+            tail.map(function (e, j) {
+              const i = j + LM_PRELOAD;
+              return '<div class="lm-clip lm-lite" id="lm-clip-' + i + '"' +
+                ' onclick="expandLmClip(' + i + ')">' +
+                '<span class="lm-lite-play">&#9654;</span>' +
+                '<span class="lm-lite-name">' + escHtml(e.device_name || 'Camera') + '</span>' +
+                '<span class="lm-lite-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
+                '</div>';
+            }).join('')
+          : '')
+      : '<div class="rd-note">no video events in the last 7 days</div>';
     // One recording at a time: starting a clip pauses any other that is playing.
     if (!div.dataset.playHook) {
       div.dataset.playHook = '1';
