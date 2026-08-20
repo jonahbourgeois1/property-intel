@@ -370,11 +370,18 @@
   #cam-popup.big #cam-pop-img { height: 300px; }
   #cam-pop-event { display: none; margin-top: 8px; }
   #cam-pop-event-hd { margin: 0 0 5px; }
-  #cam-pop-event-row { display: flex; align-items: center; gap: 8px; }
-  #cam-pop-event-row .rd-btn { margin-top: 0; flex: 1; }
-  #cam-pop-event-time {
-    font-family: monospace; font-size: 10px; color: #8a93a2; flex-shrink: 0;
+  /* The pin's own event log: every clip from THIS camera in the last 72 h,
+     newest first, each row plays over the card. Scrolls past ~5 rows. */
+  #cam-pop-event-list { max-height: 122px; overflow-y: auto; scrollbar-width: thin; }
+  .pin-ev-row {
+    display: flex; align-items: center; gap: 8px; padding: 4px 7px;
+    border-radius: 6px; cursor: pointer;
+    font-family: monospace; font-size: 10.5px; color: #dfe3e9;
   }
+  .pin-ev-row:hover { background: rgba(255,255,255,0.08); }
+  .pin-ev-play { color: #ff5252; font-size: 8px; flex-shrink: 0; }
+  .pin-ev-time { flex: 1; }
+  .pin-ev-none { font-family: monospace; font-size: 10px; color: #8a93a2; padding: 2px 0; }
   #cam-pop-close {
     position: absolute; right: 4px; top: 4px; width: 18px; height: 18px;
     border: none; border-radius: 4px; background: rgba(10,12,15,0.75);
@@ -596,10 +603,8 @@
     <span id="cam-pop-live" class="cam-live-tag"></span>
     <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
     <div id="cam-pop-event">
-      <div class="pin-group-label" id="cam-pop-event-hd">Recent events</div>
-      <div id="cam-pop-event-row">
-        <button class="rd-btn" id="cam-pop-event-btn" onclick="watchPinEvent()">Watch event</button>
-        <span id="cam-pop-event-time"></span>
+      <div class="pin-group-label" id="cam-pop-event-hd">Recent events (72h)</div>
+      <div id="cam-pop-event-list">
       </div>
     </div>
   </div>
@@ -2134,43 +2139,64 @@ function eventsForDevice(mac) {
   return gwClipsCache.filter(function (e) { return e.device_name === cam.name; });
 }
 // Repaint every camera marker's event dot from the current clips cache.
+// Scoped to the same 72 h as the card list, so a dotted pin never opens to
+// an empty "Recent events" section.
 function updateEventIndicators() {
   if (!camLayer) return;
   camLayer.traverse(function (o) {
     if (!o.isSprite || !o.userData || !o.userData.camera) return;
     const cam = o.userData.camera;
     const l = camLive(cam);
-    const has = !!(l && eventsForDevice(l.device).length);
+    const has = !!(l && pinEventsFor(l.device).length);
     if (has !== !!o.userData.hasEvent) {
       o.userData.hasEvent = has;
       decorateCamSprite(o, cam, camList.indexOf(cam));
     }
   });
 }
-// The Watch-event row on the open card: newest clip for THIS pin's camera.
-let camPopupEvent = null;
+// The pin's event log: every clip from THIS camera in the last 72 hours,
+// newest first, one playable row per event. Same 7-day cache the rail uses -
+// the pin view just narrows it, so no extra gateway traffic.
+const PIN_EVENT_HOURS = 72;
+let camPopupEvents = [];
+function pinEventsFor(mac) {
+  const cutoff = Date.now() - PIN_EVENT_HOURS * 3600 * 1000;
+  return eventsForDevice(mac).filter(function (e) {
+    const t = Date.parse(e.event_time || '');
+    return isFinite(t) && t >= cutoff;
+  });
+}
 async function fillPinEvent(idx) {
   const cam = camList[idx], l = camLive(cam);
-  const row = document.getElementById('cam-pop-event');
-  if (!row) return;
-  camPopupEvent = null;
-  row.style.display = 'none';
+  const box = document.getElementById('cam-pop-event');
+  if (!box) return;
+  camPopupEvents = [];
+  box.style.display = 'none';
   if (!l || GW_OFF || !propertyId) return;
   try {
     await gwEnsureLive();
     await ensureClips(false);
   } catch (e) { return; }
   if (camPopupIdx !== idx) return;   // user moved on while we fetched
-  const evs = eventsForDevice(l.device);
-  if (!evs.length) return;
-  camPopupEvent = evs[0];
-  document.getElementById('cam-pop-event-time').textContent = wxTime(camPopupEvent.event_time);
-  row.style.display = 'block';
+  camPopupEvents = pinEventsFor(l.device);
+  const list = document.getElementById('cam-pop-event-list');
+  if (!list) return;
+  // A video pin always gets its section - an explicit "none" beats a section
+  // that silently vanishes when the camera has been quiet for three days.
+  list.innerHTML = camPopupEvents.length
+    ? camPopupEvents.map(function (e, i) {
+        return '<div class="pin-ev-row" onclick="watchPinEvent(' + i + ')">' +
+          '<span class="pin-ev-play">&#9654;</span>' +
+          '<span class="pin-ev-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
+          '</div>';
+      }).join('')
+    : '<div class="pin-ev-none">none in the last 72 hours</div>';
+  box.style.display = 'block';
 }
 // Plays over the card; the live stream keeps running and the card returns
 // when the recording is closed.
-window.watchPinEvent = function () {
-  const e = camPopupEvent;
+window.watchPinEvent = function (i) {
+  const e = camPopupEvents[i || 0];
   if (!e || !e.mp4) return;
   lbStandaloneLive = false;
   lbShowVideo(e.mp4);
@@ -2504,7 +2530,7 @@ window.showCameraPopup = function (idx) {
   popEl.classList.remove('big');
   const evRow = document.getElementById('cam-pop-event');
   if (evRow) evRow.style.display = 'none';
-  camPopupEvent = null;
+  camPopupEvents = [];
   fillPinEvent(idx);
   // The control only appears for a camera that has a feed AND on a link that
   // carries a token, so a plainly-shared viewer URL shows the photo and
