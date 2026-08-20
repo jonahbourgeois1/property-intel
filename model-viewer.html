@@ -207,6 +207,35 @@
     font-size: 10px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
   }
   .gw-watch:hover { border-color: #38bdf8; color: #38bdf8; }
+  #cam-quad {
+    display: none; position: fixed; inset: 0; z-index: 95;
+    background: rgba(6,8,11,0.95); padding: 46px 16px 16px; gap: 10px;
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr;
+  }
+  #cam-quad.open { display: grid; }
+  .quad-cell {
+    position: relative; background: #000; border-radius: 10px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.14); min-height: 0;
+  }
+  .quad-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .quad-name {
+    position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
+    background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  .quad-state {
+    position: absolute; right: 8px; top: 8px; padding: 2px 7px; border-radius: 4px;
+    font-family: monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
+    color: #ef4444; border: 1px solid #ef4444; background: rgba(239,68,68,0.12);
+  }
+  .quad-state.bad { color: #f59e0b; border-color: rgba(245,158,11,0.6); background: none; }
+  #cam-quad-close {
+    position: fixed; top: 10px; right: 14px; z-index: 96; width: 28px; height: 28px;
+    border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(10,12,15,0.85); color: #f0f2f5; font-size: 15px;
+    line-height: 1; cursor: pointer; display: none;
+  }
+  #cam-quad.open ~ #cam-quad-close, #cam-quad-close.open { display: block; }
   #cam-lb-title {
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-size: 14px; font-weight: 600; color: #f0f2f5; text-align: center;
@@ -489,6 +518,8 @@
     <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
   </div>
 </div>
+<div id="cam-quad"></div>
+<button id="cam-quad-close" onclick="closeGwQuad()">&#10005;</button>
 <div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
   <img id="cam-lb-img" alt="Camera view">
   <video id="cam-lb-video" controls playsinline preload="metadata"></video>
@@ -1943,7 +1974,11 @@ window.loadGwSections = async function () {
   try {
     const m = await gwEnsureLive();
     gwLiveList = Object.keys(m).map(function (k) { return m[k]; });
-    liveDiv.innerHTML = '<div class="pin-group-label">Live cameras</div>' +
+    liveDiv.innerHTML = '<div class="gw-row" style="padding:0">' +
+        '<span class="pin-group-label" style="margin:10px 0 6px">Live cameras</span>' +
+        (gwLiveList.length > 1
+          ? '<button class="gw-watch" onclick="watchGwQuad()">Watch all</button>' : '') +
+      '</div>' +
       (gwLiveList.length ? gwLiveList.map(function (c, i) {
         return '<div class="gw-row">' +
           '<span class="gw-dot' + (c.status === 'online' ? '' : ' off') + '"></span>' +
@@ -2005,6 +2040,56 @@ window.playGwClip = function (i) {
   document.getElementById('cam-lb-meta').textContent = wxTime(e.event_time);
   document.getElementById('cam-lightbox').classList.add('open');
   dbg('Clip playback: ' + (e.device_name || '') + ' ' + (e.event_time || ''), 'info');
+};
+
+// ── Quad view: every camera at the site, streaming at once ────────────
+// Each cell is its own MJPEG <img>. A cell that never produces a frame flips
+// its badge to "no stream" instead of failing the wall - if the bridge limits
+// how many concurrent streams it will serve, this is where that will show.
+window.watchGwQuad = async function () {
+  let m;
+  try { m = await gwEnsureLive(); }
+  catch (e) { dbg('Quad view unavailable: ' + e.message, 'warn'); return; }
+  const list = Object.keys(m).map(function (k) { return m[k]; })
+    .filter(function (c) { return c && c.mjpeg_url; });
+  if (!list.length) return;
+  stopLive();
+  hideCameraPopup();
+  closeCameraPhoto();
+  const quad = document.getElementById('cam-quad');
+  quad.style.gridTemplateColumns = list.length <= 2 ? '1fr '.repeat(list.length).trim()
+                                                    : '1fr 1fr';
+  quad.innerHTML = list.map(function (c, i) {
+    return '<div class="quad-cell">' +
+      '<img id="quad-img-' + i + '" alt="">' +
+      '<span class="quad-name">' + escHtml(c.name || c.mac) + '</span>' +
+      '<span class="quad-state" id="quad-state-' + i + '">connecting…</span></div>';
+  }).join('');
+  quad.classList.add('open');
+  document.getElementById('cam-quad-close').classList.add('open');
+  list.forEach(function (c, i) {
+    const img = document.getElementById('quad-img-' + i);
+    const st  = document.getElementById('quad-state-' + i);
+    let done = false;
+    img.onload  = function () { done = true; if (st) { st.textContent = 'LIVE'; st.classList.remove('bad'); } };
+    img.onerror = function () { done = true; if (st) { st.textContent = 'no stream'; st.classList.add('bad'); } };
+    setTimeout(function () {
+      if (!done && st) { st.textContent = 'no stream'; st.classList.add('bad'); }
+    }, 12000);
+    img.src = c.mjpeg_url;
+  });
+  dbg('Quad view: ' + list.length + ' streams opened', 'info');
+};
+window.closeGwQuad = function () {
+  const quad = document.getElementById('cam-quad');
+  // Clearing src is what actually closes each stream connection - a hidden
+  // MJPEG <img> keeps downloading forever otherwise.
+  quad.querySelectorAll('img').forEach(function (img) {
+    img.onload = null; img.onerror = null; img.src = '';
+  });
+  quad.innerHTML = '';
+  quad.classList.remove('open');
+  document.getElementById('cam-quad-close').classList.remove('open');
 };
 
 window.showCameraPopup = function (idx) {
@@ -2120,6 +2205,8 @@ window.flyToCamera = function (idx) {
 // Escape peels one layer at a time: the full-screen view first, then the card.
 document.addEventListener('keydown', function (e) {
   if (e.key !== 'Escape') return;
+  const quad = document.getElementById('cam-quad');
+  if (quad && quad.classList.contains('open')) { closeGwQuad(); return; }
   const lb = document.getElementById('cam-lightbox');
   if (lb && lb.classList.contains('open')) { closeCameraPhoto(); return; }
   hideCameraPopup();
