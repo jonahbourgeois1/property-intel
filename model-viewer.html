@@ -2094,6 +2094,13 @@ async function ensureClips(force) {
   const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
   gwClipsCache = j.events || [];
   gwClipsAt = Date.now();
+  // Retrieval audit, straight from the gateway: which search mode ran and how
+  // many events the window held before the cap. "fallback" or a total larger
+  // than the list means the rail is NOT the whole story.
+  if (j.clips_mode) {
+    dbg('Clips: ' + gwClipsCache.length + ' shown of ' + (j.total_found || gwClipsCache.length) +
+        ' found, mode ' + j.clips_mode, j.clips_mode === 'filtered' ? 'ok' : 'warn');
+  }
   updateEventIndicators();
   return gwClipsCache;
 }
