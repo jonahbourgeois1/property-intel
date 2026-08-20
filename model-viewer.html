@@ -236,6 +236,43 @@
     line-height: 1; cursor: pointer; display: none;
   }
   #cam-quad.open ~ #cam-quad-close, #cam-quad-close.open { display: block; }
+  /* ── Live feed mode ─────────────────────────────────────────────────
+     A vertical tab on the LEFT edge - deliberately apart from the right-hand
+     data rail, because this is a mode switch, not another panel. Opening it
+     swaps the whole screen: streams fill the main area, clips down the side. */
+  #live-tab {
+    display: none; position: fixed; left: 0; top: 50%;
+    transform: translateY(-50%); z-index: 60;
+    writing-mode: vertical-rl; text-orientation: mixed;
+    background: rgba(0,0,0,0.6); color: #ef4444; border: 1px solid #ef4444;
+    border-left: none; border-radius: 0 8px 8px 0;
+    font-family: monospace; font-size: 11px; letter-spacing: 0.14em;
+    padding: 14px 7px; cursor: pointer; transition: background 0.15s;
+  }
+  #live-tab:hover { background: rgba(239,68,68,0.16); }
+  #live-tab.on { background: rgba(239,68,68,0.22); }
+  #live-mode {
+    display: none; position: fixed; inset: 0; z-index: 80;
+    background: #0a0c0f;
+  }
+  #live-mode.open { display: flex; }
+  #lm-main {
+    flex: 1; display: grid; gap: 10px; padding: 16px;
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 0;
+  }
+  #lm-side {
+    width: 320px; flex-shrink: 0; background: #12161b;
+    border-left: 1px solid rgba(255,255,255,0.10);
+    display: flex; flex-direction: column; overflow: hidden;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  #lm-clips { overflow-y: auto; flex: 1; padding: 0 14px 14px; scrollbar-width: thin; }
+  #lm-clips .gw-row { cursor: default; }
+  @media (max-width: 800px) {
+    #live-mode.open { flex-direction: column; }
+    #lm-side { width: 100%; height: 40%; border-left: none;
+               border-top: 1px solid rgba(255,255,255,0.10); }
+  }
   #cam-lb-title {
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-size: 14px; font-weight: 600; color: #f0f2f5; text-align: center;
@@ -518,6 +555,20 @@
     <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
   </div>
 </div>
+<button id="live-tab" onclick="toggleLiveMode()">LIVE FEED</button>
+<div id="live-mode">
+  <div id="lm-main"></div>
+  <div id="lm-side">
+    <div class="dp-head">
+      <div>
+        <div class="dp-title">Recent clips</div>
+        <div class="dp-sub" id="lm-sub">last 7 days</div>
+      </div>
+      <button class="dp-close" onclick="toggleLiveMode()">&#10005;</button>
+    </div>
+    <div id="lm-clips"></div>
+  </div>
+</div>
 <div id="cam-quad"></div>
 <button id="cam-quad-close" onclick="closeGwQuad()">&#10005;</button>
 <div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
@@ -712,6 +763,7 @@ if (autocapture) {
   document.getElementById('hint').classList.add('hidden');
   document.getElementById('resetBtn').style.display = 'none';
   document.getElementById('debug-panel').style.display = 'none';
+  document.getElementById('live-tab').style.display = 'none';
 }
 // Same axis convention as positionCameraForDefaultView below: Z-up,
 // +Y = north, +X = east (confirmed by the existing default view's
@@ -1625,7 +1677,7 @@ function cameraSprite(text, worldSize) {
 function coverageWedge(cam, gz, lift) {
   const h = Number(cam.heading);
   if (!isFinite(h)) return null;
-  const fov = isFinite(Number(cam.fov)) ? Number(cam.fov) : 90;
+  const fov = isFinite(Number(cam.fov)) ? Number(cam.fov) : 120;
   const rng = isFinite(Number(cam.range)) ? Number(cam.range) : 25;
   const start = THREE.MathUtils.degToRad(90 - h - fov / 2);
   const geo = new THREE.CircleGeometry(rng, 48, start,
@@ -2092,6 +2144,109 @@ window.closeGwQuad = function () {
   document.getElementById('cam-quad-close').classList.remove('open');
 };
 
+// ── Live feed mode: streams as the whole screen, clips down the side ──
+let lmClipList = [];
+function lmCloseStreams() {
+  document.querySelectorAll('#lm-main img').forEach(function (img) {
+    img.onload = null; img.onerror = null; img.src = '';
+  });
+  document.getElementById('lm-main').innerHTML = '';
+}
+window.toggleLiveMode = function () {
+  const lm = document.getElementById('live-mode');
+  if (lm.classList.contains('open')) { closeLiveMode(); return; }
+  openLiveMode();
+};
+function closeLiveMode() {
+  lmCloseStreams();
+  document.getElementById('live-mode').classList.remove('open');
+  document.getElementById('live-tab').classList.remove('on');
+}
+async function openLiveMode() {
+  stopLive();
+  hideCameraPopup();
+  closeCameraPhoto();
+  closeGwQuad();
+  closeAllPanels(null);
+  syncTabRail();
+  const lm = document.getElementById('live-mode');
+  const main = document.getElementById('lm-main');
+  lm.classList.add('open');
+  document.getElementById('live-tab').classList.add('on');
+  main.innerHTML = '<div class="rd-note" style="margin:auto">connecting&hellip;</div>';
+  let m;
+  try { m = await gwEnsureLive(); }
+  catch (e) {
+    main.innerHTML = '<div class="rd-note" style="margin:auto">Live cameras unavailable - ' +
+                     escHtml(e.message) + '</div>';
+    dbg('Live mode: gateway failed - ' + e.message, 'warn');
+    renderLmClips();
+    return;
+  }
+  const list = Object.keys(m).map(function (k) { return m[k]; })
+    .filter(function (c) { return c && c.mjpeg_url; });
+  if (!list.length) {
+    main.innerHTML = '<div class="rd-note" style="margin:auto">no cameras online</div>';
+    renderLmClips();
+    return;
+  }
+  main.style.gridTemplateColumns = list.length <= 2 ? '1fr '.repeat(list.length).trim() : '1fr 1fr';
+  main.style.gridTemplateRows = list.length <= 2 ? '1fr' : '1fr 1fr';
+  main.innerHTML = list.map(function (c, i) {
+    return '<div class="quad-cell">' +
+      '<img id="lm-img-' + i + '" alt="">' +
+      '<span class="quad-name">' + escHtml(c.name || c.mac) + '</span>' +
+      '<span class="quad-state" id="lm-state-' + i + '">connecting…</span></div>';
+  }).join('');
+  list.forEach(function (c, i) {
+    const img = document.getElementById('lm-img-' + i);
+    const st  = document.getElementById('lm-state-' + i);
+    let done = false;
+    img.onload  = function () { done = true; if (st) { st.textContent = 'LIVE'; st.classList.remove('bad'); } };
+    img.onerror = function () { done = true; if (st) { st.textContent = 'no stream'; st.classList.add('bad'); } };
+    setTimeout(function () {
+      if (!done && st) { st.textContent = 'no stream'; st.classList.add('bad'); }
+    }, 12000);
+    img.src = c.mjpeg_url;
+  });
+  dbg('Live mode: ' + list.length + ' streams', 'info');
+  renderLmClips();
+}
+async function renderLmClips() {
+  const div = document.getElementById('lm-clips');
+  div.innerHTML = '<div class="rd-note">loading clips&hellip;</div>';
+  try {
+    const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
+    lmClipList = j.events || [];
+    div.innerHTML = lmClipList.length ? lmClipList.map(function (e, i) {
+      return '<div class="gw-row">' +
+        (e.thumbnail ? '<img src="' + escHtml(e.thumbnail) + '" alt="" loading="lazy" ' +
+          'onerror="this.style.display=\'none\'">' : '') +
+        '<span class="gw-name">' + escHtml(e.device_name || 'Camera') +
+          '<br><span style="font-family:monospace;font-size:9.5px;color:#555f6e">' +
+          escHtml(wxTime(e.event_time)) + '</span></span>' +
+        (e.mp4 ? '<button class="gw-watch" onclick="playLmClip(' + i + ')">Play</button>' : '') +
+        '</div>';
+    }).join('') : '<div class="rd-note">no video events in the last 7 days</div>';
+  } catch (e) {
+    div.innerHTML = '<div class="rd-note">Clips unavailable - ' + escHtml(e.message) + '</div>';
+    dbg('Live mode clips failed: ' + e.message, 'warn');
+  }
+}
+// The clip player is the existing lightbox, which sits ABOVE live mode, so the
+// streams keep running behind the recording being reviewed.
+window.playLmClip = function (i) {
+  const e = lmClipList[i];
+  if (!e || !e.mp4) return;
+  lbStandaloneLive = false;
+  lbShowVideo(e.mp4);
+  document.getElementById('cam-lb-title').textContent =
+    (e.device_name || 'Camera') + ' — recorded clip';
+  document.getElementById('cam-lb-meta').textContent = wxTime(e.event_time);
+  document.getElementById('cam-lightbox').classList.add('open');
+  dbg('Clip playback (live mode): ' + (e.device_name || ''), 'info');
+};
+
 window.showCameraPopup = function (idx) {
   const cam = camList[idx];
   if (!cam) return;
@@ -2209,6 +2364,8 @@ document.addEventListener('keydown', function (e) {
   if (quad && quad.classList.contains('open')) { closeGwQuad(); return; }
   const lb = document.getElementById('cam-lightbox');
   if (lb && lb.classList.contains('open')) { closeCameraPhoto(); return; }
+  const lm = document.getElementById('live-mode');
+  if (lm && lm.classList.contains('open')) { closeLiveMode(); return; }
   hideCameraPopup();
 });
 // ── Weather ───────────────────────────────────────────────────────────
@@ -3175,6 +3332,9 @@ function showHazardButtons() {
   });
 }
 if (!autocapture) { buildPropertyUi(); buildHazardUi(); }
+if (!autocapture && propertyId && !GW_OFF) {
+  document.getElementById('live-tab').style.display = 'block';
+}
 // ── Route in 3D ───────────────────────────────────────────────────────
 function markCard(i, on) {
   const c = document.getElementById('rd-card-' + i);
