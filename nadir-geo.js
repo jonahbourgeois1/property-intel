@@ -416,6 +416,96 @@
              lng: origin.lng + (dx * d) / kx, exitM: best };
   }
 
+  // ⭐ WHERE THE FOUR SIDE LABELS BELONG — anchored to the LOT'S OWN EDGES.
+  //
+  // The obvious construction is to cast a ray from the building along each of
+  // the four bearings and label where it leaves the lot. That is wrong in
+  // practice and Jonah's markup showed exactly how: a house is rarely centred on
+  // its lot, so four rays 90 degrees apart from an off-centre origin exit near
+  // the CORNERS, not the middle of each side. On a rotated rectangle it produced
+  // Alpha NW, Bravo N, Charlie SE, Delta SW - two bunched along the top, two
+  // along the bottom, nothing on the long sides at all.
+  //
+  // So work from the boundary instead. Every edge has an outward normal bearing.
+  // The four side bearings cut the compass into four 90-degree sectors; an edge
+  // belongs to the side its normal points at. A side's anchor is then the
+  // LENGTH-WEIGHTED midpoint of its edges, pushed out along the side bearing.
+  //
+  // Length weighting is what makes this survive a real taxlot: Deschutes rings
+  // run to 34+ vertices, so a side is many short edges plus one long one, and an
+  // unweighted mean would drift toward wherever the surveyor put the most
+  // points. It also means the anchor is independent of where the building sits,
+  // which is the whole point.
+  //
+  // Sectors are inclusive at +-45 degrees, so an edge facing exactly into a
+  // corner contributes to BOTH neighbouring sides rather than to neither.
+  // A sector with no edges at all (a triangle, say) falls back to the support
+  // point - the vertex farthest along that bearing - so four anchors always come
+  // back.
+  function sideAnchors(ring, alphaDeg, pushM) {
+    var fr = localFrame(ring);
+    if (!fr) return null;
+    var P = fr.pts, n = P.length;
+    if (n < 3) return null;
+    var i, area2 = 0;
+    for (i = 0; i < n; i++) {
+      var a = P[i], b = P[(i + 1) % n];
+      area2 += a.x * b.y - b.x * a.y;
+    }
+    if (area2 < 0) { P = P.slice().reverse(); }      // outward normal needs CCW
+    var edges = [];
+    for (i = 0; i < n; i++) {
+      var p = P[i], q = P[(i + 1) % n];
+      var dx = q.x - p.x, dy = q.y - p.y;
+      var L = Math.sqrt(dx * dx + dy * dy);
+      if (L < 1e-6) continue;
+      var nx = dy / L, ny = -dx / L;                 // right normal = outward, CCW
+      edges.push({ mx: (p.x + q.x) / 2, my: (p.y + q.y) / 2, L: L,
+                   brg: (Math.atan2(nx, ny) * 180 / Math.PI + 360) % 360 });
+    }
+    if (!edges.length) return null;
+    var push = pushM || 0;
+    var out = [];
+    for (var k = 0; k < 4; k++) {
+      var bd = ((((alphaDeg + k * 90) % 360) + 360) % 360);
+      var rad = bd * Math.PI / 180;
+      var ux = Math.sin(rad), uy = Math.cos(rad);    // unit vector along the bearing
+      var wx = 0, wy = 0, w = 0, cnt = 0, nvx = 0, nvy = 0;
+      for (i = 0; i < edges.length; i++) {
+        var e = edges[i];
+        var off = Math.abs(((e.brg - bd + 540) % 360) - 180);
+        if (off <= 45) {
+          wx += e.mx * e.L; wy += e.my * e.L; w += e.L; cnt++;
+          // accumulate the outward normal too, length-weighted
+          var er = e.brg * Math.PI / 180;
+          nvx += Math.sin(er) * e.L; nvy += Math.cos(er) * e.L;
+        }
+      }
+      var ax, ay;
+      if (w > 0) {
+        ax = wx / w; ay = wy / w;
+        // Push along the side's own mean outward NORMAL, not along the side
+        // bearing. Both agree on a lot squared to the frontage, but the sector
+        // admits edges up to 45 degrees off, and pushing along the bearing there
+        // would slide the label along the boundary instead of clear of it. The
+        // normal is perpendicular to the line the label is annotating, which is
+        // what "just outside the property line" has to mean.
+        var nl = Math.sqrt(nvx * nvx + nvy * nvy);
+        if (nl > 1e-9) { ux = nvx / nl; uy = nvy / nl; }
+      } else {                                      // support point fallback
+        var best = -Infinity;
+        for (i = 0; i < P.length; i++) {
+          var t = P[i].x * ux + P[i].y * uy;
+          if (t > best) { best = t; ax = P[i].x; ay = P[i].y; }
+        }
+      }
+      var ll = fr.out({ x: ax + ux * push, y: ay + uy * push });
+      out.push({ lat: ll.lat, lng: ll.lng, bearing: bd,
+                 edgeCount: cnt, edgeLenM: w });
+    }
+    return out;
+  }
+
   // Longest span across the ring, in metres - used to scale how far outside the
   // boundary a label should sit so it reads the same on a 40 m lot and a 400 m one.
   function ringSpanM(ring) {
@@ -504,11 +594,12 @@
     bearingBetween:   bearingBetween,
     ringCentroid:     ringCentroid,
     rayExit:          rayExit,
+    sideAnchors:      sideAnchors,
     ringSpanM:        ringSpanM,
     clipRingToBox:    clipRingToBox,
     ringContains:     ringContains,
     ringDistanceM:    ringDistanceM,
     normaliseRing:    normaliseRing,
-    _version:         '1.2.0'
+    _version:         '1.3.0'
   };
 })(typeof window !== 'undefined' ? window : globalThis);
