@@ -1207,7 +1207,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.5';
+  var BUILD = 'v6.5.1';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -3388,13 +3388,23 @@
     if (!erMap) return;
     if (erParcelPoly) { erParcelPoly.setMap(null); erParcelPoly = null; }
     if (erRangePoly)  { erRangePoly.setMap(null);  erRangePoly = null; }
+    // ⚠️ ATTACHED AT CONSTRUCTION, not later in erApplyLimits().
+    // These used to be built with no `map` and only attached at the end of this
+    // function. Anything that threw in between - and erAllow.outline() below
+    // does throw against an older nadir-geo.js - left the lot line CREATED BUT
+    // ORPHANED: a Polygon object with no map, invisible, no error on screen.
+    // The only lot still visible then was the one the pipeline bakes into the
+    // Static Maps raster itself (the nadir URL carries markers/path params), so
+    // the lot appeared to depend on the Image toggle. It never did.
+    // Attach each layer the moment it exists and nothing downstream can strand it.
     if (parcelRing && parcelRing.length >= 3) {
       erParcelPoly = new google.maps.Polygon({
         paths: parcelRing,
         // House style, matched to responder-intel.html / hoa-viewer.html /
         // viewer.html so the same line means the same thing in every viewer.
         strokeColor: '#cd3333', strokeOpacity: 1, strokeWeight: 4,
-        fillOpacity: 0, clickable: false, zIndex: 3
+        fillOpacity: 0, clickable: false, zIndex: 3,
+        map: parcelShown ? erMap : null
       });
     }
     // ⭐ THE PIN RANGE. Not a hint and not a decoration: NadirGeo's outline() is
@@ -3405,21 +3415,43 @@
     // inside are accepted and points just outside are refused.
     // It matters more now that the camera is uncapped: panning is unlimited, so
     // this ring is the only thing on screen saying where a pin can actually go.
-    var ring = erAllow.outline();
-    if (ring && ring.length >= 3) {
-      erRangePoly = new google.maps.Polyline({
-        path: ring.concat([ring[0]]),          // Polyline, so close it by hand
-        strokeOpacity: 0,                      // the dots ARE the line
-        icons: [{ icon: ER_DOT, offset: '0', repeat: '10px' }],
-        clickable: false, zIndex: 2
-      });
+    // Its own try/catch, and a capability check first. The range ring is the
+    // newer of the two layers and the one that depends on a module version; a
+    // problem here must never be able to take the lot line down with it.
+    try {
+      if (typeof erAllow.outline !== 'function') {
+        throw new Error('nadir-geo.js is too old for the pin-range ring ' +
+          '(needs v1.1.0, found v' + ((window.NadirGeo && window.NadirGeo._version) ||
+          'unknown') + ') - upload the current nadir-geo.js beside this page');
+      }
+      var ring = erAllow.outline();
+      if (ring && ring.length >= 3) {
+        erRangePoly = new google.maps.Polyline({
+          path: ring.concat([ring[0]]),        // Polyline, so close it by hand
+          strokeOpacity: 0,                    // the dots ARE the line
+          icons: [{ icon: ER_DOT, offset: '0', repeat: '10px' }],
+          clickable: false, zIndex: 2,
+          map: parcelShown ? erMap : null
+        });
+      }
+    } catch (e) {
+      if (window.console) {
+        console.error('[element-review] pin-range ring not drawn: ' +
+                      (e.message || e) + '. The lot line and pin enforcement ' +
+                      'are unaffected.');
+      }
     }
     erApplyLimits();
   }
+  // The Lot button governs the lot line and the pin-range ring together: they
+  // are two readings of the same thing, and showing one without the other
+  // invites "why is my pin refused inside the red line".
+  //
+  // ⚠️ NEITHER OF THESE HAS ANYTHING TO DO WITH THE Image TOGGLE. They are map
+  // overlays; the captured nadir is an <img> inside #frame. `parcelShown` is
+  // the only input. Do not couple them - a reviewer needs the lot line most
+  // when the captured image is off and they are looking at live imagery.
   function erApplyLimits() {
-    // The Lot button governs the lot line and the pin-range ring together: they
-    // are two readings of the same thing, and showing one without the other
-    // invites "why is my pin refused inside the red line".
     if (erParcelPoly) erParcelPoly.setMap(parcelShown ? erMap : null);
     if (erRangePoly)  erRangePoly.setMap(parcelShown ? erMap : null);
   }
