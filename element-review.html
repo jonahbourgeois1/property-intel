@@ -1007,52 +1007,6 @@
     color: var(--ink-faint); border: 1px solid var(--line);
     border-radius: 5px; padding: 2px 6px; margin-left: 10px;
   }
-  /* Diagnostics. position:fixed so it survives fail(), which blanks the stage. */
-  /* ⚠️ BOTTOM-CENTRE, NOT BOTTOM-LEFT. At bottom-left this panel sat directly
-     on top of the submit bar and made "Rerun analysis" and "Copy JSON"
-     unclickable — a debug aid that blocks filing a round is worse than no debug
-     aid. Centred it clears the 340px critique rail and the 320px legend rail at
-     every desktop width, and it starts COLLAPSED so it cannot cover anything
-     the reviewer has not chosen to cover. */
-  #erDiag {
-    position: fixed; left: 50%; transform: translateX(-50%);
-    bottom: 12px; z-index: 60;
-    width: min(560px, calc(100vw - 24px));
-    background: rgba(27,32,39,0.97); border: 1px solid var(--hot);
-    border-radius: 9px; box-shadow: 0 4px 22px rgba(0,0,0,0.6);
-    font-family: var(--mono); font-size: 11px; overflow: hidden;
-  }
-  .dg-head {
-    display: flex; align-items: center; gap: 8px;
-    padding: 6px 10px; background: rgba(79,209,197,0.12);
-    border-bottom: 1px solid rgba(79,209,197,0.28);
-    color: var(--hot); font-size: 10px; letter-spacing: 0.14em;
-    cursor: pointer; user-select: none;
-  }
-  #erDiag.collapsed .dg-head { border-bottom: none; }
-  #erDiag.collapsed #erDiagBody { display: none; }
-  .dg-head .dg-caret { font-size: 9px; }
-  /* Red header when map mode was asked for and refused - the one state nobody
-     should be able to miss. */
-  #erDiag.refused { border-color: var(--bad); }
-  #erDiag.refused .dg-head {
-    background: rgba(239,111,111,0.14); border-bottom-color: rgba(239,111,111,0.3);
-    color: var(--bad);
-  }
-  .dg-head span { flex: 1 1 auto; }
-  .dg-btn {
-    background: none; border: 1px solid var(--line); border-radius: 5px;
-    color: var(--ink-dim); font-family: var(--mono); font-size: 10px;
-    padding: 1px 7px; cursor: pointer;
-  }
-  .dg-btn:hover { color: var(--ink); border-color: var(--hot); }
-  #erDiagBody { max-height: 44vh; overflow-y: auto; padding: 6px 10px 9px; }
-  .dg-row { display: flex; gap: 10px; padding: 2px 0; align-items: flex-start; }
-  .dg-k { flex: 0 0 116px; color: var(--ink-faint); }
-  .dg-v { flex: 1 1 auto; color: var(--ink-dim); word-break: break-word; line-height: 1.55; }
-  .dg-v.ok   { color: var(--good); }
-  .dg-v.warn { color: var(--warn); }
-  .dg-v.bad  { color: var(--bad); }
 </style>
 </head>
 <body>
@@ -1158,18 +1112,14 @@
              it never offers a toggle for something that cannot be shown. -->
         <div class="zoom-btn reset" id="parcel-toggle"
              title="Show or hide the property boundary" style="display:none">Lot</div>
-        <!-- v6.3: map mode only. Off by default - the live basemap is sharper
-             than the capture, so seeing the older raster is opt-in. -->
-        <!-- v6.3.2: THE MAP TOGGLE. v6.3/v6.3.1 shipped map mode as ?map=1 and
-             nothing else, so the only way to reach it was to hand-edit the URL.
-             That made the feature invisible and indistinguishable from broken
-             for the first person who opened the page. A reviewer will never type
-             a query param. Always visible; reloads with the param flipped. -->
-        <div class="zoom-btn reset" id="mode-toggle"
-             title="Switch between the flat nadir image and the live satellite map">Map</div>
+        <!-- v6.4: the map is ALWAYS the substrate, so there is no mode button.
+             This one overlays the CAPTURED nadir on top of it - the image the
+             analysis actually saw - and is off by default because the live
+             basemap is sharper than the capture. Hidden entirely on a row that
+             cannot be mapped, where the page is already showing that image. -->
         <div class="zoom-btn reset" id="nadir-toggle"
-             title="Show or hide the captured nadir over the map"
-             style="display:none">Nadir</div>
+             title="Show or hide the captured nadir image over the map"
+             style="display:none">Image</div>
         <div class="zoom-level" id="zoom-level">100%</div>
       </div>
     </section>
@@ -1184,15 +1134,7 @@
       </div>
       <div class="hint">Hover a marker, a field or a row to link all three. <b>Drag a pin</b> to correct its position — the dashed ring shows where it was. <b>OK</b> or <b>Remove</b> locks that pin's fix fields. Numbers are review labels only. Amber = the pin's id is not in the catalog at all.</div>
     </aside>
-  <div id="erDiag" style="display:none">
-    <div class="dg-head" onclick="erDiagToggle(event)">
-      <span class="dg-caret" id="erDiagCaret">&#9650;</span>
-      <span id="erDiagHead">MAP DIAGNOSTICS</span>
-      <button type="button" class="dg-btn" onclick="erDiagCopy();event.stopPropagation()">copy</button>
-      <button type="button" class="dg-btn" onclick="erDiagHide();event.stopPropagation()">&times;</button>
-    </div>
-    <div id="erDiagBody"></div>
-  </div>
+  </main>
   </main>
 
 <!-- v6.3: the ONE georeference, shared with responder-intel.html. Loaded before
@@ -1266,8 +1208,20 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.3.2';
-  var MAP_WANTED = qp('map') === '1';
+  var BUILD = 'v6.4.1';
+  // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
+  // param a reviewer has to know about.
+  //
+  // ⚠️ THE FLAT RENDERER STAYS, as machinery rather than as a choice. A row
+  // whose nadir URL carries no center/zoom CANNOT be georeferenced, so it
+  // cannot go on a map at all - and deleting the flat path would make those
+  // rows unreviewable rather than merely unmapped. MAP_MODE therefore still
+  // resolves to false for them, the page falls back on its own, and the status
+  // line says why. Same rows where the Lot button is struck through.
+  //
+  // `&map=0` survives as an undocumented escape: no button offers it, but if a
+  // row renders badly on the map it is a way back without waiting for a build.
+  var MAP_WANTED = qp('map') !== '0';
 
   // The georeference: normally parsed out of the nadir URL, because a
   // parcel-fitted Static Maps URL carries center/zoom/size in its own query
@@ -1338,16 +1292,11 @@
   // silently killed every declaration after it, including the whole page. Same
   // trap model-viewer.html documents above its render loop. Caught by the e2e
   // suite's very first check; do not move these back down.
-  var erDiagKeys = [], erDiagVals = {};
-  // Same hoisting reason as the note above: erDiagRender() reads both of these
-  // and runs during the early erRunDiagnostics() call, so the ASSIGNMENTS have
-  // to happen before it. `var` hoists the name only.
-  var erDiagForced = false, erDiagOpen = (qp('diag') === '1');
   // Deliberately here and not in boot(): several ?nadir= / ?pins= guards call
   // fail() and RETURN before boot() runs, and a missing georeference is exactly
   // the moment the panel has something to say. erRunDiagnostics is a hoisted
   // function declaration, so calling it from above its definition is fine.
-  erRunDiagnostics();
+  erBootMap();
   var erFwd = MAP_MODE ? window.NadirGeo.makeProjector(erGeo)   : null;
   var erInv = MAP_MODE ? window.NadirGeo.makeUnprojector(erGeo) : null;
   // Metres a pin may sit OUTSIDE the lot line, for roads and extremity points.
@@ -3218,173 +3167,46 @@
   // controls are off AND setTilt(0) is asserted after the map is built.
   var erBounds = null, erMapsTimer = null;
 
-  // ══════════════════════════════════════════════════════════════════════════
-  // DIAGNOSTICS. Shows automatically whenever ?map=1 was asked for and REFUSED,
-  // because that is the exact silent failure v6.3 shipped with. Also on
-  // ?diag=1 or ?debug=1, so preconditions can be checked before committing to
-  // a review session.
-  // ══════════════════════════════════════════════════════════════════════════
-  function diag(k, v, cls) {
-    if (erDiagKeys.indexOf(k) < 0) erDiagKeys.push(k);
-    erDiagVals[k] = { v: (v === undefined || v === null) ? '—' : String(v),
-                      cls: cls || '' };
-    erDiagRender();
-  }
-  function erDiagVisible() {
-    return erDiagForced || qp('diag') === '1' || qp('debug') === '1' ||
-           (MAP_WANTED && !MAP_MODE);
-  }
-  window.erDiagToggle = function (e) {
-    if (e) e.stopPropagation();
-    erDiagOpen = !erDiagOpen;
-    erDiagRender();
-  };
-  function erDiagRender() {
-    var box = document.getElementById('erDiag');
-    if (!box) return;
-    if (!erDiagVisible()) { box.style.display = 'none'; return; }
-    box.style.display = 'block';
-    box.classList.toggle('collapsed', !erDiagOpen);
-    box.classList.toggle('refused', MAP_WANTED && !MAP_MODE);
-    var caret = document.getElementById('erDiagCaret');
-    if (caret) caret.innerHTML = erDiagOpen ? '&#9660;' : '&#9650;';
-    var head = document.getElementById('erDiagHead');
-    if (head) {
-      head.textContent = 'MAP DIAGNOSTICS \u00b7 ' +
-        (!MAP_WANTED ? 'no &map=1 on this url'
-         : MAP_MODE  ? 'map mode ON'
-                     : 'MAP MODE REFUSED \u2014 click to see why');
-    }
-    var body = document.getElementById('erDiagBody');
-    if (!body) return;
-    body.innerHTML = erDiagKeys.map(function (k) {
-      var r = erDiagVals[k];
-      return '<div class="dg-row"><span class="dg-k">' + escapeHtml(k) +
-             '</span><span class="dg-v ' + r.cls + '">' + escapeHtml(r.v) +
-             '</span></div>';
-    }).join('');
-  }
-  function erDiagText() {
-    return 'element-review diagnostics\n' + erDiagKeys.map(function (k) {
-      return '  ' + k + ': ' + erDiagVals[k].v;
-    }).join('\n') + '\n  url: ' + window.location.href;
-  }
-  window.erDiagCopy = function () {
-    var t = erDiagText();
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(t).then(function () {
-        diag('copied', 'diagnostics on the clipboard', 'ok');
-      }, function () { if (window.console) console.log(t); });
-    } else if (window.console) { console.log(t); }
-  };
-  window.erDiagHide = function () {
-    var b = document.getElementById('erDiag');
-    if (b) b.style.display = 'none';
-  };
 
   // Runs on EVERY page load, map mode or not — the whole point is that it can
   // tell you why map mode did not start.
-  // Rebuild this page's URL with one param added or removed.
-  // Splitting the query string on '&' is safe for a correctly-encoded review
-  // link (the nadir URL then holds no bare '&'), and it is ALSO safe for the
-  // unencoded case: the leaked fragments come back in the same order, so the
-  // round trip preserves whatever was there.
-  function erUrlWith(param, value) {
-    var parts = window.location.href.split('#')[0].split('?');
-    var kept = (parts[1] || '').split('&').filter(function (kv) {
-      return kv && kv.split('=')[0] !== param;
-    });
-    if (value !== null) kept.push(param + '=' + encodeURIComponent(value));
-    return parts[0] + (kept.length ? '?' + kept.join('&') : '');
-  }
-
-  function erWireModeToggle() {
-    var b = document.getElementById('mode-toggle');
-    if (!b) return;
-    b.textContent = MAP_MODE ? 'Image' : 'Map';
-    b.classList.toggle('on', MAP_MODE);
-    b.title = MAP_MODE ? 'Back to the flat nadir image'
-                       : 'Review on the live satellite map (zoom and pan freely)';
-    b.addEventListener('click', function () {
-      window.location.assign(erUrlWith('map', MAP_MODE ? null : '1'));
-    });
-  }
-
-  function erRunDiagnostics() {
+  function erBootMap() {
     var tag = document.getElementById('build');
-    if (tag) {
-      tag.textContent = BUILD;
-      // The build tag is already what you look at when something seems wrong,
-      // so it is also the handle for the detail behind it.
-      tag.title = 'click for map diagnostics';
-      tag.style.cursor = 'pointer';
-      tag.onclick = function () { erDiagForced = true; erDiagOpen = true; erDiagRender(); };
+    if (tag) tag.textContent = BUILD;
+    if (window.console) {
+      if (!window.NadirGeo) {
+        try {
+          console.error('[element-review] nadir-geo.js did not load. Expected at ' +
+            new URL('nadir-geo.js', window.location.href).href);
+        } catch (e) {}
+      }
+      console.log('[element-review] ' + BUILD +
+        ' | map ' + (MAP_MODE ? 'ON' : 'OFF') +
+        ' | nadir-geo ' + (window.NadirGeo ? 'v' + (window.NadirGeo._version || '?')
+                                           : 'MISSING') +
+        ' | georef ' + (erGeo
+            ? erGeo.lat.toFixed(6) + ',' + erGeo.lng.toFixed(6) +
+              ' z' + erGeo.zoom + ' ' + erGeo.w + 'x' + erGeo.h + ' [' + erGeoSource + ']'
+            : 'NONE'));
+      // The truncation signature: a centre but no zoom inside the nadir URL
+      // means the review link was almost certainly not percent-encoded, so
+      // qp('nadir') was cut at the first '&'. Invisible otherwise.
+      var sn = erScrape(nadirUrl);
+      if (isFinite(sn.lat) && !isFinite(sn.zoom)) {
+        console.warn('[element-review] the nadir URL has center= but no zoom= - ' +
+          'this review link is probably not percent-encoded, so it was truncated ' +
+          'at the first &. The nadir <img> is getting a cut-off URL too.');
+      }
     }
-    erWireModeToggle();
-    diag('build', BUILD, 'ok');
-    diag('?map=', qp('map') === null ? 'not present  (add &map=1 to enable the map)'
-                                     : qp('map'),
-         MAP_WANTED ? 'ok' : 'warn');
-    var modUrl = (function () {
-      try { return new URL('nadir-geo.js', window.location.href).href; }
-      catch (e) { return 'nadir-geo.js'; }
-    })();
-    diag('nadir-geo.js', window.NadirGeo
-      ? 'loaded, v' + (window.NadirGeo._version || '?')
-      : 'MISSING — expected at ' + modUrl, window.NadirGeo ? 'ok' : 'bad');
-    if (!window.NadirGeo) {
-      // A 404 and a syntax error look the same from here, so ask the server.
-      fetch(modUrl, { cache: 'no-store' })
-        .then(function (r) {
-          diag('nadir-geo.js fetch', 'HTTP ' + r.status +
-            (r.status === 200 ? ' — the file IS there, so it failed to EXECUTE; ' +
-                                'check the console for a syntax error'
-                              : ' — commit nadir-geo.js next to element-review.html'),
-            'bad');
-        })
-        .catch(function (e) { diag('nadir-geo.js fetch', 'failed: ' + e.message, 'bad'); });
-    }
-    diag('?nadir=', nadirUrl ? nadirUrl.slice(0, 150) : 'MISSING',
-         nadirUrl ? '' : 'bad');
-    diag('georeference', erGeo
-      ? 'centre ' + erGeo.lat.toFixed(6) + ', ' + erGeo.lng.toFixed(6) +
-        '  zoom ' + erGeo.zoom + '  size ' + erGeo.w + 'x' + erGeo.h +
-        (erGeo.scale > 1 ? ' @' + erGeo.scale + 'x' : '') +
-        '   [' + erGeoSource + ']'
-      : 'NONE. Map mode cannot start without one.', erGeo ? 'ok' : 'bad');
-    // The truncation signature: a centre but no zoom in the nadir URL means the
-    // link almost certainly was not percent-encoded and qp('nadir') was cut at
-    // the first '&'. Say so, because it is invisible otherwise.
-    var sn = erScrape(nadirUrl);
-    if (isFinite(sn.lat) && !isFinite(sn.zoom)) {
-      diag('link encoding', 'the nadir URL has center= but no zoom= — the review ' +
-        'link is probably NOT percent-encoded, so qp(\'nadir\') was truncated at ' +
-        'the first &. The nadir <img> is being given a cut-off URL too.', 'bad');
-    }
-    if (!erGeo) {
-      diag('to test this row', 'append  &center=<lat>,<lng>&zoom=18  to this URL', 'warn');
-    }
-    diag('MAP MODE', MAP_MODE ? 'ON' : 'OFF — running as the flat v6.2 page',
-         MAP_MODE ? 'ok' : 'warn');
     if (MAP_WANTED && !MAP_MODE) {
-      diag('why refused', !window.NadirGeo
-        ? 'nadir-geo.js did not load — commit it to the repo beside this page'
-        : 'no georeference — try adding &center=<lat>,<lng>&zoom=18 to this URL',
-        'bad');
-    }
-    if (!MAP_WANTED) {
-      diag('next step', 'append &map=1 to this URL', 'warn');
-    }
-    if (window.console) console.log(erDiagText());
-    // The status line is part of the page's own furniture, so it can carry this
-    // without covering a control. Only written on an actual refusal.
-    if (MAP_WANTED && !MAP_MODE) {
-      setStatus('Map mode did not start - ' +
-        (!window.NadirGeo ? 'nadir-geo.js is not on the server beside this page.'
-                          : 'this row has no georeference in its nadir URL.') +
-        ' See MAP DIAGNOSTICS at the bottom of the screen.', 'err');
+      setStatus(!window.NadirGeo
+        ? 'Map unavailable - nadir-geo.js is not on the server beside this page. ' +
+          'Reviewing on the captured image instead.'
+        : 'Map unavailable - this row has no map coordinates in its nadir URL. ' +
+          'Reviewing on the captured image instead.', 'err');
     }
   }
+
 
   function erToast(msg) {
     var el = document.getElementById('erToast');
@@ -3444,7 +3266,6 @@
     sc.async = true; sc.defer = true;
     sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
              '&callback=__erMapReady';
-    diag('google.maps', 'requesting the Maps API…', 'warn');
     sc.onerror = erMapsDead;
     // A referrer or billing rejection does NOT fire onerror - the script loads
     // fine and then refuses in the console. A timeout is the only way to notice,
@@ -3455,10 +3276,12 @@
   function erMapsDead() {
     if (erMapsTimer) { clearTimeout(erMapsTimer); erMapsTimer = null; }
     if (erMap) return;
-    diag('google.maps', 'DID NOT LOAD. If the console shows ' +
-      'RefererNotAllowedMapError, add responder-intel.vyanet.com to the API ' +
-      'key\u2019s HTTP-referrer restrictions. If it shows BillingNotEnabled or ' +
-      'ApiNotActivatedMapError, that is a Cloud console setting.', 'bad');
+    if (window.console) {
+      console.error('[element-review] Google Maps did not load. ' +
+        'RefererNotAllowedMapError means responder-intel.vyanet.com is not on ' +
+        'the API key\u2019s HTTP-referrer list; BillingNotEnabled or ' +
+        'ApiNotActivatedMapError are Cloud console settings.');
+    }
     erToast('Google Maps did not load. Remove &map=1 from the URL to review on ' +
             'the flat image. (If the console says RefererNotAllowedMapError, ' +
             'this page is not being served from responder-intel.vyanet.com.)');
@@ -3494,7 +3317,6 @@
         strictBounds: false
       }
     });
-    diag('google.maps', 'loaded, callback fired', 'ok');
     erMap.setTilt(0);                       // see the TILT warning above
     erFitNadir();
     erOverlay = erBuildOverlay();
@@ -3507,14 +3329,6 @@
     erDrawLimits();
     erWireButtons();
     erApplyNadir();
-    var fr = document.getElementById('frame');
-    diag('map', 'built — capture zoom ' + erGeo.zoom + ', pan restricted', 'ok');
-    diag('frame', 'in pane "' + (fr.parentElement && fr.parentElement.className) +
-      '" at ' + fr.style.left + ',' + fr.style.top + ' size ' +
-      fr.style.width + ' x ' + fr.style.height, 'ok');
-    diag('placement limit', parcelRing
-      ? 'lot + ' + Math.round(MARGIN_M) + ' m'
-      : 'no lot data for this property — captured image only', 'ok');
     if (window.console) {
       console.log('[element-review] map mode: centre ' + erGeo.lat.toFixed(6) +
         ', ' + erGeo.lng.toFixed(6) + ' capture zoom ' + erGeo.zoom +
@@ -3611,7 +3425,12 @@
     var img = document.getElementById('nadir');
     var btn = document.getElementById('nadir-toggle');
     if (img) img.style.visibility = erNadirOn ? '' : 'hidden';
-    if (btn) btn.classList.toggle('on', erNadirOn);
+    if (btn) {
+      btn.classList.toggle('on', erNadirOn);
+      btn.title = erNadirOn
+        ? 'Hide the captured nadir image'
+        : 'Show the captured nadir image over the map';
+    }
   }
 
   function erWireButtons() {
@@ -3620,10 +3439,10 @@
       erNadirOn = !erNadirOn;
       erApplyNadir();
       erToast(erNadirOn
-        ? 'Showing the captured nadir - this is the image the analysis saw, at ' +
-          'zoom ' + erGeo.zoom + '. It will blur if you zoom past that.'
-        : 'Nadir hidden. This is live basemap imagery, which may be a different ' +
-          'vintage from the capture.');
+        ? 'Showing the captured image - what the analysis actually saw, at zoom ' +
+          erGeo.zoom + '. It will blur if you zoom past that.'
+        : 'Captured image hidden. This is live basemap imagery, which may be a ' +
+          'different vintage from the capture.');
     });
     // Fit belongs to the map now; initZoomPan returned early so nothing else
     // has claimed this button.
