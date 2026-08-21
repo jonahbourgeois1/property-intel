@@ -964,7 +964,7 @@
   }
   /* ══════════════════════════════════════════════════════════════════════
      v6.3 MAP SUBSTRATE. Every rule here is scoped to .stage.mapmode, so the
-     flat page is untouched when ?map=1 is absent.
+     flat fallback renderer is untouched when the map cannot be used.
      ══════════════════════════════════════════════════════════════════════ */
   .stage.mapmode { padding: 0; display: block; }
   #map { position: absolute; inset: 0; width: 100%; height: 100%; background: #0a0c0f; }
@@ -1138,8 +1138,9 @@
   </main>
 
 <!-- v6.3: the ONE georeference, shared with responder-intel.html. Loaded before
-     the page script so `window.NadirGeo` exists by the time ?map=1 is read; if
-     this 404s, ?map=1 is ignored and the page behaves exactly as v6.2. -->
+     the page script so `window.NadirGeo` exists before the map is set up. If
+     this 404s the map is skipped and the page falls back to the flat nadir
+     image, exactly as v6.2 rendered it. -->
 <script src="nadir-geo.js"></script>
 <script>
 (function () {
@@ -1196,19 +1197,17 @@
   var acctType = (qp('type') || '').toLowerCase();   // optional: residential|commercial
   var catalogUrl = qp('catalog') || DEFAULT_CATALOG;
   // ── v6.3: MAP SUBSTRATE, OPT-IN ───────────────────────────────────────────
-  // ?map=1 puts the pins on a live Google satellite map. WITHOUT that param not
-  // one byte of behaviour changes, which is the whole point: every review link
-  // already sent keeps working, and a reviewer is never blocked by this feature.
-  // Both preconditions are checked rather than assumed, so a missing
-  // nadir-geo.js or a nadir URL with no center/zoom degrades to today's page
-  // instead of to a broken one.
+  // The pins go on a live Google satellite map. Both preconditions are checked
+  // rather than assumed, so a missing nadir-geo.js or a nadir URL with no
+  // center/zoom falls back to the v6.2 flat rendering instead of to a broken
+  // page - see the note on MAP_WANTED below.
   // ⚠️ v6.3.1: EVERY GATE BELOW IS INSTRUMENTED. v6.3 degraded to the flat page
   // silently when a precondition failed, which is indistinguishable from "the
   // new file never deployed" — and this file can be served from a browser cache
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.4.1';
+  var BUILD = 'v6.4.2';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -3130,7 +3129,7 @@
   // silently replacing it with a live read would change what they are reviewing
   // out from under them. The API is the fallback, and the refresh path.
   // ══════════════════════════════════════════════════════════════════════════
-  // v6.3 — MAP SUBSTRATE (opt-in with ?map=1)
+  // v6.4 — MAP SUBSTRATE (always on; the flat renderer is the fallback)
   // ══════════════════════════════════════════════════════════════════════════
   // WHY THIS SECTION IS SHORT, which is the whole design.
   //
@@ -3248,8 +3247,8 @@
     erLoadMaps();
   }
 
-  // Loaded here rather than from a tag in <head> on purpose: with ?map=1 absent
-  // the page makes no request to Google at all, so the flat path gains no new
+  // Loaded here rather than from a tag in <head> on purpose: a row that cannot
+  // be mapped makes no request to Google at all, so the flat fallback gains no
   // dependency and no new failure mode.
   function erLoadMaps() {
     if (window.google && window.google.maps) { erInitMap(); return; }
@@ -3258,7 +3257,7 @@
       try { erInitMap(); }
       catch (e) {
         erToast('The map failed to start (' + (e.message || e) +
-                '). Remove &map=1 from the URL to use the flat image.');
+                '). Add &map=0 to the URL to review on the flat image.');
         if (window.console) console.error('[element-review] map init failed', e);
       }
     };
@@ -3282,9 +3281,9 @@
         'the API key\u2019s HTTP-referrer list; BillingNotEnabled or ' +
         'ApiNotActivatedMapError are Cloud console settings.');
     }
-    erToast('Google Maps did not load. Remove &map=1 from the URL to review on ' +
-            'the flat image. (If the console says RefererNotAllowedMapError, ' +
-            'this page is not being served from responder-intel.vyanet.com.)');
+    erToast('Google Maps did not load. Add &map=0 to the URL to review on the ' +
+            'flat image. (If the console says RefererNotAllowedMapError, this ' +
+            'page is not being served from responder-intel.vyanet.com.)');
   }
 
   function erInitMap() {
@@ -3435,14 +3434,20 @@
 
   function erWireButtons() {
     var nb = document.getElementById('nadir-toggle');
+    // ⚠️ NO TOAST HERE, deliberately. Toggling the captured image is a routine,
+    // reversible, self-evident action - the picture appears or it does not, the
+    // button lights up, and its tooltip already says which way it will go. A
+    // banner over the imagery for something the reviewer can see happen is just
+    // an obstruction between them and the thing they came to look at.
+    // The toast is reserved for what the reviewer CANNOT see: a refused pin
+    // placement, and a map that failed to load.
     if (nb) nb.addEventListener('click', function () {
       erNadirOn = !erNadirOn;
       erApplyNadir();
-      erToast(erNadirOn
-        ? 'Showing the captured image - what the analysis actually saw, at zoom ' +
-          erGeo.zoom + '. It will blur if you zoom past that.'
-        : 'Captured image hidden. This is live basemap imagery, which may be a ' +
-          'different vintage from the capture.');
+      if (window.console && erNadirOn) {
+        console.log('[element-review] captured image shown - zoom ' + erGeo.zoom +
+          ' capture; it will blur past that');
+      }
     });
     // Fit belongs to the map now; initZoomPan returned early so nothing else
     // has claimed this button.
