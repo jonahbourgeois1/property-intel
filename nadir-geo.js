@@ -158,6 +158,35 @@
     return EARTH_A * Math.PI / 180 * Math.cos(lat * Math.PI / 180);
   }
 
+  // ⚠️ ALWAYS BUILD POLYGON MATHS ON A LOCAL ORIGIN, NEVER ON ABSOLUTE METRES.
+  // lng * metresPerDegLng at lat 44 is about -9.7e6 and lat * metresPerDegLat
+  // about 4.9e6. Any cross product of those - a signed area, a centroid moment,
+  // an orientation test - is a difference of two enormous nearly-equal doubles,
+  // and the ~1e4 answer is destroyed by cancellation. The square-lot centroid
+  // test caught it: the centroid came out nowhere near the centre. Subtracting
+  // the first vertex first makes every coordinate a few hundred metres and the
+  // maths exact. Differences alone (edge vectors, point-to-segment) are safe
+  // either way, but there is no reason to have two conventions in one file.
+  function localFrame(ring) {
+    var r = normaliseRing(ring);
+    if (r.length < 2) return null;
+    var ref = r[0];
+    var kx = metresPerDegLng(ref.lat), ky = metresPerDegLat(ref.lat);
+    var pts = [];
+    for (var i = 0; i < r.length; i++) {
+      var p = { x: (r[i].lng - ref.lng) * kx, y: (r[i].lat - ref.lat) * ky };
+      var last = pts[pts.length - 1];
+      if (!last || Math.abs(last.x - p.x) > 1e-6 || Math.abs(last.y - p.y) > 1e-6) pts.push(p);
+    }
+    if (pts.length > 1) {
+      var f = pts[0], l = pts[pts.length - 1];
+      if (Math.abs(f.x - l.x) < 1e-6 && Math.abs(f.y - l.y) < 1e-6) pts.pop();
+    }
+    return { pts: pts, kx: kx, ky: ky, ref: ref,
+             out: function (p) { return { lat: ref.lat + p.y / ky,
+                                          lng: ref.lng + p.x / kx }; } };
+  }
+
   function distPointSegM(px, py, ax, ay, bx, by) {
     var dx = bx - ax, dy = by - ay;
     var L2 = dx * dx + dy * dy;
@@ -224,23 +253,9 @@
   // A mitre at a very sharp concave corner shoots off to infinity, so it is
   // capped at 4d and falls back to a bevel beyond that.
   function ringOffsetM(ring, d) {
-    var n0 = ring.length;
-    var mLat = 0;
-    ring.forEach(function (v) { mLat += v.lat; });
-    mLat /= n0;
-    var kx = metresPerDegLng(mLat), ky = metresPerDegLat(mLat);
-    // to local metres, dropping the closing duplicate and any repeats
-    var P = [];
-    ring.forEach(function (v) {
-      var p = { x: v.lng * kx, y: v.lat * ky };
-      var last = P[P.length - 1];
-      if (!last || Math.abs(last.x - p.x) > 1e-6 || Math.abs(last.y - p.y) > 1e-6) P.push(p);
-    });
-    if (P.length > 1) {
-      var f = P[0], l = P[P.length - 1];
-      if (Math.abs(f.x - l.x) < 1e-6 && Math.abs(f.y - l.y) < 1e-6) P.pop();
-    }
-    var n = P.length;
+    var fr = localFrame(ring);
+    if (!fr) return null;
+    var P = fr.pts, n = P.length;
     if (n < 3) return null;
     // Orientation matters: the outward normal is the RIGHT normal only for a
     // counter-clockwise ring, so normalise the winding first.
@@ -302,7 +317,7 @@
       // segment short - the un-truncated point lands on the neighbouring edge,
       // 0 m from the lot instead of d. Do not add it back.
     }
-    return out.map(function (p) { return { lat: p.y / ky, lng: p.x / kx }; });
+    return out.map(fr.out);
   }
 
   // Sutherland-Hodgman against the four half-planes of the storable box. The
@@ -335,6 +350,81 @@
   function boxRing(box) {
     return [{ lat: box.north, lng: box.west }, { lat: box.north, lng: box.east },
             { lat: box.south, lng: box.east }, { lat: box.south, lng: box.west }];
+  }
+
+  // ── Bearings and rays, for labelling the sides of a property ─────────────
+  // The A/B/C/D convention in this project is model-viewer.html's:
+  //   alpha = the COMPASS AZIMUTH the front elevation was captured from, so the
+  //           front face of the structure looks along that bearing
+  //   bravo / charlie / delta = alpha + 90 / 180 / 270  (clockwise, N->E->S->W)
+  // Everything below is bearing maths in that frame: 0 = north, 90 = east.
+  function bearingBetween(a, b) {
+    var kx = metresPerDegLng((a.lat + b.lat) / 2), ky = metresPerDegLat((a.lat + b.lat) / 2);
+    var dx = (b.lng - a.lng) * kx, dy = (b.lat - a.lat) * ky;
+    var deg = Math.atan2(dx, dy) * 180 / Math.PI;   // atan2(east, north) = compass
+    return (deg + 360) % 360;
+  }
+
+  // Area-weighted centroid, not the average of the vertices: a lot with many
+  // closely-spaced points down one side would otherwise pull the centre toward
+  // that side and skew every bearing taken from it.
+  function ringCentroid(ring) {
+    var fr = localFrame(ring);
+    if (!fr) return null;
+    var P = fr.pts, n = P.length;
+    if (n < 3) return fr.out(P[0]);
+    var A = 0, cx = 0, cy = 0;
+    for (var i = 0; i < n; i++) {
+      var p = P[i], q = P[(i + 1) % n];
+      var f = p.x * q.y - q.x * p.y;
+      A += f; cx += (p.x + q.x) * f; cy += (p.y + q.y) * f;
+    }
+    if (Math.abs(A) < 1e-9) {          // degenerate sliver: fall back to the mean
+      var mx = 0, my = 0;
+      P.forEach(function (p) { mx += p.x; my += p.y; });
+      return fr.out({ x: mx / n, y: my / n });
+    }
+    A *= 0.5;
+    return fr.out({ x: cx / (6 * A), y: cy / (6 * A) });
+  }
+
+  // Cast a ray from `origin` along `bearingDeg` and return where it leaves the
+  // ring, pushed a further `pushM` metres out. Takes the FARTHEST crossing, not
+  // the first, so a concave lot or an origin sitting off-centre still yields a
+  // point outside the whole boundary rather than inside a notch.
+  function rayExit(ring, origin, bearingDeg, pushM) {
+    var r = normaliseRing(ring);
+    if (r.length < 3 || !origin) return null;
+    var kx = metresPerDegLng(origin.lat), ky = metresPerDegLat(origin.lat);
+    var ox = origin.lng * kx, oy = origin.lat * ky;
+    var b = bearingDeg * Math.PI / 180;
+    var dx = Math.sin(b), dy = Math.cos(b);            // unit, compass frame
+    var best = -Infinity;
+    for (var i = 0, n = r.length; i < n; i++) {
+      var p = r[i], q = r[(i + 1) % n];
+      var px = p.lng * kx - ox, py = p.lat * ky - oy;
+      var ex = q.lng * kx - p.lng * kx, ey = q.lat * ky - p.lat * ky;
+      var den = dx * ey - dy * ex;
+      if (Math.abs(den) < 1e-12) continue;             // parallel
+      var t = (px * ey - py * ex) / den;               // along the ray, metres
+      var u = (px * dy - py * dx) / den;               // along the edge, 0..1
+      if (t >= 0 && u >= 0 && u <= 1 && t > best) best = t;
+    }
+    if (!isFinite(best)) return null;
+    var d = best + (pushM || 0);
+    return { lat: origin.lat + (dy * d) / ky,
+             lng: origin.lng + (dx * d) / kx, exitM: best };
+  }
+
+  // Longest span across the ring, in metres - used to scale how far outside the
+  // boundary a label should sit so it reads the same on a 40 m lot and a 400 m one.
+  function ringSpanM(ring) {
+    var fr = localFrame(ring);
+    if (!fr) return 0;
+    var xs = fr.pts.map(function (p) { return p.x; });
+    var ys = fr.pts.map(function (p) { return p.y; });
+    return Math.max(Math.max.apply(null, xs) - Math.min.apply(null, xs),
+                    Math.max.apply(null, ys) - Math.min.apply(null, ys));
   }
 
   // ── WHERE A REVIEWER MAY PLACE A PIN ─────────────────────────────────────
@@ -411,10 +501,14 @@
     storableBox:      storableBox,
     makeAllowedRegion: makeAllowedRegion,
     ringOffsetM:      ringOffsetM,
+    bearingBetween:   bearingBetween,
+    ringCentroid:     ringCentroid,
+    rayExit:          rayExit,
+    ringSpanM:        ringSpanM,
     clipRingToBox:    clipRingToBox,
     ringContains:     ringContains,
     ringDistanceM:    ringDistanceM,
     normaliseRing:    normaliseRing,
-    _version:         '1.1.0'
+    _version:         '1.2.0'
   };
 })(typeof window !== 'undefined' ? window : globalThis);
