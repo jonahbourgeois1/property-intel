@@ -1233,7 +1233,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.7';
+  var BUILD = 'v6.8';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -3607,11 +3607,11 @@
     var to = erPinLatLng(ER_RE_ENTRY), what = 'Entry';
     if (!to) { to = erPinLatLng(ER_RE_DRIVE); what = 'Driveway'; }
     if (!to) return null;
-    var d = window.NadirGeo.bearingBetween(st, to);
-    // Two pins on top of each other give a meaningless bearing.
-    if (window.NadirGeo.rayExit && Math.abs(st.lat - to.lat) < 1e-9 &&
-        Math.abs(st.lng - to.lng) < 1e-9) return null;
-    return { deg: d, how: 'structure to ' + what + ' pin', derived: true };
+    // Two pins on top of each other give a meaningless bearing. 1e-9 deg is
+    // about 0.1 mm, so this only ever catches literally-identical coordinates.
+    if (Math.abs(st.lat - to.lat) < 1e-9 && Math.abs(st.lng - to.lng) < 1e-9) return null;
+    return { deg: window.NadirGeo.bearingBetween(st, to),
+             how: 'structure to ' + what + ' pin', derived: true };
   }
 
   function erComputeSideLabels() {
@@ -3625,26 +3625,33 @@
       }
       return;
     }
-    // Ray origin is the STRUCTURE when we have one - alpha is defined by the
-    // building's front face, so rays from the building put ALPHA on the lot edge
-    // the front actually looks at. Only fall back to the lot centroid.
-    var origin = erPinLatLng(ER_RE_STRUCT) ||
-                 window.NadirGeo.ringCentroid(parcelRing);
-    if (!origin) return;
-    // Sit the label outside the lot line, scaled to the lot so it reads the same
-    // on a 40 m town lot and a 400 m rural one.
-    var push = Math.max(10, window.NadirGeo.ringSpanM(parcelRing) * 0.06);
-    for (var i = 0; i < 4; i++) {
-      var brg = (a.deg + i * 90) % 360;
-      var pt = window.NadirGeo.rayExit(parcelRing, origin, brg, push);
-      if (!pt) continue;
-      erSideLabels.push({ text: ER_SIDES[i], lat: pt.lat, lng: pt.lng,
-                          brg: brg, derived: a.derived, how: a.how });
+    // ⚠️ ANCHORED TO THE LOT'S EDGES, NOT TO A RAY FROM THE BUILDING.
+    // v6.7 cast a ray from the structure pin along each bearing and labelled
+    // where it left the lot. Jonah's markup showed why that fails: a house is
+    // rarely centred on its lot, so four rays 90 degrees apart from an
+    // off-centre origin exit near the CORNERS. On his rotated rectangle it gave
+    // Alpha NW, Bravo N, Charlie SE, Delta SW - two bunched along the top, two
+    // along the bottom, nothing on either long side, and Alpha sitting on a pin.
+    // NadirGeo.sideAnchors() instead assigns each lot EDGE to the side its
+    // outward normal points at and takes the length-weighted midpoint, so the
+    // anchors are the middles of the four sides and do not depend on where the
+    // building sits. See the note above sideAnchors for why length weighting
+    // matters on a 34-vertex Deschutes taxlot.
+    var push = Math.max(14, window.NadirGeo.ringSpanM(parcelRing) * 0.09);
+    var anchors = window.NadirGeo.sideAnchors(parcelRing, a.deg, push);
+    if (!anchors) return;
+    for (var i = 0; i < 4 && i < anchors.length; i++) {
+      erSideLabels.push({ text: ER_SIDES[i], lat: anchors[i].lat,
+                          lng: anchors[i].lng, brg: anchors[i].bearing,
+                          edges: anchors[i].edgeCount,
+                          derived: a.derived, how: a.how });
     }
     if (window.console) {
       console.log('[element-review] A/B/C/D from ' + a.how + ' - alpha ' +
         a.deg.toFixed(1) + ' deg' + (a.derived ? ' (DERIVED)' : '') +
-        ', ' + erSideLabels.length + ' side(s) placed');
+        ', anchored to lot edges: ' + erSideLabels.map(function (L) {
+          return L.text[0] + Math.round(L.brg) + '/' + L.edges + 'e';
+        }).join(' '));
     }
   }
 
@@ -3655,7 +3662,8 @@
       var el = document.createElement('div');
       el.className = 'er-side' + (L.derived ? ' derived' : '');
       el.textContent = L.text;
-      el.title = L.text + ' side - bearing ' + Math.round(L.brg) + ' deg' +
+      el.title = L.text + ' side - faces ' + Math.round(L.brg) + ' deg' +
+        (L.edges === 0 ? ' (no lot edge faces this way; placed at the far corner)' : '') +
         (L.derived ? '. DERIVED from the ' + L.how + ', not from the capture. ' +
                      'Add &alpha=<bearing> to the review link to make it exact.'
                    : ' (from ' + L.how + ')');
