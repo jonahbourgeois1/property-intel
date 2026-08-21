@@ -1207,7 +1207,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.4.2';
+  var BUILD = 'v6.5';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1305,7 +1305,7 @@
   })();
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var erMap = null, erOverlay = null, erAllow = null;
-  var erParcelPoly = null, erMarginPoly = null, erBoxRect = null;
+  var erParcelPoly = null, erRangePoly = null;
   var erNadirOn = false, erToastT = null, erToastMsg = '';
   var mapCoordHook = null;
   if (MAP_MODE) {
@@ -2986,6 +2986,10 @@
 
   function parcelNone(reason) {
     parcelSay('no parcel boundary: ' + reason);
+    // No lot lines, but there is still a pin range (the storable box), and with
+    // the camera uncapped it is the only boundary on screen. erDrawLimits draws
+    // it from erAllow.outline(), which falls back to the box when ring is null.
+    if (MAP_MODE) erDrawLimits();
     var btn = document.getElementById('parcel-toggle');
     if (btn) {
       btn.style.display = '';
@@ -3288,33 +3292,28 @@
 
   function erInitMap() {
     var g = google.maps;
-    var pad = { lat: erBounds.north - erBounds.south,
-                lng: erBounds.east  - erBounds.west };
     erMap = new g.Map(document.getElementById('map'), {
       mapTypeId: g.MapTypeId.SATELLITE,
       tilt: 0,
       rotateControl: false,
-      // Past the capture zoom the basemap is sharper than the nadir, which is
-      // exactly why the nadir is off by default. Below minZoom the property is a
-      // dot and nothing can be judged.
+      // The one cap kept: past 21 there is no satellite imagery to show, only
+      // upscaled mush. Zooming OUT is unlimited - see the note below.
       maxZoom: 21,
-      minZoom: Math.max(1, erGeo.zoom - 3),
       mapTypeControl: true,
       mapTypeControlOptions: { style: g.MapTypeControlStyle.DROPDOWN_MENU,
                                mapTypeIds: ['satellite', 'hybrid', 'roadmap'] },
       streetViewControl: false,
-      zoomControl: true,
       zoomControlOptions: { position: g.ControlPosition.RIGHT_CENTER },
       fullscreenControl: true,
-      // Generous on purpose: context is the reason for the map, so the approach
-      // road and the neighbouring frontage have to stay reachable.
-      restriction: {
-        latLngBounds: { north: erBounds.north + pad.lat * 1.5,
-                        south: erBounds.south - pad.lat * 1.5,
-                        east:  erBounds.east  + pad.lng * 1.5,
-                        west:  erBounds.west  - pad.lng * 1.5 },
-        strictBounds: false
-      }
+      // ⚠️ NO `restriction` AND NO `minZoom`, deliberately. Earlier builds fenced
+      // the camera to roughly 4x the nadir footprint on the theory that a
+      // reviewer should stay near the property. In practice the fence is what
+      // gets in the way: a long driveway, the road the engine actually arrives
+      // on, or the neighbouring parcel a fire would run through are all outside
+      // it, and those are the things a map is for. Where a PIN may go is a
+      // separate question, it is still enforced exactly, and it is now drawn
+      // (see erDrawLimits) - so the camera does not need to enforce anything.
+      zoomControl: true
     });
     erMap.setTilt(0);                       // see the TILT warning above
     erFitNadir();
@@ -3324,7 +3323,6 @@
       var q = erFwd(e.latLng.lat(), e.latLng.lng());
       mapCoordHook(q.x, q.y);
     });
-    erDrawBox();
     erDrawLimits();
     erWireButtons();
     erApplyNadir();
@@ -3374,15 +3372,10 @@
 
   // The 5..95 band. Drawn always, with or without a parcel, because it is the
   // real edge of what can be STORED - not the edge of the picture.
-  function erDrawBox() {
-    if (erBoxRect) { erBoxRect.setMap(null); erBoxRect = null; }
-    var b = window.NadirGeo.storableBox(erGeo, COORD_MIN, COORD_MAX);
-    erBoxRect = new google.maps.Rectangle({
-      bounds: { north: b.north, south: b.south, east: b.east, west: b.west },
-      strokeColor: '#9aa7b4', strokeOpacity: 0.5, strokeWeight: 1,
-      fillOpacity: 0, clickable: false, map: erMap, zIndex: 1
-    });
-  }
+  // A dotted grey ring. Google Maps has no dashed stroke, so the line itself is
+  // transparent and a repeating symbol is walked along it.
+  var ER_DOT = { path: 'M 0,-1 0,1', strokeColor: '#c3c9d1',
+                 strokeOpacity: 0.95, strokeWeight: 2, scale: 1.4 };
 
   // Called from drawParcel(), so it runs on first load AND after every refresh -
   // and it tolerates being called before the map exists, because loadParcel()
@@ -3394,7 +3387,7 @@
     });
     if (!erMap) return;
     if (erParcelPoly) { erParcelPoly.setMap(null); erParcelPoly = null; }
-    if (erMarginPoly) { erMarginPoly.setMap(null); erMarginPoly = null; }
+    if (erRangePoly)  { erRangePoly.setMap(null);  erRangePoly = null; }
     if (parcelRing && parcelRing.length >= 3) {
       erParcelPoly = new google.maps.Polygon({
         paths: parcelRing,
@@ -3403,21 +3396,32 @@
         strokeColor: '#cd3333', strokeOpacity: 1, strokeWeight: 4,
         fillOpacity: 0, clickable: false, zIndex: 3
       });
-      var hint = erAllow.marginHint();
-      if (hint) {
-        erMarginPoly = new google.maps.Polygon({
-          paths: hint,
-          strokeColor: '#cd3333', strokeOpacity: 0.3, strokeWeight: 1,
-          fillColor: '#cd3333', fillOpacity: 0.07, clickable: false, zIndex: 2
-        });
-      }
+    }
+    // ⭐ THE PIN RANGE. Not a hint and not a decoration: NadirGeo's outline() is
+    // the lot offset outward by MARGIN_M with round joins at convex corners and
+    // mitres at concave ones, clipped to the storable 5..95 box - which is
+    // exactly the region placementAllowed() accepts. Verified in
+    // test-nadir-geo.mjs: every vertex sits MARGIN_M from the lot, points just
+    // inside are accepted and points just outside are refused.
+    // It matters more now that the camera is uncapped: panning is unlimited, so
+    // this ring is the only thing on screen saying where a pin can actually go.
+    var ring = erAllow.outline();
+    if (ring && ring.length >= 3) {
+      erRangePoly = new google.maps.Polyline({
+        path: ring.concat([ring[0]]),          // Polyline, so close it by hand
+        strokeOpacity: 0,                      // the dots ARE the line
+        icons: [{ icon: ER_DOT, offset: '0', repeat: '10px' }],
+        clickable: false, zIndex: 2
+      });
     }
     erApplyLimits();
   }
   function erApplyLimits() {
-    // The Lot button governs the lot line and its tolerance band together.
+    // The Lot button governs the lot line and the pin-range ring together: they
+    // are two readings of the same thing, and showing one without the other
+    // invites "why is my pin refused inside the red line".
     if (erParcelPoly) erParcelPoly.setMap(parcelShown ? erMap : null);
-    if (erMarginPoly) erMarginPoly.setMap(parcelShown ? erMap : null);
+    if (erRangePoly)  erRangePoly.setMap(parcelShown ? erMap : null);
   }
 
   function erApplyNadir() {
