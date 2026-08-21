@@ -1003,6 +1003,24 @@
   .er-toast.on { display: block; }
   /* The captured nadir once it has been lifted into the map's LOWEST pane.
      `.frame img` no longer matches it, so its sizing lives here. */
+  /* A/B/C/D side labels. Quiet chips, not shouty markers: they are orientation,
+     not content, and they sit outside the lot line where nothing else is. */
+  #erSides { position: absolute; left: 0; top: 0; pointer-events: none; }
+  .er-side {
+    position: absolute; transform: translate(-50%, -50%);
+    padding: 3px 9px; border-radius: 5px; white-space: nowrap;
+    background: rgba(27,32,39,0.86);
+    border: 1px solid rgba(238,242,246,0.45);
+    color: var(--ink);
+    font-family: var(--mono); font-size: 10.5px; font-weight: 500;
+    letter-spacing: 0.14em;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.5);
+  }
+  /* Derived from the pins rather than given by the capture. Dashed and amber so
+     "we worked this out" never reads as "we measured this". */
+  .er-side.derived {
+    border-style: dashed; border-color: rgba(232,149,90,0.75); color: #f0c9a8;
+  }
   #nadirPane { position: absolute; overflow: hidden; line-height: 0; }
   #nadirPane img {
     display: block; width: 100%; height: 100%;
@@ -1215,7 +1233,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.6';
+  var BUILD = 'v6.7';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1314,6 +1332,7 @@
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var erMap = null, erOverlay = null, erAllow = null;
   var erParcelPoly = null, erRangePoly = null;
+  var erSideLabels = [], erSideEls = [], erSideBox = null;
   var erNadirOn = false, erToastT = null, erToastMsg = '';
   var mapCoordHook = null;
   if (MAP_MODE) {
@@ -3372,6 +3391,13 @@
       // overlayMouseTarget, not overlayLayer: the markers need pointer events
       // for dragging and the frame needs a click in place mode.
       panes.overlayMouseTarget.appendChild(frame);
+      // Appended AFTER #frame in the same pane, so the labels sit above the lot
+      // line and the pins rather than under them, and pointer-events:none keeps
+      // them from stealing a drag from a pin they happen to overlap.
+      erSideBox = document.createElement('div');
+      erSideBox.id = 'erSides';
+      panes.overlayMouseTarget.appendChild(erSideBox);
+      erRenderSideLabels();
       if (img) {
         wrap = document.createElement('div');
         wrap.id = 'nadirPane';
@@ -3394,10 +3420,32 @@
         wrap.style.left = L; wrap.style.top = T;
         wrap.style.width = W; wrap.style.height = H;
       }
+      if (erSideBox) {
+        // Below a couple of zoom levels under the capture the lot is a smudge and
+        // four chips would just collide over it. They ride the Lot toggle too.
+        var z = erMap && erMap.getZoom ? erMap.getZoom() : erGeo.zoom;
+        var show = parcelShown && erSideLabels.length &&
+                   z >= (erGeo.zoom - 1);
+        erSideBox.style.display = show ? '' : 'none';
+        if (show) {
+          for (var i = 0; i < erSideLabels.length; i++) {
+            var el = erSideEls[i];
+            if (!el) continue;
+            var q = proj.fromLatLngToDivPixel(new google.maps.LatLng(
+              erSideLabels[i].lat, erSideLabels[i].lng));
+            el.style.left = q.x + 'px';
+            el.style.top  = q.y + 'px';
+          }
+        }
+      }
     };
     ov.onRemove = function () {
       if (frame.parentNode) frame.parentNode.removeChild(frame);
       if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
+      if (erSideBox && erSideBox.parentNode) {
+        erSideBox.parentNode.removeChild(erSideBox);
+        erSideBox = null;
+      }
     };
     ov.setMap(erMap);
     return ov;
@@ -3481,6 +3529,8 @@
                       'are unaffected.');
       }
     }
+    erComputeSideLabels();
+    erRenderSideLabels();
     erApplyLimits();
   }
   // The Lot button governs the lot line and the pin-range ring together: they
@@ -3494,6 +3544,124 @@
   function erApplyLimits() {
     if (erParcelPoly) erParcelPoly.setMap(parcelShown ? erMap : null);
     if (erRangePoly)  erRangePoly.setMap(parcelShown ? erMap : null);
+    // One place decides whether the labels show - draw() - so poke it.
+    if (erOverlay && erOverlay.draw) erOverlay.draw();
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ALPHA / BRAVO / CHARLIE / DELTA — labelling the sides of the property
+  // ══════════════════════════════════════════════════════════════════════════
+  // The convention is model-viewer.html's, and it is worth restating because
+  // getting the direction of rotation wrong is the sort of error nobody notices
+  // until a responder is told the wrong side of a building:
+  //   alpha  = the COMPASS AZIMUTH the FRONT elevation was captured from, so the
+  //            front face of the structure looks along that bearing
+  //   bravo / charlie / delta = alpha + 90 / 180 / 270, i.e. CLOCKWISE
+  // model-viewer's own `VIEW_OFFSETS = {alpha:0, bravo:90, charlie:180,
+  // delta:270}` and its flythrough - which steps from the residence pin along
+  // `alpha` to find the front face - are the authority for both.
+  //
+  // ⚠️ THIS PAGE HAS NO FRONTAGE BEARING. `alpha` is a model-viewer URL param;
+  // element-review's query string has never carried one and ?route=elements does
+  // not return one. So there are three tiers, and which one produced the answer
+  // is made visible rather than hidden:
+  //   1. &alpha=<bearing>  - authoritative. Add it to the review link (or have
+  //      Satellite.gs add it) and the labels are exact. Solid border.
+  //   2. DERIVED from the pins already on the page: the bearing from the
+  //      structure pin to the Entry pin IS the direction the front door faces,
+  //      which is exactly what model-viewer's flythrough assumes in reverse.
+  //      Falls back to structure -> Driveway, since a driveway meets the front.
+  //      Dashed amber border, and the tooltip says which pins were used.
+  //   3. Nothing to derive from - NO LABELS. A confidently wrong "Charlie side"
+  //      is worse than no label at all, so this layer never guesses north.
+  var ER_SIDES = ['ALPHA', 'BRAVO', 'CHARLIE', 'DELTA'];
+  var ER_RE_STRUCT = /residence|dwelling|main\s*building|commercial\s*building|house|structure/i;
+  var ER_RE_ENTRY  = /^\s*entry\s*$|entrance|front\s*door/i;
+  var ER_RE_DRIVE  = /driveway/i;
+
+  // Current position of the first pin whose NAME matches - honouring a
+  // reviewer's correction, because a dragged Entry pin is the better answer.
+  // Matched on name rather than catalog id: ids are renumbered by catalog work,
+  // and a name is checkable by eye against the legend.
+  function erPinLatLng(re) {
+    for (var i = 0; i < elements.length; i++) {
+      if (!re.test(String(elements[i].name || ''))) continue;
+      var st = state[i] || {};
+      var x = (st.cx === null || st.cx === undefined) ? elements[i].x : st.cx;
+      var y = (st.cy === null || st.cy === undefined) ? elements[i].y : st.cy;
+      if (isFinite(Number(x)) && isFinite(Number(y))) return erInv(x, y);
+    }
+    for (var k = 0; k < added.length; k++) {          // pins added this round count
+      if (re.test(String(added[k].name || ''))) return erInv(added[k].x, added[k].y);
+    }
+    return null;
+  }
+
+  function erAlphaBearing() {
+    var p = parseFloat(qp('alpha'));
+    if (isFinite(p)) {
+      return { deg: ((p % 360) + 360) % 360, how: '&alpha=' + p, derived: false };
+    }
+    var st = erPinLatLng(ER_RE_STRUCT);
+    if (!st) return null;
+    var to = erPinLatLng(ER_RE_ENTRY), what = 'Entry';
+    if (!to) { to = erPinLatLng(ER_RE_DRIVE); what = 'Driveway'; }
+    if (!to) return null;
+    var d = window.NadirGeo.bearingBetween(st, to);
+    // Two pins on top of each other give a meaningless bearing.
+    if (window.NadirGeo.rayExit && Math.abs(st.lat - to.lat) < 1e-9 &&
+        Math.abs(st.lng - to.lng) < 1e-9) return null;
+    return { deg: d, how: 'structure to ' + what + ' pin', derived: true };
+  }
+
+  function erComputeSideLabels() {
+    erSideLabels = [];
+    if (!parcelRing || parcelRing.length < 3) return;   // labels are about the LOT
+    var a = erAlphaBearing();
+    if (!a) {
+      if (window.console) {
+        console.log('[element-review] no A/B/C/D labels: no &alpha= and no ' +
+          'structure+Entry/Driveway pins to derive the frontage bearing from');
+      }
+      return;
+    }
+    // Ray origin is the STRUCTURE when we have one - alpha is defined by the
+    // building's front face, so rays from the building put ALPHA on the lot edge
+    // the front actually looks at. Only fall back to the lot centroid.
+    var origin = erPinLatLng(ER_RE_STRUCT) ||
+                 window.NadirGeo.ringCentroid(parcelRing);
+    if (!origin) return;
+    // Sit the label outside the lot line, scaled to the lot so it reads the same
+    // on a 40 m town lot and a 400 m rural one.
+    var push = Math.max(10, window.NadirGeo.ringSpanM(parcelRing) * 0.06);
+    for (var i = 0; i < 4; i++) {
+      var brg = (a.deg + i * 90) % 360;
+      var pt = window.NadirGeo.rayExit(parcelRing, origin, brg, push);
+      if (!pt) continue;
+      erSideLabels.push({ text: ER_SIDES[i], lat: pt.lat, lng: pt.lng,
+                          brg: brg, derived: a.derived, how: a.how });
+    }
+    if (window.console) {
+      console.log('[element-review] A/B/C/D from ' + a.how + ' - alpha ' +
+        a.deg.toFixed(1) + ' deg' + (a.derived ? ' (DERIVED)' : '') +
+        ', ' + erSideLabels.length + ' side(s) placed');
+    }
+  }
+
+  function erRenderSideLabels() {
+    if (!erSideBox) return;
+    while (erSideBox.firstChild) erSideBox.removeChild(erSideBox.firstChild);
+    erSideEls = erSideLabels.map(function (L) {
+      var el = document.createElement('div');
+      el.className = 'er-side' + (L.derived ? ' derived' : '');
+      el.textContent = L.text;
+      el.title = L.text + ' side - bearing ' + Math.round(L.brg) + ' deg' +
+        (L.derived ? '. DERIVED from the ' + L.how + ', not from the capture. ' +
+                     'Add &alpha=<bearing> to the review link to make it exact.'
+                   : ' (from ' + L.how + ')');
+      erSideBox.appendChild(el);
+      return el;
+    });
   }
 
   function erApplyNadir() {
