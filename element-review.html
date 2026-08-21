@@ -962,6 +962,45 @@
     border-top: 1px solid var(--line);
     font-size: 12px; color: var(--ink-faint);
   }
+  /* ══════════════════════════════════════════════════════════════════════
+     v6.3 MAP SUBSTRATE. Every rule here is scoped to .stage.mapmode, so the
+     flat page is untouched when ?map=1 is absent.
+     ══════════════════════════════════════════════════════════════════════ */
+  .stage.mapmode { padding: 0; display: block; }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; background: #0a0c0f; }
+  .stage:not(.mapmode) #map { display: none; }
+  /* The frame is moved into a map pane by the OverlayView and sized by it, so
+     every flat-layout constraint has to come off. It keeps its percentage
+     coordinate system - that is what makes the rest of the page work unchanged. */
+  .stage.mapmode .frame {
+    position: absolute;
+    max-width: none; max-height: none;
+    box-shadow: inset 0 0 0 1px rgba(238,242,246,0.22);
+    border-radius: 0;
+    transform: none;
+    cursor: default;
+    /* Pointer events pass THROUGH to the map, so panning and wheel-zoom work
+       anywhere - including over the property. Markers opt back in below. */
+    pointer-events: none;
+  }
+  .stage.mapmode .frame .marker { pointer-events: auto; }
+  /* Place mode is the one time the frame itself must catch a click. */
+  .stage.mapmode.placing .frame { pointer-events: auto; cursor: crosshair; }
+  /* The map draws its own zoom control, and there is no CSS transform to report. */
+  .stage.mapmode #zoom-in,
+  .stage.mapmode #zoom-out,
+  .stage.mapmode #zoom-level { display: none; }
+  .stage.mapmode .zoom-controls { z-index: 5; }
+  /* A refused drag has to be explained where the eye already is: on the image. */
+  .er-toast {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+    z-index: 7; display: none; max-width: min(560px, 88%);
+    padding: 9px 15px; border-radius: 8px;
+    background: var(--bad); color: #2a0d0d;
+    font-size: 13px; font-weight: 600; line-height: 1.4; text-align: center;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.55);
+  }
+  .er-toast.on { display: block; }
 </style>
 </head>
 <body>
@@ -1038,6 +1077,8 @@
     </aside>
 
     <section class="stage">
+      <!-- v6.3: inert and display:none unless .stage carries .mapmode -->
+      <div id="map"></div>
       <div class="frame" id="frame">
         <img id="nadir" alt="Nadir orthophoto">
         <svg class="route-svg" id="routeSvg" viewBox="0 0 100 100"
@@ -1051,6 +1092,7 @@
              preserveAspectRatio="none" aria-hidden="true"></svg>
       </div>
       <div class="place-hint" id="placeHint"></div>
+      <div class="er-toast" id="erToast"></div>
       <div class="coord" id="coord" title="Cursor position — click to copy"><b>xy</b> <span id="coordVal">—</span></div>
       <div class="zoom-controls">
         <div class="zoom-btn" id="zoom-in" title="Zoom in">+</div>
@@ -1060,6 +1102,11 @@
              it never offers a toggle for something that cannot be shown. -->
         <div class="zoom-btn reset" id="parcel-toggle"
              title="Show or hide the property boundary" style="display:none">Lot</div>
+        <!-- v6.3: map mode only. Off by default - the live basemap is sharper
+             than the capture, so seeing the older raster is opt-in. -->
+        <div class="zoom-btn reset" id="nadir-toggle"
+             title="Show or hide the captured nadir over the map"
+             style="display:none">Nadir</div>
         <div class="zoom-level" id="zoom-level">100%</div>
       </div>
     </section>
@@ -1076,6 +1123,10 @@
     </aside>
   </main>
 
+<!-- v6.3: the ONE georeference, shared with responder-intel.html. Loaded before
+     the page script so `window.NadirGeo` exists by the time ?map=1 is read; if
+     this 404s, ?map=1 is ignored and the page behaves exactly as v6.2. -->
+<script src="nadir-geo.js"></script>
 <script>
 (function () {
   // v2: merged, tagged catalog.
@@ -1130,6 +1181,40 @@
   var addr     = qp('addr');
   var acctType = (qp('type') || '').toLowerCase();   // optional: residential|commercial
   var catalogUrl = qp('catalog') || DEFAULT_CATALOG;
+  // ── v6.3: MAP SUBSTRATE, OPT-IN ───────────────────────────────────────────
+  // ?map=1 puts the pins on a live Google satellite map. WITHOUT that param not
+  // one byte of behaviour changes, which is the whole point: every review link
+  // already sent keeps working, and a reviewer is never blocked by this feature.
+  // Both preconditions are checked rather than assumed, so a missing
+  // nadir-geo.js or a nadir URL with no center/zoom degrades to today's page
+  // instead of to a broken one.
+  var MAP_WANTED = qp('map') === '1';
+  var erGeo = (MAP_WANTED && window.NadirGeo && nadirUrl)
+                ? window.NadirGeo.nadirGeo(nadirUrl) : null;
+  var MAP_MODE = !!(MAP_WANTED && erGeo);
+  if (MAP_WANTED && !MAP_MODE && window.console) {
+    console.warn('[element-review] ?map=1 IGNORED - ' +
+      (!window.NadirGeo ? 'nadir-geo.js did not load'
+                        : 'this nadir URL carries no center/zoom'));
+  }
+  var erFwd = MAP_MODE ? window.NadirGeo.makeProjector(erGeo)   : null;
+  var erInv = MAP_MODE ? window.NadirGeo.makeUnprojector(erGeo) : null;
+  // Metres a pin may sit OUTSIDE the lot line, for roads and extremity points.
+  var MARGIN_M = (function () {
+    var v = parseFloat(qp('margin'));
+    return (isFinite(v) && v >= 0) ? v : 30;
+  })();
+  var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+  var erMap = null, erOverlay = null, erAllow = null;
+  var erParcelPoly = null, erMarginPoly = null, erBoxRect = null;
+  var erNadirOn = false, erToastT = null, erToastMsg = '';
+  var mapCoordHook = null;
+  if (MAP_MODE) {
+    // Applied immediately, not in boot(), so there is no flash of the flat
+    // layout before the map arrives.
+    var st0 = document.querySelector('.stage');
+    if (st0) st0.classList.add('mapmode');
+  }
 
   // Responder Directions: an ordered waypoint list drawn over the same nadir.
   // Waypoints are {seq,x,y} percentages and carry NO catalog id — the sequence
@@ -1750,6 +1835,11 @@
     // Refuse a drag or a typed coordinate on a locked pin. The guard lives here
     // rather than on the drag handler so BOTH input paths are covered.
     if (isLocked(idx)) return;
+    // v6.3: and refuse a position outside the lot + margin. Same reasoning for
+    // the same location - movePin is the ONLY path that writes a correction, so
+    // drag and typed coordinate are both covered by one guard. A refusal simply
+    // does not move the pin, which reads as a wall at the boundary.
+    if (!placementAllowed(x, y)) return;
     state[idx].cx = x; state[idx].cy = y;
     // v5.6: a corrected position IS a Fix verdict. Before this, dragging a pin
     // without also tapping the chip filed a row with "Pin n Fix XY" set and
@@ -2077,6 +2167,9 @@
     // only function that creates a pin, so the count can never exceed the limit
     // however placement was reached.
     if (atPinLimit()) { cancelPlacement(); updateAddWarn(); return; }
+    // v6.3: guard 4 - the placement region. placeAdded is the only function that
+    // creates a pin, so this is where the invariant has to hold.
+    if (!placementAllowed(x, y)) { cancelPlacement(); return; }
 
     var rec = { id: parseInt(entry.id, 10), name: entry.name,
                 section: entry.section || '', x: x, y: y, note: '' };
@@ -2200,7 +2293,7 @@
     var missed = (document.getElementById('missed') || {}).value || '';
     return {
       source: 'element-review',
-      version: 'v6.2',
+      version: 'v6.3',
       submitted_at: new Date().toISOString(),
       // Both travel, though the server trusts NEITHER: it re-derives the key from
       // the row it matched, so a stale link cannot misfile a critique. These are
@@ -2211,6 +2304,10 @@
       address: addr || '',
       account_type: acctType || '',
       nadir_url: nadirUrl || '',
+      // v6.3: which substrate produced this round. Additive - critique-api.gs
+      // reads named fields and ignores the rest - and it means a round filed
+      // from the map is identifiable in the log forever.
+      substrate: MAP_MODE ? 'map' : 'image',
       reviewer: reviewer.trim(),
       round: (isFinite(round) && round > 0) ? round : 1,
       element_count: elements.length,
@@ -2670,6 +2767,10 @@
     if (!svg) return;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     if (!parcelRing || parcelRing.length < 3) return;
+    // v6.3: on a map the lot is a real polygon, not an SVG clipped to the
+    // frame. A parcel legitimately runs past the nadir's edge and there is no
+    // longer any reason to hide the part that does.
+    if (MAP_MODE) { erDrawLimits(); return; }
     var geo = nadirGeo(nadirUrl);
     if (!geo) return;
     var project = makeProjector(geo);
@@ -2691,6 +2792,8 @@
     var btn = document.getElementById('parcel-toggle');
     if (stage) stage.classList.toggle('parcel-off', !parcelShown);
     if (btn) btn.classList.toggle('on', parcelShown);
+    // v6.3: the same Lot button drives the map polygon and its margin band.
+    if (MAP_MODE) erApplyLimits();
   }
 
   // ── v6.1: where the parcel boundary actually comes from ────────────────────
@@ -2926,7 +3029,277 @@
   // carries, it needs no network, and it is exactly what the reviewer was sent —
   // silently replacing it with a live read would change what they are reviewing
   // out from under them. The API is the fallback, and the refresh path.
+  // ══════════════════════════════════════════════════════════════════════════
+  // v6.3 — MAP SUBSTRATE (opt-in with ?map=1)
+  // ══════════════════════════════════════════════════════════════════════════
+  // WHY THIS SECTION IS SHORT, which is the whole design.
+  //
+  // The instinct is that moving the pins onto a slippy map means rewriting every
+  // marker to pixel coordinates. It does not. #frame is a rectangle that IS the
+  // nadir's footprint, and everything inside it is already positioned in PERCENT
+  // of that rectangle: markers, ghost markers, and all three
+  // viewBox="0 0 100 100" preserveAspectRatio="none" overlays.
+  //
+  // A Static Maps nadir is a Web Mercator raster. A Google map at tilt 0 with no
+  // rotation renders Mercator world pixels to the screen by a uniform,
+  // axis-aligned affine transform. So the nadir footprint projects to an
+  // axis-aligned screen RECTANGLE at every zoom level. Keep #frame sized and
+  // positioned to that projected rectangle and every percentage inside it stays
+  // exactly right, with no recomputation and no per-pin work.
+  //
+  // That is the "same at every zoom level" guarantee held STRUCTURALLY rather
+  // than by correction. Unchanged by this feature, and deliberately so:
+  //     pctFromClient()   reads frame.getBoundingClientRect() - still correct
+  //     makeDraggable()   its maths is already frame-relative
+  //     .marker left/top  percentages
+  //     ensureGhost / the ghost connector lines
+  //     renderRoute()
+  //     collectPayload()  same percentages, same 0.1 rounding, same 5..95 clamp
+  // Only the CAMERA changes hands: fitFrame() and initZoomPan() step aside.
+  //
+  // ⚠️ THE NADIR <img> STAYS INSIDE THE FRAME. It is NOT a
+  // google.maps.GroundOverlay. Sharing one rectangle with the pins means the
+  // image and the pins cannot drift apart; a separate overlay could.
+  //
+  // ⚠️ TILT AND ROTATION MUST STAY AT ZERO. The axis-aligned argument above is
+  // the load-bearing assumption of this whole approach. 45-degree imagery or a
+  // rotated heading would shear the footprint and every pin with it, so the
+  // controls are off AND setTilt(0) is asserted after the map is built.
+  var erBounds = null, erMapsTimer = null;
+
+  function erToast(msg) {
+    var el = document.getElementById('erToast');
+    if (!el) return;
+    // A drag fires continuously, so the same refusal must not restart the timer
+    // on every pointermove - it would never clear.
+    if (erToastMsg === msg && el.classList.contains('on')) return;
+    erToastMsg = msg;
+    el.textContent = msg;
+    el.classList.add('on');
+    if (erToastT) clearTimeout(erToastT);
+    erToastT = setTimeout(function () {
+      el.classList.remove('on'); erToastMsg = '';
+    }, 3600);
+  }
+
+  // ── The placement rule ────────────────────────────────────────────────────
+  // Returns TRUE unconditionally when the map is not in play, so the flat page's
+  // behaviour is bit-for-bit what it was. In map mode it is
+  // (lot grown by MARGIN_M) INTERSECT (the storable 5..95 box).
+  //
+  // ⚠️ The box half is not optional. clampCoords() in shared.gs clamps every
+  // stored coordinate to 5..95, so permitting a pin outside that band would let
+  // the pipeline silently relocate a gate a reviewer had placed deliberately.
+  // Refusing is the honest failure; clamping is the dishonest one.
+  function placementAllowed(x, y) {
+    if (!MAP_MODE || !erAllow) return true;
+    var ll = erInv(x, y);
+    var v = erAllow(ll.lat, ll.lng);
+    if (v.ok) return true;
+    erToast(v.message || 'That position cannot be stored.');
+    return false;
+  }
+
+  function erStart() {
+    var nb = document.getElementById('nadir-toggle');
+    if (nb) nb.style.display = '';
+    erBounds = window.NadirGeo.nadirBounds(erGeo);
+    erLoadMaps();
+  }
+
+  // Loaded here rather than from a tag in <head> on purpose: with ?map=1 absent
+  // the page makes no request to Google at all, so the flat path gains no new
+  // dependency and no new failure mode.
+  function erLoadMaps() {
+    if (window.google && window.google.maps) { erInitMap(); return; }
+    window.__erMapReady = function () {
+      if (erMapsTimer) { clearTimeout(erMapsTimer); erMapsTimer = null; }
+      try { erInitMap(); }
+      catch (e) {
+        erToast('The map failed to start (' + (e.message || e) +
+                '). Remove &map=1 from the URL to use the flat image.');
+        if (window.console) console.error('[element-review] map init failed', e);
+      }
+    };
+    var sc = document.createElement('script');
+    sc.async = true; sc.defer = true;
+    sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
+             '&callback=__erMapReady';
+    sc.onerror = erMapsDead;
+    // A referrer or billing rejection does NOT fire onerror - the script loads
+    // fine and then refuses in the console. A timeout is the only way to notice,
+    // and saying so beats a reviewer staring at a grey rectangle.
+    erMapsTimer = setTimeout(erMapsDead, 9000);
+    document.head.appendChild(sc);
+  }
+  function erMapsDead() {
+    if (erMapsTimer) { clearTimeout(erMapsTimer); erMapsTimer = null; }
+    if (erMap) return;
+    erToast('Google Maps did not load. Remove &map=1 from the URL to review on ' +
+            'the flat image. (If the console says RefererNotAllowedMapError, ' +
+            'this page is not being served from responder-intel.vyanet.com.)');
+  }
+
+  function erInitMap() {
+    var g = google.maps;
+    var pad = { lat: erBounds.north - erBounds.south,
+                lng: erBounds.east  - erBounds.west };
+    erMap = new g.Map(document.getElementById('map'), {
+      mapTypeId: g.MapTypeId.SATELLITE,
+      tilt: 0,
+      rotateControl: false,
+      // Past the capture zoom the basemap is sharper than the nadir, which is
+      // exactly why the nadir is off by default. Below minZoom the property is a
+      // dot and nothing can be judged.
+      maxZoom: 21,
+      minZoom: Math.max(1, erGeo.zoom - 3),
+      mapTypeControl: true,
+      mapTypeControlOptions: { style: g.MapTypeControlStyle.DROPDOWN_MENU,
+                               mapTypeIds: ['satellite', 'hybrid', 'roadmap'] },
+      streetViewControl: false,
+      zoomControl: true,
+      zoomControlOptions: { position: g.ControlPosition.RIGHT_CENTER },
+      fullscreenControl: true,
+      // Generous on purpose: context is the reason for the map, so the approach
+      // road and the neighbouring frontage have to stay reachable.
+      restriction: {
+        latLngBounds: { north: erBounds.north + pad.lat * 1.5,
+                        south: erBounds.south - pad.lat * 1.5,
+                        east:  erBounds.east  + pad.lng * 1.5,
+                        west:  erBounds.west  - pad.lng * 1.5 },
+        strictBounds: false
+      }
+    });
+    erMap.setTilt(0);                       // see the TILT warning above
+    erFitNadir();
+    erOverlay = erBuildOverlay();
+    erMap.addListener('mousemove', function (e) {
+      if (!mapCoordHook) return;
+      var q = erFwd(e.latLng.lat(), e.latLng.lng());
+      mapCoordHook(q.x, q.y);
+    });
+    erDrawBox();
+    erDrawLimits();
+    erWireButtons();
+    erApplyNadir();
+    if (window.console) {
+      console.log('[element-review] map mode: centre ' + erGeo.lat.toFixed(6) +
+        ', ' + erGeo.lng.toFixed(6) + ' capture zoom ' + erGeo.zoom +
+        ', size ' + erGeo.w + 'x' + erGeo.h +
+        ', placement limit ' + (parcelRing ? 'lot + ' + Math.round(MARGIN_M) + ' m'
+                                           : 'no lot data, image only'));
+    }
+  }
+
+  // The one piece of real machinery: keep #frame nailed to the nadir footprint.
+  function erBuildOverlay() {
+    var frame = document.getElementById('frame');
+    var ov = new google.maps.OverlayView();
+    ov.onAdd = function () {
+      // overlayMouseTarget, not overlayLayer: the markers need pointer events
+      // for dragging and the frame needs a click in place mode.
+      this.getPanes().overlayMouseTarget.appendChild(frame);
+    };
+    ov.draw = function () {
+      var proj = this.getProjection();
+      if (!proj || !erBounds) return;
+      var nw = proj.fromLatLngToDivPixel(
+        new google.maps.LatLng(erBounds.north, erBounds.west));
+      var se = proj.fromLatLngToDivPixel(
+        new google.maps.LatLng(erBounds.south, erBounds.east));
+      frame.style.left   = nw.x + 'px';
+      frame.style.top    = nw.y + 'px';
+      frame.style.width  = (se.x - nw.x) + 'px';
+      frame.style.height = (se.y - nw.y) + 'px';
+    };
+    ov.onRemove = function () {
+      if (frame.parentNode) frame.parentNode.removeChild(frame);
+    };
+    ov.setMap(erMap);
+    return ov;
+  }
+
+  function erFitNadir() {
+    if (!erMap || !erBounds) return;
+    erMap.fitBounds(new google.maps.LatLngBounds(
+      { lat: erBounds.south, lng: erBounds.west },
+      { lat: erBounds.north, lng: erBounds.east }), 24);
+  }
+
+  // The 5..95 band. Drawn always, with or without a parcel, because it is the
+  // real edge of what can be STORED - not the edge of the picture.
+  function erDrawBox() {
+    if (erBoxRect) { erBoxRect.setMap(null); erBoxRect = null; }
+    var b = window.NadirGeo.storableBox(erGeo, COORD_MIN, COORD_MAX);
+    erBoxRect = new google.maps.Rectangle({
+      bounds: { north: b.north, south: b.south, east: b.east, west: b.west },
+      strokeColor: '#9aa7b4', strokeOpacity: 0.5, strokeWeight: 1,
+      fillOpacity: 0, clickable: false, map: erMap, zIndex: 1
+    });
+  }
+
+  // Called from drawParcel(), so it runs on first load AND after every refresh -
+  // and it tolerates being called before the map exists, because loadParcel()
+  // races the Maps script by design (pins must never wait on either).
+  function erDrawLimits() {
+    erAllow = window.NadirGeo.makeAllowedRegion({
+      geo: erGeo, ring: parcelRing, marginM: MARGIN_M,
+      coordMin: COORD_MIN, coordMax: COORD_MAX
+    });
+    if (!erMap) return;
+    if (erParcelPoly) { erParcelPoly.setMap(null); erParcelPoly = null; }
+    if (erMarginPoly) { erMarginPoly.setMap(null); erMarginPoly = null; }
+    if (parcelRing && parcelRing.length >= 3) {
+      erParcelPoly = new google.maps.Polygon({
+        paths: parcelRing,
+        // House style, matched to responder-intel.html / hoa-viewer.html /
+        // viewer.html so the same line means the same thing in every viewer.
+        strokeColor: '#cd3333', strokeOpacity: 1, strokeWeight: 4,
+        fillOpacity: 0, clickable: false, zIndex: 3
+      });
+      var hint = erAllow.marginHint();
+      if (hint) {
+        erMarginPoly = new google.maps.Polygon({
+          paths: hint,
+          strokeColor: '#cd3333', strokeOpacity: 0.3, strokeWeight: 1,
+          fillColor: '#cd3333', fillOpacity: 0.07, clickable: false, zIndex: 2
+        });
+      }
+    }
+    erApplyLimits();
+  }
+  function erApplyLimits() {
+    // The Lot button governs the lot line and its tolerance band together.
+    if (erParcelPoly) erParcelPoly.setMap(parcelShown ? erMap : null);
+    if (erMarginPoly) erMarginPoly.setMap(parcelShown ? erMap : null);
+  }
+
+  function erApplyNadir() {
+    var img = document.getElementById('nadir');
+    var btn = document.getElementById('nadir-toggle');
+    if (img) img.style.visibility = erNadirOn ? '' : 'hidden';
+    if (btn) btn.classList.toggle('on', erNadirOn);
+  }
+
+  function erWireButtons() {
+    var nb = document.getElementById('nadir-toggle');
+    if (nb) nb.addEventListener('click', function () {
+      erNadirOn = !erNadirOn;
+      erApplyNadir();
+      erToast(erNadirOn
+        ? 'Showing the captured nadir - this is the image the analysis saw, at ' +
+          'zoom ' + erGeo.zoom + '. It will blur if you zoom past that.'
+        : 'Nadir hidden. This is live basemap imagery, which may be a different ' +
+          'vintage from the capture.');
+    });
+    // Fit belongs to the map now; initZoomPan returned early so nothing else
+    // has claimed this button.
+    var fb = document.getElementById('zoom-reset');
+    if (fb) fb.addEventListener('click', erFitNadir);
+  }
+
   function boot() {
+    if (MAP_MODE) erStart();
     renderRoute(route);
     var btn = document.getElementById('parcel-toggle');
     if (btn) btn.addEventListener('click', function () {
@@ -3002,6 +3375,15 @@
     var val   = document.getElementById('coordVal');
     if (!frame || !box || !val) return;
     var last = null;
+    // v6.3: in map mode the frame is pointer-events:none, so the readout is fed
+    // from the MAP's mousemove instead. Same `last`, so click-to-copy is
+    // unchanged. fmt() is a hoisted declaration, hence usable from here.
+    mapCoordHook = function (x, y) {
+      if (x < 0 || x > 100 || y < 0 || y > 100) { box.classList.remove('on'); return; }
+      last = { x: x, y: y };
+      val.textContent = fmt(x) + ', ' + fmt(y);
+      box.classList.add('on');
+    };
 
     function fmt(n) { return (Math.round(n * 10) / 10).toFixed(1); }
 
@@ -3054,6 +3436,9 @@
   var afterFrameFit = null;   // set by initZoomPan, so pan limits re-clamp
 
   function fitFrame() {
+    // v6.3: in map mode the frame's size and position come from the map
+    // projection (see erBuildOverlay), never from the stage.
+    if (MAP_MODE) return;
     var frame = document.getElementById('frame');
     var img = document.getElementById('nadir');
     var stage = frame ? frame.parentElement : null;
@@ -3100,6 +3485,9 @@
     var frame = document.getElementById('frame');
     var stage = frame ? frame.parentElement : null;
     if (!frame || !stage) return;
+    // v6.3: the map owns zoom and pan in map mode. Decided at parse time from
+    // the URL, so this can never be half-initialised.
+    if (MAP_MODE) return;
 
     var MIN = 1, MAX = 8;
     var scale = 1, tx = 0, ty = 0;
