@@ -200,6 +200,143 @@
     return best;
   }
 
+  // ── The DRAWN boundary of the allowed region ─────────────────────────────
+  // makeAllowedRegion().test() accepts a point when it is inside the lot or
+  // within marginM metres of it. The set of points exactly marginM metres from
+  // a polygon is that polygon offset outward with ROUND joins - straight
+  // sections parallel to each edge, and a quarter-ish arc of radius marginM at
+  // every convex corner. So that is what gets drawn, rather than the cheap
+  // "push each vertex away from the centroid" approximation this replaces:
+  // radial push distorts badly on a long thin lot, which is exactly the shape a
+  // rural parcel with road frontage tends to be, and a guide line that disagrees
+  // with the rule it depicts is worse than no guide line.
+  //
+  // The two joins are different because the level set genuinely is:
+  //   CONVEX corner  -> ARC of radius d (the corner is a single nearest point,
+  //                     so every direction around it is d away)
+  //   CONCAVE corner -> MITRE, the intersection of the two offset lines (the
+  //                     exterior angle is under 180 degrees, so the boundary
+  //                     turns a sharp corner rather than sweeping)
+  // ⚠️ Getting the concave case wrong is not cosmetic. Emitting the per-edge
+  // offset point there puts it ON the neighbouring edge - distance 0 from the
+  // lot, not d - so the drawn line dives back through the property. Caught on
+  // an L-shaped test lot: two of 32 vertices measured 0.000 m instead of 30.
+  // A mitre at a very sharp concave corner shoots off to infinity, so it is
+  // capped at 4d and falls back to a bevel beyond that.
+  function ringOffsetM(ring, d) {
+    var n0 = ring.length;
+    var mLat = 0;
+    ring.forEach(function (v) { mLat += v.lat; });
+    mLat /= n0;
+    var kx = metresPerDegLng(mLat), ky = metresPerDegLat(mLat);
+    // to local metres, dropping the closing duplicate and any repeats
+    var P = [];
+    ring.forEach(function (v) {
+      var p = { x: v.lng * kx, y: v.lat * ky };
+      var last = P[P.length - 1];
+      if (!last || Math.abs(last.x - p.x) > 1e-6 || Math.abs(last.y - p.y) > 1e-6) P.push(p);
+    });
+    if (P.length > 1) {
+      var f = P[0], l = P[P.length - 1];
+      if (Math.abs(f.x - l.x) < 1e-6 && Math.abs(f.y - l.y) < 1e-6) P.pop();
+    }
+    var n = P.length;
+    if (n < 3) return null;
+    // Orientation matters: the outward normal is the RIGHT normal only for a
+    // counter-clockwise ring, so normalise the winding first.
+    var area2 = 0;
+    for (var i = 0; i < n; i++) {
+      var a = P[i], b = P[(i + 1) % n];
+      area2 += a.x * b.y - b.x * a.y;
+    }
+    if (area2 < 0) P.reverse();
+    var N = [];
+    for (i = 0; i < n; i++) {
+      var p = P[i], q = P[(i + 1) % n];
+      var dx = q.x - p.x, dy = q.y - p.y;
+      var L = Math.sqrt(dx * dx + dy * dy) || 1;
+      N.push({ x: dy / L, y: -dx / L });          // right normal = outward for CCW
+    }
+    var out = [];
+    var STEP = Math.PI / 8;
+    for (i = 0; i < n; i++) {
+      var pi = P[i], ni = N[i], np = N[(i - 1 + n) % n];
+      var cross = np.x * ni.y - np.y * ni.x;
+      if (cross > 1e-9) {                          // convex: sweep an arc
+        var a0 = Math.atan2(np.y, np.x), a1 = Math.atan2(ni.y, ni.x);
+        var sweep = a1 - a0;
+        while (sweep < 0) sweep += 2 * Math.PI;
+        var steps = Math.max(1, Math.ceil(sweep / STEP));
+        for (var k = 0; k <= steps; k++) {
+          var a = a0 + sweep * k / steps;
+          out.push({ x: pi.x + d * Math.cos(a), y: pi.y + d * Math.sin(a) });
+        }
+      } else {
+        // Concave: mitre. Intersect the previous edge's offset line with this
+        // edge's offset line, both shifted out by d.
+        var pv = P[(i - 1 + n) % n];
+        var ux = pi.x - pv.x, uy = pi.y - pv.y;
+        var Lu = Math.sqrt(ux * ux + uy * uy) || 1; ux /= Lu; uy /= Lu;
+        var qn = P[(i + 1) % n];
+        var vx = qn.x - pi.x, vy = qn.y - pi.y;
+        var Lv = Math.sqrt(vx * vx + vy * vy) || 1; vx /= Lv; vy /= Lv;
+        var Ax = pi.x + d * np.x, Ay = pi.y + d * np.y;
+        var Bx = pi.x + d * ni.x, By = pi.y + d * ni.y;
+        var den = ux * vy - uy * vx;
+        var done = false;
+        if (Math.abs(den) > 1e-9) {
+          var t = ((Bx - Ax) * vy - (By - Ay) * vx) / den;
+          var mx = Ax + t * ux, my = Ay + t * uy;
+          var reach = Math.sqrt((mx - pi.x) * (mx - pi.x) + (my - pi.y) * (my - pi.y));
+          if (reach <= 4 * d) { out.push({ x: mx, y: my }); done = true; }
+        }
+        if (!done) { out.push({ x: Ax, y: Ay }); out.push({ x: Bx, y: By }); }
+      }
+      // ⚠️ NOTHING ELSE IS EMITTED PER EDGE, and that is not an omission.
+      // Each join already supplies BOTH ends of the straight offset section:
+      // vertex i's join finishes at P[i] + d*N[i] (the start of edge i's
+      // offset) and vertex i+1's join begins at P[i+1] + d*N[i] (its end), so
+      // the straight line between consecutive joins IS the offset of edge i.
+      // Pushing P[i+1] + d*N[i] explicitly is redundant at a convex corner and
+      // WRONG at a concave one, where the mitre is supposed to truncate that
+      // segment short - the un-truncated point lands on the neighbouring edge,
+      // 0 m from the lot instead of d. Do not add it back.
+    }
+    return out.map(function (p) { return { lat: p.y / ky, lng: p.x / kx }; });
+  }
+
+  // Sutherland-Hodgman against the four half-planes of the storable box. The
+  // box is axis-aligned in lat/lng, so this is exact and needs no projection.
+  function clipRingToBox(ring, box) {
+    var planes = [
+      function (v) { return box.north - v.lat; },
+      function (v) { return v.lat - box.south; },
+      function (v) { return box.east - v.lng; },
+      function (v) { return v.lng - box.west; }
+    ];
+    var poly = ring.slice();
+    for (var pi = 0; pi < planes.length && poly.length; pi++) {
+      var f = planes[pi], next = [];
+      for (var i = 0; i < poly.length; i++) {
+        var a = poly[i], b = poly[(i + 1) % poly.length];
+        var da = f(a), db = f(b);
+        if (da >= 0) next.push(a);
+        if ((da >= 0) !== (db >= 0)) {
+          var t = da / (da - db);
+          next.push({ lat: a.lat + (b.lat - a.lat) * t,
+                      lng: a.lng + (b.lng - a.lng) * t });
+        }
+      }
+      poly = next;
+    }
+    return poly.length >= 3 ? poly : null;
+  }
+
+  function boxRing(box) {
+    return [{ lat: box.north, lng: box.west }, { lat: box.north, lng: box.east },
+            { lat: box.south, lng: box.east }, { lat: box.south, lng: box.west }];
+  }
+
   // ── WHERE A REVIEWER MAY PLACE A PIN ─────────────────────────────────────
   // Decided 2026-08-21 (Jonah): "limit the range outside of the property lines.
   // It should be allowed to extend slightly to help account for roads or
@@ -252,21 +389,16 @@
     test.box       = box;
     test.hasParcel = !!ring;
     test.marginM   = marginM;
-    // The margin band as a drawable polygon-ish hint: each ring vertex pushed
-    // marginM metres away from the ring centroid. NOT used for the test (which
-    // is exact) — only to shade roughly where placement is allowed.
-    test.marginHint = function () {
-      if (!ring) return null;
-      var cLat = 0, cLng = 0;
-      ring.forEach(function (v) { cLat += v.lat; cLng += v.lng; });
-      cLat /= ring.length; cLng /= ring.length;
-      var kx = metresPerDegLng(cLat), ky = metresPerDegLat(cLat);
-      return ring.map(function (v) {
-        var dx = (v.lng - cLng) * kx, dy = (v.lat - cLat) * ky;
-        var L = Math.sqrt(dx * dx + dy * dy) || 1;
-        return { lat: v.lat + (dy / L) * marginM / ky,
-                 lng: v.lng + (dx / L) * marginM / kx };
-      });
+    // ⭐ THE DRAWABLE BOUNDARY OF WHAT test() ACCEPTS, as [{lat,lng}].
+    // Lot offset outward by marginM with round joins, then clipped to the
+    // storable box - i.e. exactly the region test() returns ok for. With no lot
+    // data it is the box itself. Draw this and the guide cannot disagree with
+    // the rule.
+    test.outline = function () {
+      if (!ring) return boxRing(box);
+      var off = ringOffsetM(ring, marginM);
+      if (!off) return boxRing(box);
+      return clipRingToBox(off, box) || boxRing(box);
     };
     return test;
   }
@@ -278,9 +410,11 @@
     nadirBounds:      nadirBounds,
     storableBox:      storableBox,
     makeAllowedRegion: makeAllowedRegion,
+    ringOffsetM:      ringOffsetM,
+    clipRingToBox:    clipRingToBox,
     ringContains:     ringContains,
     ringDistanceM:    ringDistanceM,
     normaliseRing:    normaliseRing,
-    _version:         '1.0.0'
+    _version:         '1.1.0'
   };
 })(typeof window !== 'undefined' ? window : globalThis);
