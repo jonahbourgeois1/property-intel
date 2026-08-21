@@ -1160,6 +1160,13 @@
              title="Show or hide the property boundary" style="display:none">Lot</div>
         <!-- v6.3: map mode only. Off by default - the live basemap is sharper
              than the capture, so seeing the older raster is opt-in. -->
+        <!-- v6.3.2: THE MAP TOGGLE. v6.3/v6.3.1 shipped map mode as ?map=1 and
+             nothing else, so the only way to reach it was to hand-edit the URL.
+             That made the feature invisible and indistinguishable from broken
+             for the first person who opened the page. A reviewer will never type
+             a query param. Always visible; reloads with the param flipped. -->
+        <div class="zoom-btn reset" id="mode-toggle"
+             title="Switch between the flat nadir image and the live satellite map">Map</div>
         <div class="zoom-btn reset" id="nadir-toggle"
              title="Show or hide the captured nadir over the map"
              style="display:none">Nadir</div>
@@ -1259,7 +1266,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.3.1';
+  var BUILD = 'v6.3.2';
   var MAP_WANTED = qp('map') === '1';
 
   // The georeference: normally parsed out of the nadir URL, because a
@@ -1332,6 +1339,10 @@
   // trap model-viewer.html documents above its render loop. Caught by the e2e
   // suite's very first check; do not move these back down.
   var erDiagKeys = [], erDiagVals = {};
+  // Same hoisting reason as the note above: erDiagRender() reads both of these
+  // and runs during the early erRunDiagnostics() call, so the ASSIGNMENTS have
+  // to happen before it. `var` hoists the name only.
+  var erDiagForced = false, erDiagOpen = (qp('diag') === '1');
   // Deliberately here and not in boot(): several ?nadir= / ?pins= guards call
   // fail() and RETURN before boot() runs, and a missing georeference is exactly
   // the moment the panel has something to say. erRunDiagnostics is a hoisted
@@ -3220,9 +3231,9 @@
     erDiagRender();
   }
   function erDiagVisible() {
-    return qp('diag') === '1' || qp('debug') === '1' || (MAP_WANTED && !MAP_MODE);
+    return erDiagForced || qp('diag') === '1' || qp('debug') === '1' ||
+           (MAP_WANTED && !MAP_MODE);
   }
-  var erDiagOpen = (qp('diag') === '1');
   window.erDiagToggle = function (e) {
     if (e) e.stopPropagation();
     erDiagOpen = !erDiagOpen;
@@ -3273,9 +3284,43 @@
 
   // Runs on EVERY page load, map mode or not — the whole point is that it can
   // tell you why map mode did not start.
+  // Rebuild this page's URL with one param added or removed.
+  // Splitting the query string on '&' is safe for a correctly-encoded review
+  // link (the nadir URL then holds no bare '&'), and it is ALSO safe for the
+  // unencoded case: the leaked fragments come back in the same order, so the
+  // round trip preserves whatever was there.
+  function erUrlWith(param, value) {
+    var parts = window.location.href.split('#')[0].split('?');
+    var kept = (parts[1] || '').split('&').filter(function (kv) {
+      return kv && kv.split('=')[0] !== param;
+    });
+    if (value !== null) kept.push(param + '=' + encodeURIComponent(value));
+    return parts[0] + (kept.length ? '?' + kept.join('&') : '');
+  }
+
+  function erWireModeToggle() {
+    var b = document.getElementById('mode-toggle');
+    if (!b) return;
+    b.textContent = MAP_MODE ? 'Image' : 'Map';
+    b.classList.toggle('on', MAP_MODE);
+    b.title = MAP_MODE ? 'Back to the flat nadir image'
+                       : 'Review on the live satellite map (zoom and pan freely)';
+    b.addEventListener('click', function () {
+      window.location.assign(erUrlWith('map', MAP_MODE ? null : '1'));
+    });
+  }
+
   function erRunDiagnostics() {
     var tag = document.getElementById('build');
-    if (tag) tag.textContent = BUILD;
+    if (tag) {
+      tag.textContent = BUILD;
+      // The build tag is already what you look at when something seems wrong,
+      // so it is also the handle for the detail behind it.
+      tag.title = 'click for map diagnostics';
+      tag.style.cursor = 'pointer';
+      tag.onclick = function () { erDiagForced = true; erDiagOpen = true; erDiagRender(); };
+    }
+    erWireModeToggle();
     diag('build', BUILD, 'ok');
     diag('?map=', qp('map') === null ? 'not present  (add &map=1 to enable the map)'
                                      : qp('map'),
