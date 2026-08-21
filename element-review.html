@@ -1233,7 +1233,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8';
+  var BUILD = 'v6.8.1';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -3574,6 +3574,24 @@
   //      Dashed amber border, and the tooltip says which pins were used.
   //   3. Nothing to derive from - NO LABELS. A confidently wrong "Charlie side"
   //      is worse than no label at all, so this layer never guesses north.
+  // ⚠️ OFF BY DEFAULT (v6.8.1), at Jonah's request. The positioning is settled -
+  // anchors sit on the middle of each lot edge - but WHICH edge gets ALPHA still
+  // comes from a derived bearing, and on a rotated lot a derivation 35-55 deg off
+  // the nearest edge normal can pick the neighbouring side. A confidently wrong
+  // "Charlie side" is not worth shipping to reviewers, so the layer waits.
+  //
+  // TO TURN IT BACK ON: flip ER_SIDES_DEFAULT to true. `&sides=1` enables it on a
+  // single link without editing the file, and `&sides=0` forces it off.
+  // The thing that makes it trustworthy is Satellite.gs adding
+  // `&alpha=<frontage bearing>` to review links - then the labels are exact and
+  // this can default to true.
+  var ER_SIDES_DEFAULT = false;
+  var ER_SIDES_ON = (function () {
+    var v = qp('sides');
+    if (v === '1') return true;
+    if (v === '0') return false;
+    return ER_SIDES_DEFAULT;
+  })();
   var ER_SIDES = ['ALPHA', 'BRAVO', 'CHARLIE', 'DELTA'];
   var ER_RE_STRUCT = /residence|dwelling|main\s*building|commercial\s*building|house|structure/i;
   var ER_RE_ENTRY  = /^\s*entry\s*$|entrance|front\s*door/i;
@@ -3616,6 +3634,7 @@
 
   function erComputeSideLabels() {
     erSideLabels = [];
+    if (!ER_SIDES_ON) return;                           // see ER_SIDES_DEFAULT
     if (!parcelRing || parcelRing.length < 3) return;   // labels are about the LOT
     var a = erAlphaBearing();
     if (!a) {
