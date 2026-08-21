@@ -1001,6 +1001,14 @@
     box-shadow: 0 2px 14px rgba(0,0,0,0.55);
   }
   .er-toast.on { display: block; }
+  /* The captured nadir once it has been lifted into the map's LOWEST pane.
+     `.frame img` no longer matches it, so its sizing lives here. */
+  #nadirPane { position: absolute; overflow: hidden; line-height: 0; }
+  #nadirPane img {
+    display: block; width: 100%; height: 100%;
+    user-select: none; -webkit-user-drag: none;
+    pointer-events: none;          /* panning must work over the image */
+  }
   /* Build tag. Deliberately quiet but ALWAYS present. */
   header .build {
     font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
@@ -1207,7 +1215,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.5.1';
+  var BUILD = 'v6.6';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -3336,13 +3344,40 @@
   }
 
   // The one piece of real machinery: keep #frame nailed to the nadir footprint.
+  // ⚠️ TWO PANES, AND THE SPLIT IS THE WHOLE POINT.
+  // Google's panes stack, bottom to top:
+  //     mapPane -> overlayLayer -> markerLayer -> overlayMouseTarget -> floatPane
+  // Polygons and polylines - the lot line and the pin-range ring - are drawn by
+  // the API into overlayLayer. #frame has to be in overlayMouseTarget so its
+  // markers can be dragged and so place-mode clicks land. overlayMouseTarget is
+  // ABOVE overlayLayer, so while the captured nadir <img> lived inside #frame it
+  // covered the lot line and the range ring the moment it was switched on.
+  //
+  // So the image is lifted OUT of #frame and given its own wrapper in mapPane,
+  // the LOWEST pane. Final order, bottom to top:
+  //     basemap tiles -> captured nadir -> lot line + range ring -> pins
+  // which is the order they should be read in anyway.
+  //
+  // Both elements are sized from ONE projected rectangle in one draw() call, so
+  // the image and the pins still cannot drift apart - that guarantee was the
+  // reason for keeping them together in the first place, and it survives the
+  // split because they share the maths, not the parent.
   function erBuildOverlay() {
     var frame = document.getElementById('frame');
+    var img   = document.getElementById('nadir');
+    var wrap  = null;
     var ov = new google.maps.OverlayView();
     ov.onAdd = function () {
+      var panes = this.getPanes();
       // overlayMouseTarget, not overlayLayer: the markers need pointer events
       // for dragging and the frame needs a click in place mode.
-      this.getPanes().overlayMouseTarget.appendChild(frame);
+      panes.overlayMouseTarget.appendChild(frame);
+      if (img) {
+        wrap = document.createElement('div');
+        wrap.id = 'nadirPane';
+        wrap.appendChild(img);            // moves it out of #frame
+        panes.mapPane.appendChild(wrap);
+      }
     };
     ov.draw = function () {
       var proj = this.getProjection();
@@ -3351,13 +3386,18 @@
         new google.maps.LatLng(erBounds.north, erBounds.west));
       var se = proj.fromLatLngToDivPixel(
         new google.maps.LatLng(erBounds.south, erBounds.east));
-      frame.style.left   = nw.x + 'px';
-      frame.style.top    = nw.y + 'px';
-      frame.style.width  = (se.x - nw.x) + 'px';
-      frame.style.height = (se.y - nw.y) + 'px';
+      var L = nw.x + 'px', T = nw.y + 'px';
+      var W = (se.x - nw.x) + 'px', H = (se.y - nw.y) + 'px';
+      frame.style.left = L; frame.style.top = T;
+      frame.style.width = W; frame.style.height = H;
+      if (wrap) {
+        wrap.style.left = L; wrap.style.top = T;
+        wrap.style.width = W; wrap.style.height = H;
+      }
     };
     ov.onRemove = function () {
       if (frame.parentNode) frame.parentNode.removeChild(frame);
+      if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
     };
     ov.setMap(erMap);
     return ov;
