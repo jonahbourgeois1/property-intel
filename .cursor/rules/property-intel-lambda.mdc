@@ -1,0 +1,59 @@
+---
+description: Lambda/pipeline Python rules — env vars, S3 layout, async invocation, Sheets write patterns
+globs: "lambda/**/*.py,1-ingest/**/*.py,2-parcels/**/*.py,3-eligibility/**/*.py,4-clip/**/*.py,5-render/**/*.py,tools/**/*.py"
+alwaysApply: false
+---
+
+# Property Intel — Lambda & pipeline Python rules
+
+## Which copy is real
+
+Deployed Lambda source lives in the **v2 repo**: `3-eligibility/` (plane-eligibility-check-v2, zip + Pillow layer), `4-clip/` (plane-parcel-clip, ECR), `5-render/` (plane-parcel-render AND plane-parcel-video — same ECR image, ImageConfig.Command override). The v1 repo's `lambda/` folder is a **stale reference copy** — CONTEXT.md's SUPERSEDED table says never treat it as source of truth; use its docstrings for flow/env documentation only. `chekt-viewer-gateway.py` is hand-deployed (Lambda console).
+
+## Invocation contracts
+
+- **plane-parcel-render** — ASYNC (Event) via API GW: renders exceed the 29 s sync cap. Payload `{spreadsheetId, sheetName, rowIndex, accountName, address, accountType, captureId?}`. Apps Script fires and checks back.
+- **plane-eligibility-check-v2** — SYNC batch POST `/eligibility`: `{"addresses":[{rowIndex, address, lat?, lng?}]}` → `{"results":[{rowIndex, eligible, taxlot, capture, reason, coverage?, county?, lat?, lng?}]}`. Coordinate passthrough skips geocoding; Lambda-geocoded rows echo coords back for the sheet to store (one geocode per address per lifetime).
+- **plane-parcel-clip** — `{"properties":[{rowIndex, taxlot}]}`; idempotent; cached-vs-generated reported per row.
+- **plane-parcel-render storyboard branch** — `{"storyboard": true, taxlot, lat, lng, address}` → uploads `storyboard.json`, no rendering.
+- **chekt-viewer-gateway** — function URL, `x-viewer-key` header; `GET /live?property=` and `GET /clips?property=&days=`. Never implement arming/audio/alarm paths in it.
+
+## Env vars
+
+render(+video): required `MAPS_API_KEY_SECRET_ARN`, `REFERENCE_BUCKET`, `OUTPUT_BUCKET`, `MODEL_VIEWER_BASE_URL`; optional `WORKLOAD_IDENTITY_CONFIG_PATH` (default /var/task/aws-credential-config.json), `BEDROCK_MODEL_ID` (default us.anthropic.claude-sonnet-4-6), `AWS_REGION_BEDROCK`, `CAPTURES_KEY` (reference/captures.json), `PARCELS_KEY_TEMPLATE`, `GLB_URL_TEMPLATE`, `TILE_CAPTURE_BASE_TEMPLATE`, `PUBLIC_CDN_BASE`, `MIN_TILE_COVERAGE` (0.8), `RENDER_ZOOM`/`RENDER_POLAR`/`NADIR_PADDING_FRAC`/`NADIR_ZOOM`/viewport dials.
+eligibility-v2: `MAPS_API_KEY_SECRET_ARN` ONLY (reads registry/parcels/tiles via CDN — no S3 API, no bucket env).
+clip: none required (`CLIP_MAX_TEXTURE_DIM=1536`, `CLIP_TEXTURE_QUALITY=82` match known-good GLBs — don't drift).
+gateway: `CHEKT_API_KEY` (dealer-wide key — NEVER leaves AWS), `VIEWER_PASSCODE`, `ALLOWED_ORIGINS`, `PROPERTY_MAP` (propertyId:site_id allowlist).
+
+## S3 layout (serving bucket property-intel-tiles)
+
+```
+reference/captures.json                        registry (backup to reference/backups/ before edits)
+reference/parcels/{county}/index.json          written LAST on publish
+reference/parcels/{county}/shards/{z}-{x}-{y}.geojson
+captures/plane/{capture}/map/{z}/{x}/{y}.png
+captures/plane/{capture}/parcels/{TAXLOT}/clipped.glb
+captures/plane/{capture}/parcels/{TAXLOT}/renders/{view}.jpg     STABLE keys → invalidate after write
+captures/plane/{capture}/parcels/{TAXLOT}/videos/{view}-{hash12}.mp4   input-hashed, write-once, no invalidation
+captures/plane/{capture}/parcels/{TAXLOT}/storyboard.json
+properties/{propertyId}/cameras/…              planned camera layer (property-scoped: cameras outlive flights)
+```
+Raw ingest + future raw photos → bucket property-intel-ingest (`captures/{id}/raw|processed`, `manifest.json` uploaded LAST; `camera-uploads/` planned — raw photos carry customer GPS and never enter the served bucket).
+
+## Hard rules
+
+- `s3.head_object` for existence — NEVER CloudFront HEAD (negative-caches 403s, poisons fresh uploads).
+- NEVER auto-retry a render invoke: `config=Config(retries={"max_attempts": 0})`.
+- Fatal render failures call `os._exit(1)` deliberately — a normal exception retries into the same memory-saturated warm container; keep this pattern.
+- One opacity function: import `capture_coverage` from `3-eligibility/eligibility_check.py`; never reimplement coverage math.
+- Captures are discovered from the registry at runtime, NEWEST first — adding a capture is data-only; never hardcode capture ids (an optional event `captureId` pins one).
+- Bedrock: downscale images below the 5 MB payload cap; `anthropic_version: bedrock-2023-05-31`; model id from env.
+- Sheets write-back ONLY via Workload Identity Federation (`google.auth.load_credentials_from_file` on the bundled non-secret config, scope spreadsheets, one `batchUpdate` per invocation). No service-account keys exist — org policy forbids them.
+- GitHub: never. No exceptions in Lambda code.
+- New concern = new Lambda (video/gateway precedent) — do not graft unrelated features onto plane-parcel-render.
+- Warm-container caches (`_cache`, shard prep) are expected; keep per-invocation cleanup (`kill_stray_chromium`, `clean_scratch`) at handler start in render code.
+- CHEKT dealer API: ~7 rapid calls → 429 (code 10151); space upstream calls ≥0.25 s, degrade to partial results (`truncated: true`), never poll search in a loop. `category_id` single int is honored; the array form 400s.
+
+## Deploy & verify
+
+Deploy containers with `5-render/deploy-render.ps1`: git-SHA tag, classic image store (containerd store emits manifest lists Lambda rejects), **crane push** (Docker Desktop 4.80 `docker login` to ECR is broken), single-manifest verification, `update-function-code` + wait; `-FunctionName plane-parcel-video` reuses the image (Command override survives). Build from repo root always. After ANY render change run the row-3 oracle: `18775 Macalpine Loop, Bend, OR 97702` / taxlot 181102C000600 → ok=true, tier ENTRANCE, alpha=231.3°, nadir 148/156. Local referees: `eligibility_check.py report <file>`, `clip_parcel.py clip` + `compare_glb.py`, aws-lambda-rie for the container. `py_compile` everything you touch. Known pending: the `load_captures()` plane|drone edit is committed but NOT deployed to the four Lambdas — drone-typed captures are invisible to clip/render until it ships.
