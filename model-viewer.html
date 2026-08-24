@@ -574,6 +574,48 @@
   .debug-time { color: #555f6e; margin-right: 6px; }
   #debug-clear { padding: 4px 10px; border-top: 1px solid rgba(255,255,255,0.05); background: none; border: none; color: #555f6e; font-size: 10px; font-family: monospace; cursor: pointer; text-align: left; width: 100%; }
   #debug-clear:hover { color: #8a93a2; }
+  #pass-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1100;
+    background: rgba(10,12,15,0.72);
+    align-items: center; justify-content: center;
+  }
+  #pass-overlay.open { display: flex; }
+  #pass-card {
+    width: 340px; max-width: calc(100vw - 32px);
+    background: #12161b; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; padding: 18px 18px 16px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+  }
+  #pass-card .pass-title { font-size: 14px; font-weight: 600; color: #f0f2f5; }
+  #pass-card .pass-sub {
+    font-family: monospace; font-size: 11px; color: #8a93a2;
+    line-height: 1.5; margin: 8px 0 14px;
+  }
+  #pass-err {
+    display: none; font-family: monospace; font-size: 11px; color: #ef4444;
+    margin: -6px 0 12px;
+  }
+  #pass-input {
+    width: 100%; box-sizing: border-box; background: #0b0e12;
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 6px;
+    color: #f0f2f5; font-family: monospace; font-size: 13px;
+    padding: 9px 10px; outline: none;
+  }
+  #pass-input:focus { border-color: #ef4444; }
+  .pass-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  #pass-cancel, #pass-go {
+    font-family: monospace; font-size: 11px; padding: 7px 12px;
+    border-radius: 6px; cursor: pointer;
+  }
+  #pass-cancel {
+    background: none; border: 1px solid #2a3040; color: #8a93a2;
+  }
+  #pass-cancel:hover { color: #fff; }
+  #pass-go {
+    background: rgba(239,68,68,0.18); border: 1px solid #ef4444; color: #ef4444;
+    font-weight: 700;
+  }
+  #pass-go:hover { background: rgba(239,68,68,0.28); }
 </style>
 </head>
 <body>
@@ -620,6 +662,18 @@
     </div>
     <div id="lm-clips"></div>
   </div>
+</div>
+<div id="pass-overlay" onclick="if(event.target===this)cancelViewerPasscode()">
+  <form id="pass-card" onsubmit="submitViewerPasscode(event)">
+    <div class="pass-title">Live feed</div>
+    <div class="pass-sub">Enter the viewer passcode to open cameras and clips. It stays in this tab only.</div>
+    <div id="pass-err"></div>
+    <input id="pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
+    <div class="pass-actions">
+      <button type="button" id="pass-cancel" onclick="cancelViewerPasscode()">Cancel</button>
+      <button type="submit" id="pass-go">Open live</button>
+    </div>
+  </form>
 </div>
 <div id="cam-quad"></div>
 <button id="cam-quad-close" onclick="closeGwQuad()">&#10005;</button>
@@ -678,12 +732,11 @@ const { DRACOLoader }    = await import(`${BASE}/loaders/DRACOLoader.js`);
 const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
 // ── URL param ─────────────────────────────────────────────────────────
 const params  = new URLSearchParams(window.location.search);
-const glbUrl  = params.get('model');
+let glbUrl  = params.get('model');
 // ── Optional property record ──────────────────────────────────────────
-// This file's contract has always been `?model=<glb>` plus the headless
-// capture params, and that path is untouched: `?property=<id>` is purely
-// additive and everything it adds is gated on `!autocapture`, so a capture
-// run can never be slowed or broken by a failed fetch.
+// `?model=<glb>` plus headless capture params is unchanged. `?property=<id>`
+// is additive and gated on `!autocapture`: pins/cameras, and if `model=` is
+// missing, the GLB is taken from the view record's viewer360 (qp, first &).
 const propertyId = params.get('property');
 // ── Storyboard params (written into the 360 URL by the sheet) ─────────
 // alpha is the property's frontage bearing — the compass azimuth the FRONT
@@ -692,13 +745,14 @@ const propertyId = params.get('property');
 // point in the GLB's local frame; they are null for frontage tiers 3/4
 // (a bearing but no point), in which case the Entrance button disables —
 // same contract the storyboard record documents.
-const alphaParam = parseFloat(params.get('alpha'));
-const entXParam  = parseFloat(params.get('ent_x'));
-const entYParam  = parseFloat(params.get('ent_y'));
-const hasAlpha   = !isNaN(alphaParam);
-const hasEnt     = !isNaN(entXParam) && !isNaN(entYParam);
+let alphaParam = parseFloat(params.get('alpha'));
+let entXParam  = parseFloat(params.get('ent_x'));
+let entYParam  = parseFloat(params.get('ent_y'));
+let hasAlpha   = !isNaN(alphaParam);
+let hasEnt     = !isNaN(entXParam) && !isNaN(entYParam);
 const wantView   = (params.get('view') || params.get('tab') || '').trim();
 const DT_VIEW    = 'drone-test';
+const MODEL_VIEWS = ['drone-test', 'plane', 'drone'];
 const ROUTE_HEX  = '#f59e0b';
 // ── Live camera view parameters ───────────────────────────────────────
 // &chekt=<jwt>   the CHEKT access token. Never committed to the record - a
@@ -806,7 +860,7 @@ const autocapture = params.get('autocapture') === '1';
 const azimuthParam = parseFloat(params.get('azimuth'));
 const polarParam   = parseFloat(params.get('polar'));
 const hasCaptureAngles = !isNaN(azimuthParam) && !isNaN(polarParam);
-if (!glbUrl) {
+if (!glbUrl && !(propertyId && !autocapture)) {
   showErr('No model URL provided. Add ?model=https://... to the URL.');
 }
 if (autocapture) {
@@ -888,8 +942,10 @@ async function loadProperty() {
     const byView = await resolveViaIndex(propertyId, wantView);
     if (byView) return byView;
   }
-  const byDefault = await resolveViaIndex(propertyId, DT_VIEW);
-  if (byDefault) return byDefault;
+  for (let i = 0; i < MODEL_VIEWS.length; i++) {
+    const rec = await resolveViaIndex(propertyId, MODEL_VIEWS[i]);
+    if (rec) return rec;
+  }
   const direct = await fetchJson(DATA_ROOT + DT_VIEW + '/' + propertyId + '.json');
   if (direct) return direct;
   return await fetchJson(DATA_ROOT + 'responder-drone/' + propertyId + '.json');
@@ -899,6 +955,39 @@ const propertyPromise = loadProperty().catch(function (e) {
   console.warn('[directions] property load failed:', e.message);
   return null;
 });
+// viewer360 is a full model-viewer (or DJI) URL on the record. Nested
+// model= is not encoded, so stop at the first & — same rule as qp().
+function qpFrom(url, name) {
+  const m = String(url || '').match(new RegExp('[?&]' + name + '=([^&]*)'));
+  if (!m) return '';
+  try { return decodeURIComponent(m[1].replace(/\+/g, ' ')); }
+  catch (e) { return m[1]; }
+}
+function glbFromRecord(rec) {
+  const v = rec && rec.viewer360;
+  if (!v) return '';
+  const nested = qpFrom(v, 'model');
+  if (nested) return nested;
+  if (/\.glb(\?|#|$)/i.test(String(v))) return String(v);
+  return '';
+}
+function applyViewer360Params(rec) {
+  const v = rec && rec.viewer360;
+  if (!v) return;
+  if (isNaN(alphaParam)) {
+    alphaParam = parseFloat(qpFrom(v, 'alpha'));
+    hasAlpha = !isNaN(alphaParam);
+  }
+  if (isNaN(entXParam) || isNaN(entYParam)) {
+    const x = parseFloat(qpFrom(v, 'ent_x'));
+    const y = parseFloat(qpFrom(v, 'ent_y'));
+    if (!isNaN(x) && !isNaN(y)) {
+      entXParam = x;
+      entYParam = y;
+      hasEnt = true;
+    }
+  }
+}
 if (propertyId && !autocapture) dbg('Resolving property ' + propertyId.substring(0, 12) + '…', 'info');
 // The shared 239-entry pin catalog, resolved exactly as viewer.html resolves
 // it: published pins carry only {id,x,y}, and the id names them.
@@ -965,8 +1054,16 @@ loader.setDRACOLoader(dracoLoader);
 // Filled once the GLB is in the scene; the directions layer needs all three
 // to drape a route (raycast origin height, tube radius, marker size).
 let modelRoot = null, modelBox = null, modelSpan = 0;
-loader.load(
-  glbUrl,
+function startModelLoad(url) {
+  if (!url) {
+    showErr(propertyId
+      ? 'This property has no GLB. The view record needs viewer360 with model=.'
+      : 'No model URL provided. Add ?model=https://... to the URL.');
+    return;
+  }
+  dbg('Loading GLB from ' + url.substring(0, 72) + (url.length > 72 ? '…' : ''), 'info');
+  loader.load(
+  url,
   function(gltf) {
     const model = gltf.scene;
     scene.add(model);
@@ -1096,6 +1193,17 @@ loader.load(
     showErr(err.message || String(err));
   }
 );
+}
+if (glbUrl) {
+  startModelLoad(glbUrl);
+} else if (propertyId && !autocapture) {
+  propertyPromise.then(function (rec) {
+    applyViewer360Params(rec);
+    const fromRec = glbFromRecord(rec);
+    if (fromRec) glbUrl = fromRec;
+    startModelLoad(glbUrl);
+  });
+}
 // ── Camera popup state ────────────────────────────────────────────────
 // Declared HERE, above animate(), and not down with the rest of the camera
 // code, because animate() runs synchronously on the line after its definition
@@ -1892,36 +2000,124 @@ function camSpriteFor(cam) {
 // Either way the viewer never holds the dealer key; the worst a leaked page
 // URL exposes is nothing, and a leaked stream URL dies inside the hour.
 
-function gwPasscode(force) {
-  let k = null;
-  try { k = sessionStorage.getItem('vyViewerKey'); } catch (e) {}
-  if (!k || force) {
-    k = window.prompt('Viewer passcode');
-    if (k) { k = k.trim(); try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {} }
-  }
-  return (k || '').trim();
+function gwPasscode(force, interactive) {
+  let k = '';
+  try { k = (sessionStorage.getItem('vyViewerKey') || '').trim(); } catch (e) {}
+  if (k && !force) return Promise.resolve(k);
+  if (!interactive) return Promise.resolve('');
+  if (gwPassWait) return gwPassWait;
+  gwPassWait = showViewerPasscode(force
+    ? 'Passcode not accepted. Try again.'
+    : '');
+  return gwPassWait.then(function (v) {
+    gwPassWait = null;
+    return (v || '').trim();
+  });
 }
-// One retry on 401: a mistyped passcode re-prompts once instead of dying.
-async function gwGet(path) {
+let gwPassWait = null, gwPassResolve = null;
+function showViewerPasscode(errText) {
+  return new Promise(function (resolve) {
+    gwPassResolve = resolve;
+    const ov = document.getElementById('pass-overlay');
+    const err = document.getElementById('pass-err');
+    const inp = document.getElementById('pass-input');
+    if (err) {
+      err.textContent = errText || '';
+      err.style.display = errText ? 'block' : 'none';
+    }
+    if (inp) inp.value = '';
+    if (ov) ov.classList.add('open');
+    setTimeout(function () { if (inp) inp.focus(); }, 40);
+  });
+}
+function finishViewerPasscode(value) {
+  const ov = document.getElementById('pass-overlay');
+  if (ov) ov.classList.remove('open');
+  const r = gwPassResolve;
+  gwPassResolve = null;
+  if (r) r(value || '');
+}
+window.submitViewerPasscode = function (ev) {
+  if (ev) ev.preventDefault();
+  const inp = document.getElementById('pass-input');
+  const k = (inp && inp.value ? inp.value : '').trim();
+  if (!k) {
+    const err = document.getElementById('pass-err');
+    if (err) { err.textContent = 'Enter a passcode'; err.style.display = 'block'; }
+    return;
+  }
+  try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
+  finishViewerPasscode(k);
+};
+window.cancelViewerPasscode = function () {
+  finishViewerPasscode('');
+};
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  const ov = document.getElementById('pass-overlay');
+  if (ov && ov.classList.contains('open')) cancelViewerPasscode();
+});
+async function livePropertyIds() {
+  const ids = [];
+  function add(x) {
+    const s = String(x || '').trim();
+    if (s && ids.indexOf(s) === -1) ids.push(s);
+  }
+  add(propertyId);
+  try {
+    const idx = await fetchJson(DATA_ROOT + 'index/' + propertyId + '.json');
+    if (idx) {
+      add(idx.id);
+      if (idx.views) {
+        add(idx.views['drone-test']);
+        add(idx.views.drone);
+        add(idx.views.plane);
+      }
+    }
+  } catch (e) {}
+  return ids;
+}
+async function gwGet(path, interactive) {
   if (GW_OFF) throw new Error('gateway disabled by &gw=0');
-  let k = gwPasscode(false);
+  const ask = interactive !== false;
+  let k = await gwPasscode(false, ask);
   if (!k) throw new Error('no passcode entered');
   let r = await fetch(GW_URL + path, { headers: { 'x-viewer-key': k } });
   if (r.status === 401) {
     try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
-    k = gwPasscode(true);
+    k = await gwPasscode(true, ask);
     if (!k) throw new Error('no passcode entered');
     r = await fetch(GW_URL + path, { headers: { 'x-viewer-key': k } });
   }
   if (!r.ok) throw new Error('gateway HTTP ' + r.status);
   return await r.json();
 }
+async function gwGetForProperty(makePath, interactive) {
+  const ids = await livePropertyIds();
+  let last = null;
+  for (let i = 0; i < ids.length; i++) {
+    try {
+      const j = await gwGet(makePath(ids[i]), interactive);
+      if (ids[i] !== propertyId) {
+        dbg('Live gateway mapped via alias ' + String(ids[i]).substring(0, 12) + '…', 'ok');
+      }
+      return j;
+    } catch (e) {
+      last = e;
+      const msg = (e && e.message) ? e.message : String(e);
+      if (!/gateway HTTP 404/.test(msg)) throw e;
+    }
+  }
+  throw last || new Error('gateway HTTP 404');
+}
 // The camera list is cached for 50 minutes - the embedded stream tokens live
 // for 60, so a refetch always lands before the URLs in hand go stale.
 let gwLiveMap = null, gwLiveAt = 0;
-async function gwEnsureLive() {
+async function gwEnsureLive(interactive) {
   if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
-  const j = await gwGet('/live?property=' + encodeURIComponent(propertyId));
+  const j = await gwGetForProperty(function (id) {
+    return '/live?property=' + encodeURIComponent(id);
+  }, interactive !== false);
   const m = {};
   (j.cameras || []).forEach(function (c) {
     if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
@@ -1941,8 +2137,8 @@ function prefetchLiveLayer() {
   gwPrefetched = true;
   (async function () {
     try {
-      await gwEnsureLive();
-      await ensureClips(false);
+      await gwEnsureLive(false);
+      await ensureClips(false, false);
     } catch (e) { dbg('Live-layer prefetch failed: ' + e.message, 'warn'); }
   })();
 }
@@ -2141,11 +2337,13 @@ window.toggleLive = function () {
 // pins, and the Watch-event row in a camera card. Cached 50 minutes - the
 // S3 links inside expire at 60.
 let gwClipsCache = null, gwClipsAt = 0;
-async function ensureClips(force) {
+async function ensureClips(force, interactive) {
   if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
     return gwClipsCache;
   }
-  const j = await gwGet('/clips?property=' + encodeURIComponent(propertyId) + '&days=7');
+  const j = await gwGetForProperty(function (id) {
+    return '/clips?property=' + encodeURIComponent(id) + '&days=7';
+  }, interactive !== false);
   gwClipsCache = j.events || [];
   gwClipsAt = Date.now();
   // Retrieval audit, straight from the gateway: which search mode ran and how

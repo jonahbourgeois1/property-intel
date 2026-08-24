@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vyanet Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #111318; overflow: hidden;
+    font-family: monospace; color: #8a93a2; }
+  #bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+    height: 44px; display: flex; align-items: center; gap: 8px;
+    padding: 0 12px; background: #0b0e12;
+    border-bottom: 1px solid rgba(255,255,255,0.10);
+  }
+  #bar .name { color: #f0f2f5; font-size: 12px; font-weight: 600;
+    margin-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bar .addr { font-size: 10px; color: #555f6e; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bar .build { font-size: 9px; color: #555f6e; letter-spacing: 0.04em; }
+  #bar button {
+    font-family: monospace; font-size: 10px; letter-spacing: 0.06em;
+    padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    background: rgba(0,0,0,0.35); color: #8a93a2;
+    border: 1px solid #2a3040;
+  }
+  #bar button.on { color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16); }
+  #bar button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #stage { position: fixed; top: 44px; left: 0; right: 0; bottom: 0; }
+  iframe {
+    position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
+    background: #111318; z-index: 1; pointer-events: none;
+  }
+  iframe.on { z-index: 2; pointer-events: auto; }
+  #err {
+    display: none; position: fixed; inset: 44px 0 0; align-items: center;
+    justify-content: center; flex-direction: column; gap: 10px;
+    padding: 32px; text-align: center; z-index: 50;
+  }
+  #err.visible { display: flex; }
+  #err strong { color: #ef4444; font-size: 15px; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <span class="name" id="nm">Vyanet</span>
+  <span class="addr" id="addr"></span>
+  <span class="build" id="build">hub 1.0.3</span>
+  <button id="btn-3d" disabled onclick="setStage('3d')">3D MODEL</button>
+  <button id="btn-sat" disabled onclick="setStage('satellite')">SATELLITE</button>
+</div>
+<div id="stage"></div>
+<div id="err"><strong>Could not open property</strong><span id="err-msg"></span></div>
+<script type="module">
+import { fetchJson, dataRoot, framesFromIndex } from './js/vyanet-viewer/property.js';
+
+const BUILD = '1.0.3';
+const params = new URLSearchParams(window.location.search);
+document.getElementById('build').textContent = 'hub ' + BUILD;
+const propertyId = (params.get('property') || '').trim();
+const wantStage = (params.get('stage') || '').toLowerCase();
+const root = dataRoot();
+const frames = {};
+
+function showErr(msg) {
+  document.getElementById('err-msg').textContent = msg || '';
+  document.getElementById('err').classList.add('visible');
+}
+
+function ensureFrame(id, href) {
+  let el = document.getElementById(id);
+  if (el) return el;
+  el = document.createElement('iframe');
+  el.id = id;
+  el.title = id;
+  el.loading = 'eager';
+  el.src = href;
+  document.getElementById('stage').appendChild(el);
+  return el;
+}
+
+window.setStage = function (stage) {
+  const spec = frames.spec;
+  if (!spec) return;
+  if (stage === '3d' && !spec.hasModel) return;
+  if (stage === 'satellite' && !spec.hasSatellite) return;
+  const f3 = spec.hasModel ? ensureFrame('frame-3d', spec.modelHref) : null;
+  const fs = spec.hasSatellite ? ensureFrame('frame-sat', spec.satHref) : null;
+  if (f3) f3.classList.toggle('on', stage === '3d');
+  if (fs) fs.classList.toggle('on', stage === 'satellite');
+  document.getElementById('btn-3d').classList.toggle('on', stage === '3d');
+  document.getElementById('btn-sat').classList.toggle('on', stage === 'satellite');
+  if (stage === 'satellite' && fs && fs.contentWindow) {
+    try {
+      fs.contentWindow.postMessage({ type: 'vyanet-stage', stage: 'satellite' }, window.location.origin);
+    } catch (e) {}
+  }
+};
+
+if (!propertyId) {
+  showErr('Pass ?property=<id> from data/index/.');
+} else {
+  const idx = await fetchJson(root + 'index/' + propertyId + '.json');
+  if (!idx || !idx.views) {
+    showErr('No index at data/index/' + propertyId + '.json');
+  } else {
+    const spec = framesFromIndex(idx);
+    frames.spec = spec;
+    document.getElementById('nm').textContent = spec.name || 'Vyanet';
+    document.getElementById('addr').textContent = spec.address || '';
+    document.getElementById('btn-3d').disabled = !spec.hasModel;
+    document.getElementById('btn-sat').disabled = !spec.hasSatellite;
+    const start = (wantStage === 'satellite' && spec.hasSatellite) ? 'satellite'
+      : (spec.hasModel ? '3d' : (spec.hasSatellite ? 'satellite' : ''));
+    if (!start) showErr('Index has no 3D or satellite view yet.');
+    else setStage(start);
+  }
+}
+</script>
+</body>
+</html>

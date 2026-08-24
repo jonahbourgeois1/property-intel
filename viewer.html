@@ -38,11 +38,27 @@
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-  #map-controls { position: absolute; bottom: 24px; left: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
-  .map-ctrl-btn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
-  .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
-  .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
-  .map-ctrl-btn .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+  #map-controls { position: absolute; left: 16px; bottom: 16px; z-index: 10; display: flex; flex-direction: column; gap: 6px; }
+  .zoom-btn {
+    width: 34px; height: 34px;
+    border: 1px solid #3a444f;
+    background: #232a33;
+    color: #eef2f6;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .zoom-btn:hover { background: #2c3540; border-color: #4fd1c5; }
+  .zoom-btn.reset { font-size: 12px; letter-spacing: 0.04em; }
+  .zoom-btn.on {
+    border-color: #cd3333;
+    color: #f0a8a8;
+    background: rgba(205, 51, 51, 0.16);
+  }
+  .zoom-btn.on:hover { border-color: #cd3333; background: rgba(205, 51, 51, 0.26); }
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
   .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
@@ -200,7 +216,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.9.0 — satellite split pins</div>
+    <div id="version-badge">v2.9.3 — satellite split pins</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -213,9 +229,9 @@
     </div>
   </div>
   <div id="map-controls">
-    <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()" title="Toggle nadir image overlay">
-      <span class="ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
-    </button>
+    <div class="zoom-btn reset" id="zoom-reset" title="Reset to fit" onclick="fitView()">Fit</div>
+    <div class="zoom-btn reset" id="parcel-toggle" title="Show or hide the property boundary" style="display:none" onclick="toggleParcel()">Lot</div>
+    <div class="zoom-btn reset" id="nadir-toggle" title="Show or hide the captured nadir image over the map" style="display:none" onclick="toggleOverlay()">Image</div>
   </div>
   <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
   <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
@@ -252,20 +268,28 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.9.0';
-const BASE_URL    = 'https://responder-intel.vyanet.com/data/satellite/';
-const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
+const VERSION     = 'v2.9.3';
+const _qs         = new URLSearchParams(window.location.search);
+const DATA_ROOT   = (function () {
+  const explicit = _qs.get('dataRoot');
+  if (explicit) return explicit.replace(/\/*$/, '/');
+  if (window.location.protocol === 'file:') {
+    return 'https://responder-intel.vyanet.com/data/';
+  }
+  return new URL('data/', window.location.href).href;
+})();
+const BASE_URL    = DATA_ROOT + 'satellite/';
 const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER  = ['security','wildfire','plane','drone','tour'];
-const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone' };
+const VIEW_ORDER  = ['security','wildfire','plane','drone','drone-test','tour'];
+const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone', 'drone-test':'Drone Test' };
 
 // Maps each view suffix to the subfolder its JSON lives in
 function viewBaseUrl(viewSuffix) {
-  const subfolders = { drone: 'drone', plane: 'plane', interior: 'interior' };
+  const subfolders = { drone: 'drone', plane: 'plane', interior: 'interior', 'drone-test': 'drone-test' };
   const sub = subfolders[viewSuffix];
   return sub ? DATA_ROOT + sub + '/' : BASE_URL;
 }
@@ -277,6 +301,7 @@ let streetViewActive = false, matterportActive = false, djiViewerActive = false;
 let frMode = false;
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
 let groundOverlay = null, overlayVisible = false;
+let parcelPoly = null, parcelShown = true;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
 const isMobile = () => window.innerWidth <= 768;
@@ -451,11 +476,12 @@ function pinRowClick(pinId) {
 }
 function setOverlay(imageUrl, centerLat, centerLng, zoom) {
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
-  if (!imageUrl) return;
+  if (!imageUrl) { showImageControl(false); return; }
   if (!map) { pendingOverlay = { imageUrl, centerLat, centerLng, zoom }; return; }
   const bounds = computeOverlayBounds(centerLat, centerLng, zoom);
   groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
-  if (overlayVisible) groundOverlay.setMap(map);
+  applyNadirToggle();
+  showImageControl(true);
 }
 function flushPendingMapData() {
   if (pendingOverlay) {
@@ -468,11 +494,47 @@ function flushPendingMapData() {
   pendingPinSets = [];
   sets.forEach(({ pins, color, hexColor }) => dropPins(pins, color, hexColor));
 }
+function showImageControl(on) {
+  const btn = document.getElementById('nadir-toggle');
+  if (btn) btn.style.display = on ? 'flex' : 'none';
+  applyNadirToggle();
+}
+function applyNadirToggle() {
+  const btn = document.getElementById('nadir-toggle');
+  if (btn) {
+    btn.classList.toggle('on', overlayVisible);
+    btn.title = overlayVisible
+      ? 'Hide the captured nadir image'
+      : 'Show the captured nadir image over the map';
+  }
+  if (groundOverlay) groundOverlay.setMap(overlayVisible && map ? map : null);
+}
 function toggleOverlay() {
   overlayVisible = !overlayVisible;
-  const btn = document.getElementById('overlay-btn'), lbl = document.getElementById('overlay-label');
-  if (overlayVisible) { btn.classList.add('active'); lbl.textContent = 'Hide Overlay'; if (groundOverlay) groundOverlay.setMap(map); }
-  else { btn.classList.remove('active'); lbl.textContent = 'Show Overlay'; if (groundOverlay) groundOverlay.setMap(null); }
+  applyNadirToggle();
+}
+function applyParcelToggle() {
+  const btn = document.getElementById('parcel-toggle');
+  if (btn) btn.classList.toggle('on', parcelShown);
+  if (parcelPoly) parcelPoly.setMap(parcelShown && map ? map : null);
+}
+function toggleParcel() {
+  const btn = document.getElementById('parcel-toggle');
+  if (!btn || btn.style.display === 'none') return;
+  parcelShown = !parcelShown;
+  applyParcelToggle();
+}
+function fitView() {
+  if (!map) return;
+  if (groundOverlay && groundOverlay.getBounds) {
+    const b = groundOverlay.getBounds();
+    if (b && !b.isEmpty()) { map.fitBounds(b, 24); return; }
+  }
+  if (parcelPoly) {
+    const b = new google.maps.LatLngBounds();
+    parcelPoly.getPath().forEach(function (ll) { b.extend(ll); });
+    if (!b.isEmpty()) { map.fitBounds(b, 24); return; }
+  }
 }
 function pointInPolygon(lat, lng, ring) {
   let inside = false;
@@ -488,9 +550,22 @@ function getParcelFile(lat, lng) {
   return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
 function drawParcelBoundary(lat, lng, storedRing) {
+  if (parcelPoly) { parcelPoly.setMap(null); parcelPoly = null; }
+  const lotBtn = document.getElementById('parcel-toggle');
+  if (lotBtn) lotBtn.style.display = 'none';
+  function attach(paths) {
+    parcelPoly = new google.maps.Polygon({
+      paths: paths,
+      strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4,
+      fillOpacity: 0.0, map: parcelShown && map ? map : null
+    });
+    if (lotBtn) {
+      lotBtn.style.display = 'flex';
+      lotBtn.classList.toggle('on', parcelShown);
+    }
+  }
   if (storedRing && storedRing.length >= 3) {
-    const paths = storedRing.map(pt => ({ lat: pt.lat, lng: pt.lng }));
-    new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
+    attach(storedRing.map(function (pt) { return { lat: pt.lat, lng: pt.lng }; }));
     dbg('Parcel matched: stored ring (' + storedRing.length + ' pts)', 'ok');
     return;
   }
@@ -505,7 +580,7 @@ function drawParcelBoundary(lat, lng, storedRing) {
       if (!matched) { dbg('No parcel matched', 'warn'); return; }
       dbg('Parcel matched: ' + (matched.properties.TAXLOT || 'ok'), 'ok');
       const paths = matched.geometry.coordinates.map(ring => ring.map(pt => ({ lat: pt[1], lng: pt[0] })));
-      new google.maps.Polygon({ paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map });
+      attach(paths);
     })
     .catch(e => dbg('Parcel error: ' + e.message, 'error'));
 }
@@ -514,11 +589,16 @@ function initMap(lat, lng, storedRing) {
     map = new google.maps.Map(document.getElementById('map'), {
       center: { lat, lng }, zoom: 18,
       mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+      rotateControl: false, maxZoom: 21,
       mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-      streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-      fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+      streetViewControl: false,
+      fullscreenControl: true,
+      gestureHandling: 'greedy',
+      scrollwheel: true
     });
+    map.setTilt(0);
+    wireMapMouse(map);
     new google.maps.Marker({
       position: { lat, lng }, map,
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#fff', fillOpacity: 0.9, strokeColor: '#3b82f6', strokeWeight: 2 },
@@ -531,6 +611,57 @@ function initMap(lat, lng, storedRing) {
     dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
     flushPendingMapData();
   } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
+}
+function wireMapMouse(gmap) {
+  // Element-review map mode: wheel zooms toward the cursor. Inside the hub
+  // iframe, Maps defaults to cooperative (Ctrl+scroll). Greedy matches the
+  // top-level critique page. Middle-button drag zooms the same way; otherwise
+  // Chrome's autoscroll eats the button.
+  const el = gmap.getDiv();
+  const helper = new google.maps.OverlayView();
+  helper.onAdd = function () {};
+  helper.draw = function () {};
+  helper.onRemove = function () {};
+  helper.setMap(gmap);
+  function latLngAt(clientX, clientY) {
+    const p = helper.getProjection();
+    if (!p) return null;
+    const r = el.getBoundingClientRect();
+    return p.fromContainerPixelToLatLng(
+      new google.maps.Point(clientX - r.left, clientY - r.top));
+  }
+  function zoomAt(clientX, clientY, nextZoom) {
+    const z = Math.max(0, Math.min(21, nextZoom));
+    if (z === gmap.getZoom()) return;
+    const keep = latLngAt(clientX, clientY);
+    gmap.setZoom(z);
+    const now = latLngAt(clientX, clientY);
+    if (!keep || !now) return;
+    const c = gmap.getCenter();
+    if (!c) return;
+    gmap.panTo({
+      lat: c.lat() + (keep.lat() - now.lat()),
+      lng: c.lng() + (keep.lng() - now.lng())
+    });
+  }
+  let mid = null;
+  el.addEventListener('mousedown', function (e) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    mid = { y: e.clientY, zoom: gmap.getZoom() || 0 };
+  }, true);
+  window.addEventListener('mousemove', function (e) {
+    if (!mid) return;
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, mid.zoom + (mid.y - e.clientY) / 80);
+  });
+  window.addEventListener('mouseup', function (e) {
+    if (e.button === 1) mid = null;
+  });
+  el.addEventListener('auxclick', function (e) {
+    if (e.button === 1) e.preventDefault();
+  });
 }
 function resolveAndInitMap(entry, storedRing) {
   if (entry.lat && entry.lng) { initMap(entry.lat, entry.lng, storedRing); }
@@ -600,7 +731,6 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   const concerns = satConcernLatLngPins_(fr.concerns, centerLat, centerLng, zoom);
 
   setOverlay(nadirUrl, centerLat, centerLng, zoom);
-  const _ob = document.getElementById('overlay-btn'); if (_ob) _ob.style.display = 'flex';
   dropPins(elements, 'green', '#22c55e');
   dropPins(concerns, 'red', '#ef4444');
   dbg('Security: ' + elements.length + ' elements, ' + concerns.length + ' FR concerns', 'ok');
@@ -631,7 +761,6 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   const concerns = satConcernLatLngPins_(wf.concerns, centerLat, centerLng, zoom);
 
   setOverlay(nadirUrl, centerLat, centerLng, zoom);
-  const _ob = document.getElementById('overlay-btn'); if (_ob) _ob.style.display = 'flex';
   dropPins(elements, 'green', '#22c55e');
   dropPins(concerns, 'orange', '#f97316');
   dbg('Wildfire: ' + elements.length + ' elements, ' + concerns.length + ' WF concerns', 'ok');
@@ -749,29 +878,27 @@ function dropNadirPinMapMarkers(d) {
 // north/south/east/west, so the nadir image lines up precisely.
 function setOverlayFromBounds(imageUrl, b) {
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
-  if (!imageUrl || !b || b.north == null || b.south == null || b.east == null || b.west == null) return;
+  if (!imageUrl || !b || b.north == null || b.south == null || b.east == null || b.west == null) {
+    showImageControl(false);
+    return;
+  }
   if (!map) { pendingOverlay = { imageUrl: imageUrl, bounds: b }; return; }
   const bounds = new google.maps.LatLngBounds(
     { lat: b.south, lng: b.west }, { lat: b.north, lng: b.east });
   groundOverlay = new google.maps.GroundOverlay(imageUrl, bounds, { opacity: 0.75 });
-  if (overlayVisible) groundOverlay.setMap(map);
+  applyNadirToggle();
+  showImageControl(true);
 }
 function buildPanel(d) {
   clearMarkers();
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   dropNadirPinMapMarkers(d);
-  // Plane-tab 2D nadir overlay: wire the overlay control to the real
-  // published bounds when present, else hide the control (no overlay for
-  // this property). setOverlayFromBounds respects the current
-  // overlayVisible toggle state.
-  const overlayCtl = document.getElementById('overlay-btn');
   if (d.nadir && d.nadir.url && d.nadir.bounds &&
       d.nadir.bounds.north != null && d.nadir.bounds.south != null &&
       d.nadir.bounds.east != null && d.nadir.bounds.west != null) {
-    if (overlayCtl) overlayCtl.style.display = 'flex';
     setOverlayFromBounds(d.nadir.url, d.nadir.bounds);
-  } else if (overlayCtl) {
-    overlayCtl.style.display = 'none';
+  } else {
+    showImageControl(false);
   }
   const views = [
     { label: 'Alpha', badge: 'A', cls: '', data: d.alpha }, { label: 'Bravo', badge: 'B', cls: '', data: d.bravo },
@@ -997,6 +1124,15 @@ window.initGoogleMaps = function() {
   dbg('Google Maps API ready', 'ok');
   if (pendingEntry) { resolveAndInitMap(pendingEntry, pendingStoredRing || null); pendingEntry = null; pendingStoredRing = null; }
 };
+window.addEventListener('message', function (e) {
+  if (e.origin !== window.location.origin) return;
+  if (!e.data || e.data.type !== 'vyanet-stage') return;
+  if (e.data.stage === 'satellite' && map) {
+    google.maps.event.trigger(map, 'resize');
+    const c = map.getCenter();
+    if (c) map.setCenter(c);
+  }
+});
 loadPropertyData();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
