@@ -135,10 +135,24 @@ Hub (`vyanet-viewer.html?property={id}`):
 1. Fetch `data/index/{id}.json`.
 2. If `views` has `drone-test` | `plane` | `drone`, enable **3D MODEL** and iframe `model-viewer.html?property={id}&view={that key}` (forwards `gw`, `chekt`, `debug`, `dataRoot`, …).
 3. If `views` has `security` | `wildfire` | `plane` | `drone` | `drone-test`, enable **SATELLITE** and iframe `viewer.html?property={id}&tab={that key}`.
-4. Default stage is 3D when a model view exists, else satellite. `?stage=satellite` overrides. Both child pages stay mounted at full size and swap by z-index (no `display:none` / `visibility:hidden` — those freeze WebGL and Maps).
+4. Default after the gate is the **home** shell, not a plugin (see "Hub gate + home"). `?stage=3d` / `?stage=satellite` jumps straight to that stage after the gate. Both child pages stay mounted at full size and swap by z-index (no `display:none` / `visibility:hidden` — those freeze WebGL and Maps); home is an opaque layer *above* the mounted iframes, same rule.
 5. Live CHEKT stays inside `model-viewer.html`. The gateway `/live?property=` allowlist may still be keyed by an older hash; `model-viewer` retries aliases from the index (`id`, `views.drone-test`, `views.drone`, `views.plane`).
 
 Direct `model-viewer.html?property={id}` still walks `drone-test` → `plane` → `drone`, then `data/drone-test/{id}.json`, then `data/responder-drone/{id}.json`. `?view=` / `?tab=` on that page selects a views-map key.
+
+## Hub gate + home (Phase A, hub 1.1.0)
+
+Opening `vyanet-viewer.html?property={id}` never dumps the user into a plugin. The order is gate → home → plugin.
+
+**Gate.** Always shown on load, including refresh — the user confirms property identity (name, address, account/HOA/coord chips) every time. Session values only pre-fill it: a saved role preselects its button; a saved viewer key hides the passcode field. `&role=customer|tech|responder` preselects for testers but does not skip the gate. The passcode never travels in a URL.
+
+- **Role** is required. Values `customer` | `tech` | `responder`, stored in `sessionStorage.vyRole` (tab-scoped). Role filters what is shown; it never forks the HTML files. "Switch role" on home clears `vyRole` (not the viewer key) and re-gates.
+- **Passcode** is requested iff the property has cameras. Pre-key detection sources, in order: `data/cameras/{propertyId}.json` (absent/404 = none) or a non-empty `cameras` array on the model view record the 3D iframe will load. The live gateway allowlist is **not** a pre-gate source: it returns 401 before evaluating `?property=` (verified 2026-08-25), so it cannot be probed without a key. A **"Continue without live"** button (hub 1.1.1) sits under ENTER whenever the passcode field shows: it enters with the role but stores no key, so live surfaces inside model-viewer fall back to their own passcode overlay on first use. A later refresh offers the passcode again (nothing was saved).
+- **Validation** on submit walks the same alias order model-viewer uses (URL property → `idx.id` → `views.drone-test` → `views.drone` → `views.plane`) against `GET /live?property=` with `x-viewer-key`: 401 = rejected, re-ask; 404 = key fine, id unknown, try next alias; all-404 or any other outcome (429/5xx/network) = accept and defer to model-viewer's own 401-retry on first live use. `&gw=0` skips validation and stores blind. The key lands in `sessionStorage.vyViewerKey` — the exact name model-viewer reads, so its non-interactive prefetch works in the iframe without prompting.
+
+**Home.** Identity from the index plus plugin cards. Unavailable plugins are hidden on home; the top bar keeps its buttons visible but disabled. Both available iframes mount the moment the gate passes (they warm up behind the opaque home layer), so the first stage switch is instant.
+
+**Verification.** `test-vyanet-viewer.py` (repo root, Playwright): stubs the child pages, the gateway, and the camera sources per scenario, then runs one unstubbed integration smoke. Run with the local server up: `python -m http.server 8899` then `python test-vyanet-viewer.py`.
 
 ## Out of scope / do not do
 

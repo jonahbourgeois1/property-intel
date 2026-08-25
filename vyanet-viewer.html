@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Vyanet Viewer</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -10,33 +10,142 @@
     font-family: monospace; color: #8a93a2; }
   #bar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-    height: 44px; display: flex; align-items: center; gap: 8px;
-    padding: 0 12px; background: #0b0e12;
+    height: 48px; display: flex; align-items: center; gap: 8px;
+    padding: 0 10px;
+    padding-left: calc(10px + env(safe-area-inset-left));
+    padding-right: calc(10px + env(safe-area-inset-right));
+    background: #0b0e12;
     border-bottom: 1px solid rgba(255,255,255,0.10);
   }
   #bar .name { color: #f0f2f5; font-size: 12px; font-weight: 600;
-    margin-right: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #bar .addr { font-size: 10px; color: #555f6e; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #bar .addr { font-size: 10px; color: #555f6e; flex: 1; min-width: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #bar .build { font-size: 9px; color: #555f6e; letter-spacing: 0.04em; }
   #bar button {
     font-family: monospace; font-size: 10px; letter-spacing: 0.06em;
-    padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    padding: 9px 10px; border-radius: 6px; cursor: pointer;
     background: rgba(0,0,0,0.35); color: #8a93a2;
-    border: 1px solid #2a3040;
+    border: 1px solid #2a3040; flex-shrink: 0;
   }
   #bar button.on { color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16); }
   #bar button:disabled { opacity: 0.35; cursor: not-allowed; }
-  #stage { position: fixed; top: 44px; left: 0; right: 0; bottom: 0; }
+  @media (max-width: 560px) {
+    #bar .addr, #bar .build { display: none; }
+    #bar .name { flex: 1; min-width: 0; }
+  }
+  #stage { position: fixed; top: 48px; left: 0; right: 0; bottom: 0; }
   iframe {
     position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
     background: #111318; z-index: 1; pointer-events: none;
   }
   iframe.on { z-index: 2; pointer-events: auto; }
+  /* Home is an opaque layer ABOVE the mounted iframes — never display:none
+     on the iframes themselves (that freezes WebGL/Maps for ~5s). */
+  #home {
+    display: none; position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+    z-index: 30; background: #111318; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #home.visible { display: block; }
+  .hm-wrap {
+    max-width: 520px; margin: 0 auto;
+    padding: 26px 18px calc(26px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .hm-name { font-size: 22px; color: #f0f2f5; font-weight: 600; line-height: 1.25; }
+  .hm-addr { font-size: 13px; color: #8a93a2; margin-top: 4px; }
+  .hm-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .chip {
+    font-size: 10px; letter-spacing: 0.05em; padding: 4px 9px;
+    border: 1px solid #2a3040; border-radius: 999px; color: #8a93a2;
+    white-space: nowrap;
+  }
+  .hm-cards { display: flex; flex-direction: column; gap: 10px; }
+  .hm-card {
+    display: none; width: 100%; text-align: left;
+    background: #171b22; border: 1px solid #2a3040; border-radius: 12px;
+    padding: 18px 16px; min-height: 76px; cursor: pointer;
+    font-family: monospace;
+  }
+  .hm-card.avail { display: block; }
+  .hm-card:hover { border-color: #a855f7; }
+  .hm-card:active { transform: scale(0.99); }
+  .hm-card-title { display: block; color: #f0f2f5; font-size: 14px;
+    font-weight: 700; letter-spacing: 0.06em; }
+  .hm-card-sub { display: block; margin-top: 6px; font-size: 11px;
+    color: #8a93a2; line-height: 1.5; }
+  #hm-none { display: none; font-size: 12px; color: #8a93a2; line-height: 1.6;
+    padding: 14px 2px; }
+  #hm-none.visible { display: block; }
+  .hm-foot { display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; font-size: 11px; }
+  #hm-switch {
+    background: none; border: 1px solid #2a3040; color: #8a93a2;
+    border-radius: 6px; padding: 10px 14px; min-height: 40px;
+    font-family: monospace; font-size: 11px; cursor: pointer;
+  }
+  #hm-switch:hover { color: #f0f2f5; }
+  #gate {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: #111318; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #gate.visible { display: flex; }
+  #gate-card {
+    width: 100%; max-width: 400px; margin: auto;
+    padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .gt-brand { font-size: 10px; letter-spacing: 0.18em; color: #555f6e; }
+  .gt-name { font-size: 24px; color: #f0f2f5; font-weight: 600; line-height: 1.25; }
+  .gt-addr { font-size: 13px; color: #8a93a2; }
+  .gt-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gt-label { font-size: 10px; letter-spacing: 0.1em; color: #555f6e;
+    text-transform: uppercase; margin-top: 10px; }
+  .gt-roles { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 480px) { .gt-roles { grid-template-columns: repeat(3, 1fr); } }
+  .gt-role {
+    min-height: 48px; background: #171b22; border: 1px solid #2a3040;
+    border-radius: 10px; color: #8a93a2; font-family: monospace;
+    font-size: 12px; letter-spacing: 0.05em; cursor: pointer;
+  }
+  .gt-role.on { color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16); }
+  #gt-pass-block { display: none; }
+  #gt-pass-block.visible { display: block; }
+  .gt-sub { font-size: 11px; color: #8a93a2; line-height: 1.5; margin: 6px 0 10px; }
+  #gt-pass-input {
+    width: 100%; min-height: 48px; background: #0b0e12;
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 8px;
+    color: #f0f2f5; font-family: monospace; font-size: 16px;
+    padding: 10px 12px; outline: none;
+  }
+  #gt-pass-input:focus { border-color: #a855f7; }
+  #gt-pass-saved { display: none; font-size: 11px; color: #22c55e; }
+  #gt-pass-saved.visible { display: block; }
+  #gt-err { display: none; font-size: 11px; color: #ef4444; }
+  #gt-err.visible { display: block; }
+  #gt-enter {
+    min-height: 50px; border-radius: 10px; margin-top: 4px;
+    background: rgba(168,85,247,0.18); border: 1px solid #a855f7;
+    color: #e9d5ff; font-family: monospace; font-weight: 700;
+    font-size: 13px; letter-spacing: 0.08em; cursor: pointer;
+  }
+  #gt-enter:disabled { opacity: 0.35; cursor: not-allowed; }
+  #gt-skip {
+    display: none; min-height: 44px; border-radius: 10px;
+    background: none; border: 1px solid #2a3040; color: #8a93a2;
+    font-family: monospace; font-size: 11px; letter-spacing: 0.06em;
+    cursor: pointer;
+  }
+  #gt-skip.visible { display: block; }
+  #gt-skip:hover { color: #f0f2f5; }
+  #gt-skip:disabled { opacity: 0.35; cursor: not-allowed; }
+  #gt-status { font-size: 10px; color: #555f6e; min-height: 14px; text-align: center; }
   #err {
-    display: none; position: fixed; inset: 44px 0 0; align-items: center;
+    display: none; position: fixed; inset: 0; align-items: center;
     justify-content: center; flex-direction: column; gap: 10px;
-    padding: 32px; text-align: center; z-index: 50;
+    padding: 32px; text-align: center; z-index: 200; background: #111318;
   }
   #err.visible { display: flex; }
   #err strong { color: #ef4444; font-size: 15px; }
@@ -46,22 +155,82 @@
 <div id="bar">
   <span class="name" id="nm">Vyanet</span>
   <span class="addr" id="addr"></span>
-  <span class="build" id="build">hub 1.0.3</span>
+  <span class="build" id="build">hub 1.1.1</span>
+  <button id="btn-home" disabled onclick="showHome()">HOME</button>
   <button id="btn-3d" disabled onclick="setStage('3d')">3D MODEL</button>
   <button id="btn-sat" disabled onclick="setStage('satellite')">SATELLITE</button>
 </div>
 <div id="stage"></div>
+<div id="home">
+  <div class="hm-wrap">
+    <div>
+      <div class="hm-name" id="hm-name"></div>
+      <div class="hm-addr" id="hm-addr"></div>
+      <div class="hm-meta" id="hm-meta"></div>
+    </div>
+    <div class="hm-cards">
+      <button class="hm-card" id="card-3d" onclick="setStage('3d')">
+        <span class="hm-card-title">3D MODEL</span>
+        <span class="hm-card-sub">Interactive 3D model with compass views of the property</span>
+      </button>
+      <button class="hm-card" id="card-sat" onclick="setStage('satellite')">
+        <span class="hm-card-title">SATELLITE</span>
+        <span class="hm-card-sub">Aerial imagery, lot lines, and property analysis</span>
+      </button>
+      <div id="hm-none">No views are published for this property yet.</div>
+    </div>
+    <div class="hm-foot">
+      <span id="hm-role"></span>
+      <button id="hm-switch" onclick="switchRole()">Switch role</button>
+    </div>
+  </div>
+</div>
+<div id="gate">
+  <form id="gate-card" onsubmit="gateSubmit(event)">
+    <div class="gt-brand">VYANET PROPERTY INTEL</div>
+    <div>
+      <div class="gt-name" id="gt-name"></div>
+      <div class="gt-addr" id="gt-addr"></div>
+    </div>
+    <div class="gt-meta" id="gt-meta"></div>
+    <div class="gt-label">Who is viewing?</div>
+    <div class="gt-roles">
+      <button type="button" class="gt-role" id="role-customer" onclick="pickRole('customer')">Customer</button>
+      <button type="button" class="gt-role" id="role-tech" onclick="pickRole('tech')">Technician</button>
+      <button type="button" class="gt-role" id="role-responder" onclick="pickRole('responder')">Responder</button>
+    </div>
+    <div id="gt-pass-block">
+      <div class="gt-label">Viewer passcode</div>
+      <div class="gt-sub">This property has cameras. The passcode unlocks live video and stays in this tab only.</div>
+      <input id="gt-pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
+    </div>
+    <div id="gt-pass-saved">Viewer passcode already saved in this tab.</div>
+    <div id="gt-err"></div>
+    <button type="submit" id="gt-enter" disabled>ENTER</button>
+    <button type="button" id="gt-skip" disabled onclick="gateSkipLive()">Continue without live</button>
+    <div id="gt-status"></div>
+  </form>
+</div>
 <div id="err"><strong>Could not open property</strong><span id="err-msg"></span></div>
 <script type="module">
-import { fetchJson, dataRoot, framesFromIndex } from './js/vyanet-viewer/property.js';
+import { fetchJson, dataRoot, framesFromIndex, detectCameras, validateViewerKey,
+         liveAliasIds, gwConfig, ROLES } from './js/vyanet-viewer/property.js';
 
-const BUILD = '1.0.3';
+const BUILD = '1.1.1';
 const params = new URLSearchParams(window.location.search);
 document.getElementById('build').textContent = 'hub ' + BUILD;
 const propertyId = (params.get('property') || '').trim();
 const wantStage = (params.get('stage') || '').toLowerCase();
 const root = dataRoot();
-const frames = {};
+const gw = gwConfig();
+const state = {
+  idx: null, spec: null, role: '', entered: false, busy: false,
+  hasCams: false, needsKey: false, camsSettled: false
+};
+
+function ss(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
+function ssSet(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }
+function ssDel(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
 
 function showErr(msg) {
   document.getElementById('err-msg').textContent = msg || '';
@@ -80,17 +249,45 @@ function ensureFrame(id, href) {
   return el;
 }
 
+function roleLabel(r) {
+  return r === 'customer' ? 'Customer' : r === 'tech' ? 'Technician'
+    : r === 'responder' ? 'Responder' : '';
+}
+
+function chips(el, idx) {
+  const parts = [];
+  const acct = String(idx.account_type || '').toLowerCase();
+  parts.push(acct.indexOf('comm') === 0 ? 'Commercial' : 'Residential');
+  if (idx.hoa) parts.push('HOA ' + idx.hoa);
+  if (isFinite(idx.lat) && isFinite(idx.lng)) {
+    parts.push(Number(idx.lat).toFixed(5) + ', ' + Number(idx.lng).toFixed(5));
+  }
+  el.innerHTML = '';
+  parts.forEach(function (p) {
+    const s = document.createElement('span');
+    s.className = 'chip';
+    s.textContent = p;
+    el.appendChild(s);
+  });
+}
+
+function syncBar(mode) {
+  document.getElementById('btn-home').classList.toggle('on', mode === 'home');
+  document.getElementById('btn-3d').classList.toggle('on', mode === '3d');
+  document.getElementById('btn-sat').classList.toggle('on', mode === 'satellite');
+}
+
 window.setStage = function (stage) {
-  const spec = frames.spec;
-  if (!spec) return;
+  const spec = state.spec;
+  if (!spec || !state.entered) return;
   if (stage === '3d' && !spec.hasModel) return;
   if (stage === 'satellite' && !spec.hasSatellite) return;
   const f3 = spec.hasModel ? ensureFrame('frame-3d', spec.modelHref) : null;
   const fs = spec.hasSatellite ? ensureFrame('frame-sat', spec.satHref) : null;
   if (f3) f3.classList.toggle('on', stage === '3d');
   if (fs) fs.classList.toggle('on', stage === 'satellite');
-  document.getElementById('btn-3d').classList.toggle('on', stage === '3d');
-  document.getElementById('btn-sat').classList.toggle('on', stage === 'satellite');
+  document.getElementById('home').classList.remove('visible');
+  syncBar(stage);
   if (stage === 'satellite' && fs && fs.contentWindow) {
     try {
       fs.contentWindow.postMessage({ type: 'vyanet-stage', stage: 'satellite' }, window.location.origin);
@@ -98,25 +295,155 @@ window.setStage = function (stage) {
   }
 };
 
-if (!propertyId) {
-  showErr('Pass ?property=<id> from data/index/.');
-} else {
-  const idx = await fetchJson(root + 'index/' + propertyId + '.json');
+window.showHome = function () {
+  if (!state.entered) return;
+  document.getElementById('home').classList.add('visible');
+  document.getElementById('hm-role').textContent =
+    state.role ? 'Viewing as ' + roleLabel(state.role) : '';
+  syncBar('home');
+};
+
+window.pickRole = function (r) {
+  if (ROLES.indexOf(r) === -1) return;
+  state.role = r;
+  ROLES.forEach(function (x) {
+    document.getElementById('role-' + x).classList.toggle('on', x === r);
+  });
+  refreshEnter();
+};
+
+window.switchRole = function () {
+  ssDel('vyRole');
+  state.role = '';
+  state.entered = false;
+  ROLES.forEach(function (x) {
+    document.getElementById('role-' + x).classList.remove('on');
+  });
+  document.getElementById('home').classList.remove('visible');
+  syncBar('');
+  refreshEnter();
+  document.getElementById('gate').classList.add('visible');
+};
+
+function gateErr(msg) {
+  const el = document.getElementById('gt-err');
+  el.textContent = msg || '';
+  el.classList.toggle('visible', !!msg);
+}
+
+function paintPassBlock() {
+  document.getElementById('gt-pass-block').classList.toggle('visible', state.needsKey);
+  document.getElementById('gt-skip').classList.toggle('visible', state.needsKey);
+  document.getElementById('gt-pass-saved').classList.toggle('visible',
+    state.hasCams && !state.needsKey);
+}
+
+function refreshEnter() {
+  const ready = state.role && state.camsSettled && !state.busy;
+  document.getElementById('gt-enter').disabled = !ready;
+  document.getElementById('gt-skip').disabled = !ready;
+  document.getElementById('gt-status').textContent =
+    state.busy ? 'Checking passcode...' : (state.camsSettled ? '' : 'Checking cameras...');
+}
+
+window.gateSubmit = async function (ev) {
+  if (ev) ev.preventDefault();
+  if (!state.role || !state.camsSettled || state.busy) return;
+  gateErr('');
+  if (state.needsKey) {
+    const inp = document.getElementById('gt-pass-input');
+    const key = (inp && inp.value ? inp.value : '').trim();
+    if (!key) { gateErr('Enter the viewer passcode.'); return; }
+    state.busy = true;
+    refreshEnter();
+    const verdict = await validateViewerKey(key, liveAliasIds(state.idx, propertyId), gw);
+    state.busy = false;
+    refreshEnter();
+    if (!verdict.ok) { gateErr('Passcode not accepted. Try again.'); return; }
+    ssSet('vyViewerKey', key);
+    state.needsKey = false;
+    paintPassBlock();
+  }
+  ssSet('vyRole', state.role);
+  enterApp();
+};
+
+// Enter without a passcode. No key is stored, so live surfaces inside
+// model-viewer fall back to their own passcode overlay on first use.
+window.gateSkipLive = function () {
+  if (!state.role || !state.camsSettled || state.busy) return;
+  gateErr('');
+  ssSet('vyRole', state.role);
+  enterApp();
+};
+
+function enterApp() {
+  state.entered = true;
+  document.getElementById('gate').classList.remove('visible');
+  const spec = state.spec;
+  // Mount both plugins now so the later swap is instant; they render behind
+  // the opaque home layer and swap by z-index only.
+  if (spec.hasModel) ensureFrame('frame-3d', spec.modelHref);
+  if (spec.hasSatellite) ensureFrame('frame-sat', spec.satHref);
+  const start = (wantStage === '3d' && spec.hasModel) ? '3d'
+    : (wantStage === 'satellite' && spec.hasSatellite) ? 'satellite' : '';
+  if (start) setStage(start);
+  else showHome();
+}
+
+async function boot() {
+  if (!propertyId) {
+    showErr('Pass ?property=<id> from data/index/.');
+    return;
+  }
+  let idx = null;
+  try {
+    idx = await fetchJson(root + 'index/' + propertyId + '.json');
+  } catch (e) {
+    showErr('Index fetch failed: ' + e.message);
+    return;
+  }
   if (!idx || !idx.views) {
     showErr('No index at data/index/' + propertyId + '.json');
-  } else {
-    const spec = framesFromIndex(idx);
-    frames.spec = spec;
-    document.getElementById('nm').textContent = spec.name || 'Vyanet';
-    document.getElementById('addr').textContent = spec.address || '';
-    document.getElementById('btn-3d').disabled = !spec.hasModel;
-    document.getElementById('btn-sat').disabled = !spec.hasSatellite;
-    const start = (wantStage === 'satellite' && spec.hasSatellite) ? 'satellite'
-      : (spec.hasModel ? '3d' : (spec.hasSatellite ? 'satellite' : ''));
-    if (!start) showErr('Index has no 3D or satellite view yet.');
-    else setStage(start);
+    return;
   }
+  state.idx = idx;
+  state.spec = framesFromIndex(idx);
+  document.getElementById('nm').textContent = state.spec.name || 'Vyanet';
+  document.getElementById('addr').textContent = state.spec.address || '';
+  document.getElementById('gt-name').textContent = state.spec.name || 'Vyanet';
+  document.getElementById('gt-addr').textContent = state.spec.address || '';
+  document.getElementById('hm-name').textContent = state.spec.name || 'Vyanet';
+  document.getElementById('hm-addr').textContent = state.spec.address || '';
+  chips(document.getElementById('gt-meta'), idx);
+  chips(document.getElementById('hm-meta'), idx);
+  document.getElementById('btn-home').disabled = false;
+  document.getElementById('btn-3d').disabled = !state.spec.hasModel;
+  document.getElementById('btn-sat').disabled = !state.spec.hasSatellite;
+  document.getElementById('card-3d').classList.toggle('avail', state.spec.hasModel);
+  document.getElementById('card-sat').classList.toggle('avail', state.spec.hasSatellite);
+  document.getElementById('hm-none').classList.toggle('visible',
+    !state.spec.hasModel && !state.spec.hasSatellite);
+  // Restore for the tab: role preselects (URL param wins for testers), the
+  // gate itself still shows so the user confirms the property. The passcode
+  // never travels in the URL.
+  const urlRole = (params.get('role') || '').toLowerCase();
+  const savedRole = ss('vyRole');
+  const pre = ROLES.indexOf(urlRole) !== -1 ? urlRole
+    : (ROLES.indexOf(savedRole) !== -1 ? savedRole : '');
+  if (pre) pickRole(pre);
+  refreshEnter();
+  document.getElementById('gate').classList.add('visible');
+  detectCameras(root, idx, state.spec).then(function (has) {
+    state.hasCams = has;
+    state.needsKey = has && !ss('vyViewerKey');
+    state.camsSettled = true;
+    paintPassBlock();
+    refreshEnter();
+  });
 }
+
+boot();
 </script>
 </body>
 </html>
