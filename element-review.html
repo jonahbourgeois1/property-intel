@@ -1233,7 +1233,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.1';
+  var BUILD = 'v6.8.2';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1354,12 +1354,24 @@
   var rowKey   = qp('key') || '';
   // ⭐ v5.8: site_no is the Satellite sheet's identity as of the 2026-08-13 rekey
   // (a property id is now hashId(slug(site_no))). Accept either spelling of the
-  // param. It is the BEST lookup — exact, needs no salt, and readable in the
-  // sheet — but the link does not carry it yet, so it is learned from the first
-  // API response and used for every poll after that.
+  // param. Review links from the sheet menu now carry it; address-only bookmarks
+  // still work when the address is unique, and learn site_no from the first
+  // API response for every poll after that.
   var siteNo   = qp('site_no') || qp('site') || '';
   var viewName = qp('view') || '';
   var roundIn  = parseInt(qp('round'), 10);
+
+  function paintIdentity() {
+    var el = document.getElementById('addr');
+    if (!el) return;
+    var bits = [];
+    if (addr) bits.push(addr);
+    if (siteNo) bits.push('site ' + siteNo);
+    el.textContent = bits.length ? '\u00b7 ' + bits.join(' \u00b7 ') : '';
+  }
+  function lookupKind() {
+    return siteNo ? 'site_no' : rowKey ? 'key' : 'address';
+  }
 
   // Holds the resolved element list once render() has run, so the submit
   // handler reads the same names/ids/coords the reviewer was looking at.
@@ -1448,13 +1460,12 @@
   // type into but not submit.
   initSubmit();
 
-  if (addr) document.getElementById('addr').textContent = '· ' + addr;
+  paintIdentity();
 
   // v5.7: pins may now arrive from the API instead of the URL, so "no pins in the
   // query string" is only fatal if there is also no way to ASK for them. The API
-  // resolves a row by key, name or address — and `addr` is already in every
-  // review link the sheet builds, which is why this works before Satellite.gs
-  // has been patched to send &key=.
+  // resolves a row by site_no, then key, then address. Review links carry
+  // site_no; &addr= remains as a fallback for older bookmarks.
   var canFetchPins = !!(CRITIQUE_POST_URL && CRITIQUE_POST_URL.indexOf('PASTE_') !== 0 &&
                         (siteNo || rowKey || addr));
 
@@ -1462,7 +1473,7 @@
   if (!pinsRaw && !routeRaw && !canFetchPins) {
     fail('No pins or route provided.',
          'Expected ?pins=&lt;json array&gt; and/or ?route=&lt;json array&gt;, ' +
-         'or a ?key= / ?addr= this page can look up.');
+         'or a ?site_no= / ?key= / ?addr= this page can look up.');
     return;
   }
 
@@ -3090,11 +3101,8 @@
 
   // ── v5.7: ask the API for this row's current pins ─────────────────────────
   // GET with no custom headers is a CORS simple request, so no preflight — the
-  // same constraint the POST works under. Resolution order is key, then address:
-  // `key` is exact, `addr` is what today's review links actually carry.
-  // Most exact first. Address is last because it is the only one that can be
-  // ambiguous — though far less so since the sheet was rebuilt to one row per
-  // physical address.
+  // same constraint the POST works under. Resolution order is site_no, then key,
+  // then address. Address is last because it is the one that can be ambiguous.
   function lookupParam() {
     if (siteNo) return 'site_no=' + encodeURIComponent(siteNo);
     if (rowKey) return 'key=' + encodeURIComponent(rowKey);
@@ -3116,6 +3124,7 @@
         // reason to keep matching on a string that could, in principle, tie.
         if (j.site_no && !siteNo) siteNo = String(j.site_no);
         if (j.key && !rowKey) rowKey = String(j.key);
+        paintIdentity();
         return j;
       });
   }
@@ -3740,14 +3749,10 @@
       drawPins(pins);
       loadParcel();          // after the pins: it must never delay them
       // Learn the current rev (and the site_no) in the background so a later
-      // refresh has something to compare against.
-      //
-      // ⚠️ This is quiet in the UI on purpose — the page is already fully usable
-      // and the reviewer has not asked for anything — but it must not be SILENT,
-      // because a failure here disables the whole refresh loop. The link carries
-      // an address; if that string does not match the sheet's cell the lookup
-      // finds no row, and without this line the only symptom would be pins that
-      // never update, hours later, with nothing to point at.
+      // refresh has something to compare against. Success stays quiet — the
+      // page is already usable from the URL snapshot. Failure is visible: an
+      // address-only link against a duplicate lot used to look fine and then
+      // reject on submit.
       if (canFetchPins) {
         fetchElements().then(function (j) {
           lastRev = j.rev || null;
@@ -3759,10 +3764,15 @@
                           ? ' (the LINK carries ' + pins.length + ' — it is a snapshot)' : ''));
           }
         }, function (err) {
+          var msg = 'Cannot identify this row: ' + String(err.message || err);
+          if (!siteNo && !rowKey) {
+            msg += ' Re-open from the sheet menu so the link includes site_no.';
+          }
+          setStatus(msg, 'err');
           if (window.console) {
             console.warn('[element-review] identity lookup FAILED, so live refresh is ' +
                          'disabled for this session: ' + String(err.message || err) +
-                         ' — looked up by ' + (siteNo ? 'site_no' : rowKey ? 'key' : 'address') +
+                         ' — looked up by ' + lookupKind() +
                          (addr ? ' "' + addr + '"' : ''));
           }
         });
@@ -3777,9 +3787,8 @@
       loadParcel();
       if (j.address && !addr) {
         addr = j.address;
-        var el = document.getElementById('addr');
-        if (el) el.textContent = '· ' + j.address;
       }
+      paintIdentity();
       setStatus(j.pins.length + ' pin(s) loaded from the sheet' +
                 (j.fixes_pending ? ' — a re-pin is still pending on this row.' : '.'), 'ok');
     }, function (err) {
@@ -3787,7 +3796,7 @@
       // say which lookup failed rather than showing an empty image.
       fail('Could not load this row&rsquo;s pins.',
            escapeHtml(String(err.message || err)) +
-           ' (looked up by ' + (rowKey ? 'key' : 'address') + ')');
+           ' (looked up by ' + lookupKind() + ')');
     });
   }
 

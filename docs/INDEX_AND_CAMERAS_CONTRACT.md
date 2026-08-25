@@ -53,6 +53,14 @@ Every pipeline may PUT only its own view record. Index writes are **merge-only**
 
 Plane / drone-test / cameras join satellite by `site_no`, not by display name. Name match is how Jones vs “Tracy Residence Drone Test” split.
 
+### site_no format (2026-08-25)
+
+`satValidSiteNo_` accepts **any non-blank string**. Digits, `VY-AS-001` placeholders, and interim values like `Cht-3` are all ids. Format is not a gate — the sheet holds values that will be replaced with source-system numbers later, and rejecting them made those rows un-reviewable and unpublished.
+
+Blank is still refused. `hashId('')` is a valid-looking hash that every empty row would share.
+
+Element-review links must carry `&site_no=`. Address is not unique (410 SW Columbia St is two Satellite rows). The critique API still refuses an ambiguous address match rather than guessing; the URL is what makes the match unique.
+
 ## Required index fields
 
 ```json
