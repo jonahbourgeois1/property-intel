@@ -793,6 +793,11 @@ const chektClaims = chektToken ? jwtClaims(chektToken) : null;
 // links. &gw= overrides the endpoint; &gw=0 disables the gateway entirely.
 const GW_URL = (params.get('gw') || 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws').replace(/\/+$/, '');
 const GW_OFF = params.get('gw') === '0';
+// &embed=1: this page is an iframe inside vyanet-viewer.html, which owns the
+// always-on chrome (Weather / hazard buttons). LIVE FEED is a separate hub
+// tab (live-viewer.html) as of hub 1.4.0. These buttons stay hidden here.
+// vyanet-cmd live still works for standalone / leftover callers.
+const embedded = params.get('embed') === '1';
 const DATA_ROOT  = (function () {
   const explicit = params.get('dataRoot');
   if (explicit) return explicit.replace(/\/*$/, '/');
@@ -906,6 +911,7 @@ function flyTo(pos, tgt, ms) {
     p0: camera.position.clone(), q0: controls.target.clone(),
     p1: pos.clone(), q1: tgt.clone()
   };
+  kickViewLoop();
 }
 function cancelFly() { camTween = null; if (tour) stopTour(); }
 function stepFly() {
@@ -1003,13 +1009,22 @@ const catalogPromise = (propertyId && !autocapture)
       })
       .catch(function (e) { dbg('Pin catalog FAILED: ' + e.message, 'warn'); return null; })
   : Promise.resolve(null);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(window.devicePixelRatio);
+// Cap DPR: a 3x phone would otherwise draw 9x the pixels. Above ~1.25,
+// MSAA is redundant with the extra samples, so skip antialias there.
+const PIXEL_RATIO = Math.min(window.devicePixelRatio || 1, 1.5);
+const renderer = new THREE.WebGLRenderer({
+  antialias: PIXEL_RATIO < 1.25,
+  powerPreference: 'high-performance',
+  stencil: false
+});
+renderer.setPixelRatio(PIXEL_RATIO);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
+renderer.shadowMap.enabled = false;
 document.body.appendChild(renderer.domElement);
+window.__pixelRatio = PIXEL_RATIO;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#111318');
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100000);
@@ -1066,6 +1081,12 @@ function startModelLoad(url) {
   url,
   function(gltf) {
     const model = gltf.scene;
+    model.traverse(function (o) {
+      if (!o.isMesh) return;
+      o.castShadow = false;
+      o.receiveShadow = false;
+      if (o.geometry && !o.geometry.boundingSphere) o.geometry.computeBoundingSphere();
+    });
     scene.add(model);
     // Compute bounding box
     const box = new THREE.Box3().setFromObject(model);
@@ -1167,7 +1188,15 @@ function startModelLoad(url) {
         'z ' + box.min.z.toFixed(1) + '…' + box.max.z.toFixed(1) + ' m', 'ok');
     Promise.all([propertyPromise, catalogPromise]).then(function (r) {
       pinCatalogById = r[1];
-      if (r[0]) initDirections(r[0]); else if (propertyId) dbg('No record found for this property', 'warn');
+      if (!r[0]) {
+        if (propertyId) dbg('No record found for this property', 'warn');
+        return;
+      }
+      attachCameras(r[0]).then(function (rec) { initDirections(rec); })
+        .catch(function (e) {
+          dbg('Camera attach failed: ' + e.message, 'warn');
+          initDirections(r[0]);
+        });
     });
     // Fade in
     document.getElementById('loading').classList.add('hidden');
@@ -1220,19 +1249,75 @@ let camPopupIdx = -1, camPopupWorld = null;
 // propagates out of the synchronous animate() call and kills the whole module.
 let routeCurve = null, routeCurveIdx = -1, tour = null;
 // ── Render loop ───────────────────────────────────────────────────────
+// The hub keeps this iframe in the layout (z-index swap, never display:none)
+// so WebGL does not stall. That used to mean 60 fps of a full-DPR mesh even
+// while Home / Satellite / Live covered it. Pause the loop off-stage; skip
+// GPU work when the camera is still. Kick on orbit, fly, tour, pin flash,
+// or a hub {type:'vyanet-stage', stage:'3d'} message.
+let viewRaf = 0, viewIdle = 0, viewDirty = true;
+window.__loopOn = !embedded || !!autocapture;
+const lastCamPos = new THREE.Vector3(NaN, 0, 0);
+const lastCamTgt = new THREE.Vector3(NaN, 0, 0);
+function kickViewLoop() {
+  viewIdle = 0;
+  viewDirty = true;
+  if (!window.__loopOn || viewRaf) return;
+  viewRaf = requestAnimationFrame(animate);
+}
+function setViewLoop(on) {
+  if (autocapture) on = true;
+  window.__loopOn = !!on;
+  if (window.__loopOn) {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    kickViewLoop();
+  } else {
+    if (viewRaf) { cancelAnimationFrame(viewRaf); viewRaf = 0; }
+    if (typeof window.hideCameraPopup === 'function') window.hideCameraPopup();
+  }
+}
 function animate() {
-  requestAnimationFrame(animate);
+  if (!window.__loopOn) { viewRaf = 0; return; }
   if (tour) stepTour(); else if (camTween) stepFly(); else controls.update();
+  const moved = !lastCamPos.equals(camera.position) || !lastCamTgt.equals(controls.target);
+  if (moved) {
+    lastCamPos.copy(camera.position);
+    lastCamTgt.copy(controls.target);
+  }
   // updateCameraPopup is a hoisted function declaration, so calling it from
   // above its textual position is fine.
-  if (camPopupIdx >= 0) updateCameraPopup();
-  renderer.render(scene, camera);
+  if (camPopupIdx >= 0 && moved) updateCameraPopup();
+  if (moved || viewDirty || tour || camTween) {
+    renderer.render(scene, camera);
+    viewDirty = false;
+    viewIdle = 0;
+  } else {
+    viewIdle++;
+  }
+  if (tour || camTween || viewIdle < 10) {
+    viewRaf = requestAnimationFrame(animate);
+  } else {
+    viewRaf = 0;
+  }
 }
-animate();
+controls.addEventListener('change', kickViewLoop);
+renderer.domElement.addEventListener('pointerdown', kickViewLoop);
+renderer.domElement.addEventListener('wheel', kickViewLoop, { passive: true });
+document.addEventListener('visibilitychange', function () {
+  if (autocapture) return;
+  if (document.hidden) {
+    if (viewRaf) { cancelAnimationFrame(viewRaf); viewRaf = 0; }
+  } else if (window.__loopOn) {
+    kickViewLoop();
+  }
+});
+if (window.__loopOn) kickViewLoop();
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  kickViewLoop();
 });
 // ── Responder Directions + property pins ──────────────────────────────
 // A direction is {name, trigger, target, start, route:[{seq,x,y[,mx,my]}]}.
@@ -1442,7 +1527,7 @@ function raycastGround(pts, progressEl, onDone) {
   dirBusy = true;
   (function step() {
     if (token !== groundJobSeq) return;   // superseded; the new job owns dirBusy
-    const end = Math.min(pts.length, i + 4);
+    const end = Math.min(pts.length, i + 8);
     for (; i < end; i++) {
       ray.set(new THREE.Vector3(pts[i].x, pts[i].y, zTop), down);
       const hit = ray.intersectObject(modelRoot, true)[0];
@@ -1480,6 +1565,45 @@ function nadirPinSets(d) {
     return { element: n.element_pins || [], concern: n.concern_pins || [] };
   }
   return { element: Array.isArray(n.pins) ? n.pins : [], concern: [] };
+}
+// Repo-relative stills ("data/drone-test/cameras/…/cam-01.jpg") resolve
+// against this page's URL. Absolute http(s) URLs pass through.
+function resolveMediaUrl(src) {
+  if (!src) return '';
+  const s = String(src);
+  if (/^https?:\/\//i.test(s) || /^data:/i.test(s)) return s;
+  try { return new URL(s, window.location.href).href; }
+  catch (e) { return s; }
+}
+// Cameras live in data/cameras/{propertyId}.json (contract). The view
+// record may still carry a cameras[] array as a fallback. Walk the same
+// alias ids the live gateway uses so a hub id, a view id, or a legacy
+// hash all find the file.
+async function attachCameras(rec) {
+  const ids = await livePropertyIds();
+  let cams = [];
+  for (let i = 0; i < ids.length; i++) {
+    try {
+      const j = await fetchJson(DATA_ROOT + 'cameras/' + ids[i] + '.json');
+      if (j && Array.isArray(j.cameras) && j.cameras.length) {
+        cams = j.cameras;
+        dbg('Cameras file: ' + cams.length + ' (cameras/' +
+            String(ids[i]).substring(0, 12) + '\u2026)', 'ok');
+        break;
+      }
+    } catch (e) {}
+  }
+  if (!cams.length && Array.isArray(rec.cameras) && rec.cameras.length) {
+    cams = rec.cameras;
+    dbg('Cameras from view record: ' + cams.length, 'ok');
+  }
+  rec.cameras = cams.map(function (c) {
+    const o = {};
+    Object.keys(c || {}).forEach(function (k) { o[k] = c[k]; });
+    if (o.photo) o.photo = resolveMediaUrl(o.photo);
+    return o;
+  });
+  return rec;
 }
 function initDirections(d) {
   dirCorners = cornersOf(d);
@@ -1807,6 +1931,7 @@ window.togglePins3D = function () {
     if (c) c.classList.add('on');
     dbg('Pins placed: ' + pinSets.element.length + ' element, ' +
         pinSets.concern.length + ' concern', 'ok');
+    kickViewLoop();
   });
 };
 // ── Security cameras in 3D ────────────────────────────────────────────
@@ -1883,6 +2008,7 @@ function decorateCamSprite(sp, cam, idx) {
         camFlashSprites.forEach(function (x) {
           if (x.userData.texOn) x.material.map = camFlashOn ? x.userData.texOn : x.userData.texOff;
         });
+        kickViewLoop();
       }, 600);
     }
   } else {
@@ -1896,7 +2022,7 @@ function coverageWedge(cam, gz, lift) {
   const fov = isFinite(Number(cam.fov)) ? Number(cam.fov) : 120;
   const rng = isFinite(Number(cam.range)) ? Number(cam.range) : 25;
   const start = THREE.MathUtils.degToRad(90 - h - fov / 2);
-  const geo = new THREE.CircleGeometry(rng, 48, start,
+  const geo = new THREE.CircleGeometry(rng, 24, start,
                                        THREE.MathUtils.degToRad(fov));
   const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
     color: 0x38bdf8, transparent: true, opacity: 0.15,
@@ -1954,7 +2080,8 @@ window.toggleCameras3D = function () {
     dbg('Cameras placed: ' + camList.length, 'ok');
     // If the prefetched clips landed before the sprites existed, this is the
     // moment their amber dots catch up.
-    updateEventIndicators();
+    refreshCamIndicators();
+    kickViewLoop();
   });
 };
 function camGroundZ(cam) {
@@ -2138,6 +2265,8 @@ function prefetchLiveLayer() {
   (async function () {
     try {
       await gwEnsureLive(false);
+      joinLiveToPins();
+      refreshCamIndicators();
       await ensureClips(false, false);
     } catch (e) { dbg('Live-layer prefetch failed: ' + e.message, 'warn'); }
   })();
@@ -2365,22 +2494,60 @@ function eventsForDevice(mac) {
   if (!cam || !cam.name) return [];
   return gwClipsCache.filter(function (e) { return e.device_name === cam.name; });
 }
-// Repaint every camera marker's event dot from the current clips cache.
-// Scoped to the same 72 h as the card list, so a dotted pin never opens to
-// an empty "Recent events" section.
-function updateEventIndicators() {
+function normCamKey(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+// Associate geo pins with CHEKT devices without inventing MACs. A pin that
+// already has live.device wins. Otherwise a unique name (or id) match against
+// the /live roster copies that camera's MAC onto the pin.
+function joinLiveToPins() {
+  if (!gwLiveMap || !camList.length) return 0;
+  const roster = Object.keys(gwLiveMap).map(function (k) { return gwLiveMap[k]; });
+  const taken = {};
+  camList.forEach(function (cam) {
+    const d = cam.live && cam.live.device;
+    if (d) taken[String(d).toUpperCase()] = true;
+  });
+  let n = 0;
+  camList.forEach(function (cam) {
+    if (cam.live && cam.live.device) return;
+    const keys = [normCamKey(cam.label), normCamKey(cam.id)].filter(Boolean);
+    if (!keys.length) return;
+    const hits = roster.filter(function (g) {
+      const mac = String(g.mac || '').toUpperCase();
+      if (!mac || taken[mac]) return false;
+      const gn = normCamKey(g.name);
+      return keys.indexOf(gn) !== -1 || keys.indexOf(normCamKey(mac)) !== -1;
+    });
+    if (hits.length !== 1) return;
+    const g = hits[0];
+    cam.live = cam.live || {};
+    cam.live.device = String(g.mac).toUpperCase();
+    if (cam.live.channel === undefined || cam.live.channel === null) {
+      cam.live.channel = g.channel != null ? g.channel : 0;
+    }
+    taken[cam.live.device] = true;
+    n++;
+  });
+  if (n) dbg('Joined ' + n + ' camera pin(s) to live devices', 'ok');
+  return n;
+}
+// Repaint every camera marker from the current roster + clips cache.
+// Red flashing LED = this pin has a live feed; amber = a clip in the last 72 h.
+function refreshCamIndicators() {
   if (!camLayer) return;
   camLayer.traverse(function (o) {
     if (!o.isSprite || !o.userData || !o.userData.camera) return;
     const cam = o.userData.camera;
     const l = camLive(cam);
-    const has = !!(l && pinEventsFor(l.device).length);
-    if (has !== !!o.userData.hasEvent) {
-      o.userData.hasEvent = has;
-      decorateCamSprite(o, cam, camList.indexOf(cam));
-    }
+    o.userData.hasEvent = !!(l && pinEventsFor(l.device).length);
+    decorateCamSprite(o, cam, camList.indexOf(cam));
   });
+  window.__camFlashCount = camFlashSprites.length;
+  kickViewLoop();
 }
+function updateEventIndicators() { refreshCamIndicators(); }
+window.__refreshCamIndicators = refreshCamIndicators;
 // The pin's event log: every clip from THIS camera in the last 72 hours,
 // newest first, one playable row per event. Same 7-day cache the rail uses -
 // the pin view just narrows it, so no extra gateway traffic.
@@ -2394,17 +2561,20 @@ function pinEventsFor(mac) {
   });
 }
 async function fillPinEvent(idx) {
-  const cam = camList[idx], l = camLive(cam);
   const box = document.getElementById('cam-pop-event');
   if (!box) return;
   camPopupEvents = [];
   box.style.display = 'none';
-  if (!l || GW_OFF || !propertyId) return;
+  if (GW_OFF || !propertyId) return;
   try {
-    await gwEnsureLive();
-    await ensureClips(false);
+    await gwEnsureLive(false);
+    joinLiveToPins();
+    refreshCamIndicators();
+    await ensureClips(false, false);
   } catch (e) { return; }
-  if (camPopupIdx !== idx) return;   // user moved on while we fetched
+  if (camPopupIdx !== idx) return;
+  const cam = camList[idx], l = camLive(cam);
+  if (!l) return;
   camPopupEvents = pinEventsFor(l.device);
   const list = document.getElementById('cam-pop-event-list');
   if (!list) return;
@@ -2769,6 +2939,14 @@ window.showCameraPopup = function (idx) {
   dbg('Camera popup: ' + camName(cam, idx) +
       (lv && liveAvailable(cam) ? ' - live available (' + lv.device + ' ch' + lv.channel + ')' : ''), 'info');
   if (liveAvailable(cam)) startLive(idx);
+  fillPinEvent(idx).then(function () {
+    if (camPopupIdx !== idx) return;
+    const c = camList[idx];
+    const btn = document.getElementById('cam-pop-live-btn');
+    if (btn) btn.style.display = liveAvailable(c) ? 'block' : 'none';
+    if (liveAvailable(c) && liveIdx < 0) startLive(idx);
+  });
+  kickViewLoop();
 };
 window.hideCameraPopup = function () {
   stopLive();
@@ -2912,8 +3090,10 @@ function initWeather(d) {
     return;
   }
   wxLat = la; wxLng = ln;
-  document.getElementById('wx-toggle').style.display = 'block';
-  showHazardButtons();
+  if (!embedded) {
+    document.getElementById('wx-toggle').style.display = 'block';
+    showHazardButtons();
+  }
   dbg('Weather ready for ' + la.toFixed(4) + ', ' + ln.toFixed(4), 'ok');
 }
 window.closeWxPanel = function () {
@@ -3825,7 +4005,7 @@ function showHazardButtons() {
   });
 }
 if (!autocapture) { buildPropertyUi(); buildHazardUi(); }
-if (!autocapture && propertyId && !GW_OFF) {
+if (!autocapture && propertyId && !GW_OFF && !embedded) {
   document.getElementById('live-tab').style.display = 'block';
 }
 // ── Route in 3D ───────────────────────────────────────────────────────
@@ -4071,6 +4251,7 @@ function beginTour(i) {
       (tour.ms / 1000).toFixed(0) + ' s, closing from ' + Math.round(R0) + ' m to ' +
       Math.round(tour.r1) + ' m (' + Math.round(rise0) + ' m up), facing the ' +
       faceSrc + ' until ' + Math.round(kSwitch * 100) + '% then the target', 'info');
+  kickViewLoop();
 }
 function stopTour() {
   if (!tour) return;
@@ -4181,6 +4362,24 @@ function showErr(msg) {
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('err-msg').textContent = msg;
   document.getElementById('err').classList.add('visible');
+}
+// ── Hub commands (vyanet-viewer.html) ─────────────────────────────────
+// Same-origin only. As of hub 1.4.0 live video is live-viewer.html, not
+// this page. {type:'vyanet-cmd', cmd:'live'} still toggles the overlay so
+// a direct model-viewer link and any leftover caller keep working.
+window.addEventListener('message', function (e) {
+  if (e.origin !== window.location.origin) return;
+  if (e.data && e.data.type === 'vyanet-stage') {
+    setViewLoop(e.data.stage === '3d');
+    return;
+  }
+  if (!e.data || e.data.type !== 'vyanet-cmd') return;
+  if (e.data.cmd === 'live' && !autocapture) toggleLiveMode();
+});
+if (embedded && window.parent !== window) {
+  try {
+    window.parent.postMessage({ type: 'vyanet-ready', page: 'model-viewer' }, window.location.origin);
+  } catch (e) {}
 }
 </script>
 </body>

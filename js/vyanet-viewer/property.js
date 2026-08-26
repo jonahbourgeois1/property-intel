@@ -5,6 +5,7 @@
 
 export const MODEL_PAGE = 'model-viewer.html';
 export const SAT_PAGE = 'viewer.html';
+export const LIVE_PAGE = 'live-viewer.html';
 export const MODEL_VIEWS = ['drone-test', 'plane', 'drone'];
 export const SAT_VIEWS = ['security', 'wildfire', 'plane', 'drone', 'drone-test'];
 export const ROLES = ['customer', 'tech', 'responder'];
@@ -59,9 +60,36 @@ export function framesFromIndex(idx) {
     modelView: modelView || '',
     hasModel: !!modelView,
     hasSatellite: !!satView,
-    modelHref: modelView ? (MODEL_PAGE + '?' + childQuery({ view: modelView })) : '',
-    satHref: satView ? (SAT_PAGE + '?' + childQuery({ tab: satView })) : ''
+    // hasLive is filled by the hub after detectCameras (cameras file / any
+    // view-record cameras array) OR when hasModel is true — Jones has live
+    // via the CHEKT gateway with no cameras file yet.
+    hasLive: false,
+    // embed=1 tells the child pages the hub owns the always-on chrome
+    // (live/weather/hazard buttons), so they don't reveal their own copies.
+    modelHref: modelView ? (MODEL_PAGE + '?' + childQuery({ view: modelView, embed: '1' })) : '',
+    satHref: satView ? (SAT_PAGE + '?' + childQuery({ tab: satView, embed: '1' })) : '',
+    liveHref: LIVE_PAGE + '?' + childQuery({ embed: '1' })
   };
+}
+
+// The best available nadir render for this property, for the home hero.
+// Walks the model views first (drone-test/plane/drone renders are the
+// highest-caliber imagery), then the satellite views. Stops at the first
+// record carrying nadir.url; returns '' when none do.
+export async function findNadir(root, idx) {
+  const views = (idx && idx.views) || {};
+  const seen = [];
+  const order = MODEL_VIEWS.concat(SAT_VIEWS);
+  for (let i = 0; i < order.length; i++) {
+    const v = order[i], id = views[v];
+    if (!id || seen.indexOf(v + '/' + id) !== -1) continue;
+    seen.push(v + '/' + id);
+    try {
+      const rec = await fetchJson(root + v + '/' + id + '.json');
+      if (rec && rec.nadir && rec.nadir.url) return String(rec.nadir.url);
+    } catch (e) {}
+  }
+  return '';
 }
 
 // Property ids the live gateway might key this property under — same walk
@@ -85,21 +113,40 @@ export function liveAliasIds(idx, propertyId) {
 }
 
 // Does this property have cameras? Sources the gate can read without a key:
-// data/cameras/{propertyId}.json (404 = none) and the cameras array on the
-// model view record the 3D page will load. The gateway allowlist is NOT
-// probeable keylessly (it 401s before looking at ?property=), so it cannot
-// answer this question pre-gate. Any fetch error counts as "no cameras" —
-// the gate passcode is a front-load; model-viewer still asks on demand.
-export async function detectCameras(root, idx, spec) {
+// data/cameras/{idx.id}.json, data/cameras/{propertyId}.json (404 = none),
+// and a non-empty cameras array on ANY view record (not only the 3D view —
+// live feed is its own plugin and must work without a GLB). The gateway
+// allowlist is NOT probeable keylessly (it 401s before looking at
+// ?property=), so it cannot answer this question pre-gate. Any fetch error
+// counts as "no cameras". The hub still treats hasModel as a live proxy
+// until cameras files are published (Jones: gateway live, no cameras file).
+export async function detectCameras(root, idx, _spec, propertyId) {
   const jobs = [];
-  jobs.push(fetchJson(root + 'cameras/' + idx.id + '.json').then(function (j) {
-    return !!(j && Array.isArray(j.cameras) && j.cameras.length);
-  }).catch(function () { return false; }));
-  if (spec.modelView && idx.views && idx.views[spec.modelView]) {
-    jobs.push(fetchJson(root + spec.modelView + '/' + idx.views[spec.modelView] + '.json').then(function (j) {
+  const camIds = [];
+  function addCam(id) {
+    const s = String(id || '').trim();
+    if (s && camIds.indexOf(s) === -1) camIds.push(s);
+  }
+  addCam(idx && idx.id);
+  addCam(propertyId);
+  camIds.forEach(function (id) {
+    jobs.push(fetchJson(root + 'cameras/' + id + '.json').then(function (j) {
       return !!(j && Array.isArray(j.cameras) && j.cameras.length);
     }).catch(function () { return false; }));
-  }
+  });
+  const views = (idx && idx.views) || {};
+  const seen = [];
+  Object.keys(views).forEach(function (v) {
+    const id = views[v];
+    if (!id) return;
+    const key = v + '/' + id;
+    if (seen.indexOf(key) !== -1) return;
+    seen.push(key);
+    jobs.push(fetchJson(root + v + '/' + id + '.json').then(function (j) {
+      return !!(j && Array.isArray(j.cameras) && j.cameras.length);
+    }).catch(function () { return false; }));
+  });
+  if (!jobs.length) return false;
   const hits = await Promise.all(jobs);
   return hits.indexOf(true) !== -1;
 }
