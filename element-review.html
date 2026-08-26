@@ -1233,7 +1233,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.2';
+  var BUILD = 'v6.8.3';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1325,9 +1325,12 @@
   var erFwd = MAP_MODE ? window.NadirGeo.makeProjector(erGeo)   : null;
   var erInv = MAP_MODE ? window.NadirGeo.makeUnprojector(erGeo) : null;
   // Metres a pin may sit OUTSIDE the lot line, for roads and extremity points.
+  // v6.8.3: default 60 (was 30) so the dotted grey pin-range ring is 2x as far
+  // from the lot. `&margin=` still overrides. PlacementAllowed uses this same
+  // number, so the ring and the wall stay one region.
   var MARGIN_M = (function () {
     var v = parseFloat(qp('margin'));
-    return (isFinite(v) && v >= 0) ? v : 30;
+    return (isFinite(v) && v >= 0) ? v : 60;
   })();
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var erMap = null, erOverlay = null, erAllow = null;
