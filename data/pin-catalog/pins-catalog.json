@@ -1,9 +1,9 @@
 {
   "catalog": "property-intel-pins",
-  "version": "2026-07-15",
+  "version": "2026-08-26",
   "schema": "merged-tagged-v1",
-  "notes": "Merged FR/WF residential+commercial. role=primary -> Pass 1; role=concern -> Pass 2 (analysis: fr|wf|both). account_type gates by property type. Names appearing as both roles across source sections were collapsed to primary. Some WF-residential-only pins have empty definitions pending authoring.",
-  "pin_count": 239,
+  "notes": "Merged FR/WF residential+commercial. role=primary -> Pass 1; role=concern -> Pass 2 (analysis: fr|wf|both). account_type gates by property type. Names appearing as both roles across source sections were collapsed to primary. Some WF-residential-only pins have empty definitions pending authoring. 2026-08-26: pins 240-256 appended (standard-list Front door; schools vocabulary incl. boundary/approach pins per Jonah); #30 renamed Entry->Vehicle Entrance with roadway-connection definition; account_type widened on #30/#33/#127.",
+  "pin_count": 256,
   "pins": [
     {
       "id": 1,
@@ -390,11 +390,12 @@
     },
     {
       "id": 30,
-      "name": "Entry",
-      "definition": "An exterior doorway providing building access.",
+      "name": "Vehicle Entrance",
+      "definition": "The point where the property's vehicle access connects to the public roadway.",
       "section": "Buildings & Structures",
       "role": "primary",
       "account_type": [
+        "commercial",
         "residential"
       ],
       "analysis": [
@@ -435,6 +436,7 @@
       "section": "Buildings & Structures",
       "role": "primary",
       "account_type": [
+        "commercial",
         "residential"
       ],
       "analysis": [
@@ -1680,6 +1682,7 @@
       "section": "Property Features",
       "role": "primary",
       "account_type": [
+        "commercial",
         "residential"
       ],
       "analysis": [
@@ -3222,6 +3225,227 @@
       "analysis": [
         "fr",
         "wf"
+      ]
+    },
+    {
+      "id": 240,
+      "name": "Front door",
+      "definition": "The primary exterior entrance door of the residence.",
+      "section": "Buildings & Structures",
+      "role": "primary",
+      "account_type": [
+        "residential"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 241,
+      "name": "Building entrance",
+      "definition": "The primary exterior entrance providing public access into a building.",
+      "section": "Buildings & Structures",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 242,
+      "name": "Secondary door",
+      "definition": "An exterior door providing secondary access or egress from a building.",
+      "section": "Buildings & Structures",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 243,
+      "name": "Bus loop",
+      "definition": "A designated driveway loop used for bus loading, unloading, and circulation.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 244,
+      "name": "Parent pickup/drop-off",
+      "definition": "A designated vehicle area used for passenger pickup and drop-off.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 245,
+      "name": "Athletic facility",
+      "definition": "An outdoor sports facility such as a field, track, or court complex.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 246,
+      "name": "Fire lane",
+      "definition": "A marked vehicle lane required to remain clear for emergency apparatus access.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 247,
+      "name": "Portable classroom",
+      "definition": "A transportable modular building used as classroom or auxiliary space.",
+      "section": "Buildings & Structures",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 248,
+      "name": "Loading area",
+      "definition": "A ground-level area used for deliveries, loading, and unloading.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 249,
+      "name": "Roof access",
+      "definition": "A visible point providing access onto a roof, such as a hatch or fixed exterior ladder.",
+      "section": "Buildings & Structures",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 250,
+      "name": "Vegetation",
+      "definition": "An area of vegetation whose density or type is not otherwise classified.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 251,
+      "name": "Remote buildings",
+      "definition": "One or more auxiliary buildings located away from the main building or building cluster.",
+      "section": "Buildings & Structures",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 252,
+      "name": "Campus/property boundary",
+      "definition": "The perimeter boundary of the campus or property.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 253,
+      "name": "Adjacent land use",
+      "definition": "The land use immediately bordering the property that is relevant to response operations.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 254,
+      "name": "Approach road",
+      "definition": "A roadway forming a primary approach route to the property.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 255,
+      "name": "Pedestrian approach",
+      "definition": "A route by which pedestrians approach and enter the property.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
+      ]
+    },
+    {
+      "id": 256,
+      "name": "Emergency vehicle approach",
+      "definition": "The route by which emergency apparatus is expected to approach the property.",
+      "section": "Property Features",
+      "role": "primary",
+      "account_type": [
+        "commercial"
+      ],
+      "analysis": [
+        "shared"
       ]
     }
   ]
