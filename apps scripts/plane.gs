@@ -877,7 +877,8 @@ function fetchPinCatalog_(accountType) {
 // an ELEMENT-section id (present in catalog.elementIds). Any id outside
 // the element sections — including a concern-section id the model
 // proposed despite the element-only prompt — is dropped. Deduped,
-// clamped, capped at PLANE_MAX_PINS.
+// refused if outside the 5–95 storable box (never clamped), capped at
+// PLANE_MAX_PINS.
 function validateElementPins_(pins, elementIds) {
   if (!Array.isArray(pins)) return [];
   const out = [];
@@ -886,11 +887,11 @@ function validateElementPins_(pins, elementIds) {
     const p = pins[i] || {};
     const x = parseFloat(p.x), y = parseFloat(p.y);
     if (isNaN(x) || isNaN(y)) continue;
+    if (x < 5 || x > 95 || y < 5 || y > 95) continue;
     const id = parseInt(p.id, 10);
     if (isNaN(id) || !elementIds[id] || seen[id]) continue;
     seen[id] = true;
-    const c = clampCoords(x, y);
-    out.push({ id: id, x: c.x, y: c.y });
+    out.push({ id: id, x: x, y: y });
   }
   return out;
 }
@@ -898,9 +899,9 @@ function validateElementPins_(pins, elementIds) {
 // Pass 2 validator: identical to validateElementPins_ but the id must be
 // a CONCERN-section id (present in catalog.concernIds). Any id outside the
 // concern sections — including an element-section id the model proposed
-// despite the concern-only prompt — is dropped. Deduped, clamped, capped
-// at PLANE_MAX_PINS. Guarantees element ids can never leak into Nadir
-// Concerns (S).
+// despite the concern-only prompt — is dropped. Deduped, refused if
+// outside the 5–95 box (never clamped), capped at PLANE_MAX_PINS.
+// Guarantees element ids can never leak into Nadir Concerns (S).
 function validateConcernPins_(pins, concernIds) {
   if (!Array.isArray(pins)) return [];
   const out = [];
@@ -909,11 +910,11 @@ function validateConcernPins_(pins, concernIds) {
     const p = pins[i] || {};
     const x = parseFloat(p.x), y = parseFloat(p.y);
     if (isNaN(x) || isNaN(y)) continue;
+    if (x < 5 || x > 95 || y < 5 || y > 95) continue;
     const id = parseInt(p.id, 10);
     if (isNaN(id) || !concernIds[id] || seen[id]) continue;
     seen[id] = true;
-    const c = clampCoords(x, y);
-    out.push({ id: id, x: c.x, y: c.y });
+    out.push({ id: id, x: x, y: y });
   }
   return out;
 }

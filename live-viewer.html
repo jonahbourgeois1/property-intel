@@ -160,7 +160,7 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwConfig } from './js/vyanet-viewer/property.js?v=1.4.0';
+import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig } from './js/vyanet-viewer/property.js?v=1.7.2';
 
 const BUILD = '1.0.0';
 const params = new URLSearchParams(window.location.search);
@@ -283,7 +283,7 @@ async function gwGetForProperty(makePath, interactive) {
   let last = null;
   for (let i = 0; i < ids.length; i++) {
     try {
-      const j = await gwGet(makePath(ids[i]), interactive);
+      const j = await gwGet(makePath(ids[i], idx), interactive);
       if (ids[i] !== propertyId) {
         dbg('Gateway mapped via alias ' + String(ids[i]).substring(0, 12) + '...', 'ok');
       }
@@ -300,8 +300,8 @@ async function gwGetForProperty(makePath, interactive) {
 let gwLiveMap = null, gwLiveAt = 0, gwClipsCache = null, gwClipsAt = 0;
 async function gwEnsureLive(interactive) {
   if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
-  const j = await gwGetForProperty(function (id) {
-    return '/live?property=' + encodeURIComponent(id);
+  const j = await gwGetForProperty(function (id, idx) {
+    return '/live?' + gwLiveQuery(id, idx);
   }, interactive !== false);
   const m = {};
   (j.cameras || []).forEach(function (c) {
@@ -315,8 +315,8 @@ async function ensureClips(force, interactive) {
   if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
     return gwClipsCache;
   }
-  const j = await gwGetForProperty(function (id) {
-    return '/clips?property=' + encodeURIComponent(id) + '&days=7';
+  const j = await gwGetForProperty(function (id, idx) {
+    return '/clips?' + gwLiveQuery(id, idx) + '&days=7';
   }, interactive !== false);
   gwClipsCache = j.events || [];
   gwClipsAt = Date.now();

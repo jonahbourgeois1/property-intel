@@ -9,12 +9,14 @@ export const LIVE_PAGE = 'live-viewer.html';
 export const MODEL_VIEWS = ['drone-test', 'plane', 'drone'];
 export const SAT_VIEWS = ['security', 'wildfire', 'plane', 'drone', 'drone-test'];
 export const ROLES = ['customer', 'tech', 'responder'];
+// Bump with the hub HTML BUILD so child iframes and this module cache-bust together.
+export const HUB_BUILD = '1.7.2';
 
 // Same default as model-viewer.html; ?gw= overrides, ?gw=0 disables.
 export const GW_DEFAULT = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
 
 export async function fetchJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: 'no-store' });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.json();
@@ -64,6 +66,7 @@ function childQuery(extra) {
   Object.keys(extra || {}).forEach(function (k) {
     if (extra[k] != null && extra[k] !== '') out.set(k, String(extra[k]));
   });
+  if (!out.get('v')) out.set('v', HUB_BUILD);
   return out.toString();
 }
 
@@ -111,6 +114,15 @@ export async function findNadir(root, idx) {
 
 // Property ids the live gateway might key this property under — same walk
 // order as model-viewer.html (the allowlist may predate the site_no hub id).
+// Eugene currently has two index files for the same building: the site_no
+// hub (8eea64e5, satellite + drone-test) and the name-hash hub (4a484f8c,
+// drone + drone-test). Cameras were first published on 4a484f8c. Looking up
+// either hub must find that file until the two indexes are merged.
+const CAMERA_HUB_SIBLINGS = {
+  '8eea64e5c09dc806f667b079e111a38d': ['4a484f8c273abef3c02cf91e274f9e2f'],
+  '4a484f8c273abef3c02cf91e274f9e2f': ['8eea64e5c09dc806f667b079e111a38d']
+};
+
 export function liveAliasIds(idx, propertyId) {
   const ids = [];
   function add(x) {
@@ -126,6 +138,9 @@ export function liveAliasIds(idx, propertyId) {
       add(idx.views.plane);
     }
   }
+  ids.slice().forEach(function (id) {
+    (CAMERA_HUB_SIBLINGS[id] || []).forEach(add);
+  });
   return ids;
 }
 
@@ -140,14 +155,7 @@ export function liveAliasIds(idx, propertyId) {
 // published (Jones: gateway live, no cameras file).
 export async function detectCameras(root, idx, _spec, propertyId) {
   const jobs = [];
-  const camIds = [];
-  function addCam(id) {
-    const s = String(id || '').trim();
-    if (s && camIds.indexOf(s) === -1) camIds.push(s);
-  }
-  addCam(idx && idx.id);
-  addCam(propertyId);
-  camIds.forEach(function (id) {
+  liveAliasIds(idx, propertyId).forEach(function (id) {
     jobs.push(fetchCamerasFile(root, id).then(function (j) {
       return !!(j && Array.isArray(j.cameras) && j.cameras.length);
     }).catch(function () { return false; }));
@@ -169,18 +177,28 @@ export async function detectCameras(root, idx, _spec, propertyId) {
   return hits.indexOf(true) !== -1;
 }
 
+export function gwLiveQuery(id, idx) {
+  const q = new URLSearchParams();
+  q.set('property', String(id || ''));
+  if (idx && idx.address) q.set('address', String(idx.address));
+  if (idx && idx.name) q.set('name', String(idx.name));
+  if (idx && idx.site_no) q.set('site_no', String(idx.site_no));
+  return q.toString();
+}
+
 // Ask the gateway whether it accepts this key. Walk the alias ids the same
 // way model-viewer does: 200 = accepted and this property has live cameras;
 // 401 = key rejected (stop — the gateway checks the key before the
 // property); 404 = key fine, property unknown under that id, try the next.
-// Anything else (429, 5xx, network) is inconclusive: accept the key and let
-// model-viewer's own 401-retry loop sort it out on first live use.
-export async function validateViewerKey(key, ids, gw) {
+// Address/name from the index let the gateway resolve CHEKT sites that are
+// not in PROPERTY_MAP. Anything else (429, 5xx, network) is inconclusive:
+// accept the key and let model-viewer's own 401-retry loop sort it out.
+export async function validateViewerKey(key, ids, gw, idx) {
   if (gw.off) return { ok: true, live: false };
   for (let i = 0; i < ids.length; i++) {
     let r;
     try {
-      r = await fetch(gw.url + '/live?property=' + encodeURIComponent(ids[i]), {
+      r = await fetch(gw.url + '/live?' + gwLiveQuery(ids[i], idx), {
         headers: { 'x-viewer-key': key }
       });
     } catch (e) {

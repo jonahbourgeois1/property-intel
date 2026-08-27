@@ -20,6 +20,12 @@
 // buildIndexEntryFile_, upsertIndexEntry_ (the per-sync primitive),
 // listIndexIds_, deleteIndexEntryFile_. There is no fetchIndex(), no
 // migration, and no monolith writer anywhere in v5.24.
+//
+// v5.27: camera metadata is property-level, not a view field.
+// Canonical PUT: data/cameras/json/{hubId}.json
+// (camerasFileForSync_). Plane/satellite must not write that file.
+// pushAllToGitHub is UTF-8 text — never JPEG bytes through it.
+// Stills: data/cameras/images/{hubId}/cam-NN.jpg. Never nest JSON under images/.
 // ============================================================
 
 // ── AWS SigV4 helpers ────────────────────────────────────────────────────────
@@ -286,6 +292,121 @@ function upsertIndexEntry_(id, patch) {
   return { entry: merged, file: buildIndexEntryFile_(id, merged) };
 }
 
+// ── Camera metadata (property-level, keyed by index hub id) ──────────────────
+// Canonical file: data/cameras/json/{hubId}.json
+// Stills (repo, until CloudFront tiles): data/cameras/images/{hubId}/cam-NN.jpg
+// Viewers try this path first, then the flat data/cameras/{id}.json, then
+// data/cameras/images/json/{id}.json. 404 = no cameras.
+//
+// Rules:
+//   - Key on hashId(slug(site_no)), never a view-record hash.
+//   - Never attach cameras[] to a view record (index does not inline it).
+//   - Never write data/drone-test/cameras/.
+//   - Never nest JSON under data/cameras/images/.
+//   - Never invent an empty cameras file.
+//   - Repo-relative still URLs are rewritten onto the hub-id image folder.
+//     http(s) URLs (CloudFront later) are left alone.
+//   - pushAllToGitHub encodes utf-8 text blobs only. JPEG bytes stay in git
+//     (or later tiles). Do not PUT stills through this helper.
+//   - Plane / satellite sync must not call camerasFileForSync_ — they do
+//     not own this file. Drone-test sync is the writer for now.
+
+const CAMERAS_JSON_DIR = 'data/cameras/json';
+
+function githubGetDecodedJson_(repoPath) {
+  const creds = getCredentials();
+  const headers = {
+    'Authorization': 'token ' + creds.githubToken,
+    'Accept': 'application/vnd.github.v3+json'
+  };
+  try {
+    const res = UrlFetchApp.fetch(
+      'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + repoPath,
+      { method: 'GET', headers, muteHttpExceptions: true });
+    const code = res.getResponseCode();
+    if (code === 404) return null;
+    if (code !== 200) {
+      Logger.log('githubGetDecodedJson_ ' + repoPath + ': HTTP ' + code);
+      return null;
+    }
+    const content = JSON.parse(res.getContentText()).content;
+    return JSON.parse(
+      Utilities.newBlob(Utilities.base64Decode(content.replace(/\n/g, ''))).getDataAsString()
+    );
+  } catch (e) {
+    Logger.log('githubGetDecodedJson_ error (' + repoPath + '): ' + e.message);
+    return null;
+  }
+}
+
+function fetchCamerasRecord_(propertyId) {
+  if (!propertyId) return null;
+  const paths = [
+    CAMERAS_JSON_DIR + '/' + propertyId + '.json',
+    'data/cameras/' + propertyId + '.json',
+    'data/cameras/images/json/' + propertyId + '.json'
+  ];
+  for (let i = 0; i < paths.length; i++) {
+    const rec = githubGetDecodedJson_(paths[i]);
+    if (rec && typeof rec === 'object') return rec;
+  }
+  return null;
+}
+
+function rewriteCameraPhotoUrl_(photo, propertyId) {
+  const s = String(photo || '').trim();
+  if (!s) return s;
+  if (/^https?:\/\//i.test(s)) return s;
+  const m = s.match(/(cam-\d+\.(?:jpe?g|png|webp))$/i);
+  if (!m) return s;
+  let name = m[1].toLowerCase();
+  if (name.substring(name.length - 5) === '.jpeg') {
+    name = name.substring(0, name.length - 5) + '.jpg';
+  }
+  return 'data/cameras/images/' + propertyId + '/' + name;
+}
+
+function rewriteCamerasRecord_(rec, propertyId) {
+  const out = rec && typeof rec === 'object' ? JSON.parse(JSON.stringify(rec)) : {};
+  out.property = propertyId;
+  const cams = Array.isArray(out.cameras) ? out.cameras : [];
+  out.cameras = cams.map(function (c) {
+    const cam = c && typeof c === 'object' ? JSON.parse(JSON.stringify(c)) : {};
+    if (cam.photo) cam.photo = rewriteCameraPhotoUrl_(cam.photo, propertyId);
+    return cam;
+  });
+  return out;
+}
+
+function buildCamerasFile_(propertyId, rec) {
+  const body = rewriteCamerasRecord_(rec, propertyId);
+  return {
+    path: CAMERAS_JSON_DIR + '/' + propertyId + '.json',
+    content: JSON.stringify(body, null, 2)
+  };
+}
+
+// Fetch existing cameras JSON (canonical, then fallbacks). If none, lift a
+// leftover cameras[] off fallbackViewPath (an existing GitHub view record)
+// so the next view PUT does not silently drop them. Returns a
+// { path, content } for pushAllToGitHub, or null when there is nothing to
+// publish. Never invents an empty cameras file.
+function camerasFileForSync_(propertyId, fallbackViewPath) {
+  if (!propertyId) return null;
+  let rec = fetchCamerasRecord_(propertyId);
+  if (!rec || !Array.isArray(rec.cameras) || !rec.cameras.length) {
+    if (fallbackViewPath) {
+      const view = githubGetDecodedJson_(fallbackViewPath);
+      if (view && Array.isArray(view.cameras) && view.cameras.length) {
+        rec = { property: propertyId, cameras: view.cameras };
+        Logger.log('camerasFileForSync_: lifted cameras[] from ' + fallbackViewPath);
+      }
+    }
+  }
+  if (!rec || !Array.isArray(rec.cameras) || !rec.cameras.length) return null;
+  return buildCamerasFile_(propertyId, rec);
+}
+
 // ── Index hub id (satellite site_no) ─────────────────────────────────────────
 // The index filename is ALWAYS hashId(slug(site_no)). Plane / drone-test
 // merge a single views.* key onto that file. They must never hash Account
@@ -363,6 +484,99 @@ function indexHubId_(opts) {
     return null;
   }
   return satPropertyId_(siteNo, opts.salt);
+}
+
+// Existing index files keyed by display name / address. Used by drone-test
+// so a row joins the hub that already has this property (Vyanet Eugene →
+// 4a484f8c) instead of minting a second file when Satellite site_no is
+// missing or ambiguous. Plane still uses indexHubId_ and skips.
+var indexNameCache_ = null;
+
+function indexHubScore_(entry) {
+  const v = (entry && entry.views) || {};
+  let s = 0;
+  if (v.security) s += 4;
+  if (v.wildfire) s += 4;
+  if (v.plane) s += 2;
+  if (v.drone) s += 2;
+  if (v['drone-test']) s += 1;
+  return s;
+}
+
+function loadIndexNameCache_() {
+  if (indexNameCache_) return indexNameCache_;
+  const byName = {};
+  const byAddr = {};
+  const ids = listIndexIds_();
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    const e = fetchIndexEntry_(id);
+    if (!e) continue;
+    const n = satNormKey_(e.name);
+    const a = satNormKey_(e.address);
+    if (n) {
+      if (!byName[n]) byName[n] = [];
+      byName[n].push({ id: id, entry: e });
+    }
+    if (a) {
+      if (!byAddr[a]) byAddr[a] = [];
+      byAddr[a].push({ id: id, entry: e });
+    }
+  }
+  indexNameCache_ = { byName: byName, byAddr: byAddr };
+  Logger.log('loadIndexNameCache_: ' + ids.length + ' index files');
+  return indexNameCache_;
+}
+
+function chooseIndexHub_(list, label) {
+  if (!list || !list.length) return null;
+  if (list.length === 1) return list[0].id;
+  const scored = list.slice().sort(function (a, b) {
+    return indexHubScore_(b.entry) - indexHubScore_(a.entry);
+  });
+  Logger.log('chooseIndexHub_: ' + list.length + ' index files for ' + label +
+             ' — using ' + scored[0].id + ' (score ' +
+             indexHubScore_(scored[0].entry) + ')');
+  return scored[0].id;
+}
+
+function pickExistingIndexHub_(accountName, address) {
+  const cache = loadIndexNameCache_();
+  const byName = chooseIndexHub_(cache.byName[satNormKey_(accountName)],
+                                 'name "' + (accountName || '') + '"');
+  if (byName) return byName;
+  return chooseIndexHub_(cache.byAddr[satNormKey_(address)],
+                         'address "' + (address || '') + '"');
+}
+
+// Drone-test hub: never skip the index write.
+// 1. Existing index file with this property name (or address) — merge.
+//    Prefer the hub that already has satellite/plane/drone views when more
+//    than one file shares the name (Eugene: 4a484f8c over a drone-test-only
+//    stray).
+// 2. Else unique satellite site_no (indexHubId_).
+// 3. Else mint hashId(slug(name)) and create the file.
+// Address match is how "Tracy Residence Drone Test" still joins Jones.
+function droneTestHubId_(opts) {
+  opts = opts || {};
+  const existing = pickExistingIndexHub_(opts.accountName, opts.address);
+  if (existing) {
+    Logger.log('droneTestHubId_: joining existing index ' + existing +
+               ' for "' + (opts.accountName || '') + '"');
+    return existing;
+  }
+  const fromSat = indexHubId_(opts);
+  if (fromSat) return fromSat;
+  const slug = slugify(opts.accountName);
+  if (!slug) {
+    Logger.log('droneTestHubId_: empty slug for "' +
+               (opts.accountName || '') + '" — cannot mint an index file');
+    return null;
+  }
+  const minted = hashId(slug, opts.salt);
+  Logger.log('droneTestHubId_: no index for "' + opts.accountName +
+             '" — creating ' + minted);
+  return minted;
 }
 
 function fetchHoaMap() {

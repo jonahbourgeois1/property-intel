@@ -1072,7 +1072,7 @@ async function loadView(views, viewSuffix) {
   document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Loading ' + viewSuffix + '...</div>';
   try {
     dbg('Loading ' + viewSuffix + '...', 'info');
-    const res = await fetch(viewBaseUrl(viewSuffix) + hashedViewId + '.json');
+    const res = await fetch(viewBaseUrl(viewSuffix) + hashedViewId + '.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
     currentViewData = d;
@@ -1109,12 +1109,12 @@ async function loadPropertyData() {
     setLoading('Loading property index...');
     // v2.8.0: per-property index file (data/index/{id}.json) replaces the
     // monolithic index.json. The file IS the entry — identity + views map.
-    const indexRes = await fetch(DATA_ROOT + 'index/' + propertyHash + '.json');
+    const indexRes = await fetch(DATA_ROOT + 'index/' + propertyHash + '.json', { cache: 'no-store' });
     if (!indexRes.ok) { showError('Property not found.'); return; }
     const entry = await indexRes.json();
     if (!entry || !entry.views) { showError('Property not found.'); return; }
     dbg('Property found: ' + entry.name, 'ok');
-    const propRes = await fetch(BASE_URL + propertyHash + '.json');
+    const propRes = await fetch(BASE_URL + propertyHash + '.json', { cache: 'no-store' });
     const propData = propRes.ok ? await propRes.json() : null;
     const views = Object.assign({}, entry.views);
     if (propData && propData.viewer360) { views['tour'] = propertyHash; dbg('viewer360 found — Tour tab enabled', 'ok'); }

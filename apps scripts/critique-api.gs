@@ -22,9 +22,9 @@
 // so a name is not a key on either side.
 // ⚠️ Drone and plane are still NAME-based, deliberately, because client drone
 // links are already delivered. Two hashing rules coexist on purpose — never
-// "unify" them. This file only touches Satellite, so site_no is always right
-// here, and the hash itself is delegated to satPropertyId_ in Satellite.gs so
-// the rule has exactly one home.
+// "unify" them. Satellite lookups stay on site_no. view=drone-test is the
+// sanctioned exception: GET/POST then resolve the drone-test tab by taxlot
+// (key) so a shared address like 862 Bethel Dr cannot file against Satellite.
 //
 // WHY THIS FILE EXISTS
 // element-review.html receives its pins baked into the URL, which makes the
@@ -150,7 +150,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.4 (2026-08-27) — 20 pin slots (schools); reviewer duplicate ids allowed on rerun';
+const CRITIQUE_BUILD = 'v6.5 (2026-08-27) — drone-test view= routing by taxlot; satellite path unchanged';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -336,6 +336,20 @@ function critiqueOpenSatSheet_() {
   return { ss: opened.ss, sheet: sheet, via: opened.via };
 }
 
+function critiqueViewOf_(p) {
+  return String((p && (p.view || p.View)) || '').trim().toLowerCase();
+}
+
+function critiqueOpenDtSheet_() {
+  if (typeof DT_SHEET !== 'string') {
+    throw new Error('drone-test.gs is not in this project — cannot look up a drone-test row');
+  }
+  var opened = critiqueOpenSpreadsheet_();
+  var sheet = opened.ss.getSheetByName(DT_SHEET);
+  if (!sheet) throw new Error('sheet "' + DT_SHEET + '" not found');
+  return { ss: opened.ss, sheet: sheet, via: opened.via };
+}
+
 // Resolve a row from key | name | addr, in that order of trust. NEVER silently
 // picks the first of several matches — a critique filed against the wrong
 // property is worse than a visible error.
@@ -392,6 +406,50 @@ function critiqueFindRow_(sheet, p) {
       hits.map(function (h) { return 'row ' + h.row + ' (site ' +
         critiqueSiteNoOf_(h.vals) + ')'; }).join(', ') +
       '). Use ?site_no= — it is unique by construction.');
+  }
+  return hits[0];
+}
+
+// drone-test identity is the taxlot (clip/render key), not satellite site_no.
+// Address is last and must be unique on THIS tab — 862 Bethel Dr is two
+// Satellite rows (VY-IN-A03 / CHT-81) and must not be guessed there.
+function critiqueFindDtRow_(sheet, p) {
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 2) throw new Error('drone-test sheet has no data rows');
+  var width = Math.max(sheet.getLastColumn(), DT_COL_SITE_NO);
+  var data = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+
+  var key  = String(p.key || p.taxlot || '').trim();
+  var addr = String(p.addr || p.address || '').trim();
+  var name = String(p.name || '').trim();
+  var site = String(p.site_no || p.site || '').trim();
+  if (!key && !addr && !name && !site) {
+    throw new Error('drone-test review needs key (taxlot), addr, or name');
+  }
+
+  var hits = [];
+  for (var i = 0; i < data.length; i++) {
+    var match = false;
+    if (key) {
+      match = (critiqueNorm_(data[i][DT_COL_TAXLOT - 1]) === critiqueNorm_(key));
+    } else if (site) {
+      match = (critiqueNorm_(data[i][DT_COL_SITE_NO - 1]) === critiqueNorm_(site));
+    } else if (addr) {
+      match = (critiqueNorm_(data[i][DT_COL_ADDRESS - 1]) === critiqueNorm_(addr));
+    } else {
+      match = (critiqueNorm_(data[i][DT_COL_ACCOUNT - 1]) === critiqueNorm_(name));
+    }
+    if (match) hits.push({ row: i + 2, vals: data[i] });
+  }
+
+  if (!hits.length) throw new Error('no drone-test row matched');
+  if (hits.length > 1) {
+    throw new Error('ambiguous — ' + hits.length + ' drone-test rows matched (' +
+      hits.map(function (h) {
+        return 'row ' + h.row + ' (taxlot ' +
+          String(h.vals[DT_COL_TAXLOT - 1] || '').trim() + ')';
+      }).join(', ') +
+      '). Re-open from the Drone Test menu so the link includes the taxlot key.');
   }
   return hits[0];
 }
@@ -509,6 +567,7 @@ function critiqueNextRound_(logSheet, siteNo, key) {
 // change; `fixes_pending` lets it say "round N+1 in progress" instead of
 // looking idle.
 function critiqueGetElements_(p) {
+  if (critiqueViewOf_(p) === 'drone-test') return critiqueGetDtElements_(p);
   var h = critiqueOpenSatSheet_();
   var hit = critiqueFindRow_(h.sheet, p);
   var v = hit.vals;
@@ -556,6 +615,50 @@ function critiqueGetElements_(p) {
     // false: a GET must never create the tab.
     out.next_round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false),
                                         out.site_no, out.key);
+  } catch (e) {
+    out.next_round = 1;
+  }
+  return out;
+}
+
+function critiqueGetDtElements_(p) {
+  var h = critiqueOpenDtSheet_();
+  var hit = critiqueFindDtRow_(h.sheet, p);
+  var v = hit.vals;
+
+  var elementsRaw = String(v[DT_COL_ELEMENTS - 1] || '').trim();
+  var errored = elementsRaw.indexOf('ERROR:') === 0;
+  var lat = parseFloat(v[DT_COL_LAT - 1]);
+  var lng = parseFloat(v[DT_COL_LNG - 1]);
+  var accountName = String(v[DT_COL_ACCOUNT - 1] || '').trim();
+  var taxlot = String(v[DT_COL_TAXLOT - 1] || '').trim();
+  var siteNo = String(v[DT_COL_SITE_NO - 1] || '').trim();
+
+  var out = {
+    ok: true,
+    route: 'elements',
+    view: 'drone-test',
+    row: hit.row,
+    site_no: siteNo,
+    key: taxlot,
+    name: accountName,
+    address: String(v[DT_COL_ADDRESS - 1] || '').trim(),
+    account_type: normalizeAccountType(v[DT_COL_ACCOUNT_TYPE - 1]),
+    nadir_url: String(v[DT_COL_NADIR_URL - 1] || '').trim(),
+    pins: errored ? [] : parsePinCell_(elementsRaw),
+    pin_error: errored ? elementsRaw : '',
+    reviewed: v[DT_COL_REVIEWED - 1] === true,
+    fixes_pending: String(v[DT_COL_FIXES - 1] || '').trim() !== '',
+    rev: critiqueRev_(elementsRaw),
+    max_pins: (typeof PLANE_MAX_PINS === 'number') ? PLANE_MAX_PINS : 10,
+    rerun_automated: CRITIQUE_QUEUE_RERUN,
+    server_time: new Date().toISOString()
+  };
+  if (!isNaN(lat) && !isNaN(lng)) { out.lat = lat; out.lng = lng; }
+
+  try {
+    out.next_round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false),
+                                        siteNo, taxlot);
   } catch (e) {
     out.next_round = 1;
   }
@@ -823,7 +926,178 @@ function critiqueBuildRow_(ctx) {
   return { row: row, overCap: overCap, headerCount: headers.length };
 }
 
+function critiquePostDt_(p) {
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(20000)) {
+    return { ok: false, error: 'sheet busy (a re-run is in progress) — try again in a moment' };
+  }
+  try {
+    critiqueNormalizeVerdicts_(p);
+
+    var h = critiqueOpenDtSheet_();
+    var hit = critiqueFindDtRow_(h.sheet, p);
+    var v = hit.vals;
+    var row = hit.row;
+
+    var accountName = String(v[DT_COL_ACCOUNT - 1] || '').trim();
+    var address = String(v[DT_COL_ADDRESS - 1] || '').trim();
+    var taxlot = String(v[DT_COL_TAXLOT - 1] || '').trim();
+    var siteNo = String(v[DT_COL_SITE_NO - 1] || '').trim();
+    var key = taxlot || ('dt-row-' + row);
+
+    var round = parseInt(p.round, 10);
+    if (!isFinite(round) || round < 1) {
+      round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false), siteNo, key);
+    }
+
+    var now = new Date();
+    var note = critiqueComposeFixesNote_({
+      round: round,
+      reviewer: String(p.reviewer || '').trim(),
+      stamp: critiqueStamp_(now),
+      elements: p.elements || [],
+      added: p.added || [],
+      missed: p.missed || ''
+    });
+    var reqCount = (p.pin_requests || []).length;
+
+    var willQueue = CRITIQUE_QUEUE_RERUN && !!note;
+    var rerunStatus;
+    var trigState = null;
+    if (willQueue) {
+      if (CRITIQUE_RERUN_MODE === 'inline') {
+        rerunStatus = '';
+      } else {
+        rerunStatus = 'note written to Nadir Fixes — run Rerun Pins from Fixes (This Row) on the Drone Test menu';
+      }
+    } else if (!note) {
+      rerunStatus = reqCount ? 'catalog request only — no re-pin needed' : 'nothing actionable';
+    } else {
+      rerunStatus = 'not queued — run the rerun from the Drone Test menu';
+    }
+
+    var built = critiqueBuildRow_({
+      payload: p, now: now, siteNo: siteNo || ('dt:' + key), key: key,
+      accountName: accountName, address: address, row: row, round: round,
+      note: note, rerunStatus: rerunStatus
+    });
+
+    if (built.overCap.length) {
+      var total = (p.elements || []).length + (p.added || []).length;
+      return { ok: false,
+        error: 'This round carries ' + total + ' pins but the sheet has ' +
+          CRITIQUE_PIN_SLOTS + ' slots, so nothing was saved. No slot for ' +
+          built.overCap.join(', ') + '.' };
+    }
+
+    var log = critiqueEnsureLogSheet_(h.ss, true);
+    var logRow = log.getLastRow() + 1;
+    log.getRange(logRow, 1, 1, built.headerCount).setValues([built.row]);
+    log.getRange(logRow, 1).setNumberFormat('M/d/yyyy h:mm:ss am/pm');
+
+    var queued = false;
+    var rerunRan = null;
+    var rerunError = '';
+    var freshPins = null;
+    var freshRev = null;
+
+    if (willQueue) {
+      writePlainCell(h.sheet, row, DT_COL_FIXES, note);
+      h.sheet.getRange(row, DT_COL_REVIEWED).setValue(false);
+      SpreadsheetApp.flush();
+      queued = true;
+
+      if (CRITIQUE_RERUN_MODE === 'inline') {
+        var beforeRaw = String(h.sheet.getRange(row, DT_COL_ELEMENTS).getValue() || '').trim();
+        var beforeReviewed = h.sheet.getRange(row, DT_COL_REVIEWED).getValue();
+
+        if (typeof rerunElementPinsRowDT_ !== 'function') {
+          rerunRan = false;
+          rerunError = 'rerunElementPinsRowDT_() not found in this project';
+        } else {
+          var outcome;
+          try {
+            outcome = rerunElementPinsRowDT_(h.sheet, row);
+          } catch (err) {
+            outcome = false;
+            rerunError = String(err && err.message ? err.message : err);
+          }
+          rerunRan = (outcome === true);
+          if (!rerunRan && !rerunError) {
+            rerunError = (outcome === 'no-fixes')
+              ? 'the Nadir Fixes note was not readable back — nothing was re-pinned'
+              : 'the re-pin failed; see the Nadir Elements cell and the execution log';
+          }
+        }
+
+        if (rerunRan) {
+          var freshRaw = String(h.sheet.getRange(row, DT_COL_ELEMENTS).getValue() || '').trim();
+          var candidate = (freshRaw.indexOf('ERROR:') === 0) ? [] : parsePinCell_(freshRaw);
+          var lost = critiquePinLoss_(p, beforeRaw, candidate);
+          if (lost.length) {
+            writePlainCell(h.sheet, row, DT_COL_ELEMENTS, beforeRaw);
+            h.sheet.getRange(row, DT_COL_REVIEWED).setValue(beforeReviewed);
+            writePlainCell(h.sheet, row, DT_COL_FIXES, note);
+            SpreadsheetApp.flush();
+            rerunRan = false;
+            rerunError = 'the re-pin dropped ' + lost.length + ' pin(s) you did not ask to ' +
+              'remove (' + lost.join(', ') + '), so it was ROLLED BACK — your pins are ' +
+              'unchanged and the note is still in Nadir Fixes';
+            Logger.log('critique ROLLED BACK drone-test taxlot ' + key + ' row ' + row +
+                       ': re-pin returned ' + candidate.length + ' pin(s) and dropped ' +
+                       lost.join(', '));
+          } else {
+            writePlainCell(h.sheet, row, DT_COL_FIXES, '');
+            SpreadsheetApp.flush();
+            freshPins = candidate;
+            freshRev = critiqueRev_(freshRaw);
+          }
+        }
+
+        rerunStatus = rerunRan
+          ? 'RE-PINNED immediately — ' + (freshPins ? freshPins.length : 0) + ' pin(s), note consumed'
+          : 'FAILED to re-pin: ' + rerunError + ' — the note is still in Nadir Fixes';
+        try {
+          var cRerun = critiqueHeaders_().indexOf('Rerun Status') + 1;
+          if (cRerun > 0) log.getRange(logRow, cRerun).setValue(rerunStatus);
+        } catch (e) {
+          Logger.log('critique DT: could not write Rerun Status back — ' + e.message);
+        }
+      }
+    }
+
+    Logger.log('critique filed: drone-test ' + key + ' ' + accountName +
+               ' round ' + round + ' — ' +
+               (p.elements || []).length + ' pins, ' + (p.added || []).length + ' added');
+
+    return {
+      ok: true, route: 'critique', view: 'drone-test', rows: 1, round: round, row: row,
+      site_no: siteNo, key: key,
+      rerun_mode: CRITIQUE_RERUN_MODE,
+      rerun_ran: rerunRan,
+      rerun_error: rerunError,
+      pins: freshPins,
+      rev: freshRev,
+      rerun_trigger: trigState,
+      build: CRITIQUE_BUILD,
+      rerun_queued: queued,
+      pin_requests: reqCount,
+      message: (CRITIQUE_RERUN_MODE === 'inline' && queued
+        ? (rerunRan
+            ? 'Round ' + round + ' filed and re-pinned on drone-test — ' +
+              (freshPins ? freshPins.length : 0) + ' new pin(s) on the image.'
+            : 'Round ' + round + ' filed to drone-test, but the re-pin FAILED: ' + rerunError)
+        : queued
+          ? 'Round ' + round + ' filed to drone-test. ' + rerunStatus
+          : 'Round ' + round + ' filed to drone-test.')
+    };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function critiquePost_(p) {
+  if (critiqueViewOf_(p) === 'drone-test') return critiquePostDt_(p);
   var lock = LockService.getScriptLock();
   // The same lock the two Satellite auto-runs take. Without it a submission
   // landing mid-rerun could interleave with the trigger's own writes.

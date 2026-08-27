@@ -177,6 +177,14 @@
     font-family: monospace; font-size: 9px; font-weight: 700;
     display: flex; align-items: center; justify-content: center; line-height: 1;
   }
+  .cam-thumb-label {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 5px 4px; background: linear-gradient(transparent, rgba(10,12,15,0.92));
+    color: #f0f2f5; font-size: 9px; line-height: 1.25; font-weight: 600;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
   #cam-lightbox {
     display: none; position: fixed; inset: 0; z-index: 90;
     background: rgba(6,8,11,0.92); padding: 24px;
@@ -725,6 +733,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
+import { liveAliasIds, gwLiveQuery } from './js/vyanet-viewer/property.js?v=1.7.2';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
@@ -926,7 +935,7 @@ function stepFly() {
 // ── Scene setup ───────────────────────────────────────────────────────
 // ── Property fetch ────────────────────────────────────────────────────
 async function fetchJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(url, { cache: 'no-store' });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.json();
@@ -1192,10 +1201,10 @@ function startModelLoad(url) {
         if (propertyId) dbg('No record found for this property', 'warn');
         return;
       }
-      attachCameras(r[0]).then(function (rec) { initDirections(rec); })
+      attachCameras(r[0]).then(function (rec) { startDirections(rec); })
         .catch(function (e) {
           dbg('Camera attach failed: ' + e.message, 'warn');
-          initDirections(r[0]);
+          startDirections(r[0]);
         });
     });
     // Fade in
@@ -1346,6 +1355,7 @@ const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 let dirList = [], dirNadir = '', dirCorners = null;
 let dirLayer = null, activeDir = -1, dirBusy = false;
 let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
+let dirRecord = null;
 let camList = [], camLayer = null, camBounds = null;
 let pinCatalogById = null;
 let groundJobSeq = 0;
@@ -1452,6 +1462,31 @@ function pctFromLatLng(lat, lng, b) {
     y: (Number(b.north) - Number(lat)) / (Number(b.north) - Number(b.south)) * 100
   };
 }
+// Same Static-Maps % → lat/lng as viewer.html. size= is the logical size.
+function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {
+  const size = 640;
+  const pixelX = (xPct / 100) * size - size / 2;
+  const pixelY = (yPct / 100) * size - size / 2;
+  const mpp = (40075016.686 * Math.cos(centerLat * Math.PI / 180)) / (256 * Math.pow(2, zoom));
+  return {
+    lat: centerLat - (pixelY * mpp) / 110574,
+    lng: centerLng + (pixelX * mpp) / (111320 * Math.cos(centerLat * Math.PI / 180))
+  };
+}
+function extractMapZoom(url) {
+  const m = String(url || '').match(/[&?]zoom=(\d+)/);
+  return m ? parseInt(m[1], 10) : 19;
+}
+function extractMapCenter(url) {
+  const m = String(url || '').match(/[&?]center=([^&]+)/);
+  if (!m) return null;
+  let raw = m[1];
+  try { raw = decodeURIComponent(raw.replace(/\+/g, ' ')); } catch (e) {}
+  const parts = raw.split(',');
+  const lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  return { lat: lat, lng: lng };
+}
 function camLocal(cam) {
   if (!cam) return null;
   if (isFinite(Number(cam.mx)) && isFinite(Number(cam.my))) {
@@ -1493,7 +1528,8 @@ function buildCameraCardHtml() {
                'title="' + escHtml(camName(cam, i)) + '">' +
                '<img src="' + escHtml(cam.photo || '') + '" alt="' + escHtml(camName(cam, i)) +
                '" loading="lazy" onerror="this.style.display=\'none\'">' +
-               '<span class="cam-thumb-n">' + (i + 1) + '</span></div>';
+               '<span class="cam-thumb-n">' + (i + 1) + '</span>' +
+               '<span class="cam-thumb-label">' + escHtml(camName(cam, i)) + '</span></div>';
       }).join('') + '</div>';
   html += '<button class="rd-btn" id="gw-btn" onclick="loadGwSections()">' +
             'Live cameras &amp; recent clips&hellip;</button>' +
@@ -1517,18 +1553,50 @@ function metreRoute(d) {
 }
 // ── Shared chunked ground raycast ─────────────────────────────────────
 function cancelGroundJobs() { groundJobSeq++; dirBusy = false; }
-function raycastGround(pts, progressEl, onDone) {
+function raycastGround(pts, progressEl, onDone, opts) {
   const token = ++groundJobSeq;
   const zTop  = modelBox.max.z + Math.max(50, modelSpan * 0.5);
   const ray   = new THREE.Raycaster();
   const down  = new THREE.Vector3(0, 0, -1);
   const zs    = new Array(pts.length).fill(null);
+  const groundOnly = !!(opts && opts.groundOnly);
+  const nWorld = new THREE.Vector3();
+  const nMat = new THREE.Matrix3();
   let i = 0;
   dirBusy = true;
   (function step() {
     if (token !== groundJobSeq) return;   // superseded; the new job owns dirBusy
-    const end = Math.min(pts.length, i + 8);
+    const end = Math.min(pts.length, i + (groundOnly ? 4 : 8));
+    function groundZ(x, y) {
+      ray.set(new THREE.Vector3(x, y, zTop), down);
+      const h = ray.intersectObject(modelRoot, true)[0];
+      if (!h) return null;
+      if (h.face) {
+        nMat.getNormalMatrix(h.object.matrixWorld);
+        nWorld.copy(h.face.normal).applyMatrix3(nMat).normalize();
+        if (Math.abs(nWorld.z) < 0.55) return null;
+      }
+      return h.point.z;
+    }
     for (; i < end; i++) {
+      if (!pts[i]) { zs[i] = null; continue; }
+      if (groundOnly) {
+        const z0 = groundZ(pts[i].x, pts[i].y);
+        if (z0 == null) { zs[i] = null; continue; }
+        const rim = Math.max(2.5, modelSpan * 0.016);
+        if (pts[i].x < modelBox.min.x + rim || pts[i].x > modelBox.max.x - rim ||
+            pts[i].y < modelBox.min.y + rim || pts[i].y > modelBox.max.y - rim) {
+          zs[i] = null; continue;
+        }
+        const off = Math.max(2.2, modelSpan * 0.014);
+        let support = 0;
+        if (groundZ(pts[i].x + off, pts[i].y) != null) support++;
+        if (groundZ(pts[i].x - off, pts[i].y) != null) support++;
+        if (groundZ(pts[i].x, pts[i].y + off) != null) support++;
+        if (groundZ(pts[i].x, pts[i].y - off) != null) support++;
+        zs[i] = support >= 3 ? z0 : null;
+        continue;
+      }
       ray.set(new THREE.Vector3(pts[i].x, pts[i].y, zTop), down);
       const hit = ray.intersectObject(modelRoot, true)[0];
       zs[i] = hit ? hit.point.z : null;
@@ -1543,7 +1611,8 @@ function raycastGround(pts, progressEl, onDone) {
 }
 // A ray can miss where the clip cut a hole in the mesh. Fill from the nearest
 // hit on either side rather than dropping the point, so one hole cannot break
-// a route into pieces or drop a pin to the floor.
+// a ROUTE into pieces. Pins must not use this — a miss means the pin is off
+// the clipped mapping, and filling it plants a sprite in the void.
 function fillGaps(zs) {
   let seen = null;
   for (let i = 0; i < zs.length; i++) { if (zs[i] === null) zs[i] = seen; else seen = zs[i]; }
@@ -1565,6 +1634,81 @@ function nadirPinSets(d) {
     return { element: n.element_pins || [], concern: n.concern_pins || [] };
   }
   return { element: Array.isArray(n.pins) ? n.pins : [], concern: [] };
+}
+function pinFingerprint(sets) {
+  function ser(arr) {
+    return (arr || []).map(function (p) {
+      return String(p.id) + ':' + Number(p.x).toFixed(2) + ',' + Number(p.y).toFixed(2);
+    }).join('|');
+  }
+  return ser(sets.element) + '#' + ser(sets.concern);
+}
+function convSatPinToNadir(p, centerLat, centerLng, zoom, bounds) {
+  const ll = pixelToLatLng(centerLat, centerLng, zoom, p.x, p.y);
+  const pct = pctFromLatLng(ll.lat, ll.lng, bounds);
+  if (!isFinite(pct.x) || !isFinite(pct.y)) return null;
+  const out = { id: p.id, x: pct.x, y: pct.y };
+  if (p.label) out.label = p.label;
+  return out;
+}
+// The hub SATELLITE tab (FR) reads data/satellite/{id}.json. The 3D iframe
+// used to read only the drone-test/plane record, so a satellite resync never
+// reached the mesh. When this property's index has views.security, map those
+// FR pins onto the nadir crop (lat/lng) and use that set. Do not clamp.
+async function loadFrPinSets(bounds) {
+  if (!propertyId || !bounds) return null;
+  let idx = null;
+  try { idx = await fetchJson(DATA_ROOT + 'index/' + propertyId + '.json'); }
+  catch (e) { return null; }
+  if (!idx || !idx.views || !idx.views.security) return null;
+  let sat = null;
+  try { sat = await fetchJson(DATA_ROOT + 'satellite/' + idx.views.security + '.json'); }
+  catch (e) { return null; }
+  if (!sat) return null;
+  const url = sat.nadir_url || '';
+  const zoom = extractMapZoom(url);
+  const center = extractMapCenter(url);
+  if (!center) return null;
+  function conv(arr) {
+    const out = [];
+    (arr || []).forEach(function (p) {
+      const q = convSatPinToNadir(p, center.lat, center.lng, zoom, bounds);
+      if (q) out.push(q);
+    });
+    return out;
+  }
+  const element = conv(sat.elements);
+  const concern = conv((sat.fr && sat.fr.concerns) || []);
+  if (!element.length && !concern.length) return null;
+  return { element: element, concern: concern };
+}
+function startDirections(rec) {
+  if (!rec) return;
+  const bounds = boundsOf(rec);
+  loadFrPinSets(bounds).then(function (fr) {
+    rec._frPinSets = fr || null;
+    initDirections(rec);
+  }).catch(function (e) {
+    dbg('FR pin load failed: ' + (e && e.message ? e.message : e), 'warn');
+    initDirections(rec);
+  });
+}
+function refreshPinsIfStale() {
+  if (!propertyId || !dirRecord) return;
+  const bounds = camBounds || boundsOf(dirRecord);
+  loadFrPinSets(bounds).then(function (fr) {
+    const next = fr || nadirPinSets(dirRecord);
+    if (pinFingerprint(next) === pinFingerprint(pinSets)) return;
+    dbg('Pins changed on disk — refreshing 3D layer', 'ok');
+    const wasShown = pinsShown();
+    cancelGroundJobs();
+    clearPins3D();
+    pinSets = next;
+    dirRecord._frPinSets = fr || null;
+    if (wasShown || (dirCorners && modelRoot && next.element.length + next.concern.length)) {
+      togglePins3D();
+    }
+  }).catch(function () {});
 }
 // Repo-relative stills ("data/cameras/images/{propertyId}/cam-01.jpg")
 // resolve against this page's URL. Absolute http(s) URLs pass through.
@@ -1616,10 +1760,11 @@ async function attachCameras(rec) {
   return rec;
 }
 function initDirections(d) {
+  dirRecord  = d;
   dirCorners = cornersOf(d);
   dirNadir   = (d.nadir && d.nadir.url) || '';
   dirList    = (d.directions || []).filter(function (x) { return orderedRoute(x).length >= 2; });
-  pinSets    = nadirPinSets(d);
+  pinSets    = d._frPinSets || nadirPinSets(d);
   camBounds  = boundsOf(d);
   camList    = (Array.isArray(d.cameras) ? d.cameras : [])
                  .filter(function (c) { return !!camLocal(c); });
@@ -1627,7 +1772,8 @@ function initDirections(d) {
   if (!dirList.length && !nPins && !camList.length) { dbg('Record has no pins, cameras or directions', 'warn'); return; }
   if (camList.length) dbg('Cameras in record: ' + camList.length + ' placeable', 'ok');
   dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
-      pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)', 'ok');
+      pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)' +
+      (d._frPinSets ? ' (FR/satellite set)' : ''), 'ok');
   dbg(dirCorners ? 'nadir.local present — percentages map to model meters'
                  : 'nadir.local MISSING — 3D placement unavailable', dirCorners ? 'ok' : 'warn');
   // Four independent bodies. A tab with nothing to say is left hidden rather
@@ -1920,11 +2066,14 @@ window.togglePins3D = function () {
   if (!local.length) return;
   const prog = document.getElementById('pin-prog');
   raycastGround(local, prog, function (zs) {
-    fillGaps(zs);
+    // Refuse misses. fillGaps would invent a Z and plant the pin in the
+    // black void around a clipped drone/plane mesh. Never clamp.
     const lift = liftBy(), mark = markerSize();
     pinLayers.element = new THREE.Group();
     pinLayers.concern = new THREE.Group();
+    let placedE = 0, placedC = 0, refused = 0;
     all.forEach(function (e, i) {
+      if (!local[i] || zs[i] == null) { refused++; return; }
       const isConcern = e.kind === 'concern';
       const sp = numberSprite(e.label, isConcern ? '#ef4444' : '#22c55e',
                               isConcern ? '#ffffff' : '#0b0e12', mark);
@@ -1932,17 +2081,22 @@ window.togglePins3D = function () {
       sp.name = pinDisplay(e.p).name;
       registerLabelTarget(sp);
       (isConcern ? pinLayers.concern : pinLayers.element).add(sp);
+      if (isConcern) placedC++; else placedE++;
     });
-    scene.add(pinLayers.element); scene.add(pinLayers.concern);
+    if (placedE) scene.add(pinLayers.element); else pinLayers.element = null;
+    if (placedC) scene.add(pinLayers.concern); else pinLayers.concern = null;
     window.__pinLayers = pinLayers;
     const b = document.getElementById('pin-btn');
     const c = document.getElementById('pin-card');
-    if (b) { b.classList.add('on'); b.textContent = 'Hide pins from 3D'; }
-    if (c) c.classList.add('on');
-    dbg('Pins placed: ' + pinSets.element.length + ' element, ' +
-        pinSets.concern.length + ' concern', 'ok');
+    if (placedE || placedC) {
+      if (b) { b.classList.add('on'); b.textContent = 'Hide pins from 3D'; }
+      if (c) c.classList.add('on');
+    }
+    dbg('Pins placed: ' + placedE + ' element, ' + placedC + ' concern' +
+        (refused ? (' — ' + refused + ' refused (off the mapping)') : ''),
+        refused ? 'warn' : 'ok');
     kickViewLoop();
-  });
+  }, { groundOnly: true });
 };
 // ── Security cameras in 3D ────────────────────────────────────────────
 // A camera marker is permanent scenery like the pins; the wedge on the
@@ -2194,25 +2348,18 @@ document.addEventListener('keydown', function (e) {
   const ov = document.getElementById('pass-overlay');
   if (ov && ov.classList.contains('open')) cancelViewerPasscode();
 });
-async function livePropertyIds() {
-  const ids = [];
-  function add(x) {
-    const s = String(x || '').trim();
-    if (s && ids.indexOf(s) === -1) ids.push(s);
-  }
-  add(propertyId);
+let gwIndex = null;
+async function liveIndex() {
+  if (gwIndex) return gwIndex;
+  gwIndex = {};
   try {
     const idx = await fetchJson(DATA_ROOT + 'index/' + propertyId + '.json');
-    if (idx) {
-      add(idx.id);
-      if (idx.views) {
-        add(idx.views['drone-test']);
-        add(idx.views.drone);
-        add(idx.views.plane);
-      }
-    }
+    if (idx) gwIndex = idx;
   } catch (e) {}
-  return ids;
+  return gwIndex;
+}
+async function livePropertyIds() {
+  return liveAliasIds(await liveIndex(), propertyId);
 }
 async function gwGet(path, interactive) {
   if (GW_OFF) throw new Error('gateway disabled by &gw=0');
@@ -2230,11 +2377,12 @@ async function gwGet(path, interactive) {
   return await r.json();
 }
 async function gwGetForProperty(makePath, interactive) {
-  const ids = await livePropertyIds();
+  const idx = await liveIndex();
+  const ids = liveAliasIds(idx, propertyId);
   let last = null;
   for (let i = 0; i < ids.length; i++) {
     try {
-      const j = await gwGet(makePath(ids[i]), interactive);
+      const j = await gwGet(makePath(ids[i], idx), interactive);
       if (ids[i] !== propertyId) {
         dbg('Live gateway mapped via alias ' + String(ids[i]).substring(0, 12) + '…', 'ok');
       }
@@ -2252,8 +2400,8 @@ async function gwGetForProperty(makePath, interactive) {
 let gwLiveMap = null, gwLiveAt = 0;
 async function gwEnsureLive(interactive) {
   if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
-  const j = await gwGetForProperty(function (id) {
-    return '/live?property=' + encodeURIComponent(id);
+  const j = await gwGetForProperty(function (id, idx) {
+    return '/live?' + gwLiveQuery(id, idx);
   }, interactive !== false);
   const m = {};
   (j.cameras || []).forEach(function (c) {
@@ -2480,8 +2628,8 @@ async function ensureClips(force, interactive) {
   if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
     return gwClipsCache;
   }
-  const j = await gwGetForProperty(function (id) {
-    return '/clips?property=' + encodeURIComponent(id) + '&days=7';
+  const j = await gwGetForProperty(function (id, idx) {
+    return '/clips?' + gwLiveQuery(id, idx) + '&days=7';
   }, interactive !== false);
   gwClipsCache = j.events || [];
   gwClipsAt = Date.now();
@@ -4381,6 +4529,7 @@ window.addEventListener('message', function (e) {
   if (e.origin !== window.location.origin) return;
   if (e.data && e.data.type === 'vyanet-stage') {
     setViewLoop(e.data.stage === '3d');
+    if (e.data.stage === '3d') refreshPinsIfStale();
     return;
   }
   if (!e.data || e.data.type !== 'vyanet-cmd') return;

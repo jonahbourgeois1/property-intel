@@ -92,6 +92,7 @@ The four oblique images are rendered from a photogrammetry 3D model. They may co
 
 TARGET PROPERTY ONLY
 Place pins ONLY on features that belong to the target property. Do not pin neighboring residences, adjacent parcels, streets outside the property, neighboring driveways, or common areas. All pins must fall within the target property boundary.
+The nadir is a padded crop around the parcel. The 3D mapping has no texture outside that parcel. Place every pin on a feature that is clearly on the target parcel — never in the empty margin, on neighboring land visible in the pad, or in untextured void.
 
 CONFIDENCE STANDARD
 Report only elements supported by clear visual evidence — identifiable with at least 95 percent confidence.
@@ -155,6 +156,7 @@ The four oblique images are rendered from a photogrammetry 3D model and may cont
 
 TARGET PROPERTY ONLY
 Place concern pins ONLY on the target property. Do not pin neighboring parcels, streets outside the property, or common areas.
+The nadir is a padded crop around the parcel. The 3D mapping has no texture outside that parcel. Place every concern pin on the target parcel — never in the empty margin, on neighboring land visible in the pad, or in untextured void.
 
 CONFIDENCE STANDARD
 Report only concerns supported by clear visual evidence — identifiable with at least 95 percent confidence. Do not use probability language. If genuine uncertainty exists, exclude the concern. Never fabricate a concern.

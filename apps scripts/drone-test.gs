@@ -16,6 +16,9 @@
 //   9. Pass 2 — concern pins + oblique descriptions + considerations
 //  10. GitHub sync -> data/drone-test/{viewId}.json (carries the reviewed
 //      responder directions inline; routes live in responder-directions.gs)
+//      PLUS data/cameras/json/{hubId}.json when a cameras file
+//      already exists (or cameras[] is still on the live view record).
+//      Never attaches cameras[] to the view record. Stills stay in git.
 //
 // WHY THIS IS A FORK, NOT A WRAPPER
 // plane.gs's per-row workers (processStoryboardRow_, processElementPinsRow_,
@@ -54,20 +57,25 @@
 //
 // MENU (add to menu.gs, before .addToUi())
 //   .addSubMenu(SpreadsheetApp.getUi().createMenu('Drone Test')
-//     .addItem('Set Up drone-test Sheet',        'setupDroneTestSheet')
-//     .addItem('Generate 3D Models',             'generate3DModelsDT')
-//     .addItem('Generate Property Images',       'generateImagesDT')
-//     .addItem('Generate Approach',              'generateApproachDT')
-//     .addItem('Generate Approach (This Row)',   'generateApproachForActiveRowDT')
-//     .addItem('Element Pins — Pass 1',          'generateElementPinsDT')
-//     .addItem('Element Pins — Pass 1 (This Row)','generateElementPinsForActiveRowDT')
-//     .addItem('Open Element Review (This Row)',  'openElementReviewForActiveRowDT')
-//     .addItem('Rerun Pins from Fixes (This Row)','rerunElementPinsForActiveRowDT')
-//     .addItem('Rerun Pins from Fixes (Flagged)', 'rerunElementPinsBatchDT')
-//     .addItem('Pass 2 — Concerns + Descriptions','generatePass2DT')
-//     .addItem('Pass 2 (This Row)',               'generatePass2ForActiveRowDT')
-//     .addItem('Check Job Status',                'checkDroneTestJobStatus')
-//     .addItem('Cancel Jobs',                    'cancelDroneTestJobs'))
+//     .addItem('Set Up drone-test Sheet',             'setupDroneTestSheet')
+//     .addItem('Generate 3D Models',                  'generate3DModelsDT')
+//     .addItem('Generate 3D Models (This Row)',       'generate3DModelsForActiveRowDT')
+//     .addItem('Generate Property Images',            'generateImagesDT')
+//     .addItem('Generate Property Images (This Row)', 'generateImagesForActiveRowDT')
+//     .addItem('Generate Approach',                   'generateApproachDT')
+//     .addItem('Generate Approach (This Row)',        'generateApproachForActiveRowDT')
+//     .addItem('Element Pins — Pass 1',               'generateElementPinsDT')
+//     .addItem('Element Pins — Pass 1 (This Row)',    'generateElementPinsForActiveRowDT')
+//     .addItem('Open Element Review (This Row)',      'openElementReviewForActiveRowDT')
+//     .addItem('Backfill Nadir Bounds (This Row)',     'backfillNadirBoundsForActiveRowDT')
+//     .addItem('Rerun Pins from Fixes (This Row)',    'rerunElementPinsForActiveRowDT')
+//     .addItem('Rerun Pins from Fixes (Flagged)',     'rerunElementPinsBatchDT')
+//     .addItem('Pass 2 — Concerns + Descriptions',    'generatePass2DT')
+//     .addItem('Pass 2 (This Row)',                   'generatePass2ForActiveRowDT')
+//     .addItem('Check Job Status',                    'checkDroneTestJobStatus')
+//     .addItem('Cancel Jobs',                         'cancelDroneTestJobs')
+//     .addItem('Sync This Row to GitHub',             'processDroneTestForActiveRowDT')
+//     .addItem('Sync drone-test to GitHub',           'processDroneTestSheet'))
 // ============================================================
 
 const DT_SHEET = 'drone-test';
@@ -273,9 +281,40 @@ function checkDroneTestJobStatus() {
 // check to F.
 
 function generate3DModelsDT() {
+  generate3DModelsDT_(null);
+}
+
+function generate3DModelsForActiveRowDT() {
+  const sheet = dtSheet_();
+  if (!sheet) return;
+  const row = dtActiveRow_(DT_SHEET);
+  if (!row) return;
+  const address = String(sheet.getRange(row, DT_COL_ADDRESS).getValue() || '').trim();
+  if (!address) {
+    SpreadsheetApp.getUi().alert('Row ' + row + ' has no Property Address.');
+    return;
+  }
+  const existing = String(sheet.getRange(row, DT_COL_VIEWER360).getValue() || '').trim();
+  if (existing) {
+    const ans = SpreadsheetApp.getUi().alert('Regenerate?',
+      'Row ' + row + ' already has a 3D viewer URL.\nQueue clip again for:\n' + address + '?',
+      SpreadsheetApp.getUi().ButtonSet.YES_NO);
+    if (ans !== SpreadsheetApp.getUi().Button.YES) return;
+  }
+  generate3DModelsDT_([row]);
+}
+
+function generate3DModelsDT_(onlyRows) {
   const sheet = dtSheet_();
   if (!sheet) return;
   ensureDtHeaders_(sheet);
+
+  if (PropertiesService.getScriptProperties().getProperty(DT_CLIP_JOB_KEY)) {
+    SpreadsheetApp.getUi().alert('drone-test 3D Models',
+      'A 3D-model job is already running. Use Check Job Status, or Cancel Jobs first.',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
@@ -287,13 +326,19 @@ function generate3DModelsDT() {
     const address = String(r[DT_COL_ADDRESS - 1] || '').trim();
     if (!address) return;
     const row  = i + 2;
+    if (onlyRows && onlyRows.indexOf(row) === -1) return;
     const item = { row: row, address: address,
                    taxlot: String(r[DT_COL_TAXLOT - 1] || '').trim() };
     rows.push(item);
     byRow[row] = item;
     if (!item.taxlot) needTaxlot.push({ rowIndex: row, address: address });
   });
-  if (!rows.length) { SpreadsheetApp.getUi().alert('No ' + DT_SHEET + ' rows with an address.'); return; }
+  if (!rows.length) {
+    SpreadsheetApp.getUi().alert(onlyRows
+      ? 'Row ' + onlyRows[0] + ' has no Property Address.'
+      : 'No ' + DT_SHEET + ' rows with an address.');
+    return;
+  }
 
   // Taxlot + coords via the eligibility Lambda, one retry on a cold start.
   for (let i = 0; i < needTaxlot.length; i += V2_ELIG_BATCH) {
@@ -352,7 +397,9 @@ function generate3DModelsDT() {
     return p;
   });
   if (!props.length) {
-    SpreadsheetApp.getUi().alert('No rows with a taxlot — see the Status column.');
+    SpreadsheetApp.getUi().alert(onlyRows
+      ? 'Row ' + onlyRows[0] + ' has no taxlot — see the Status column.'
+      : 'No rows with a taxlot — see the Status column.');
     return;
   }
 
@@ -425,9 +472,40 @@ function writeClipResultsDT_(sheet, results) {
 // re-checks the capture from the probe's capture_3d.
 
 function generateImagesDT() {
+  generateImagesDT_(null);
+}
+
+function generateImagesForActiveRowDT() {
+  const sheet = dtSheet_();
+  if (!sheet) return;
+  const row = dtActiveRow_(DT_SHEET);
+  if (!row) return;
+  const address = String(sheet.getRange(row, DT_COL_ADDRESS).getValue() || '').trim();
+  if (!address) {
+    SpreadsheetApp.getUi().alert('Row ' + row + ' has no Property Address.');
+    return;
+  }
+  const existing = String(sheet.getRange(row, DT_COL_NADIR_URL).getValue() || '').trim();
+  if (existing) {
+    const ans = SpreadsheetApp.getUi().alert('Regenerate?',
+      'Row ' + row + ' already has image URLs.\nQueue a new render for:\n' + address + '?',
+      SpreadsheetApp.getUi().ButtonSet.YES_NO);
+    if (ans !== SpreadsheetApp.getUi().Button.YES) return;
+  }
+  generateImagesDT_([row]);
+}
+
+function generateImagesDT_(onlyRows) {
   const sheet = dtSheet_();
   if (!sheet) return;
   ensureDtHeaders_(sheet);
+
+  if (PropertiesService.getScriptProperties().getProperty(DT_IMG_JOB_KEY)) {
+    SpreadsheetApp.getUi().alert('drone-test Images',
+      'An image job is already running. Use Check Job Status, or Cancel Jobs first.',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
@@ -439,16 +517,21 @@ function generateImagesDT() {
   data.forEach(function (r, i) {
     const address = String(r[DT_COL_ADDRESS - 1] || '').trim();
     if (!address) return;
+    const row = i + 2;
+    if (onlyRows && onlyRows.indexOf(row) === -1) return;
     const taxlot = String(r[DT_COL_TAXLOT - 1] || '').trim();
     const lat = parseFloat(r[DT_COL_LAT - 1]);
     const lng = parseFloat(r[DT_COL_LNG - 1]);
     if (!taxlot || isNaN(lat) || isNaN(lng)) { skipped++; return; }
-    items.push({ row: i + 2, taxlot: taxlot, lat: lat, lng: lng,
+    items.push({ row: row, taxlot: taxlot, lat: lat, lng: lng,
                  address: address, state: 'pending', polls: 0 });
   });
   if (!items.length) {
-    SpreadsheetApp.getUi().alert('No rows ready. Run "Generate 3D Models" first' +
-      (skipped ? ' (' + skipped + ' rows missing taxlot/coords).' : '.'));
+    SpreadsheetApp.getUi().alert(onlyRows
+      ? 'Row ' + onlyRows[0] + ' is not ready. Run "Generate 3D Models (This Row)" first' +
+        (skipped ? ' (missing taxlot/coords).' : '.')
+      : 'No rows ready. Run "Generate 3D Models" first' +
+        (skipped ? ' (' + skipped + ' rows missing taxlot/coords).' : '.'));
     return;
   }
   PropertiesService.getScriptProperties()
@@ -501,9 +584,13 @@ function imagesTickDT_() {
           writePlainCell(sheet, it.row, DT_COL_NADIR_LOCAL, JSON.stringify(p.body.nadir_local));
         }
         const ok = dtCaptureCheck_(sheet, it.row, p.body.capture_3d);
+        let extra = '';
+        if (!p.body.nadir_bounds) {
+          extra = ' — Nadir Bounds empty (nadir-meta.json missing; run Backfill Nadir Bounds after the render Lambda writes it)';
+        }
         writePlainCell(sheet, it.row, DT_COL_STATUS,
           'images done (' + (p.body.capture_3d || '') + ')' +
-          (ok ? '' : ' — CAPTURE MISMATCH, see column F'));
+          (ok ? '' : ' — CAPTURE MISMATCH, see column F') + extra);
         it.state = 'done';
       } else if (p.body && p.body.note && p.body.note.indexOf('no cached 3D model') !== -1) {
         writePlainCell(sheet, it.row, DT_COL_STATUS, 'NEEDS 3D MODEL — run Generate 3D Models');
@@ -676,6 +763,11 @@ function generateApproachForActiveRowDT() {
          '\nSee the Status column and execution logs.',
     SpreadsheetApp.getUi().ButtonSet.OK);
 }
+
+// Old menu.gs labels said "Storyboard" but the handlers were never named that.
+// Keep these aliases so a stale deployed menu still fires.
+function generateStoryboardDT() { generateApproachDT(); }
+function generateStoryboardForActiveRowDT() { generateApproachForActiveRowDT(); }
 
 // ============================================================
 // PASS 1 — ELEMENT PINS
@@ -856,26 +948,76 @@ function generateElementPinsForActiveRowDT() {
 }
 
 // ── Element review link ──────────────────────────────────────────────────────
-// Builds the element-review.html URL from the row's nadir + element pins. x,y
-// are percentages on the image, so no bounds are needed page-side. &type= lets
-// the page flag misfiled pins (same as the satellite variant).
+// Builds the element-review.html URL from the row's nadir + element pins.
+// Carries view=drone-test and key=taxlot so the critique API files against
+// THIS tab (address is not unique on Satellite). CloudFront nadirs have no
+// Static Maps center/zoom — &nb= passes the crop bounds for map mode.
 function buildElementReviewUrlDT_(sheet, row) {
   const nadirUrl = String(sheet.getRange(row, DT_COL_NADIR_URL).getValue() || '').trim();
   const pinsRaw  = String(sheet.getRange(row, DT_COL_ELEMENTS).getValue() || '').trim();
   const address  = String(sheet.getRange(row, DT_COL_ADDRESS).getValue() || '').trim();
   const acctType = normalizeAccountType(sheet.getRange(row, DT_COL_ACCOUNT_TYPE).getValue());
   const siteNo   = String(sheet.getRange(row, DT_COL_SITE_NO).getValue() || '').trim();
+  const taxlot   = String(sheet.getRange(row, DT_COL_TAXLOT).getValue() || '').trim();
   if (!nadirUrl || !pinsRaw) return null;
   let pins;
   try { pins = JSON.parse(pinsRaw); } catch (e) { return null; }
   if (!Array.isArray(pins)) return null;
-  return withReviewSiteNo_(
-    ELEMENT_REVIEW_URL +
+  let url = ELEMENT_REVIEW_URL +
       '?nadir=' + encodeURIComponent(nadirUrl) +
       '&pins='  + encodeURIComponent(JSON.stringify(pins)) +
       '&type='  + encodeURIComponent(acctType) +
-      (address ? '&addr=' + encodeURIComponent(address) : ''),
-    siteNo);
+      '&view=drone-test' +
+      (taxlot  ? '&key='  + encodeURIComponent(taxlot)  : '') +
+      (address ? '&addr=' + encodeURIComponent(address) : '');
+  const geo = dtReviewGeoParams_(sheet, row);
+  if (geo) url += '&' + geo;
+  return withReviewSiteNo_(url, siteNo);
+}
+
+// CloudFront nadirs have no Static Maps center/zoom. Pass the crop bounds so
+// element-review can georeference via NadirGeo.geoFromBounds (z20 mosaic).
+function dtReviewGeoParams_(sheet, row) {
+  const raw = String(sheet.getRange(row, DT_COL_NADIR_BOUNDS).getValue() || '').trim();
+  if (!raw) return '';
+  let b;
+  try { b = JSON.parse(raw); } catch (e) { return ''; }
+  if (!b || !isFinite(b.north) || !isFinite(b.south) ||
+      !isFinite(b.east) || !isFinite(b.west)) return '';
+  return 'nb=' + encodeURIComponent(b.north + ',' + b.south + ',' + b.east + ',' + b.west) +
+         '&nz=20';
+}
+
+// Pull Nadir Bounds / Nadir Local from the render probe (S3 nadir-meta.json).
+// Does not re-render. Clip and Approach never write these columns.
+function backfillNadirBoundsForActiveRowDT() {
+  const sheet = dtSheet_();
+  if (!sheet) return;
+  const row = dtActiveRow_(DT_SHEET);
+  if (!row) return;
+  const taxlot = String(sheet.getRange(row, DT_COL_TAXLOT).getValue() || '').trim();
+  if (!taxlot) {
+    SpreadsheetApp.getUi().alert('Row ' + row + ' has no taxlot.');
+    return;
+  }
+  const p = callV2_('/render', { taxlot: taxlot, probe: true });
+  if (p.body && p.body.nadir_bounds) {
+    writePlainCell(sheet, row, DT_COL_NADIR_BOUNDS, JSON.stringify(p.body.nadir_bounds));
+    if (p.body.nadir_local) {
+      writePlainCell(sheet, row, DT_COL_NADIR_LOCAL, JSON.stringify(p.body.nadir_local));
+    }
+    SpreadsheetApp.getUi().alert('drone-test Nadir Bounds',
+      'Wrote bounds' + (p.body.nadir_local ? ' and local corners' : '') +
+      ' for taxlot ' + taxlot + '.\nRe-open Element Review (This Row).',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  SpreadsheetApp.getUi().alert('drone-test Nadir Bounds',
+    'No nadir-meta.json for taxlot ' + taxlot +
+    '.\n\nGenerate 3D Models / Approach do not write this column. Images should, ' +
+    'but the render Lambda was building the JSON and never uploading it. ' +
+    'After that put is deployed, run this again (or Generate Property Images).',
+    SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 function openElementReviewForActiveRowDT() {
@@ -1221,9 +1363,11 @@ function generatePass2ForActiveRowDT() {
 //
 // Identity: viewId = hashId(slug(name) + '-drone-test', salt) — that is the
 // record filename under data/drone-test/. The INDEX hub is NOT that hash.
-// Hub id = satellite site_no (indexHubId_): explicit column AF, else a unique
-// Satellite name/address match. Missing or ambiguous → publish the view
-// record and skip the index write. Never mint a name-hashed hub (Tracy fork).
+// Hub id = droneTestHubId_: an existing data/index file with this property
+// name (or address) wins, so Vyanet Eugene merges onto 4a484f8c instead of
+// a second hub. Else unique satellite site_no. Else mint
+// hashId(slug(name)) and CREATE the index file. Never skip the index write
+// when the name is usable. Address match is how Tracy still joins Jones.
 //
 // upsertIndexEntry_ merges views.drone-test onto that hub, so plane/security/
 // wildfire pointers survive.
@@ -1298,17 +1442,37 @@ function dtRebaseViewer_(url, propertyId) {
 const DT_DATA_DIR = 'data/drone-test';
 
 function processDroneTestSheet() {
+  processDroneTestRows_(null);
+}
+
+function processDroneTestForActiveRowDT() {
+  const row = dtActiveRow_(DT_SHEET);
+  if (!row) return;
+  processDroneTestRows_(row);
+}
+
+function processDroneTestRows_(onlySheetRow) {
   const creds = getCredentials();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(DT_SHEET);
   if (!sheet) { Logger.log('Sheet not found: ' + DT_SHEET); return; }
+  indexNameCache_ = null;
 
   const data    = sheet.getDataRange().getValues();
   const files   = [];
   const updates = [];
   let processed = 0, skipped = 0, directionsTotal = 0, directionsSkipped = 0;
   let waypointsInMetres = 0;
+  let skipReason = '';
+
+  if (onlySheetRow && (onlySheetRow < 2 || onlySheetRow > data.length)) {
+    SpreadsheetApp.getUi().alert('drone-test Sync',
+      'Row ' + onlySheetRow + ' is empty.',
+      SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
 
   for (let i = 1; i < data.length; i++) {
+    if (onlySheetRow && (i + 1) !== onlySheetRow) continue;
     const row         = data[i];
     const accountType = normalizeAccountType(row[DT_COL_ACCOUNT_TYPE - 1]);
     const accountName = String(row[DT_COL_ACCOUNT - 1] || '').trim();
@@ -1331,27 +1495,39 @@ function processDroneTestSheet() {
     const lat         = parseFloat(row[DT_COL_LAT - 1]);
     const lng         = parseFloat(row[DT_COL_LNG - 1]);
 
-    if (!accountName || !address) { skipped++; continue; }
+    if (!accountName || !address) {
+      skipped++;
+      skipReason = 'missing Property Name or Address';
+      continue;
+    }
     if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
         !bravoUrl || !bravoDesc || !charlieUrl || !charlieDesc ||
         !deltaUrl || !deltaDesc) {
       Logger.log('drone-test sync skipping (incomplete): ' + accountName);
-      skipped++; continue;
+      skipped++;
+      skipReason = 'incomplete — need images, element pins, and all four descriptions';
+      continue;
     }
     if (alphaDesc.indexOf('ERROR:') === 0) {
       Logger.log('drone-test sync skipping (errored descriptions): ' + accountName);
-      skipped++; continue;
+      skipped++;
+      skipReason = 'errored descriptions in Alpha';
+      continue;
     }
 
     let elementPins = [], concernPins = [], bounds = null;
     try { elementPins = JSON.parse(elementsRaw) || []; } catch (e) {
       Logger.log('drone-test sync skipping (bad Nadir Elements JSON): ' + accountName);
-      skipped++; continue;
+      skipped++;
+      skipReason = 'Nadir Elements is not valid JSON';
+      continue;
     }
     if (concernsRaw) {
       try { concernPins = JSON.parse(concernsRaw) || []; } catch (e) {
         Logger.log('drone-test sync skipping (bad Nadir Concerns JSON): ' + accountName);
-        skipped++; continue;
+        skipped++;
+        skipReason = 'Nadir Concerns is not valid JSON';
+        continue;
       }
     }
     try { bounds = boundsRaw ? JSON.parse(boundsRaw) : null; } catch (e) { bounds = null; }
@@ -1360,7 +1536,7 @@ function processDroneTestSheet() {
 
     const baseKey = accountName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const viewId  = hashId(baseKey + '-drone-test', creds.hashSalt);
-    const hubId   = indexHubId_({
+    const hubId   = droneTestHubId_({
       siteNo: row[DT_COL_SITE_NO - 1],
       accountName: accountName,
       address: address,
@@ -1379,6 +1555,9 @@ function processDroneTestSheet() {
                  'Property Images to backfill it.');
     }
 
+    // Cameras are property-level (data/cameras/json/{hubId}.json).
+    // Do not put cameras[] on this view record — a later sync would own
+    // the drop. camerasFileForSync_ PUTs the cameras file separately.
     const propertyData = {
       name:           accountName,
       address:        address,
@@ -1415,9 +1594,11 @@ function processDroneTestSheet() {
       if (!isNaN(lat) && !isNaN(lng)) { patch.lat = lat; patch.lng = lng; }
       const up = upsertIndexEntry_(hubId, patch);
       files.push(up.file);
+      const camFile = camerasFileForSync_(hubId, DT_DATA_DIR + '/' + viewId + '.json');
+      if (camFile) files.push(camFile);
     } else {
-      Logger.log('drone-test sync: no unique satellite site_no for "' + accountName +
-                 '" — published ' + DT_DATA_DIR + '/' + viewId + '.json, skipped index. Set column AF (Site No).');
+      Logger.log('drone-test sync: could not resolve an index hub for "' + accountName +
+                 '" — published ' + DT_DATA_DIR + '/' + viewId + '.json, skipped index.');
     }
 
     updates.push({ rowIndex: i, id: hubId, viewId: viewId, accountName: accountName });
@@ -1426,7 +1607,15 @@ function processDroneTestSheet() {
 
   if (!files.length) {
     Logger.log('Nothing to push for: ' + DT_SHEET);
-    SpreadsheetApp.getActiveSpreadsheet().toast('drone-test sync: no complete rows to push.');
+    if (onlySheetRow) {
+      SpreadsheetApp.getUi().alert('drone-test Sync',
+        'Row ' + onlySheetRow + ' was not published' +
+        (skipReason ? ':\n' + skipReason : '.') +
+        '\n\nFinish images, Pass 1, and Pass 2 on this row, then sync it again.',
+        SpreadsheetApp.getUi().ButtonSet.OK);
+    } else {
+      SpreadsheetApp.getActiveSpreadsheet().toast('drone-test sync: no complete rows to push.');
+    }
     return;
   }
 

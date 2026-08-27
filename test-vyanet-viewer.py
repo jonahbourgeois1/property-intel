@@ -1,4 +1,4 @@
-# Verification for vyanet-viewer.html (hub 1.6.9) against localhost:8899.
+# Verification for vyanet-viewer.html (hub 1.7.2) against localhost:8899.
 # Static referee first (node --check, ids, handlers, braces), then behavior.
 # Child pages, the live gateway, and the dashboard's public data APIs are
 # stubbed per scenario so every code path actually evaluates (unstubbed =
