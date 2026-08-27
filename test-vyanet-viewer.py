@@ -1,4 +1,4 @@
-# Verification for vyanet-viewer.html (hub 1.6.5) against localhost:8899.
+# Verification for vyanet-viewer.html (hub 1.6.6) against localhost:8899.
 # Static referee first (node --check, ids, handlers, braces), then behavior.
 # Child pages, the live gateway, and the dashboard's public data APIs are
 # stubbed per scenario so every code path actually evaluates (unstubbed =
@@ -440,7 +440,7 @@ with sync_playwright() as p:
         else:
             j(route, {}, status=401)
     ctx.route(GW + '/**', gw_route)
-    ctx.route('**/data/cameras/json/' + JONES + '.json',
+    ctx.route('**/data/cameras/images/json/' + JONES + '.json',
               lambda r: j(r, {'property': JONES, 'cameras': [{'id': 'cam-01'}]}))
     page = ctx.new_page()
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES)
@@ -599,7 +599,7 @@ with sync_playwright() as p:
         gw_calls['v'] += 1
         j(route, {}, status=401)
     ctx.route(GW + '/**', gw_tally)
-    ctx.route('**/data/cameras/json/' + JONES + '.json',
+    ctx.route('**/data/cameras/images/json/' + JONES + '.json',
               lambda r: j(r, {'property': JONES, 'cameras': [{'id': 'cam-01'}]}))
     page = ctx.new_page()
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES)
@@ -684,7 +684,7 @@ with sync_playwright() as p:
         'account_type': 'residential',
         'views': {'security': 'sat-only-stub'}
     }))
-    ctx.route('**/data/cameras/json/' + JONES + '.json',
+    ctx.route('**/data/cameras/images/json/' + JONES + '.json',
               lambda r: j(r, {'property': JONES, 'cameras': [{'id': 'cam-01'}]}))
     page = ctx.new_page()
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES + '&role=customer')

@@ -1575,13 +1575,11 @@ function resolveMediaUrl(src) {
   try { return new URL(s, window.location.href).href; }
   catch (e) { return s; }
 }
-// Cameras live in data/cameras/json/{propertyId}.json (contract).
-// data/cameras/{propertyId}.json is a one-release fallback. The view
-// record may still carry a cameras[] array as a last resort. Walk the
-// same alias ids the live gateway uses so a hub id, a view id, or a
-// legacy hash all find the file.
+// Cameras live in data/cameras/images/json/{propertyId}.json (contract).
+// data/cameras/json/{id}.json and data/cameras/{id}.json are fallbacks.
 async function fetchCamerasFile(id) {
   const paths = [
+    DATA_ROOT + 'cameras/images/json/' + id + '.json',
     DATA_ROOT + 'cameras/json/' + id + '.json',
     DATA_ROOT + 'cameras/' + id + '.json'
   ];
@@ -1600,7 +1598,7 @@ async function attachCameras(rec) {
     const j = await fetchCamerasFile(ids[i]);
     if (j) {
       cams = j.cameras;
-      dbg('Cameras file: ' + cams.length + ' (cameras/json/' +
+      dbg('Cameras file: ' + cams.length + ' (cameras/images/json/' +
           String(ids[i]).substring(0, 12) + '\u2026)', 'ok');
       break;
     }
