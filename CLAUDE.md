@@ -145,7 +145,7 @@ Catalog rule:
 
 v1 repo:
 
-- `element-review.html` — pin QA on a Google Maps basemap (v6.8.5); posts critiques to
+- `element-review.html` — pin QA on a Google Maps basemap (v6.8.6); posts critiques to
   the Apps Script web app; side labels built but disabled (`ER_SIDES_DEFAULT=false`)
 - `nadir-geo.js` — v1.3.0 dependency-free Mercator geometry; must sit beside
   element-review; unit suite `test-nadir-geo.mjs`
@@ -169,7 +169,7 @@ v2 repo:
   single-manifest verification; `-FunctionName` reuses the image for video
 - `4-clip/clip_parcel.py` — the clip engine
 - `3-eligibility/eligibility_check.py` — coverage truth
-- `2-parcels/publish_parcels.py` + `counties.json` (currently `deschutes` only)
+- `2-parcels/publish_parcels.py` + `counties.json` (`deschutes` + `lane`; Lane join is `MAPTAXLOT`)
 - `1-ingest/ingest_capture.py` + `promote_capture.py` (⚠️ hardcodes `captures/plane/`,
   stamps `type: plane`, never sets `parcels_ref` — operator adds it by hand
   immediately after promote)
@@ -250,8 +250,10 @@ In flight:
   12-pin ceiling (schools are 20 as of 2026-08-27)
 - Photo-intake transport: Zoho Creator probe 2 ready to run; fallback = own page +
   S3 presigned POST (`docs/PHOTO_INTAKE_DECISION.md`)
-- Eugene capture: Lane County GeoJSON downloaded (407 MB, untracked — **gitignore it
-  before committing anything**); publish Lane parcels next; Phase-0 decisions in
+- Eugene capture: Lane parcels on CDN + `data/parcels/lane_*.geojson`.
+  Capture `vyanet-eugene-2026-08-19` is in serving (`captures/plane/`, `type: plane`,
+  `parcels_ref: lane`). Origin taxlot `1704233002104` is 65% opaque — below the 80%
+  clip/render gate. Adapter: v2 `tools/adapt_obj_delivery.py`.
   `docs/EUGENE_CAPTURE_RUNBOOK.md`
 - EagleView 30-day eval ends ~Sep 17 — license rights (analyze/cache/derive/resell)
   and 3D-mesh questions first

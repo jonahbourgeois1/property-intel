@@ -32,6 +32,9 @@
     kind   = (optional) NEW in v6.8.4 — 'school' raises the pin cap from 12
              to 20 (SAT_MAX_PINS_SCHOOL). Sheet links set this when column B
              is School. ?route=elements max_pins is the live override.
+    margin = IGNORED as of v6.8.6. Used to be metres outside the lot a pin
+             could sit. Reviewers may now place anywhere on the captured
+             nadir (still refused outside the 5..95 storable box).
 
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
@@ -1238,7 +1241,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.5';
+  var BUILD = 'v6.8.6';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1329,16 +1332,11 @@
   erBootMap();
   var erFwd = MAP_MODE ? window.NadirGeo.makeProjector(erGeo)   : null;
   var erInv = MAP_MODE ? window.NadirGeo.makeUnprojector(erGeo) : null;
-  // Metres a pin may sit OUTSIDE the lot line, for roads and extremity points.
-  // v6.8.3: default 60 (was 30). `&margin=` still overrides. placementAllowed
-  // uses this number; the dotted grey range ring is no longer drawn (v6.8.4)
-  // but the wall is the same region.
-  var MARGIN_M = (function () {
-    var v = parseFloat(qp('margin'));
-    return (isFinite(v) && v >= 0) ? v : 60;
-  })();
+  // v6.8.6: no lot-distance wall. Reviewers place anywhere on the captured
+  // nadir. `&margin=` is ignored. The 5..95 box is still the storable bound
+  // (see placementAllowed).
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
-  var erMap = null, erOverlay = null, erAllow = null;
+  var erMap = null, erOverlay = null;
   var erParcelPoly = null, erRangePoly = null;
   var erSideLabels = [], erSideEls = [], erSideBox = null;
   var erNadirOn = false, erToastT = null, erToastMsg = '';
@@ -1979,10 +1977,10 @@
     // Refuse a drag or a typed coordinate on a locked pin. The guard lives here
     // rather than on the drag handler so BOTH input paths are covered.
     if (isLocked(idx)) return;
-    // v6.3: and refuse a position outside the lot + margin. Same reasoning for
-    // the same location - movePin is the ONLY path that writes a correction, so
-    // drag and typed coordinate are both covered by one guard. A refusal simply
-    // does not move the pin, which reads as a wall at the boundary.
+    // v6.8.6: refuse a position the pipeline cannot store (5..95 box). Lot
+    // distance is not a bound — reviewers may pin on the neighbour, a road,
+    // or anywhere else the captured nadir covers. movePin is the ONLY path
+    // that writes a correction, so drag and typed coordinate share this guard.
     if (!placementAllowed(x, y)) return;
     state[idx].cx = x; state[idx].cy = y;
     // v5.6: a corrected position IS a Fix verdict. Before this, dragging a pin
@@ -2314,8 +2312,9 @@
     // only function that creates a pin, so the count can never exceed the limit
     // however placement was reached.
     if (atPinLimit()) { cancelPlacement(); updateAddWarn(); return; }
-    // v6.3: guard 4 - the placement region. placeAdded is the only function that
-    // creates a pin, so this is where the invariant has to hold.
+    // Guard 4: the storable box. placeAdded is the only function that creates
+    // a pin, so this is where the 5..95 invariant has to hold. Lot distance
+    // is not checked (v6.8.6).
     if (!placementAllowed(x, y)) { cancelPlacement(); return; }
 
     var rec = { id: parseInt(entry.id, 10), name: entry.name,
@@ -3039,8 +3038,8 @@
 
   function parcelNone(reason) {
     parcelSay('no parcel boundary: ' + reason);
-    // No lot lines. Placement still uses the storable 5..95 box via
-    // erAllow; the dotted range ring is not drawn (v6.8.4).
+    // No lot lines. Placement is the storable 5..95 box only (v6.8.6);
+    // the dotted range ring is not drawn.
     if (MAP_MODE) erDrawLimits();
     var btn = document.getElementById('parcel-toggle');
     if (btn) {
@@ -3286,20 +3285,20 @@
   }
 
   // ── The placement rule ────────────────────────────────────────────────────
-  // Returns TRUE unconditionally when the map is not in play, so the flat page's
-  // behaviour is bit-for-bit what it was. In map mode it is
-  // (lot grown by MARGIN_M) INTERSECT (the storable 5..95 box).
+  // Reviewers may pin anywhere the captured nadir covers — on the lot, off
+  // the lot, 60 m out, 600 m out, neighbour's driveway. v6.8.6 dropped the
+  // lot-distance wall (was 60 m, then `&margin=`).
   //
-  // ⚠️ The box half is not optional. clampCoords() in shared.gs clamps every
+  // ⚠️ The 5..95 box is not optional. clampCoords() in shared.gs clamps every
   // stored coordinate to 5..95, so permitting a pin outside that band would let
   // the pipeline silently relocate a gate a reviewer had placed deliberately.
-  // Refusing is the honest failure; clamping is the dishonest one.
+  // Refusing is the honest failure; clamping is the dishonest one. If
+  // clampCoords is ever widened, widen COORD_MIN / COORD_MAX to match.
   function placementAllowed(x, y) {
-    if (!MAP_MODE || !erAllow) return true;
-    var ll = erInv(x, y);
-    var v = erAllow(ll.lat, ll.lng);
-    if (v.ok) return true;
-    erToast(v.message || 'That position cannot be stored.');
+    if (x >= COORD_MIN && x <= COORD_MAX && y >= COORD_MIN && y <= COORD_MAX) {
+      return true;
+    }
+    erToast('Outside the captured image — that position cannot be stored.');
     return false;
   }
 
@@ -3389,8 +3388,7 @@
       console.log('[element-review] map mode: centre ' + erGeo.lat.toFixed(6) +
         ', ' + erGeo.lng.toFixed(6) + ' capture zoom ' + erGeo.zoom +
         ', size ' + erGeo.w + 'x' + erGeo.h +
-        ', placement limit ' + (parcelRing ? 'lot + ' + Math.round(MARGIN_M) + ' m'
-                                           : 'no lot data, image only'));
+        ', placement = anywhere on nadir (5..95 box; no lot-distance wall)');
     }
   }
 
@@ -3494,10 +3492,6 @@
   // and it tolerates being called before the map exists, because loadParcel()
   // races the Maps script by design (pins must never wait on either).
   function erDrawLimits() {
-    erAllow = window.NadirGeo.makeAllowedRegion({
-      geo: erGeo, ring: parcelRing, marginM: MARGIN_M,
-      coordMin: COORD_MIN, coordMax: COORD_MAX
-    });
     if (!erMap) return;
     if (erParcelPoly) { erParcelPoly.setMap(null); erParcelPoly = null; }
     if (erRangePoly)  { erRangePoly.setMap(null);  erRangePoly = null; }
@@ -3519,16 +3513,15 @@
         map: parcelShown ? erMap : null
       });
     }
-    // v6.8.4: the dotted grey pin-range ring (lot + MARGIN_M, clipped to the
-    // 5..95 storable box) is no longer drawn. placementAllowed() still uses
-    // erAllow — a pin outside that region is refused with a toast, never
-    // clamped. The red lot line is the only parcel overlay.
+    // v6.8.4: the dotted grey pin-range ring is not drawn.
+    // v6.8.6: placement is not gated on lot distance either. The red lot
+    // line is the only parcel overlay. The 5..95 box is still refused.
     erComputeSideLabels();
     erRenderSideLabels();
     erApplyLimits();
   }
-  // The Lot button governs the lot line. Placement still uses lot + margin
-  // intersect the 5..95 box; that region is no longer drawn (v6.8.4).
+  // The Lot button governs the lot line. Placement does not use the lot
+  // (v6.8.6): reviewers pin anywhere on the captured nadir.
   //
   // ⚠️ THIS HAS NOTHING TO DO WITH THE Image TOGGLE. The lot is a map
   // overlay; the captured nadir is an <img> inside #frame. `parcelShown` is

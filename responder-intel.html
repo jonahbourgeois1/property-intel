@@ -1027,12 +1027,15 @@
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
-const VERSION      = 'v2.5.1';
+const VERSION      = 'v2.5.2';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/responder-drone/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
-const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
+const PARCEL_COUNTIES = [
+  { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
+  { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 }
+];
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const VIEW_ORDER   = ['imagery','intel'];
@@ -1167,10 +1170,23 @@ function pointInPolygon(lat, lng, ring) {
   }
   return inside;
 }
-function getParcelFile(lat, lng) {
-  const lc = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
-  const lnc = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
-  return 'deschutes_' + lc.toFixed(2) + '_' + lnc.toFixed(2) + '.geojson';
+function parcelFileFor(lat, lng, county) {
+  const latCell = Math.floor((lat - county.lat0) / county.step) * county.step + county.lat0;
+  const lngCell = Math.floor((lng - county.lng0) / county.step) * county.step + county.lng0;
+  return county.name + '_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
+}
+function parcelMatch(geojson, lat, lng) {
+  if (!geojson || !geojson.features) return null;
+  for (let i = 0; i < geojson.features.length; i++) {
+    const f = geojson.features[i], g = f.geometry;
+    if (!g) continue;
+    const polys = g.type === 'Polygon' ? [g.coordinates]
+                : g.type === 'MultiPolygon' ? g.coordinates : [];
+    for (let k = 0; k < polys.length; k++) {
+      if (polys[k] && polys[k][0] && pointInPolygon(lat, lng, polys[k][0])) return f;
+    }
+  }
+  return null;
 }
 function drawParcelBoundary(lat, lng, storedRing) {
   if (storedRing && storedRing.length >= 3) {
@@ -1179,19 +1195,24 @@ function drawParcelBoundary(lat, lng, storedRing) {
     dbg('Parcel ring drawn (' + storedRing.length + ' pts)', 'ok');
     return;
   }
-  fetch(PARCEL_BASE + getParcelFile(lat, lng))
-    .then(function(r) { return r.ok ? r.json() : null; })
-    .then(function(geo) {
-      if (!geo) return;
-      const matched = geo.features.find(function(f) {
-        const c = f.geometry && f.geometry.coordinates;
-        return c && c[0] && pointInPolygon(lat, lng, c[0]);
-      });
-      if (!matched) return;
-      const paths = matched.geometry.coordinates.map(function(ring) { return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; }); });
-      new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: map });
-    })
-    .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
+  const files = PARCEL_COUNTIES.map(function (c) { return parcelFileFor(lat, lng, c); });
+  files.reduce(function (chain, name) {
+    return chain.then(function (found) {
+      if (found) return found;
+      return fetch(PARCEL_BASE + name)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (geo) { return parcelMatch(geo, lat, lng); });
+    });
+  }, Promise.resolve(null)).then(function (matched) {
+    if (!matched) return;
+    const g = matched.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates]
+                : g.type === 'MultiPolygon' ? g.coordinates : [];
+    const paths = polys.map(function (poly) {
+      return poly[0].map(function (pt) { return { lat: pt[1], lng: pt[0] }; });
+    });
+    new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: map });
+  }).catch(function (e) { dbg('Parcel error: ' + e.message, 'error'); });
 }
 function initMapAt(lat, lng, storedRing) {
   map = new google.maps.Map(document.getElementById('viewer-map'), {

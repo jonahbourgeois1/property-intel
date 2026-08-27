@@ -255,13 +255,16 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.3.2';
+const VERSION      = 'v2.3.3';
 const BASE_URL     = 'https://responder-intel.vyanet.com/data/satellite/';
 const DATA_ROOT    = 'https://responder-intel.vyanet.com/data/';
 const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
-const PARCEL_LAT_MIN = 43.61, PARCEL_LNG_MIN = -122.01, PARCEL_CELL = 0.07;
+const PARCEL_COUNTIES = [
+  { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
+  { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 }
+];
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const VIEW_ORDER   = ['security','wildfire','plane','drone'];
@@ -518,10 +521,23 @@ function pointInPolygon(lat, lng, ring) {
   }
   return inside;
 }
-function getParcelFile(lat, lng) {
-  var latCell = Math.floor((lat - PARCEL_LAT_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LAT_MIN;
-  var lngCell = Math.floor((lng - PARCEL_LNG_MIN) / PARCEL_CELL) * PARCEL_CELL + PARCEL_LNG_MIN;
-  return 'deschutes_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
+function parcelFileFor(lat, lng, county) {
+  var latCell = Math.floor((lat - county.lat0) / county.step) * county.step + county.lat0;
+  var lngCell = Math.floor((lng - county.lng0) / county.step) * county.step + county.lng0;
+  return county.name + '_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
+}
+function parcelMatch(geojson, lat, lng) {
+  if (!geojson || !geojson.features) return null;
+  for (var i = 0; i < geojson.features.length; i++) {
+    var f = geojson.features[i], g = f.geometry;
+    if (!g) continue;
+    var polys = g.type === 'Polygon' ? [g.coordinates]
+              : g.type === 'MultiPolygon' ? g.coordinates : [];
+    for (var k = 0; k < polys.length; k++) {
+      if (polys[k] && polys[k][0] && pointInPolygon(lat, lng, polys[k][0])) return f;
+    }
+  }
+  return null;
 }
 function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
   if (storedRing && storedRing.length >= 3) {
@@ -530,26 +546,29 @@ function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
     allPolygons.push(polygon);
     return;
   }
-  var filename = getParcelFile(lat, lng);
-  function renderPolygon(geojson) {
-    var matched = null;
-    for (var i = 0; i < geojson.features.length; i++) {
-      var f = geojson.features[i], coords = f.geometry && f.geometry.coordinates;
-      if (!coords || !coords[0]) continue;
-      if (pointInPolygon(lat, lng, coords[0])) { matched = f; break; }
-    }
+  var files = PARCEL_COUNTIES.map(function (c) { return parcelFileFor(lat, lng, c); });
+  files.reduce(function (chain, filename) {
+    return chain.then(function (found) {
+      if (found) return found;
+      if (parcelCache[filename]) return parcelMatch(parcelCache[filename], lat, lng);
+      return fetch(PARCEL_BASE + filename)
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (geojson) {
+          if (geojson) parcelCache[filename] = geojson;
+          return parcelMatch(geojson, lat, lng);
+        });
+    });
+  }, Promise.resolve(null)).then(function (matched) {
     if (!matched) return;
-    var paths = matched.geometry.coordinates.map(function(ring) { return ring.map(function(pt) { return { lat: pt[1], lng: pt[0] }; }); });
+    var g = matched.geometry;
+    var polys = g.type === 'Polygon' ? [g.coordinates]
+              : g.type === 'MultiPolygon' ? g.coordinates : [];
+    var paths = polys.map(function (poly) {
+      return poly[0].map(function (pt) { return { lat: pt[1], lng: pt[0] }; });
+    });
     var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
     allPolygons.push(polygon);
-  }
-  if (parcelCache[filename]) { renderPolygon(parcelCache[filename]); }
-  else {
-    fetch(PARCEL_BASE + filename)
-      .then(function(res) { return res.json(); })
-      .then(function(geojson) { parcelCache[filename] = geojson; renderPolygon(geojson); })
-      .catch(function(e) { dbg('Parcel error: ' + e.message, 'error'); });
-  }
+  }).catch(function (e) { dbg('Parcel error: ' + e.message, 'error'); });
 }
 function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
