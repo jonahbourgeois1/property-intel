@@ -26,12 +26,19 @@
              payload so the critique can be filed against the right row
              without matching on address.
     view   = (optional) NEW in v4 — capture/view label, echoed back the same way.
+             v6.8.7: view=drone-test routes the critique API to the drone-test
+             tab (taxlot in &key=). Without it, an address-only link looks up
+             Satellite and can match two rows.
     round  = (optional) NEW in v4 — analysis round number, prefills the field.
     parcels= (optional) NEW in v6.1 — override the parcel-tile directory.
              Defaults to the same-origin 'data/parcels/' in this repo.
     kind   = (optional) NEW in v6.8.4 — 'school' raises the pin cap from 12
              to 20 (SAT_MAX_PINS_SCHOOL). Sheet links set this when column B
              is School. ?route=elements max_pins is the live override.
+    nb     = (optional) NEW in v6.8.7 — north,south,east,west of a CloudFront
+             plane/drone nadir crop. Used with nadir-geo geoFromBounds so map
+             mode works when the image URL has no Static Maps center/zoom.
+    nz     = (optional) NEW in v6.8.7 — zoom for &nb= (default 20, NADIR_ZOOM).
     margin = IGNORED as of v6.8.6. Used to be metres outside the lot a pin
              could sit. Reviewers may now place anywhere on the captured
              nadir (still refused outside the 5..95 storable box).
@@ -1220,14 +1227,18 @@
   var nadirUrl = qp('nadir');
   var pinsRaw  = qp('pins');
   var addr     = qp('addr');
+  var viewName = (qp('view') || '').toLowerCase();
   var acctType = (qp('type') || '').toLowerCase();   // optional: residential|commercial
   // v6.8.4: school rows get 20 slots. `&kind=school` is set by
   // buildSatElementReviewUrl_; max_pins from the critique API overrides both
   // of these once the row is identified (covers old links that lack &kind=).
   var SAT_PIN_LIMIT = 12;
   var SCHOOL_PIN_LIMIT = 20;
+  var PLANE_PIN_LIMIT = 10; // plane + drone-test (PLANE_MAX_PINS)
   var IS_SCHOOL = String(qp('kind') || '').toLowerCase() === 'school';
-  var PIN_HARD_LIMIT = IS_SCHOOL ? SCHOOL_PIN_LIMIT : SAT_PIN_LIMIT;
+  var PIN_HARD_LIMIT = (viewName === 'drone-test' || viewName === 'plane')
+    ? PLANE_PIN_LIMIT
+    : (IS_SCHOOL ? SCHOOL_PIN_LIMIT : SAT_PIN_LIMIT);
   var REPIN_CAP = IS_SCHOOL ? SCHOOL_PIN_LIMIT : 10;
   var catalogUrl = qp('catalog') || DEFAULT_CATALOG;
   // ── v6.3: MAP SUBSTRATE, OPT-IN ───────────────────────────────────────────
@@ -1241,7 +1252,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.6';
+  var BUILD = 'v6.8.7';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1296,6 +1307,22 @@
       scale: sc ? parseInt(sc[1], 10) : NaN
     };
   }
+  function erGeoFromNb() {
+    if (!window.NadirGeo || typeof window.NadirGeo.geoFromBounds !== 'function') return null;
+    var raw = qp('nb');
+    if (!raw) return null;
+    var parts = String(raw).split(',');
+    if (parts.length !== 4) return null;
+    var north = parseFloat(parts[0]), south = parseFloat(parts[1]);
+    var east  = parseFloat(parts[2]), west  = parseFloat(parts[3]);
+    var zoom = parseInt(qp('nz'), 10);
+    var g = window.NadirGeo.geoFromBounds(
+      { north: north, south: south, east: east, west: west }, zoom);
+    if (!g) return null;
+    erGeoWhere = { lat: 'nb', lng: 'nb', zoom: 'nb', w: 'nb', h: 'nb' };
+    erGeoSource = 'nadir bounds (nb)';
+    return g;
+  }
   var erGeoSource = 'none', erGeoWhere = {};
   var erGeo = (function () {
     var fromNadir = erScrape(nadirUrl);
@@ -1305,7 +1332,11 @@
       if (isFinite(fromNadir[k]))     { out[k] = fromNadir[k]; erGeoWhere[k] = 'nadir url'; }
       else if (isFinite(fromPage[k])) { out[k] = fromPage[k];  erGeoWhere[k] = 'page url'; }
     });
-    if (!isFinite(out.lat) || !isFinite(out.lng) || !isFinite(out.zoom)) return null;
+    if (!isFinite(out.lat) || !isFinite(out.lng) || !isFinite(out.zoom)) {
+      var fromBounds = erGeoFromNb();
+      if (fromBounds) return fromBounds;
+      return null;
+    }
     if (!isFinite(out.w)) { out.w = 640; erGeoWhere.w = 'default'; }
     if (!isFinite(out.h)) { out.h = 640; erGeoWhere.h = 'default'; }
     if (!isFinite(out.scale)) out.scale = 1;
@@ -1364,7 +1395,6 @@
   // still work when the address is unique, and learn site_no from the first
   // API response for every poll after that.
   var siteNo   = qp('site_no') || qp('site') || '';
-  var viewName = qp('view') || '';
   var roundIn  = parseInt(qp('round'), 10);
 
   function paintIdentity() {
@@ -1372,10 +1402,13 @@
     if (!el) return;
     var bits = [];
     if (addr) bits.push(addr);
+    if (viewName) bits.push(viewName);
     if (siteNo) bits.push('site ' + siteNo);
+    if (rowKey && viewName === 'drone-test') bits.push('taxlot ' + rowKey);
     el.textContent = bits.length ? '\u00b7 ' + bits.join(' \u00b7 ') : '';
   }
   function lookupKind() {
+    if (viewName === 'drone-test') return rowKey ? 'drone-test taxlot' : 'drone-test address';
     return siteNo ? 'site_no' : rowKey ? 'key' : 'address';
   }
 
@@ -3125,9 +3158,17 @@
   // same constraint the POST works under. Resolution order is site_no, then key,
   // then address. Address is last because it is the one that can be ambiguous.
   function lookupParam() {
-    if (siteNo) return 'site_no=' + encodeURIComponent(siteNo);
-    if (rowKey) return 'key=' + encodeURIComponent(rowKey);
-    return 'addr=' + encodeURIComponent(addr);
+    var parts = [];
+    if (viewName) parts.push('view=' + encodeURIComponent(viewName));
+    if (viewName === 'drone-test' || viewName === 'plane') {
+      if (rowKey) parts.push('key=' + encodeURIComponent(rowKey));
+      else if (addr) parts.push('addr=' + encodeURIComponent(addr));
+      return parts.join('&');
+    }
+    if (siteNo) parts.push('site_no=' + encodeURIComponent(siteNo));
+    else if (rowKey) parts.push('key=' + encodeURIComponent(rowKey));
+    else parts.push('addr=' + encodeURIComponent(addr));
+    return parts.join('&');
   }
 
   function fetchElements() {
@@ -3742,7 +3783,9 @@
           }
         }, function (err) {
           var msg = 'Cannot identify this row: ' + String(err.message || err);
-          if (!siteNo && !rowKey) {
+          if (viewName === 'drone-test') {
+            msg += ' Re-open from Property Intel → Drone Test → Open Element Review (This Row) so the link includes view=drone-test and the taxlot key.';
+          } else if (!siteNo && !rowKey) {
             msg += ' Re-open from the sheet menu so the link includes site_no.';
           }
           setStatus(msg, 'err');

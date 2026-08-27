@@ -134,6 +134,34 @@
     return { north: nw.lat, south: se.lat, west: nw.lng, east: se.lng };
   }
 
+  // Inverse of nadirBounds: a CloudFront plane/drone crop has no Static Maps
+  // query string, but the sheet stores {north,south,east,west} from crop_nadir
+  // (z20 tile mosaic). Rebuild the centre/zoom/size georeference so the map
+  // overlay covers that exact footprint. zoom defaults to 20 (NADIR_ZOOM).
+  function geoFromBounds(b, zoom) {
+    if (!b) return null;
+    var north = Number(b.north), south = Number(b.south);
+    var east  = Number(b.east),  west  = Number(b.west);
+    if (![north, south, east, west].every(isFinite)) return null;
+    if (!(north > south) || !(east > west)) return null;
+    var z = parseInt(zoom, 10);
+    if (!isFinite(z) || z < 1 || z > 22) z = 20;
+    var S = worldSize(z);
+    var xW = worldX(west, S), xE = worldX(east, S);
+    var yN = worldY(north, S), yS = worldY(south, S);
+    var w = xE - xW, h = yS - yN;
+    if (!(w > 0) || !(h > 0)) return null;
+    var cx = (xW + xE) / 2, cy = (yN + yS) / 2;
+    return {
+      lat:   Math.atan(Math.sinh(Math.PI * (1 - 2 * cy / S))) * 180 / Math.PI,
+      lng:   cx / S * 360 - 180,
+      zoom:  z,
+      w:     w,
+      h:     h,
+      scale: 1
+    };
+  }
+
   // ── The STORABLE box, which is not the image edge ─────────────────────────
   // clampCoords() in shared.gs clamps every stored coordinate to 5..95, so a
   // pin placed outside that band is silently moved. Anything enforcing where a
@@ -588,6 +616,7 @@
     makeProjector:    makeProjector,
     makeUnprojector:  makeUnprojector,
     nadirBounds:      nadirBounds,
+    geoFromBounds:    geoFromBounds,
     storableBox:      storableBox,
     makeAllowedRegion: makeAllowedRegion,
     ringOffsetM:      ringOffsetM,
@@ -600,6 +629,6 @@
     ringContains:     ringContains,
     ringDistanceM:    ringDistanceM,
     normaliseRing:    normaliseRing,
-    _version:         '1.3.0'
+    _version:         '1.3.1'
   };
 })(typeof window !== 'undefined' ? window : globalThis);
