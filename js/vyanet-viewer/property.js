@@ -20,12 +20,12 @@ export async function fetchJson(url) {
   return await res.json();
 }
 
-// Property camera metadata: data/cameras/images/json/{id}.json.
-// Fallbacks: data/cameras/json/{id}.json then flat data/cameras/{id}.json.
+// Property camera metadata: data/cameras/json/{id}.json.
+// Fallbacks: data/cameras/images/json/{id}.json then flat data/cameras/{id}.json.
 export async function fetchCamerasFile(root, id) {
   const paths = [
-    root + 'cameras/images/json/' + id + '.json',
     root + 'cameras/json/' + id + '.json',
+    root + 'cameras/images/json/' + id + '.json',
     root + 'cameras/' + id + '.json'
   ];
   for (let i = 0; i < paths.length; i++) {
@@ -130,7 +130,7 @@ export function liveAliasIds(idx, propertyId) {
 }
 
 // Does this property have cameras? Sources the gate can read without a key:
-// data/cameras/images/json/{idx.id|propertyId}.json (older cameras/json/
+// data/cameras/json/{idx.id|propertyId}.json (older images/json/
 // and flat data/cameras/{id}.json are fallbacks), and a non-empty cameras
 // array on ANY view record (not only the 3D view — live feed is its own
 // plugin and must work without a GLB). The gateway allowlist is NOT

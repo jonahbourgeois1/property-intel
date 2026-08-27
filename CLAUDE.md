@@ -154,8 +154,8 @@ v1 repo:
 - `viewer.html` / `responder-intel.html` / `hoa-viewer.html` / `plane-viewer.html` /
   `plane-test.html` — secondary surfaces
 - `data/index/{id}.json` — property → views join hub
-- `data/cameras/images/json/{id}.json` — property camera metadata (not a view record)
-- `data/cameras/images/{id}/` — GitHub-served camera stills until CloudFront tiles exist
+- `data/cameras/json/{id}.json` — property camera metadata (not a view record). Apps Script drone-test sync is the writer (`camerasFileForSync_` in `shared.gs`)
+- `data/cameras/images/{id}/` — GitHub-served camera stills until CloudFront tiles exist (git-committed; not in `pushAllToGitHub`)
 - `data/{satellite,plane,drone,drone-test,responder-drone,hoa}/` — sync-owned records
 - `data/parcels/deschutes_*.geojson` — viewer lot-line tiles (0.07° grid)
 - `data/pin-catalog/pins-catalog.json` — THE catalog
