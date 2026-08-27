@@ -1,5 +1,5 @@
 // ============================================================
-// PROPERTY INTEL — Apps Script v5.27 — FILE 5/7: satellite.gs
+// PROPERTY INTEL — Apps Script v5.28 — FILE 5/7: satellite.gs
 // The Satellite pipeline, end to end, on the SAT_COL_* 20-column layout:
 //
 //   Pass 1   prepareSatNadir_        geocode + parcel-fitted nadir -> F/G/H
@@ -16,12 +16,25 @@
 // lives. Plane, drone and Responder Intel stay NAME-based on purpose, because
 // client links are already delivered; never "unify" the two rules.
 //
-// ⭐ 2026-08-18 (v5.27) — THE TWENTY-ELEMENT RESTRICTION.
-// v5.26 opened Pass 1's vocabulary to all 239 catalog pins. Review showed 239
-// bare "id. name" lines competing for 12 slots produced scattered, low-value
-// pins, so the permitted set is now the ranked TOP TWENTY in
-// SAT_PASS1_EMIT_IDS, each carrying detect/select/place/exclude rules inside
-// satelliteElementPinsPrompt_.
+// ⭐ 2026-08-26 (v5.28) — TWO PASS 1 EMIT LISTS (standard 23 / school 23).
+// Fresh Pass 1 is no longer one twenty for every row. Column B = "School"
+// (exact, case-insensitive) uses SAT_PASS1_EMIT_IDS_SCHOOL and
+// satelliteSchoolElementPinsPrompt_; every other value uses
+// SAT_PASS1_EMIT_IDS_STANDARD and satelliteElementPinsPrompt_. The matching
+// emit id set is handed to satValidateElementPins_ on that call.
+//
+// ⭐ 2026-08-27 (v5.29) — SCHOOL CAP 20; REVIEWER DUPLICATE IDS ON RERUN.
+// SAT_MAX_PINS stays 12 for standard rows. SAT_MAX_PINS_SCHOOL is 20.
+// Fresh Pass 1 still drops duplicate ids. A rerun (useFullVocab) keeps them,
+// because a reviewer may pin two of the same catalog element. Review links
+// carry &kind=school so element-review.html raises PIN_HARD_LIMIT without
+// waiting on the API.
+//
+// School is a Pass 1 kind, not a third published account type.
+// normalizeAccountType("School") is commercial (Pass 2 + GitHub records).
+// isSchoolAccountType_ is the only discriminator for the emit list. Do not
+// add "school" to concern-pin account_type tags to make this work — that is
+// how Pass 2 vocabularies go empty.
 //
 // ⚠️ THE RESTRICTION IS ENFORCED IN CODE, NOT BY WORDING. v5.27 first shipped
 // as a prompt change alone. A fresh run promptly returned #158 HVAC unit and
@@ -32,16 +45,19 @@
 //
 // ⭐⭐ TWO PATHS, TWO VOCABULARIES — this asymmetry IS the design:
 //   FRESH Pass 1 (processSatElementPinsRow_ -> 3 args)  -> emitNames/emitIds
-//        = the twenty. The model chooses freely, so it is held in code.
+//        = the 23 for that row's kind. The model chooses freely, so it is held
+//        in code.
 //   RERUN (rerunSatElementPinsRow_, critique-api inline re-pin -> 4th arg true)
-//        -> elementNames/elementIds = all 239. An analyst has explicitly named
-//        a pin, and the viewer offers all 239 by decision. Narrowing this path
-//        silently drops their add — the MOCKINGBIRD failure.
+//        -> elementNames/elementIds = the full catalog (256 as of 2026-08-26).
+//        An analyst has explicitly named a pin, and the viewer offers the
+//        whole catalog by decision. Narrowing this path silently drops their
+//        add — the MOCKINGBIRD failure.
 // Never "simplify" these into one vocabulary. That is the bug, not the tidy-up.
 //
 // LOCAL FORKS OF SHARED PLANE HELPERS — deliberate, do not "de-duplicate":
-//   satValidateElementPins_     12-pin cap, not plane's 10
-//   satElementRerunInstruction_ 12-pin cap + the pin-loss hardening
+//   satValidateElementPins_     SAT_MAX_PINS (12) / SAT_MAX_PINS_SCHOOL (20),
+//                               not plane's 10; rerun allows duplicate ids
+//   satElementRerunInstruction_ matching cap + the pin-loss hardening
 //   satFetchPinCatalog_         emit/accept split described above
 // Each exists so satellite can move without dragging plane and drone-test
 // with it. drone-test.gs forks for the same reason.
@@ -113,23 +129,34 @@ function selectBestZoom(lat, lng, accountType) {
 }
 
 // Satellite element-pin validator — identical to Plane.gs's validateElementPins_
-// except the cap is SAT_MAX_PINS (12) rather than PLANE_MAX_PINS (10). Kept as a
-// deliberate local fork (the same pattern drone-test.gs uses) so satellite can
-// diverge without touching the shared plane helper.
+// except the cap is SAT_MAX_PINS (12) or SAT_MAX_PINS_SCHOOL (20), rather than
+// PLANE_MAX_PINS (10). Kept as a deliberate local fork (the same pattern
+// drone-test.gs uses) so satellite can diverge without touching the shared
+// plane helper.
 //
-// ⭐ v5.27: this function did not change, but WHAT IT IS HANDED did. The caller
-// now passes the twenty on a fresh Pass 1 and all 239 on a rerun. This is the
-// single point where the restriction is actually enforced.
-function satValidateElementPins_(pins, elementIds) {
+// ⭐ v5.28: this function did not change, but WHAT IT IS HANDED did. The caller
+// now passes that row's 23 on a fresh Pass 1 and the full catalog on a rerun.
+// This is the single point where the restriction is actually enforced.
+//
+// ⭐ v5.29 (2026-08-27): opt.maxPins / opt.allowDupes.
+//   Fresh Pass 1 (allowDupes false): same id twice is dropped. Bedrock must
+//     not invent duplicates.
+//   Rerun (allowDupes true): a reviewer may have placed two of the same
+//     catalog id (two parking lots, two building entrances). Dropping the
+//     second would silently undo their add.
+function satValidateElementPins_(pins, elementIds, opt) {
   if (!Array.isArray(pins)) return [];
+  const maxPins = (opt && typeof opt.maxPins === 'number') ? opt.maxPins : SAT_MAX_PINS;
+  const allowDupes = !!(opt && opt.allowDupes);
   const out = [];
   const seen = {};
-  for (let i = 0; i < pins.length && out.length < SAT_MAX_PINS; i++) {
+  for (let i = 0; i < pins.length && out.length < maxPins; i++) {
     const p = pins[i] || {};
     const x = parseFloat(p.x), y = parseFloat(p.y);
     if (isNaN(x) || isNaN(y)) continue;
     const id = parseInt(p.id, 10);
-    if (isNaN(id) || !elementIds[id] || seen[id]) continue;
+    if (isNaN(id) || !elementIds[id]) continue;
+    if (!allowDupes && seen[id]) continue;
     seen[id] = true;
     const c = clampCoords(x, y);
     out.push({ id: id, x: c.x, y: c.y });
@@ -137,40 +164,71 @@ function satValidateElementPins_(pins, elementIds) {
   return out;
 }
 
-// ⭐ v5.27 — THE PASS 1 EMIT LIST. The ranked top twenty agreed 2026-08-18.
-// A FRESH Pass 1 may propose and keep ONLY these ids. Deliberately NOT what the
-// rerun path accepts (see satFetchPinCatalog_ and runSatElementPinsCall_).
+// ⭐ v5.28 — TWO PASS 1 EMIT LISTS. A FRESH Pass 1 may propose and keep ONLY
+// the ids in the list for that row's kind. Deliberately NOT what the rerun
+// path accepts (see satFetchPinCatalog_ and runSatElementPinsCall_).
 //
-// NOT account-type gated, by decision: a commercial row is still offered
-// Residence, Pool, Front yard and Porch and must decline them on visual
-// evidence. Nine of the twenty are catalog-tagged residential-only; gating
-// would leave a commercial row only ten choices.
+// STANDARD (column B anything except "School"): 23 elements. Commercial and
+// residential rows share this list — a commercial row is still offered
+// Residence / Pool / Front yard and must decline them on visual evidence.
+// Dropped from the 2026-08-18 twenty: #87 Bare Ground, #147 Tree, #54 Porch,
+// #178 Shipping container. Added: #240 Front door, #35 Garage, #26 Detached
+// structure, #80 Warehouse, #33 Fence, #113 Landscaping, #135 Scattered Vegetation.
 //
-// Order is the reviewer ranking, kept for readability; the code treats it as a set.
-// 61 Roof · 57 Residence · 114 Lawn · 19 Commercial Building · 150 Trees
-// 148 Tree cluster · 206 Parking lot · 186 Driveway · 30 Entry · 87 Bare Ground
-// 105 Front yard · 86 Back yard · 52 Patio · 217 Sidewalk · 147 Tree · 130 Pool
-// 141 Storage Yard · 69 Solar panels · 54 Porch · 178 Shipping container
-const SAT_PASS1_EMIT_IDS = [61, 57, 114, 19, 150, 148, 206, 186, 30, 87,
-                            105, 86, 52, 217, 147, 130, 141, 69, 54, 178];
+// SCHOOL (column B exactly "School", case-insensitive): 23 campus elements.
+// Pass 2 / published account_type stay commercial (normalizeAccountType).
+//
+// Order matches the 2026-08-26 KB element-definitions document; the code
+// treats each array as a set.
+function satPass1Kind_(rawAccountType) {
+  return isSchoolAccountType_(rawAccountType) ? 'school' : 'standard';
+}
+
+function satTypeLabel_(rawAccountType) {
+  return isSchoolAccountType_(rawAccountType) ? 'school' : normalizeAccountType(rawAccountType);
+}
+
+const SAT_PASS1_EMIT_IDS_STANDARD = [
+  61, 57, 19, 206, 186, 30, 217, 114, 105, 86, 240, 35, 26, 80, 33, 113, 135,
+  52, 130, 150, 148, 141, 69
+];
+const SAT_PASS1_EMIT_IDS_SCHOOL = [
+  241, 242, 30, 36, 33, 252, 253, 254, 255, 256, 206, 243, 244, 246, 247, 251,
+  249, 245, 127, 23, 248, 98, 250
+];
+
+const SAT_P1_KB_QUERY_STANDARD =
+  'satellite nadir element pinning standard property roof residence driveway vehicle entrance front door garage landscaping scattered vegetation';
+const SAT_P1_KB_QUERY_SCHOOL =
+  'satellite nadir element pinning school campus bus loop parent pickup fire lane building entrance approach road portable classroom';
+
+function satPass1EmitIds_(rawAccountType) {
+  return isSchoolAccountType_(rawAccountType)
+    ? SAT_PASS1_EMIT_IDS_SCHOOL
+    : SAT_PASS1_EMIT_IDS_STANDARD;
+}
 
 // ⭐ SATELLITE'S OWN CATALOG LOADER. A deliberate fork of plane.gs's
 // fetchPinCatalog_, for exactly the reason satValidateElementPins_ is one:
 // satellite needs to diverge and plane / drone-test must not move.
 //
-// WHAT IT RETURNS — THREE vocabularies, and they are not interchangeable:
-//   emitNames / emitIds        the TWENTY. Fresh Pass 1, prompt AND validator.
-//   elementNames / elementIds  all 239. Rerun path only.
-//   frConcern* / wfConcern*    Pass 2, filtered by role + analysis tag + type.
+// Callers MUST pass the RAW column-B value, not normalizeAccountType's
+// output. Passing "commercial" after School has been collapsed would select
+// the standard emit list on a school row.
 //
-// WHY all 239 survive as the rerun vocabulary. The first round of real review
-// (2026-08-17) filed 99 submissions asking for 179 pins across 12 element
-// types, and EVERY ONE already existed in the catalog. Nothing was missing;
-// the vocabulary was being filtered before the model ever saw it:
-//   114 requests (64%)  role=concern      parking lot, driveway, sidewalk, railroad
-//    54 requests (30%)  residential-only  entryway, fence, patio, awning, playground
-// The viewer therefore offers reviewers all 239, and a reviewer's explicit ADD
-// must survive the re-pin. That is why the rerun path keeps elementIds.
+// WHAT IT RETURNS — THREE vocabularies, and they are not interchangeable:
+//   emitNames / emitIds        that row's 23. Fresh Pass 1, prompt AND validator.
+//   elementNames / elementIds  full catalog. Rerun path only.
+//   frConcern* / wfConcern*    Pass 2, filtered by role + analysis tag +
+//                              normalized type (School -> commercial).
+//
+// WHY the full catalog survives as the rerun vocabulary. The first round of
+// real review (2026-08-17) filed 99 submissions asking for 179 pins across 12
+// element types, and EVERY ONE already existed in the catalog. Nothing was
+// missing; the vocabulary was being filtered before the model ever saw it.
+// The viewer therefore offers reviewers the whole catalog, and a reviewer's
+// explicit ADD must survive the re-pin. That is why the rerun path keeps
+// elementIds.
 //
 // ⚠️ THE PASS 2 INVARIANT — the fr/wf concern vocabularies below are computed
 // EXACTLY as plane.gs computes them: role=concern, gated by analysis tag AND
@@ -182,16 +240,16 @@ const SAT_PASS1_EMIT_IDS = [61, 57, 114, 19, 150, 148, 206, 186, 30, 87,
 // ever, writing nothing. That failure is silent and it costs money, which is
 // why the check below logs rather than trusting the file.
 //
-// ⚠️ CACHE KEY IS satPinCatalogV2 (was V1 in v5.26). The cached object's SHAPE
-// changed — a V1 entry has no emitIds, and satValidateElementPins_ would then
-// be handed undefined and throw on every row. The key bump makes that
-// impossible rather than relying on someone remembering to clear the cache.
-// Distinct from plane's pinCatalogV5 so neither can serve the other's shape.
-// 6-hour TTL: after editing this function OR the catalog, run
-// clearSatPinCatalogCache() rather than waiting it out.
-function satFetchPinCatalog_(accountType) {
-  const type = normalizeAccountType(accountType);
-  const cacheKey = 'satPinCatalogV2:' + type;
+// ⚠️ CACHE KEY IS satPinCatalogV3. Three buckets: residential (standard emit +
+// residential concerns), commercial (standard emit + commercial concerns),
+// school (school emit + commercial concerns). V2 collapsed School into
+// commercial and would serve the standard 23 on a school row. Distinct from
+// plane's pinCatalogV5. 6-hour TTL: after editing this function OR the
+// catalog, run clearSatPinCatalogCache() rather than waiting it out.
+function satFetchPinCatalog_(accountTypeRaw) {
+  const kind = satPass1Kind_(accountTypeRaw);
+  const type = normalizeAccountType(accountTypeRaw);
+  const cacheKey = 'satPinCatalogV3:' + kind + ':' + type;
   const cache = CacheService.getScriptCache();
   const cached = cache.get(cacheKey);
   if (cached) return JSON.parse(cached);
@@ -207,39 +265,44 @@ function satFetchPinCatalog_(accountType) {
   const idSet       = function (arr) { const o = {}; arr.forEach(function (p) { o[p.id] = true; }); return o; };
   const hasAnalysis = function (p, a) { return Array.isArray(p.analysis) && p.analysis.indexOf(a) !== -1; };
 
-  // PASS 1 EMIT — the twenty. Fresh Pass 1's prompt AND its validator.
-  const emitPins = all.filter(function (p) { return SAT_PASS1_EMIT_IDS.indexOf(p.id) !== -1; });
-  if (emitPins.length !== SAT_PASS1_EMIT_IDS.length) {
-    Logger.log('satFetchPinCatalog_ WARNING: emit list resolved ' + emitPins.length + ' of ' +
-      SAT_PASS1_EMIT_IDS.length + ' ids. An id in SAT_PASS1_EMIT_IDS is missing from ' +
-      'pins-catalog.json — Pass 1 is running on a short vocabulary.');
+  const emitIdsList = satPass1EmitIds_(accountTypeRaw);
+  const byId = {};
+  all.forEach(function (p) { byId[p.id] = p; });
+  const emitPins = [];
+  for (let i = 0; i < emitIdsList.length; i++) {
+    if (byId[emitIdsList[i]]) emitPins.push(byId[emitIdsList[i]]);
+  }
+  if (emitPins.length !== emitIdsList.length) {
+    Logger.log('satFetchPinCatalog_ WARNING [' + kind + ']: emit list resolved ' +
+      emitPins.length + ' of ' + emitIdsList.length +
+      ' ids. An id in the Pass 1 emit list is missing from pins-catalog.json — Pass 1 is running on a short vocabulary.');
   }
 
-  // ACCEPT — all 239. RERUN path only, because an analyst may add any catalog pin.
+  // ACCEPT — full catalog. RERUN path only, because an analyst may add any pin.
   const elementPins = all;
 
-  // PASS 2 — untouched. Identical to plane.gs's filtering.
+  // PASS 2 — untouched. Identical to plane.gs's filtering. School uses
+  // commercial (`type`) so concern vocabularies stay populated.
   const forType = all.filter(function (p) {
     return Array.isArray(p.account_type) && p.account_type.indexOf(type) !== -1;
   });
   const frConcern = forType.filter(function (p) { return p.role === 'concern' && hasAnalysis(p, 'fr'); });
   const wfConcern = forType.filter(function (p) { return p.role === 'concern' && hasAnalysis(p, 'wf'); });
 
-  // The invariant, checked rather than assumed. An empty concern set is the
-  // expensive silent failure described above, so say so loudly in the log.
   if (!frConcern.length || !wfConcern.length) {
-    Logger.log('satFetchPinCatalog_ WARNING [' + type + ']: concern vocabulary is ' +
+    Logger.log('satFetchPinCatalog_ WARNING [' + type + '/' + kind + ']: concern vocabulary is ' +
       'EMPTY (fr=' + frConcern.length + ', wf=' + wfConcern.length + '). Pass 2 will ' +
       'drop every concern pin and re-run for ever. Has role= been flattened in ' +
-      'pins-catalog.json? It must keep role=concern on ids 179-239.');
+      'pins-catalog.json? It must keep role=concern on concern-range ids.');
   }
 
   const out = {
     pinCount:       cat.pin_count,
+    pass1Kind:      kind,
     // namesList covers ALL pins, not just this account type. That also fixes a
     // latent bug in the rerun: a residential-only id on a commercial row used
-    // to render as "id 30" instead of "Entry" in currentPinsAsText_, so the
-    // model was told the analyst's own pin had no name.
+    // to render as "id 30" instead of the pin name in currentPinsAsText_, so
+    // the model was told the analyst's own pin had no name.
     namesList:      all.map(function (p) { return { id: p.id, name: p.name }; }),
     emitNames:      numbered(emitPins),
     emitIds:        idSet(emitPins),
@@ -254,27 +317,36 @@ function satFetchPinCatalog_(accountType) {
   return out;
 }
 
-// Clears the Pass 1 / Pass 2 vocabulary cache for both account types, so the
-// next run re-reads pins-catalog.json instead of waiting out the 6-hour TTL.
-// Run from the editor after changing SAT_PASS1_EMIT_IDS or the catalog.
-// Clears BOTH key generations so a stale V1 entry can never be read back.
+// Clears the Pass 1 / Pass 2 vocabulary cache so the next run re-reads
+// pins-catalog.json instead of waiting out the 6-hour TTL. Run from the
+// editor after changing the emit lists or the catalog. Clears V1/V2/V3 so a
+// stale entry can never be read back.
 function clearSatPinCatalogCache() {
-  CacheService.getScriptCache().removeAll(
-    ['satPinCatalogV2:residential', 'satPinCatalogV2:commercial',
-     'satPinCatalogV1:residential', 'satPinCatalogV1:commercial']);
+  CacheService.getScriptCache().removeAll([
+    'satPinCatalogV3:standard:residential', 'satPinCatalogV3:standard:commercial',
+    'satPinCatalogV3:school:commercial',
+    'satPinCatalogV2:residential', 'satPinCatalogV2:commercial',
+    'satPinCatalogV1:residential', 'satPinCatalogV1:commercial'
+  ]);
   const c = satFetchPinCatalog_('commercial');
   const r = satFetchPinCatalog_('residential');
+  const s = satFetchPinCatalog_('School');
   const msg = 'Satellite pin-catalog cache cleared and re-read.\n\n' +
-    'Pass 1 EMIT (fresh runs): ' + Object.keys(c.emitIds).length + ' commercial / ' +
-    Object.keys(r.emitIds).length + ' residential — expect 20 / 20\n' +
+    'Pass 1 EMIT standard: ' + Object.keys(c.emitIds).length + ' commercial / ' +
+    Object.keys(r.emitIds).length + ' residential — expect 23 / 23\n' +
+    'Pass 1 EMIT school: ' + Object.keys(s.emitIds).length + ' — expect 23\n' +
     'Rerun ACCEPT: ' + Object.keys(c.elementIds).length + ' / ' +
-    Object.keys(r.elementIds).length + ' — expect 239 / 239\n' +
+    Object.keys(r.elementIds).length + ' / ' + Object.keys(s.elementIds).length +
+    ' — expect 256 / 256 / 256\n' +
     'Pass 2 FR concerns: ' + Object.keys(c.frConcernIds).length + ' / ' +
-    Object.keys(r.frConcernIds).length + ' — expect 44 / 40\n' +
+    Object.keys(r.frConcernIds).length + ' / ' + Object.keys(s.frConcernIds).length +
+    ' — expect 44 / 40 / 44 (school = commercial)\n' +
     'Pass 2 WF concerns: ' + Object.keys(c.wfConcernIds).length + ' / ' +
-    Object.keys(r.wfConcernIds).length + ' — expect 25 / 27' +
-    '\n\nIf EMIT is not 20, Pass 1 is NOT restricted to the twenty.' +
-    '\nIf either Pass 2 number is 0, STOP — see satFetchPinCatalog_.';
+    Object.keys(r.wfConcernIds).length + ' / ' + Object.keys(s.wfConcernIds).length +
+    ' — expect 25 / 27 / 25' +
+    '\n\nIf a standard EMIT is not 23, or school EMIT is not 23, Pass 1 is NOT restricted.' +
+    '\nIf school FR/WF does not match commercial, STOP — School was not folded to commercial.' +
+    '\nIf any Pass 2 number is 0, STOP — see satFetchPinCatalog_.';
   Logger.log(msg);
   try { SpreadsheetApp.getUi().alert('Pin Catalog', msg, SpreadsheetApp.getUi().ButtonSet.OK); }
   catch (e) { /* editor run, no UI */ }
@@ -282,8 +354,9 @@ function clearSatPinCatalogCache() {
 }
 
 // Satellite rerun instruction — a local copy of planeElementRerunInstruction_
-// with the 12-pin cap. Without this the rerun would tell the model 10 and the
-// cap would quietly come back on every re-pin from a Nadir Fixes note.
+// with the satellite pin cap (12 standard / 20 school). Without this the rerun
+// would tell the model 10 and the cap would quietly come back on every re-pin
+// from a Nadir Fixes note.
 //
 // ⚠️ 2026-08-17: HARDENED after a data-loss incident. On PRIDESTAFF the round-2
 // critique was a single "ADD #2 Apartment Building" line. The model read the
@@ -298,6 +371,8 @@ function clearSatPinCatalogCache() {
 function satElementRerunInstruction_(address, accountType, currentPinsText, fixesNote) {
   const pinLines = String(currentPinsText || '').split('\n').filter(function (l) { return l.trim(); });
   const currentCount = pinLines.length;
+  const maxPins = (String(accountType || '').toLowerCase() === 'school')
+    ? SAT_MAX_PINS_SCHOOL : SAT_MAX_PINS;
 
   return `Property address: ${address} [${accountType}].
 
@@ -316,14 +391,14 @@ Start from the ${currentCount} current pins above and change ONLY what the analy
 - KEEP every current pin the analyst did not mention. This is the default. A pin the analyst was silent about is a pin they were happy with.
 - KEEP every current pin the analyst marked correct.
 - FIX pins the analyst says are wrong — correct the id (choose the right approved element id) and/or move x,y to the true centroid of the feature. A fixed pin is still IN the output.
-- ADD element pins the analyst says are missing, each at the coordinate they gave, or at the feature's centroid on the nadir.
+- ADD element pins the analyst says are missing, each at the coordinate they gave, or at the feature's centroid on the nadir. The same catalog id MAY appear more than once when the current pins already do, or when the analyst asked you to ADD another instance of an element already on the property (two parking lots, two building entrances). Do not invent extra duplicates on your own.
 - REMOVE only the pins the analyst explicitly says do not belong.
 
 COUNT CHECK BEFORE YOU ANSWER
 Start from ${currentCount}. Subtract only the pins the analyst explicitly asked to REMOVE. Add only the pins the analyst explicitly asked to ADD. That number is how many pins your answer must contain. If your answer has fewer pins than that, you have dropped something the analyst wanted kept — go back and put it in.
 
 CONSTRAINTS (unchanged from the element-pin pass)
-Select AT MOST ${SAT_MAX_PINS} pins. Use ONLY approved ELEMENT ids from the vocabulary above — never invent an id, never use a non-element id. Do not use the same id twice. Coordinates are x,y percentages on the NADIR image ((0,0) top-left, (100,100) bottom-right). Place each pin at the feature's actual centroid.
+Select AT MOST ${maxPins} pins. Use ONLY approved ELEMENT ids from the vocabulary above — never invent an id, never use a non-element id. Coordinates are x,y percentages on the NADIR image ((0,0) top-left, (100,100) bottom-right). Place each pin at the feature's actual centroid.
 
 Return ONLY the single JSON object described in your instructions: {"nadir_pins": [{"id": 12, "x": 62.5, "y": 31.0}]}. No markdown, no commentary.`;
 }
@@ -670,34 +745,41 @@ function prepareSatNadir_(sheet, row) {
 
 // (B) Shared element-pins core for Pass 1 AND the rerun.
 //
-// ⭐ v5.27 — THE FOURTH PARAMETER IS THE WHOLE RESTRICTION.
-//   useFullVocab omitted/false -> emitNames + emitIds  = the TWENTY.
-//        Fresh Pass 1. The model chooses freely, so it is held in code:
-//        anything outside the twenty is rejected by satValidateElementPins_
-//        and logged, never written to the sheet.
-//   useFullVocab true          -> elementNames + elementIds = all 239.
+// ⭐ v5.28 — THE FOURTH PARAMETER IS THE WHOLE RESTRICTION.
+//   useFullVocab omitted/false -> emitNames + emitIds  = that row's 23
+//        (standard or school). Fresh Pass 1. The model chooses freely, so it
+//        is held in code: anything outside the emit list is rejected by
+//        satValidateElementPins_ and logged, never written to the sheet.
+//   useFullVocab true          -> elementNames + elementIds = full catalog.
 //        Rerun from a Nadir Fixes note, and critique-api's inline re-pin.
-//        An analyst has explicitly named a pin and the viewer offers all 239,
-//        so narrowing here would silently drop their ADD — MOCKINGBIRD.
+//        An analyst has explicitly named a pin and the viewer offers the
+//        whole catalog, so narrowing here would silently drop their ADD —
+//        MOCKINGBIRD.
 // processSatElementPinsRow_ calls this with THREE arguments, which is what
 // selects the restricted vocabulary. Do not "helpfully" add a fourth there.
 //
 // Returns true on success (pins written or a legitimately empty set), false
 // on any failure.
 function runSatElementPinsCall_(sheet, row, trailingInstruction, useFullVocab) {
-  const address     = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
-  const accountType = normalizeAccountType(sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue());
-  const nadirUrl    = String(sheet.getRange(row, SAT_COL_NADIR_URL).getValue() || '').trim();
+  const address        = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
+  const accountTypeRaw = sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue();
+  const accountType    = normalizeAccountType(accountTypeRaw);
+  const pass1Kind      = satPass1Kind_(accountTypeRaw);
+  const nadirUrl       = String(sheet.getRange(row, SAT_COL_NADIR_URL).getValue() || '').trim();
   if (!nadirUrl) { writePlainCell(sheet, row, SAT_COL_ELEMENTS, 'ERROR: no nadir URL — run Prepare Nadir first'); return false; }
 
-  const catalog    = satFetchPinCatalog_(accountType);
+  const catalog    = satFetchPinCatalog_(accountTypeRaw);
   const vocabNames = useFullVocab ? catalog.elementNames : catalog.emitNames;
   const vocabIds   = useFullVocab ? catalog.elementIds   : catalog.emitIds;
 
-  const prompt = satelliteElementPinsPrompt_() +
+  const promptFn = (pass1Kind === 'school')
+    ? satelliteSchoolElementPinsPrompt_
+    : satelliteElementPinsPrompt_;
+  const prompt = promptFn() +
     '\n\nAPPROVED ELEMENT PIN VOCABULARY (use ONLY these ids):\n' +
     vocabNames;
-  const kbContext  = queryKnowledgeBase('aerial property intelligence property elements structures access vegetation');
+  const kbQuery = (pass1Kind === 'school') ? SAT_P1_KB_QUERY_SCHOOL : SAT_P1_KB_QUERY_STANDARD;
+  const kbContext  = queryKnowledgeBase(kbQuery);
   const fullPrompt = kbContext ? prompt + '\n\nREFERENCE CONTEXT FROM KNOWLEDGE BASE:\n' + kbContext : prompt;
 
   const b64 = fetchImageAsBase64(nadirUrl);
@@ -718,37 +800,37 @@ function runSatElementPinsCall_(sheet, row, trailingInstruction, useFullVocab) {
     return false;
   }
 
-  const pins = satValidateElementPins_(parsed.nadir_pins, vocabIds);
+  const pins = satValidateElementPins_(parsed.nadir_pins, vocabIds, {
+    maxPins: satMaxPins_(accountTypeRaw),
+    allowDupes: !!useFullVocab
+  });
 
-  // Say so when the model reached outside its vocabulary. Here the drop is
-  // CORRECT, but silent dropping is exactly what hid the MOCKINGBIRD failure,
-  // so it is logged by id — a drift back toward the full catalog stays visible
-  // in the execution log instead of only showing up in review.
   const rejected = (parsed.nadir_pins || []).filter(function (p) {
     return !vocabIds[parseInt(p.id, 10)];
   }).map(function (p) { return p.id; });
   if (rejected.length) {
     Logger.log('Sat element pins: row ' + row + ' — ' + rejected.length + ' pin(s) REJECTED as ' +
-      'outside the ' + (useFullVocab ? 'full catalog' : 'Pass 1 emit list (the twenty)') +
+      'outside the ' + (useFullVocab ? 'full catalog' : ('Pass 1 emit list (' + pass1Kind + ' 23)')) +
       ' — ids: ' + rejected.join(', '));
   }
 
   writePlainCell(sheet, row, SAT_COL_ELEMENTS, pins.length ? JSON.stringify(pins) : '');
-  sheet.getRange(row, SAT_COL_REVIEWED).setValue(false); // fresh pins invalidate prior review
+  sheet.getRange(row, SAT_COL_REVIEWED).setValue(false);
   SpreadsheetApp.flush();
-  Logger.log('Sat element pins: row ' + row + ' — ' + address + ' [' + accountType + ', ' + pins.length + ' elements]');
+  Logger.log('Sat element pins: row ' + row + ' — ' + address + ' [' + accountType + '/' + pass1Kind +
+    (useFullVocab ? '/rerun' : '') + ', ' + pins.length + ' elements]');
   return pins.length > 0 || parsed.nadir_pins.length === 0;
 }
 
 // Pass 1 per-row: prepare nadir (if needed) then element-pin it.
 // ⚠️ Calls runSatElementPinsCall_ with THREE arguments on purpose — the
-// missing fourth is what restricts this path to the twenty.
+// missing fourth is what restricts this path to that row's 23.
 function processSatElementPinsRow_(sheet, row) {
-  const address     = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
-  const accountType = normalizeAccountType(sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue());
+  const address        = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
+  const accountTypeRaw = sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue();
   if (!prepareSatNadir_(sheet, row)) return false;
   const trailing =
-    'Property address: ' + address + ' [' + accountType + ']. ' +
+    'Property address: ' + address + ' [' + satTypeLabel_(accountTypeRaw) + ']. ' +
     'Identify the physical property elements on the target property (yellow marker) and return ONLY the JSON object described in your instructions.';
   return runSatElementPinsCall_(sheet, row, trailing);
 }
@@ -912,20 +994,20 @@ function generateSatElementPinsForActiveRow() {
 // resets J; never writes K. Returns 'no-fixes' | true | false.
 //
 // ⚠️ THIS PATH PASSES useFullVocab = true ON PURPOSE. An analyst may ADD any
-// of the 239 catalog pins from the viewer, and restricting this call to the
-// twenty would silently discard that add — the MOCKINGBIRD failure, on every
+// catalog pin from the viewer, and restricting this call to the Pass 1 emit
+// list would silently discard that add — the MOCKINGBIRD failure, on every
 // row. If you ever "tidy" the fourth argument away, you reintroduce it.
 function rerunSatElementPinsRow_(sheet, row) {
-  const address     = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
-  const accountType = normalizeAccountType(sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue());
-  const fixesNote   = String(sheet.getRange(row, SAT_COL_FIXES).getValue() || '').trim();
+  const address        = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
+  const accountTypeRaw = sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue();
+  const fixesNote      = String(sheet.getRange(row, SAT_COL_FIXES).getValue() || '').trim();
   if (!fixesNote) return 'no-fixes';
   if (!prepareSatNadir_(sheet, row)) return false;
 
   const pinsRaw = String(sheet.getRange(row, SAT_COL_ELEMENTS).getValue() || '').trim();
-  const catalog = satFetchPinCatalog_(accountType);
+  const catalog = satFetchPinCatalog_(accountTypeRaw);
   const currentPinsText = currentPinsAsText_(pinsRaw, catalog);
-  const trailing = satElementRerunInstruction_(address, accountType, currentPinsText, fixesNote);
+  const trailing = satElementRerunInstruction_(address, satTypeLabel_(accountTypeRaw), currentPinsText, fixesNote);
   return runSatElementPinsCall_(sheet, row, trailing, true);
 }
 
@@ -1124,7 +1206,8 @@ function buildSatElementReviewUrl_(sheet, row) {
   const nadirUrl = String(sheet.getRange(row, SAT_COL_NADIR_URL).getValue() || '').trim();
   const pinsRaw  = String(sheet.getRange(row, SAT_COL_ELEMENTS).getValue() || '').trim();
   const address  = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
-  const acctType = normalizeAccountType(sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue());
+  const rawType  = sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue();
+  const acctType = normalizeAccountType(rawType);
   const siteNo   = String(sheet.getRange(row, SAT_COL_SITE_NO).getValue() || '').trim();
   if (!nadirUrl || !pinsRaw) return null;
   let pins;
@@ -1135,6 +1218,7 @@ function buildSatElementReviewUrl_(sheet, row) {
       '?nadir=' + encodeURIComponent(nadirUrl) +
       '&pins='  + encodeURIComponent(JSON.stringify(pins)) +
       '&type='  + encodeURIComponent(acctType) +
+      (isSchoolAccountType_(rawType) ? '&kind=school' : '') +
       (address ? '&addr=' + encodeURIComponent(address) : ''),
     siteNo);
 }
@@ -1178,9 +1262,10 @@ function openSatElementReviewForActiveRow() {
 // retried for just the missing analysis. Reuses shared helpers from
 // plane.gs (currentPinsAsText_, validateConcernPins_, guessImageMediaType_).
 //
-// ⭐ UNAFFECTED BY THE v5.27 TWENTY-ELEMENT RESTRICTION. Pass 2 draws on
+// ⭐ UNAFFECTED BY THE v5.28 EMIT-LIST SPLIT. Pass 2 draws on
 // frConcernIds / wfConcernIds, which are computed independently of the emit
-// list. Expect 44/40 FR and 25/27 WF (commercial/residential) — verify with
+// list. School rows use commercial concerns (normalizeAccountType). Expect
+// 44/40 FR and 25/27 WF (commercial/residential) — verify with
 // clearSatPinCatalogCache().
 
 // Parse a Pass 2 response: {nadir_pins:[...], considerations, recommendations}.
@@ -1204,12 +1289,13 @@ function parseSatPass2_(text) {
 // One analysis half (FR or WF). `spec` selects prompt, concern id set, KB
 // query, and the three target columns. Writes on success; returns true/false.
 function runSatPass2Half_(sheet, row, spec) {
-  const address     = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
-  const accountType = normalizeAccountType(sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue());
-  const nadirUrl    = String(sheet.getRange(row, SAT_COL_NADIR_URL).getValue() || '').trim();
+  const address        = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
+  const accountTypeRaw = sheet.getRange(row, SAT_COL_ACCOUNT_TYPE).getValue();
+  const accountType    = normalizeAccountType(accountTypeRaw);
+  const nadirUrl       = String(sheet.getRange(row, SAT_COL_NADIR_URL).getValue() || '').trim();
   if (!nadirUrl) return false;
 
-  const catalog = satFetchPinCatalog_(accountType);
+  const catalog = satFetchPinCatalog_(accountTypeRaw);
   const vocab   = spec.key === 'fr' ? catalog.frConcernNames : catalog.wfConcernNames;
   const ids     = spec.key === 'fr' ? catalog.frConcernIds   : catalog.wfConcernIds;
 

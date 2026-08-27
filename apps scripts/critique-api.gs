@@ -120,17 +120,20 @@ const CRITIQUE_QUEUE_RERUN = (CRITIQUE_RERUN_MODE !== 'off');
 // in plain URLs today, so it is not a new class of exposure.
 const CRITIQUE_SHARED_TOKEN = '';
 
-// Per-pin column groups. This is a HARD LIMIT (Jonah 2026-08-12: "there will
-// never be more than 12 pins"), which SUPERSEDES the earlier overflow-column
-// design — there is no overflow column any more.
+// Per-pin column groups. This is a HARD LIMIT. There is no overflow column.
 //
-// Because the layout can no longer absorb a 13th pin, a submission carrying one
+// 2026-08-12: 12 slots (Jonah: "there will never be more than 12 pins").
+// 2026-08-27: 20 slots, so a school row (SAT_MAX_PINS_SCHOOL) can actually be
+// recorded. Standard satellite still emits at most 12; unused slots stay blank.
+//
+// Because the layout can no longer absorb a 21st pin, a submission carrying one
 // is REFUSED and NOTHING is written. That is the point: dropping it instead
 // would be the silent truncation the overflow column existed to prevent, and a
 // refusal the reviewer can read beats a row that looks complete and isn't. The
-// viewer enforces the same 12 up front, so a refusal here means the two got out
-// of step — a bug worth hearing about, not a routine outcome.
-const CRITIQUE_PIN_SLOTS = 12;
+// viewer enforces the same cap up front (12 standard / 20 school), so a refusal
+// here means the two got out of step — a bug worth hearing about, not a routine
+// outcome.
+const CRITIQUE_PIN_SLOTS = 20;
 
 // ── Which build is DEPLOYED ─────────────────────────────────────────────────
 // Bump this on every meaningful change, and it will tell you whether /exec is
@@ -147,12 +150,12 @@ const CRITIQUE_PIN_SLOTS = 12;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.3 (2026-08-25) — any non-blank site_no is an id; review links must carry it';
+const CRITIQUE_BUILD = 'v6.4 (2026-08-27) — 20 pin slots (schools); reviewer duplicate ids allowed on rerun';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
-// one six-column group per pin. There is no overflow column: 12 is a hard limit,
-// enforced in the viewer and refused here.
+// one six-column group per pin. There is no overflow column: 20 is a hard limit
+// (school cap), enforced in the viewer and refused here.
 //
 // Added pins share the per-pin groups rather than getting a block of their own,
 // because the viewer numbers them continuously — six confirmed pins means an
@@ -539,9 +542,11 @@ function critiqueGetElements_(p) {
     fixes_pending: String(v[SAT_COL_FIXES - 1] || '').trim() !== '',
     rev: critiqueRev_(elementsRaw),
     // What a re-pin will EMIT. Satellite diverged to 12 on 2026-08-13 (the 10-pin
-    // cap was truncating ~45% of properties); plane stays at 10. Report the
-    // satellite number when it exists so the viewer's advisory matches reality.
-    max_pins: (typeof SAT_MAX_PINS === 'number') ? SAT_MAX_PINS : PLANE_MAX_PINS,
+    // cap was truncating ~45% of properties); schools moved to 20 on 2026-08-27.
+    // Report the row's number so the viewer's advisory matches reality.
+    max_pins: (typeof satMaxPins_ === 'function')
+      ? satMaxPins_(v[SAT_COL_ACCOUNT_TYPE - 1])
+      : ((typeof SAT_MAX_PINS === 'number') ? SAT_MAX_PINS : PLANE_MAX_PINS),
     rerun_automated: CRITIQUE_QUEUE_RERUN,
     server_time: new Date().toISOString()
   };
@@ -920,8 +925,8 @@ function critiquePost_(p) {
     // HARD STOP. There are exactly CRITIQUE_PIN_SLOTS slots and no overflow
     // column, so a pin without a slot cannot be recorded. Refuse the whole
     // submission and write NOTHING — no row, no Nadir Fixes, no tab — rather
-    // than file a row that silently omits it. The viewer blocks this at 12, so
-    // reaching here means the two are out of step.
+    // than file a row that silently omits it. The viewer blocks this at 12
+    // (standard) / 20 (school), so reaching here means the two are out of step.
     if (built.overCap.length) {
       var total = (p.elements || []).length + (p.added || []).length;
       Logger.log('critique REFUSED for ' + accountName + ': ' + total + ' pins, ' +

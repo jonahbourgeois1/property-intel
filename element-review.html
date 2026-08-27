@@ -29,6 +29,9 @@
     round  = (optional) NEW in v4 — analysis round number, prefills the field.
     parcels= (optional) NEW in v6.1 — override the parcel-tile directory.
              Defaults to the same-origin 'data/parcels/' in this repo.
+    kind   = (optional) NEW in v6.8.4 — 'school' raises the pin cap from 12
+             to 20 (SAT_MAX_PINS_SCHOOL). Sheet links set this when column B
+             is School. ?route=elements max_pins is the live override.
 
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
@@ -95,24 +98,27 @@
 
   2. ADD FROM CATALOG. "Add an element" searches the live pin catalog (filtered
      to role=primary and this property's account_type), then puts the page in
-     PLACE mode — the next click on the nadir drops the new pin there. Ids
-     already on the property are shown but not selectable, because
-     validateElementPins_ dedupes by id and a duplicate would be silently
-     dropped downstream. Added pins get their own marker style, their own card
-     with a remove button, and travel in a separate `added` array.
+     PLACE mode — the next click on the nadir drops the new pin there.
+     v6.8.4: a catalog id already on the property IS selectable — a reviewer
+     may pin two parking lots, two building entrances, etc. Bedrock Pass 1
+     still may not (satValidateElementPins_ dedupes on a fresh run). Added
+     pins get their own marker style, their own card with a remove button,
+     and travel in a separate `added` array.
 
      ⚠️ TWO DIFFERENT CEILINGS, do not conflate them.
-     PIN_HARD_LIMIT (12) = CRITIQUE_PIN_SLOTS in critique-api.gs, the number of
-     per-pin column groups the sheet has. Adding is BLOCKED there — three guards
-     (the result list, beginPlacement, placeAdded), because placeAdded is the
-     only function that creates a pin and must hold the invariant on its own.
-     There is no overflow column any more: past 12 a pin cannot be recorded at
-     all, and the script refuses the whole submission rather than dropping it.
+     PIN_HARD_LIMIT = CRITIQUE_PIN_SLOTS in critique-api.gs, the number of
+     per-pin column groups the sheet has. Standard / plane rows: 12.
+     School rows (`&kind=school`, or max_pins from the API): 20.
+     Adding is BLOCKED there — three guards (the result list, beginPlacement,
+     placeAdded), because placeAdded is the only function that creates a pin
+     and must hold the invariant on its own. There is no overflow column:
+     past the cap a pin cannot be recorded at all, and the script refuses
+     the whole submission rather than dropping it.
      The toggle is NOT disabled at the limit — it also opens the catalog REQUEST
      field, and a reviewer who has hit the ceiling is the likeliest to need it.
-     REPIN_CAP (10) = PLANE_MAX_PINS in config.gs, what a re-pin will EMIT.
-     Lower than the hard limit, so pins 11 and 12 are recordable but may not
-     survive the next round. Advisory text only.
+     REPIN_CAP starts as PLANE_MAX_PINS (10) on non-school rows, then tracks
+     the row's max_pins once ?route=elements answers, so the advisory matches
+     what a re-pin will actually emit.
 
   3. NUMBERED ADDITIONS, LEGEND ROWS, AND A RED REMOVAL CUE.
      An added pin takes the NEXT pin number (confirmed count + its position),
@@ -1183,15 +1189,6 @@
   // actually store. Drags are clamped here so what the reviewer sees is what
   // the re-pin gets. Widen both together or not at all.
   var COORD_MIN = 5, COORD_MAX = 95;
-  // v5.4: the HARD limit — CRITIQUE_PIN_SLOTS in critique-api.gs, the number of
-  // per-pin column groups the sheet has. Adding is blocked at this number, not
-  // warned about: past it there is nowhere for the pin to be recorded and the
-  // script refuses the whole submission.
-  var PIN_HARD_LIMIT = 12;
-  // PLANE_MAX_PINS in config.gs — what a RE-PIN will emit. Lower than the hard
-  // limit, so pins 11 and 12 are recordable but may not survive the next round.
-  // Advisory only.
-  var REPIN_CAP = 10;
   // Set when the catalog fetch failed: the toggle label then reports that search
   // is unavailable and must not be overwritten by the pin-count label.
   var searchUnavailable = false;
@@ -1221,6 +1218,14 @@
   var pinsRaw  = qp('pins');
   var addr     = qp('addr');
   var acctType = (qp('type') || '').toLowerCase();   // optional: residential|commercial
+  // v6.8.4: school rows get 20 slots. `&kind=school` is set by
+  // buildSatElementReviewUrl_; max_pins from the critique API overrides both
+  // of these once the row is identified (covers old links that lack &kind=).
+  var SAT_PIN_LIMIT = 12;
+  var SCHOOL_PIN_LIMIT = 20;
+  var IS_SCHOOL = String(qp('kind') || '').toLowerCase() === 'school';
+  var PIN_HARD_LIMIT = IS_SCHOOL ? SCHOOL_PIN_LIMIT : SAT_PIN_LIMIT;
+  var REPIN_CAP = IS_SCHOOL ? SCHOOL_PIN_LIMIT : 10;
   var catalogUrl = qp('catalog') || DEFAULT_CATALOG;
   // ── v6.3: MAP SUBSTRATE, OPT-IN ───────────────────────────────────────────
   // The pins go on a live Google satellite map. Both preconditions are checked
@@ -1233,7 +1238,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.3';
+  var BUILD = 'v6.8.5';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1325,9 +1330,9 @@
   var erFwd = MAP_MODE ? window.NadirGeo.makeProjector(erGeo)   : null;
   var erInv = MAP_MODE ? window.NadirGeo.makeUnprojector(erGeo) : null;
   // Metres a pin may sit OUTSIDE the lot line, for roads and extremity points.
-  // v6.8.3: default 60 (was 30) so the dotted grey pin-range ring is 2x as far
-  // from the lot. `&margin=` still overrides. PlacementAllowed uses this same
-  // number, so the ring and the wall stay one region.
+  // v6.8.3: default 60 (was 30). `&margin=` still overrides. placementAllowed
+  // uses this number; the dotted grey range ring is no longer drawn (v6.8.4)
+  // but the wall is the same region.
   var MARGIN_M = (function () {
     var v = parseFloat(qp('margin'));
     return (isFinite(v) && v >= 0) ? v : 60;
@@ -1394,10 +1399,9 @@
   var pinRequests = [];
   // Live marker/card handles so drag, place and hover can all reach each other.
   var elMarkers = [], elCards = [], ghosts = [];
-  // Set by initAddElement. Adding or removing a pin changes which catalog ids
-  // are "already placed", so the result list must be re-rendered — otherwise a
-  // second click on the same row would queue a duplicate id, which
-  // validateElementPins_ silently drops.
+  // Set by initAddElement. Adding or removing a pin changes the count against
+  // PIN_HARD_LIMIT, so the result list must be re-rendered (rows become
+  // unselectable at the cap). Duplicate catalog ids are allowed.
   var refreshAddResults = null;
   // v5.7: the catalog as fetched, kept so a REFRESH can re-resolve new pins
   // without a second network round trip. resolveNames() needs it, and a refresh
@@ -2079,17 +2083,24 @@
   }
 
   // ── v5: add an element from the catalog ────────────────────────────────
-  // Every id currently on the property — confirmed pins plus additions made in
-  // this session. validateElementPins_ dedupes by id, so offering an id that is
-  // already here would produce a pin the pipeline silently discards.
-  function pinnedIds() {
-    var s = {};
-    elements.forEach(function (p) { s[parseInt(p.id, 10)] = true; });
-    added.forEach(function (a) { s[parseInt(a.id, 10)] = true; });
-    return s;
-  }
+  // v6.8.4: a reviewer MAY place the same catalog id more than once (two
+  // parking lots, two building entrances). Bedrock Pass 1 still may not —
+  // satValidateElementPins_ dedupes on a fresh run. The result list no longer
+  // greys out "already placed" rows.
 
   function totalPins() { return elements.length + added.length; }
+
+  // Live override from ?route=elements. School rows report 20; standard
+  // satellite reports 12. Called on every successful lookup so an old link
+  // without &kind=school still gets the school cap.
+  function applyServerPinCap(j) {
+    var n = parseInt(j && j.max_pins, 10);
+    if (!isFinite(n) || n < 1) return;
+    PIN_HARD_LIMIT = n;
+    REPIN_CAP = n;
+    updateAddWarn();
+    if (refreshAddResults) refreshAddResults();
+  }
 
   // The header is the page's one-line summary, so it has to account for
   // additions — otherwise it keeps reporting the Pass 1 count after a reviewer
@@ -2154,7 +2165,6 @@
 
     function renderResults() {
       var q = String(search.value || '').trim().toLowerCase();
-      var taken = pinnedIds();
       var hits = catalogElements.filter(function (p) {
         return !q || String(p.name).toLowerCase().indexOf(q) !== -1 ||
                String(p.section || '').toLowerCase().indexOf(q) !== -1;
@@ -2175,19 +2185,16 @@
         results.appendChild(li0);
         return;
       }
-      // At the limit every row is unselectable, and says which reason applies —
-      // "already placed" and "pin limit reached" are different problems with
-      // different fixes.
+      // At the limit every row is unselectable. Duplicate catalog ids are
+      // allowed (v6.8.4) — only the pin-count cap blocks a click.
       var capped = atPinLimit();
       hits.forEach(function (p) {
         var li = document.createElement('li');
-        var isTaken = !!taken[parseInt(p.id, 10)];
-        var blocked = isTaken || capped;
-        li.className = blocked ? 'taken' : '';
+        li.className = capped ? 'taken' : '';
         li.innerHTML = escapeHtml(p.name) +
           '<span class="rid">#' + p.id + (p.section ? ' · ' + escapeHtml(p.section) : '') +
-          (isTaken ? ' · already placed' : (capped ? ' · pin limit reached' : '')) + '</span>';
-        if (!blocked) li.addEventListener('click', function () { beginPlacement(p); });
+          (capped ? ' · pin limit reached' : '') + '</span>';
+        if (!capped) li.addEventListener('click', function () { beginPlacement(p); });
         results.appendChild(li);
       });
     }
@@ -2279,7 +2286,7 @@
 
   function beginPlacement(entry) {
     // Guard 2 of 3. The result row is already unselectable at the limit; this
-    // catches a stale list (opened before the 12th pin was placed).
+    // catches a stale list (opened before the last allowed pin was placed).
     if (atPinLimit()) { updateAddWarn(); if (refreshAddResults) refreshAddResults(); return; }
     placing = entry;
     var stage = document.querySelector('.stage');
@@ -2932,7 +2939,7 @@
     var btn = document.getElementById('parcel-toggle');
     if (stage) stage.classList.toggle('parcel-off', !parcelShown);
     if (btn) btn.classList.toggle('on', parcelShown);
-    // v6.3: the same Lot button drives the map polygon and its margin band.
+    // v6.3: the same Lot button drives the map polygon.
     if (MAP_MODE) erApplyLimits();
   }
 
@@ -2944,16 +2951,18 @@
   // own HTTP cache means the second property a reviewer opens in the same area
   // costs nothing.
   //
-  // 173 tiles named deschutes_{lat}_{lng}.geojson, where lat/lng are the tile's
-  // SOUTH-WEST corner on a 0.07° grid from 43.61 / −122.01. A tile that does not
-  // exist is a 404, which is the honest answer "no coverage here".
+  // Tiles named {county}_{lat}_{lng}.geojson, where lat/lng are the tile's
+  // SOUTH-WEST corner on that county's 0.07° grid. A tile that does not exist
+  // is a 404, which is the honest answer "no coverage here".
   //
-  // ⚠️ COVERAGE IS DESCHUTES COUNTY ONLY (lat 43.61–44.45, lng −122.01 to
-  // −119.84). Bend, Redmond and Sisters resolve. Prineville, Madras, Crook,
-  // Jefferson, Harney and the southern-Oregon Asante rows do not, and must read
-  // as "boundary unknown" rather than "this property has no lot lines".
+  // Two published counties, each with its own origin (do not reuse Deschutes
+  // 43.61/−122.01 for Lane — the filenames were built from 43.40/−124.20).
+  // Lookup tries each county until a polygon contains the point.
   var PARCEL_BASE = qp('parcels') || 'data/parcels/';
-  var PARCEL_STEP = 0.07, PARCEL_LAT0 = 43.61, PARCEL_LNG0 = -122.01;
+  var PARCEL_COUNTIES = [
+    { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
+    { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 }
+  ];
   // Features are filed in ONE tile by representative point, not clipped to the
   // grid, so a polygon can hang up to ~0.0037° past its tile's edge. A point in
   // that band can therefore belong to a parcel filed next door. Only consulted
@@ -2962,11 +2971,12 @@
   var PARCEL_EDGE = 0.004;
   var parcelTiles = {};        // url -> Promise, so a tile is parsed once
 
-  function parcelTileName(lat, lng) {
-    var la = PARCEL_LAT0 + PARCEL_STEP * Math.floor((lat - PARCEL_LAT0) / PARCEL_STEP);
-    var ln = PARCEL_LNG0 + PARCEL_STEP * Math.floor((lng - PARCEL_LNG0) / PARCEL_STEP);
-    return { name: 'deschutes_' + la.toFixed(2) + '_' + ln.toFixed(2) + '.geojson',
-             lat: la, lng: ln };
+  function parcelTileName(lat, lng, county) {
+    var step = county.step;
+    var la = county.lat0 + step * Math.floor((lat - county.lat0) / step);
+    var ln = county.lng0 + step * Math.floor((lng - county.lng0) / step);
+    return { name: county.name + '_' + la.toFixed(2) + '_' + ln.toFixed(2) + '.geojson',
+             lat: la, lng: ln, step: step, county: county };
   }
 
   function parcelTile(name) {
@@ -3000,7 +3010,8 @@
       for (var k = 0; k < polys.length; k++) {
         var ring = polys[k] && polys[k][0];
         if (ring && ring.length >= 4 && ringContains(ring, lng, lat)) {
-          return { ring: ring, taxlot: (feats[i].properties || {}).TAXLOT || '' };
+          var p = feats[i].properties || {};
+          return { ring: ring, taxlot: p.MAPTAXLOT || p.TAXLOT || '' };
         }
       }
     }
@@ -3010,14 +3021,15 @@
   // Which neighbouring tiles could hold a parcel that overhangs into ours?
   function parcelNeighbours(t, lat, lng) {
     var dLa = [], dLn = [], out = [];
-    if (lat - t.lat < PARCEL_EDGE) dLa.push(-PARCEL_STEP);
-    if (t.lat + PARCEL_STEP - lat < PARCEL_EDGE) dLa.push(PARCEL_STEP);
-    if (lng - t.lng < PARCEL_EDGE) dLn.push(-PARCEL_STEP);
-    if (t.lng + PARCEL_STEP - lng < PARCEL_EDGE) dLn.push(PARCEL_STEP);
+    var step = t.step;
+    if (lat - t.lat < PARCEL_EDGE) dLa.push(-step);
+    if (t.lat + step - lat < PARCEL_EDGE) dLa.push(step);
+    if (lng - t.lng < PARCEL_EDGE) dLn.push(-step);
+    if (t.lng + step - lng < PARCEL_EDGE) dLn.push(step);
     dLa.concat([0]).forEach(function (a) {
       dLn.concat([0]).forEach(function (b) {
         if (!a && !b) return;
-        out.push(parcelTileName(t.lat + a + PARCEL_STEP / 2, t.lng + b + PARCEL_STEP / 2).name);
+        out.push(parcelTileName(t.lat + a + step / 2, t.lng + b + step / 2, t.county).name);
       });
     });
     return out;
@@ -3027,16 +3039,15 @@
 
   function parcelNone(reason) {
     parcelSay('no parcel boundary: ' + reason);
-    // No lot lines, but there is still a pin range (the storable box), and with
-    // the camera uncapped it is the only boundary on screen. erDrawLimits draws
-    // it from erAllow.outline(), which falls back to the box when ring is null.
+    // No lot lines. Placement still uses the storable 5..95 box via
+    // erAllow; the dotted range ring is not drawn (v6.8.4).
     if (MAP_MODE) erDrawLimits();
     var btn = document.getElementById('parcel-toggle');
     if (btn) {
       btn.style.display = '';
       btn.classList.add('unavailable');
-      btn.title = 'No lot lines on file for this property — parcel data covers ' +
-                  'Deschutes County only (Bend, Redmond, Sisters).';
+      btn.title = 'No lot lines on file for this property — parcel tiles cover ' +
+                  'Deschutes County (Bend, Redmond, Sisters) and Lane County (Eugene).';
     }
   }
 
@@ -3047,31 +3058,39 @@
     var geo = nadirGeo(nadirUrl);
     if (!geo) { parcelNone('this nadir URL carries no center/zoom'); return; }
     var lat = geo.lat, lng = geo.lng;
-    var t = parcelTileName(lat, lng);
 
-    parcelTile(t.name).then(function (data) {
-      if (!data) return null;
-      return parcelHit(data, lat, lng);
-    }).then(function (hit) {
-      if (hit) return hit;
-      var nb = parcelNeighbours(t, lat, lng);
-      if (!nb.length) return null;
-      // Sequential on purpose: the fallback is rare and a tile can be 5 MB.
-      return nb.reduce(function (chain, name) {
-        return chain.then(function (found) {
-          if (found) return found;
-          return parcelTile(name).then(function (d) {
-            var h = d && parcelHit(d, lat, lng);
-            if (h) parcelSay('parcel found in the adjoining tile ' + name);
-            return h || null;
+    function searchCounty(county) {
+      var t = parcelTileName(lat, lng, county);
+      return parcelTile(t.name).then(function (data) {
+        return data ? parcelHit(data, lat, lng) : null;
+      }).then(function (hit) {
+        if (hit) return hit;
+        var nb = parcelNeighbours(t, lat, lng);
+        if (!nb.length) return null;
+        return nb.reduce(function (chain, name) {
+          return chain.then(function (found) {
+            if (found) return found;
+            return parcelTile(name).then(function (d) {
+              var h = d && parcelHit(d, lat, lng);
+              if (h) parcelSay('parcel found in the adjoining tile ' + name);
+              return h || null;
+            });
           });
-        });
-      }, Promise.resolve(null));
-    }).then(function (hit) {
+        }, Promise.resolve(null));
+      });
+    }
+
+    function searchAll(i) {
+      if (i >= PARCEL_COUNTIES.length) return Promise.resolve(null);
+      return searchCounty(PARCEL_COUNTIES[i]).then(function (hit) {
+        return hit || searchAll(i + 1);
+      });
+    }
+
+    searchAll(0).then(function (hit) {
       if (!hit) {
-        parcelNone(t.name + ' has no lot containing ' +
-                   lat.toFixed(5) + ', ' + lng.toFixed(5) +
-                   ' (parcel tiles are Deschutes County only)');
+        parcelNone('no lot containing ' + lat.toFixed(5) + ', ' + lng.toFixed(5) +
+                   ' (tried Deschutes and Lane tiles)');
         return;
       }
       parcelRing = hit.ring.map(function (c) { return { lat: c[1], lng: c[0] }; });
@@ -3128,6 +3147,7 @@
         if (j.site_no && !siteNo) siteNo = String(j.site_no);
         if (j.key && !rowKey) rowKey = String(j.key);
         paintIdentity();
+        applyServerPinCap(j);
         return j;
       });
   }
@@ -3378,15 +3398,15 @@
   // ⚠️ TWO PANES, AND THE SPLIT IS THE WHOLE POINT.
   // Google's panes stack, bottom to top:
   //     mapPane -> overlayLayer -> markerLayer -> overlayMouseTarget -> floatPane
-  // Polygons and polylines - the lot line and the pin-range ring - are drawn by
+  // Polygons - the lot line - are drawn by
   // the API into overlayLayer. #frame has to be in overlayMouseTarget so its
   // markers can be dragged and so place-mode clicks land. overlayMouseTarget is
   // ABOVE overlayLayer, so while the captured nadir <img> lived inside #frame it
-  // covered the lot line and the range ring the moment it was switched on.
+  // covered the lot line the moment it was switched on.
   //
   // So the image is lifted OUT of #frame and given its own wrapper in mapPane,
   // the LOWEST pane. Final order, bottom to top:
-  //     basemap tiles -> captured nadir -> lot line + range ring -> pins
+  //     basemap tiles -> captured nadir -> lot line -> pins
   // which is the order they should be read in anyway.
   //
   // Both elements are sized from ONE projected rectangle in one draw() call, so
@@ -3470,13 +3490,6 @@
       { lat: erBounds.north, lng: erBounds.east }), 24);
   }
 
-  // The 5..95 band. Drawn always, with or without a parcel, because it is the
-  // real edge of what can be STORED - not the edge of the picture.
-  // A dotted grey ring. Google Maps has no dashed stroke, so the line itself is
-  // transparent and a repeating symbol is walked along it.
-  var ER_DOT = { path: 'M 0,-1 0,1', strokeColor: '#c3c9d1',
-                 strokeOpacity: 0.95, strokeWeight: 2, scale: 1.4 };
-
   // Called from drawParcel(), so it runs on first load AND after every refresh -
   // and it tolerates being called before the map exists, because loadParcel()
   // races the Maps script by design (pins must never wait on either).
@@ -3490,8 +3503,7 @@
     if (erRangePoly)  { erRangePoly.setMap(null);  erRangePoly = null; }
     // ⚠️ ATTACHED AT CONSTRUCTION, not later in erApplyLimits().
     // These used to be built with no `map` and only attached at the end of this
-    // function. Anything that threw in between - and erAllow.outline() below
-    // does throw against an older nadir-geo.js - left the lot line CREATED BUT
+    // function. Anything that threw in between left the lot line CREATED BUT
     // ORPHANED: a Polygon object with no map, invisible, no error on screen.
     // The only lot still visible then was the one the pipeline bakes into the
     // Static Maps raster itself (the nadir URL carries markers/path params), so
@@ -3507,50 +3519,19 @@
         map: parcelShown ? erMap : null
       });
     }
-    // ⭐ THE PIN RANGE. Not a hint and not a decoration: NadirGeo's outline() is
-    // the lot offset outward by MARGIN_M with round joins at convex corners and
-    // mitres at concave ones, clipped to the storable 5..95 box - which is
-    // exactly the region placementAllowed() accepts. Verified in
-    // test-nadir-geo.mjs: every vertex sits MARGIN_M from the lot, points just
-    // inside are accepted and points just outside are refused.
-    // It matters more now that the camera is uncapped: panning is unlimited, so
-    // this ring is the only thing on screen saying where a pin can actually go.
-    // Its own try/catch, and a capability check first. The range ring is the
-    // newer of the two layers and the one that depends on a module version; a
-    // problem here must never be able to take the lot line down with it.
-    try {
-      if (typeof erAllow.outline !== 'function') {
-        throw new Error('nadir-geo.js is too old for the pin-range ring ' +
-          '(needs v1.1.0, found v' + ((window.NadirGeo && window.NadirGeo._version) ||
-          'unknown') + ') - upload the current nadir-geo.js beside this page');
-      }
-      var ring = erAllow.outline();
-      if (ring && ring.length >= 3) {
-        erRangePoly = new google.maps.Polyline({
-          path: ring.concat([ring[0]]),        // Polyline, so close it by hand
-          strokeOpacity: 0,                    // the dots ARE the line
-          icons: [{ icon: ER_DOT, offset: '0', repeat: '10px' }],
-          clickable: false, zIndex: 2,
-          map: parcelShown ? erMap : null
-        });
-      }
-    } catch (e) {
-      if (window.console) {
-        console.error('[element-review] pin-range ring not drawn: ' +
-                      (e.message || e) + '. The lot line and pin enforcement ' +
-                      'are unaffected.');
-      }
-    }
+    // v6.8.4: the dotted grey pin-range ring (lot + MARGIN_M, clipped to the
+    // 5..95 storable box) is no longer drawn. placementAllowed() still uses
+    // erAllow — a pin outside that region is refused with a toast, never
+    // clamped. The red lot line is the only parcel overlay.
     erComputeSideLabels();
     erRenderSideLabels();
     erApplyLimits();
   }
-  // The Lot button governs the lot line and the pin-range ring together: they
-  // are two readings of the same thing, and showing one without the other
-  // invites "why is my pin refused inside the red line".
+  // The Lot button governs the lot line. Placement still uses lot + margin
+  // intersect the 5..95 box; that region is no longer drawn (v6.8.4).
   //
-  // ⚠️ NEITHER OF THESE HAS ANYTHING TO DO WITH THE Image TOGGLE. They are map
-  // overlays; the captured nadir is an <img> inside #frame. `parcelShown` is
+  // ⚠️ THIS HAS NOTHING TO DO WITH THE Image TOGGLE. The lot is a map
+  // overlay; the captured nadir is an <img> inside #frame. `parcelShown` is
   // the only input. Do not couple them - a reviewer needs the lot line most
   // when the captured image is off and they are looking at live imagery.
   function erApplyLimits() {
