@@ -1575,12 +1575,12 @@ function resolveMediaUrl(src) {
   try { return new URL(s, window.location.href).href; }
   catch (e) { return s; }
 }
-// Cameras live in data/cameras/{propertyId}.json (contract).
-// data/cameras/json/{id}.json and data/cameras/images/json/{id}.json are fallbacks.
+// Cameras live in data/cameras/json/{propertyId}.json (contract).
+// data/cameras/{id}.json and data/cameras/images/json/{id}.json are fallbacks.
 async function fetchCamerasFile(id) {
   const paths = [
-    DATA_ROOT + 'cameras/' + id + '.json',
     DATA_ROOT + 'cameras/json/' + id + '.json',
+    DATA_ROOT + 'cameras/' + id + '.json',
     DATA_ROOT + 'cameras/images/json/' + id + '.json'
   ];
   for (let i = 0; i < paths.length; i++) {
@@ -1598,7 +1598,7 @@ async function attachCameras(rec) {
     const j = await fetchCamerasFile(ids[i]);
     if (j) {
       cams = j.cameras;
-      dbg('Cameras file: ' + cams.length + ' (cameras/' +
+      dbg('Cameras file: ' + cams.length + ' (cameras/json/' +
           String(ids[i]).substring(0, 12) + '\u2026)', 'ok');
       break;
     }
