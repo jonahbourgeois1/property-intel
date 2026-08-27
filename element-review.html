@@ -204,10 +204,9 @@
      they are reviewing out from under them. The API is the fallback and the
      refresh path, not a replacement.
 
-  3. rev POLLING. After a round is filed, the page polls ?route=elements every 20s
-     for up to 10 minutes (the re-pin trigger runs every 5) and compares `rev`, the
-     server's MD5 of the elements cell. The page never decides for itself whether
-     two pin arrays differ — that is the server's fingerprint to give.
+  3. rev POLLING. After a round is filed, the page polls ?route=elements
+     immediately, then every 3s for 90s, then every 20s for up to 10 minutes.
+     Cache-busts the GET. Compares `rev`, the server's MD5 of the elements cell.
      ⚠️ A refresh DESTROYS the panel, so it is never silent when there is anything
      to lose. panelFingerprint() is compared against the snapshot taken AT SUBMIT:
      unchanged means the panel holds only what was already filed, so the new round
@@ -1252,7 +1251,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.7';
+  var BUILD = 'v6.8.8';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -2583,7 +2582,11 @@
   }
 
   function stopPolling() {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    if (pollTimer) {
+      clearTimeout(pollTimer);
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
     setRefreshBanner(null);
   }
 
@@ -2616,6 +2619,11 @@
     // The parcel lives in its OWN svg, so clearOverlay does not touch it — but
     // redraw anyway so there is one code path that puts it on screen.
     drawParcel();
+    // Map OverlayView can keep a stale paint until the camera moves. Kick
+    // draw() so a re-pin is visible without a full page reload.
+    if (MAP_MODE && erOverlay && typeof erOverlay.draw === 'function') {
+      try { erOverlay.draw(); } catch (e) { /* projection not ready yet */ }
+    }
     // The panel is now blank, so the filed snapshot must move with it — otherwise
     // the NEXT rev change would compare against a round that is no longer on
     // screen and needlessly demote an auto-refresh to a banner.
@@ -2649,6 +2657,7 @@
     if (!canFetchPins) return;
     stopPolling();
     var until = Date.now() + POLL_FOR_MS;
+    var fastUntil = Date.now() + 90000;
 
     var tick = function () {
       return fetchElements().then(function (j) {
@@ -2664,10 +2673,17 @@
     };
     pollOnce = tick;
 
-    pollTimer = setInterval(function () {
+    // First look NOW — waiting 20s is why a finished re-pin looked like it
+    // needed a browser refresh. Then poll fast for 90s (Bedrock can lag the
+    // POST body), then every 20s for the rest of the window.
+    var schedule = function () {
       if (Date.now() > until) { stopPolling(); return; }
-      tick();
-    }, POLL_EVERY_MS);
+      var wait = Date.now() < fastUntil ? 3000 : POLL_EVERY_MS;
+      pollTimer = setTimeout(function () {
+        tick().then(schedule, schedule);
+      }, wait);
+    };
+    tick().then(schedule, schedule);
   }
 
   // ── Test seam ─────────────────────────────────────────────────────────────
@@ -2765,9 +2781,9 @@
           });
         })
         .then(function (t) {
-          var ok = true, note = '';
+          var ok = true, note = '', j = null;
           try {
-            var j = JSON.parse(t);
+            j = JSON.parse(t);
             if (j && j.ok === false) { ok = false; note = j.error || 'rejected'; }
             else if (j && j.message) note = j.message;
             // v5.6: log which VIEWER build sent the round and which SERVER build
@@ -2788,26 +2804,17 @@
           setStatus(note || ('Round ' + payload.round + ' filed.'), 'ok');
           btn.disabled = false;
 
-          // ⭐ v5.9: the server may have run the re-pin INLINE and handed the new
-          // round straight back. Draw it now rather than waiting up to 20 s for a
-          // poll to notice — the reviewer just watched the button spin for it.
-          //
-          // lastRev is advanced FIRST so the poll that follows sees no change and
-          // does not redraw the same round a second time.
+          // Snapshot AS FILED first, then draw any pins the POST already has,
+          // then poll the sheet immediately. Returning early after the POST
+          // body skipped the GET — and the GET used to wait 20s and could be
+          // answered from a cached Apps Script response — so the new round
+          // only appeared after a full reload.
+          filedFingerprint = panelFingerprint();
           if (j && j.rerun_ran === true && Array.isArray(j.pins)) {
             if (j.rev) lastRev = j.rev;
-            filedFingerprint = panelFingerprint();   // what is on screen was just filed
-            applyRefresh(j.pins, (payload.round || 1) + 1);
+            applyRefresh(j.pins, j.next_round || ((payload.round || 1) + 1));
             setStatus(note + ' The image now shows the new round.', 'ok');
-            return;                                  // no polling needed; it already happened
           }
-          // v5.7: the round is filed, so from here the row may change under us —
-          // start watching for the re-pin. Whether the rerun is automated or run
-          // by hand from the sheet menu, `rev` moves when the pins do, and this
-          // is the only moment we know to start looking.
-          // Snapshot the panel AS FILED first: anything matching this is safe to
-          // throw away, anything else is work the reviewer has not sent yet.
-          filedFingerprint = panelFingerprint();
           startPolling();
         })
         .catch(function (err) {
@@ -3172,7 +3179,8 @@
   }
 
   function fetchElements() {
-    var u = CRITIQUE_POST_URL + '?route=elements&' + lookupParam();
+    var u = CRITIQUE_POST_URL + '?route=elements&' + lookupParam() +
+            '&_=' + Date.now();
     return fetch(u, { redirect: 'follow' })
       .then(function (r) { return r.text(); })
       .then(function (t) {

@@ -145,9 +145,9 @@ Catalog rule:
 
 v1 repo:
 
-- `element-review.html` — pin QA on a Google Maps basemap (v6.8.6); posts critiques to
+- `element-review.html` — pin QA on a Google Maps basemap (v6.8.8); posts critiques to
   the Apps Script web app; side labels built but disabled (`ER_SIDES_DEFAULT=false`)
-- `nadir-geo.js` — v1.3.0 dependency-free Mercator geometry; must sit beside
+- `nadir-geo.js` — v1.3.1 dependency-free Mercator geometry; must sit beside
   element-review; unit suite `test-nadir-geo.mjs`
 - `model-viewer.html` — responder 3D viewer + live video layer (no in-file version
   const; versioned via CHANGELOG/design doc)
@@ -264,8 +264,7 @@ In flight:
 Ranked open bugs: (1) critique add-loss guard missing; (2) standard 12-pin ceiling +
 prompt/rollback contradiction on full rows (schools are 20 as of 2026-08-27); (3) `?route=ping` deployed-vocab check
 wanted; (4) plane.gs reads the Satellite tab via stale COL_* (latent off-by-one);
-(5) menu.gs Drone-Test items name nonexistent functions; (6) responder-intel.html
-flat `pixelToLatLng` (0.488% N-S stretch — migrate to nadir-geo). Also:
+(5) responder-intel.html flat `pixelToLatLng` (0.488% N-S stretch — migrate to nadir-geo). Also:
 `load_captures()` plane|drone edit is **not deployed** — drone-typed captures are
 invisible to clip/render until it ships; re-baseline the row-3 oracle after.
 
