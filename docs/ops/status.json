@@ -1,6 +1,6 @@
 {
   "as_of": "2026-08-27",
-  "as_of_utc": "2026-08-27T00:03:07Z",
+  "as_of_utc": "2026-08-27T14:57:00Z",
   "repo": "jonahbourgeois1/property-intel",
   "ref": "origin/main",
   "head": {
@@ -10,18 +10,111 @@
     "author_date": "2026-08-26T21:31:22Z"
   },
   "sources": {
-    "git_log_since": "2026-08-26",
+    "git_log_since": "2026-08-24",
+    "iso_week": "2026-W35",
     "changelog": null,
     "context": null,
     "context_draft": null,
-    "property_intel_v2": "404 from this token",
+    "property_intel_v2": "404 from this token; local OneDrive path not mounted on this VM",
     "cloud_agents_listed_in_this_environment": [
       "bc-d4995744-9e87-4fbc-bbb8-3497e55e4057",
       "bc-45e4c56a-3ad9-4797-a94a-c20f1f5d6893"
     ],
     "other_property_intel_chats": "not listed in this Log Bot environment"
   },
+  "weekly": {
+    "label": "2026-W35",
+    "start": "2026-08-24",
+    "end": "2026-08-27",
+    "shipped": [
+      {
+        "date": "2026-08-26",
+        "sha": "06c9714",
+        "message": "Update pins-catalog.json",
+        "evidence": "catalog version 2026-07-15 -> 2026-08-26; pin_count 239 -> 256; role= present on all 256 pins (195 primary, 61 concern)"
+      },
+      {
+        "date": "2026-08-25",
+        "sha": "8662883",
+        "message": "Identify element-review critiques by site_no instead of address.",
+        "evidence": "element-review BUILD v6.8.2 on main"
+      },
+      {
+        "date": "2026-08-24",
+        "sha": "7cbe86e",
+        "message": "Add a thin Vyanet Viewer hub that iframes the existing 3D and satellite pages.",
+        "evidence": "main vyanet-viewer.html BUILD 1.0.3"
+      },
+      {
+        "date": "2026-08-24",
+        "sha": "86e00ef",
+        "message": "Sync drone-test — 8/24/2026, 3:26:05 PM",
+        "evidence": "Apps Script-style data/ sync commit"
+      },
+      {
+        "date": "2026-08-24",
+        "sha": "3c17989",
+        "message": "Add agent onboarding: CLAUDE.md, AGENTS.md, Cursor rules; replace README stub",
+        "evidence": "docs/onboarding on public v1"
+      }
+    ],
+    "still_open": [
+      {
+        "item": "Vyanet Viewer hub 1.6.4 not merged to main",
+        "evidence": "origin/cursor/vyanet-viewer-gate-home @ 161a860 (2026-08-26); main BUILD 1.0.3; no GitHub PRs listed"
+      },
+      {
+        "item": "Chat direction not visible to Log Bot",
+        "evidence": "list-cloud-agents in this environment returned only Log Bot automations"
+      }
+    ],
+    "watchouts": [
+      "Apps Script editor-save is not a new deployment; .gs copies in this repo are not a deploy. No satellite.gs deploy evidence on 2026-08-27; MOCKINGBIRD row 277 not checked.",
+      "Public data/*.json is sync-owned. 06c9714 is a GitHub commit to data/pin-catalog/pins-catalog.json, not an Apps Script sync message.",
+      "pins-catalog.json still has role= on every pin after the 256-pin update; do not flatten it."
+    ],
+    "merge_on_main": [
+      {
+        "date": "2026-08-25",
+        "sha": "fb9a0f2",
+        "message": "Merge branch 'main' of https://github.com/jonahbourgeois1/property-intel"
+      }
+    ],
+    "completion_percent": null
+  },
   "shipped_today": [],
+  "shipped_this_week": [
+    {
+      "date": "2026-08-26",
+      "sha": "06c9714",
+      "message": "Update pins-catalog.json",
+      "evidence": "catalog version 2026-07-15 -> 2026-08-26; pin_count 239 -> 256; role= present on all 256 pins (195 primary, 61 concern)"
+    },
+    {
+      "date": "2026-08-25",
+      "sha": "8662883",
+      "message": "Identify element-review critiques by site_no instead of address.",
+      "evidence": "element-review BUILD v6.8.2 on main"
+    },
+    {
+      "date": "2026-08-24",
+      "sha": "7cbe86e",
+      "message": "Add a thin Vyanet Viewer hub that iframes the existing 3D and satellite pages.",
+      "evidence": "main vyanet-viewer.html BUILD 1.0.3"
+    },
+    {
+      "date": "2026-08-24",
+      "sha": "86e00ef",
+      "message": "Sync drone-test — 8/24/2026, 3:26:05 PM",
+      "evidence": "Apps Script-style data/ sync commit"
+    },
+    {
+      "date": "2026-08-24",
+      "sha": "3c17989",
+      "message": "Add agent onboarding: CLAUDE.md, AGENTS.md, Cursor rules; replace README stub",
+      "evidence": "docs/onboarding on public v1"
+    }
+  ],
   "lookback": [
     {
       "date": "2026-08-26",
@@ -33,7 +126,7 @@
   "still_open": [
     {
       "item": "Vyanet Viewer hub 1.6.4 not merged to main",
-      "evidence": "origin/cursor/vyanet-viewer-gate-home @ 161a860 (2026-08-26); main vyanet-viewer.html BUILD 1.0.3; gh pr list empty"
+      "evidence": "origin/cursor/vyanet-viewer-gate-home @ 161a860 (2026-08-26); main BUILD 1.0.3; no GitHub PRs listed"
     },
     {
       "item": "Chat direction not visible to Log Bot",
@@ -45,6 +138,51 @@
     "Public data/*.json is sync-owned. 06c9714 is a GitHub commit to data/pin-catalog/pins-catalog.json, not an Apps Script sync message.",
     "pins-catalog.json still has role= on every pin after the 256-pin update; do not flatten it."
   ],
+  "shipped": [
+    {
+      "date": "2026-08-26",
+      "sha": "06c9714",
+      "message": "Update pins-catalog.json",
+      "evidence": "catalog version 2026-07-15 -> 2026-08-26; pin_count 239 -> 256; role= present on all 256 pins (195 primary, 61 concern)"
+    },
+    {
+      "date": "2026-08-25",
+      "sha": "8662883",
+      "message": "Identify element-review critiques by site_no instead of address.",
+      "evidence": "element-review BUILD v6.8.2 on main"
+    },
+    {
+      "date": "2026-08-24",
+      "sha": "7cbe86e",
+      "message": "Add a thin Vyanet Viewer hub that iframes the existing 3D and satellite pages.",
+      "evidence": "main vyanet-viewer.html BUILD 1.0.3"
+    },
+    {
+      "date": "2026-08-24",
+      "sha": "86e00ef",
+      "message": "Sync drone-test — 8/24/2026, 3:26:05 PM",
+      "evidence": "Apps Script-style data/ sync commit"
+    },
+    {
+      "date": "2026-08-24",
+      "sha": "3c17989",
+      "message": "Add agent onboarding: CLAUDE.md, AGENTS.md, Cursor rules; replace README stub",
+      "evidence": "docs/onboarding on public v1"
+    }
+  ],
+  "open": [
+    {
+      "item": "Vyanet Viewer hub 1.6.4 not merged to main",
+      "evidence": "origin/cursor/vyanet-viewer-gate-home @ 161a860 (2026-08-26); main BUILD 1.0.3; no GitHub PRs listed"
+    },
+    {
+      "item": "Chat direction not visible to Log Bot",
+      "evidence": "list-cloud-agents in this environment returned only Log Bot automations"
+    }
+  ],
+  "week_label": "2026-W35",
   "completion_percent": null,
-  "completion_percent_reason": "not reported; no measured evidence"
+  "percent": null,
+  "completion_percent_reason": "not reported; no measured evidence",
+  "log_markdown": "# Property Intel daily log\n\nEvidence-only notes from the Log Bot cron. Newest day at the top. Do not treat this file as a pipeline inventory: this checkout is `jonahbourgeois1/property-intel` (public v1). Completeness percentages are omitted unless measured.\n\n## 2026-08-27\n\nCheckout: `jonahbourgeois1/property-intel` @ `06c9714` (`origin/main`). Cron Log Bot (`41611cd5-a0bb-11f1-b532-320a589b8025`), run started 2026-08-27T00:03:07Z. Working branch `cursor/property-intel-daily-log-4f45`.\n\nSources this run could read: v1 `git log`. Not in this clone: `CHANGELOG.md`, `docs/CONTEXT.md`, `docs/CONTEXT-2026-08-19-DRAFT.md`. `gh repo view jonahbourgeois1/property-intel-v2` returns 404 for this token. `list-cloud-agents` in this environment returned only Log Bot runs (this run `bc-d4995744` and 2026-08-26 run `bc-45e4c56a`); desktop/web/local property-intel chats were not listed.\n\n### Shipped\n\nNothing shipped today (2026-08-27) on `origin/main`. No commits after `06c9714` (2026-08-26 16:31 -0500).\n\nLookback 2026-08-26 on `main`:\n\n- `06c9714` \"Update pins-catalog.json\" (author `jonahbourgeois1`, committer GitHub). Catalog `version` `2026-07-15` → `2026-08-26`; `pin_count` 239 → 256. File notes record pins 240–256 appended, `#30` renamed Entry → Vehicle Entrance, and `account_type` widened on `#30` / `#33` / `#127`. After the commit, all 256 pins still have `role` (195 `primary`, 61 `concern`, 0 missing). Actions: `Build config` run `33015751649` success; `pages-build-deployment` run `33015750965` success.\n- Last Apps Script–style property sync still `86e00ef` (2026-08-24, \"Sync drone-test\"). No satellite / plane / responder-intel `data/` sync commit on 2026-08-26.\n\n### Still open\n\n- Vyanet Viewer hub **1.6.4** is on `origin/cursor/vyanet-viewer-gate-home` (`161a860`, 2026-08-26 12:34 -0500, \"Ship Vyanet Viewer hub through 1.6.4: live tab, dashboard, and 3D cameras\") and is **not merged** to `main` (main hub is still **1.0.3** from `7cbe86e`). Also unmerged on that branch: `d32bb4a` (2026-08-25, gate/home shell 1.1.1). `gh pr list` / `gh api repos/.../pulls` returned no pull requests for this repo.\n- Chat direction for 2026-08-26 and 2026-08-27 was not visible in this environment (only Log Bot automations listed).\n- The 2026-08-26 Log Bot run did not write `docs/ops/` (blocked). This is the first `docs/ops/log.md` in the clone.\n\n### Follow-up (same day)\n\n- Added `docs/ops/index.html`, a `file://` weekly landing page that reads sibling `status.js` (`window.PI_STATUS`). This cloud checkout cannot write `C:\\Users\\Jonah Bourgeois\\OneDrive - Baylor University\\Desktop\\property-intel-v2\\docs\\ops\\`; copy `index.html` + `status.js` (+ `status.json`) into that folder, then refresh the file URL.\n\n### Watchouts\n\n- Apps Script editor-save is not a new deployment. `.gs` files under `apps scripts/` in this repo are copies, not evidence of a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 was not checked.\n- Public `data/*.json` is sync-owned. `06c9714` is a GitHub UI/Contents commit to `data/pin-catalog/pins-catalog.json`, not an Apps Script sync commit message.\n- Catalog `role=` is still present on every pin after the 256-pin update; do not flatten it.\n"
 }

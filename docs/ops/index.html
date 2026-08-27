@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Intel — weekly ops</title>
+<style>
+  :root {
+    --bg: #111318;
+    --panel: #0b0e12;
+    --line: rgba(255,255,255,0.10);
+    --text: #f0f2f5;
+    --muted: #8a93a2;
+    --dim: #555f6e;
+    --accent: #a855f7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg); color: var(--text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    min-height: 100%;
+  }
+  body { padding: 28px 20px 48px; max-width: 920px; margin: 0 auto; }
+  header { margin-bottom: 22px; }
+  .eyebrow { color: var(--accent); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; }
+  h1 { font-size: 22px; font-weight: 600; margin: 8px 0 6px; }
+  .meta { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 22px 0; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 14px 12px;
+  }
+  .card .k { color: var(--dim); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .card .v { font-size: 28px; margin-top: 8px; font-weight: 600; }
+  .card .s { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  section {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 12px;
+  }
+  h2 { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  ul { list-style: none; }
+  li { font-size: 13px; line-height: 1.45; padding: 8px 0; border-top: 1px solid var(--line); }
+  li:first-child { border-top: 0; padding-top: 0; }
+  .sha { color: var(--accent); }
+  .empty, .warn { color: var(--muted); font-size: 13px; }
+  #err {
+    display: none; border: 1px solid #ef4444; color: #fca5a5;
+    background: rgba(239,68,68,0.08); border-radius: 10px;
+    padding: 16px 18px; margin-bottom: 16px; font-size: 13px; line-height: 1.5;
+  }
+  #err.visible { display: block; }
+  #log { white-space: pre-wrap; color: var(--muted); font-size: 12px; line-height: 1.55; }
+  footer { margin-top: 18px; color: var(--dim); font-size: 11px; line-height: 1.5; }
+  @media (max-width: 720px) { .cards { grid-template-columns: 1fr 1fr; } }
+</style>
+<script src="status.js"></script>
+</head>
+<body>
+<div id="err"></div>
+<header>
+  <div class="eyebrow">Property Intel</div>
+  <h1>Weekly ops</h1>
+  <p class="meta" id="meta"></p>
+</header>
+<div class="cards">
+  <div class="card"><div class="k">Shipped this week</div><div class="v" id="n-shipped">—</div><div class="s" id="s-shipped"></div></div>
+  <div class="card"><div class="k">Still open</div><div class="v" id="n-open">—</div><div class="s">git evidence only</div></div>
+  <div class="card"><div class="k">Watchouts</div><div class="v" id="n-watch">—</div><div class="s">standing rules</div></div>
+  <div class="card"><div class="k">Completion</div><div class="v" id="pct">—</div><div class="s" id="s-pct">not measured</div></div>
+</div>
+<section>
+  <h2>Shipped</h2>
+  <ul id="list-shipped"></ul>
+</section>
+<section>
+  <h2>Still open</h2>
+  <ul id="list-open"></ul>
+</section>
+<section>
+  <h2>Watchouts</h2>
+  <ul id="list-watch"></ul>
+</section>
+<section>
+  <h2>Daily log</h2>
+  <div id="log"></div>
+</section>
+<footer id="foot"></footer>
+<script>
+(function () {
+  var err = document.getElementById('err');
+  var s = window.PI_STATUS;
+  function showErr(msg) {
+    err.textContent = msg;
+    err.className = 'visible';
+  }
+  function text(id, value) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = value == null ? '—' : String(value);
+  }
+  function items(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    return [value];
+  }
+  function labelOf(item) {
+    if (item == null) return '';
+    if (typeof item === 'string') return item;
+    var parts = [];
+    if (item.sha || item.short) parts.push(item.sha || item.short);
+    if (item.date) parts.push(item.date);
+    if (item.message) parts.push(item.message);
+    if (item.item) parts.push(item.item);
+    if (item.evidence) parts.push(item.evidence);
+    return parts.join(' — ') || JSON.stringify(item);
+  }
+  function fillList(id, arr, emptyText) {
+    var ul = document.getElementById(id);
+    ul.textContent = '';
+    var list = items(arr);
+    if (!list.length) {
+      var empty = document.createElement('li');
+      empty.className = 'empty';
+      empty.textContent = emptyText;
+      ul.appendChild(empty);
+      return;
+    }
+    list.forEach(function (item) {
+      var li = document.createElement('li');
+      var raw = labelOf(item);
+      var sha = item && (item.sha || item.short);
+      if (sha && raw.indexOf(String(sha)) === 0) {
+        var span = document.createElement('span');
+        span.className = 'sha';
+        span.textContent = sha;
+        li.appendChild(span);
+        li.appendChild(document.createTextNode(raw.slice(String(sha).length)));
+      } else {
+        li.textContent = raw;
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  if (!s || typeof s !== 'object') {
+    showErr('status.js did not set window.PI_STATUS. This page is file://-only: keep status.js in the same folder as index.html, then refresh. Cloud Log Bot cannot write your OneDrive v2 path; copy docs/ops/status.js (and this index.html) into Desktop/property-intel-v2/docs/ops/.');
+    return;
+  }
+
+  var weekly = s.weekly || {};
+  var shipped = weekly.shipped || s.shipped_this_week || s.shipped || s.lookback || s.shipped_today || [];
+  var open = weekly.still_open || s.still_open || s.open || [];
+  var watch = weekly.watchouts || s.watchouts || [];
+  var pct = s.completion_percent;
+  if (pct == null) pct = s.percent;
+  if (pct == null && weekly) pct = weekly.completion_percent;
+
+  var weekLabel = weekly.label || s.week_label || '';
+  var weekRange = (weekly.start || '') + (weekly.start && weekly.end ? ' to ' : '') + (weekly.end || '');
+  text('meta',
+    (s.as_of ? ('As of ' + s.as_of) : 'As of unknown') +
+    (s.as_of_utc ? ('  ·  ' + s.as_of_utc) : '') +
+    (weekLabel ? ('  ·  ' + weekLabel) : '') +
+    (weekRange ? ('  ·  ' + weekRange) : '') +
+    (s.repo ? ('  ·  ' + s.repo) : '')
+  );
+  text('n-shipped', shipped.length);
+  text('s-shipped', weekly.start ? ('ISO week from ' + weekly.start) : 'from git log');
+  text('n-open', open.length);
+  text('n-watch', watch.length);
+  if (pct == null || pct === '') {
+    text('pct', '—');
+    text('s-pct', s.completion_percent_reason || 'not measured; no invented %');
+  } else {
+    text('pct', pct + '%');
+    text('s-pct', 'from status snapshot');
+  }
+  fillList('list-shipped', shipped, 'Nothing shipped this week on the git this snapshot can see.');
+  fillList('list-open', open, 'No still-open items with git evidence.');
+  fillList('list-watch', watch, 'No watchouts recorded.');
+  var logEl = document.getElementById('log');
+  logEl.textContent = s.log_markdown || 'log.md was not embedded in this snapshot.';
+  var src = s.sources || {};
+  text('foot',
+    'Reads window.PI_STATUS from sibling status.js (no fetch — works from file://). ' +
+    (src.changelog == null ? 'CHANGELOG/CONTEXT not in this checkout. ' : '') +
+    'Editor-save is not a deploy. data/*.json is sync-owned. MOCKINGBIRD row 277 after a real satellite.gs deploy.'
+  );
+})();
+</script>
+</body>
+</html>

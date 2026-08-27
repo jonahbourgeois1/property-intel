@@ -23,6 +23,10 @@ Lookback 2026-08-26 on `main`:
 - Chat direction for 2026-08-26 and 2026-08-27 was not visible in this environment (only Log Bot automations listed).
 - The 2026-08-26 Log Bot run did not write `docs/ops/` (blocked). This is the first `docs/ops/log.md` in the clone.
 
+### Follow-up (same day)
+
+- Added `docs/ops/index.html`, a `file://` weekly landing page that reads sibling `status.js` (`window.PI_STATUS`). This cloud checkout cannot write `C:\Users\Jonah Bourgeois\OneDrive - Baylor University\Desktop\property-intel-v2\docs\ops\`; copy `index.html` + `status.js` (+ `status.json`) into that folder, then refresh the file URL.
+
 ### Watchouts
 
 - Apps Script editor-save is not a new deployment. `.gs` files under `apps scripts/` in this repo are copies, not evidence of a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 was not checked.
