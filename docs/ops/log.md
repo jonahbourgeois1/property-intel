@@ -1,34 +1,50 @@
 # Property Intel daily log
 
-Evidence-only notes from the Log Bot cron. Newest day at the top. Do not treat this file as a pipeline inventory: this checkout is `jonahbourgeois1/property-intel` (public v1). Completeness percentages are omitted unless measured.
+Evidence-only. Newest day at the top. This cloud checkout is public `jonahbourgeois1/property-intel` (v1). Completeness % omitted unless measured. Do not flatten catalog `role=`. Editor-save ≠ deploy. `data/*.json` is sync-owned. MOCKINGBIRD row 277 after a real `satellite.gs` deploy.
 
 ## 2026-08-27
 
-Checkout: `jonahbourgeois1/property-intel` @ `06c9714` (`origin/main`). Cron Log Bot (`41611cd5-a0bb-11f1-b532-320a589b8025`), run started 2026-08-27T00:03:07Z. Working branch `cursor/property-intel-daily-log-4f45`.
+Nothing shipped today on `origin/main`. Head remains `06c9714` (2026-08-26 16:31 -0500).
 
-Sources this run could read: v1 `git log`. Not in this clone: `CHANGELOG.md`, `docs/CONTEXT.md`, `docs/CONTEXT-2026-08-19-DRAFT.md`. `gh repo view jonahbourgeois1/property-intel-v2` returns 404 for this token. `list-cloud-agents` in this environment returned only Log Bot runs (this run `bc-d4995744` and 2026-08-26 run `bc-45e4c56a`); desktop/web/local property-intel chats were not listed.
+Log Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-27T00:03:07Z, then follow-ups to wire the `file://` weekly page. v2 / OneDrive `docs/ops` is not mounted on this VM (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs. CHANGELOG/CONTEXT not in this clone.
 
 ### Shipped
-
-Nothing shipped today (2026-08-27) on `origin/main`. No commits after `06c9714` (2026-08-26 16:31 -0500).
-
-Lookback 2026-08-26 on `main`:
-
-- `06c9714` "Update pins-catalog.json" (author `jonahbourgeois1`, committer GitHub). Catalog `version` `2026-07-15` → `2026-08-26`; `pin_count` 239 → 256. File notes record pins 240–256 appended, `#30` renamed Entry → Vehicle Entrance, and `account_type` widened on `#30` / `#33` / `#127`. After the commit, all 256 pins still have `role` (195 `primary`, 61 `concern`, 0 missing). Actions: `Build config` run `33015751649` success; `pages-build-deployment` run `33015750965` success.
-- Last Apps Script–style property sync still `86e00ef` (2026-08-24, "Sync drone-test"). No satellite / plane / responder-intel `data/` sync commit on 2026-08-26.
+None on 2026-08-27.
 
 ### Still open
-
-- Vyanet Viewer hub **1.6.4** is on `origin/cursor/vyanet-viewer-gate-home` (`161a860`, 2026-08-26 12:34 -0500, "Ship Vyanet Viewer hub through 1.6.4: live tab, dashboard, and 3D cameras") and is **not merged** to `main` (main hub is still **1.0.3** from `7cbe86e`). Also unmerged on that branch: `d32bb4a` (2026-08-25, gate/home shell 1.1.1). `gh pr list` / `gh api repos/.../pulls` returned no pull requests for this repo.
-- Chat direction for 2026-08-26 and 2026-08-27 was not visible in this environment (only Log Bot automations listed).
-- The 2026-08-26 Log Bot run did not write `docs/ops/` (blocked). This is the first `docs/ops/log.md` in the clone.
-
-### Follow-up (same day)
-
-- Added `docs/ops/index.html`, a `file://` weekly landing page that reads sibling `status.js` (`window.PI_STATUS`). This cloud checkout cannot write `C:\Users\Jonah Bourgeois\OneDrive - Baylor University\Desktop\property-intel-v2\docs\ops\`; copy `index.html` + `status.js` (+ `status.json`) into that folder, then refresh the file URL.
+- Vyanet Viewer hub **1.6.4** on `origin/cursor/vyanet-viewer-gate-home` (`161a860`) not merged; `main` hub **1.0.3**.
+- Chat direction not visible in the Log Bot environment.
 
 ### Watchouts
+- Apps Script editor-save is not a new deployment. `.gs` copies in git are not a deploy. No `satellite.gs` deploy evidence today.
+- Public `data/*.json` is sync-owned.
+- Catalog `role=` still present on all 256 pins after `06c9714`; do not flatten it.
 
-- Apps Script editor-save is not a new deployment. `.gs` files under `apps scripts/` in this repo are copies, not evidence of a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 was not checked.
-- Public `data/*.json` is sync-owned. `06c9714` is a GitHub UI/Contents commit to `data/pin-catalog/pins-catalog.json`, not an Apps Script sync commit message.
-- Catalog `role=` is still present on every pin after the 256-pin update; do not flatten it.
+## 2026-08-26
+
+First write of this day into this `log.md` (8/26 Log Bot run `bc-45e4c56a` did not commit `docs/ops/`).
+
+### Shipped
+- `06c9714` "Update pins-catalog.json". Catalog `version` `2026-07-15` → `2026-08-26`; `pin_count` 239 → 256. Notes: pins 240–256 appended; `#30` Entry → Vehicle Entrance; `account_type` widened on `#30` / `#33` / `#127`. All 256 pins still have `role` (195 primary, 61 concern). Actions `33015751649` and Pages `33015750965` succeeded.
+- Last Apps Script–style property sync remains `86e00ef` (2026-08-24 drone-test). No satellite/plane/responder-intel `data/` sync this day.
+
+### Still open
+- `161a860` "Ship Vyanet Viewer hub through 1.6.4: live tab, dashboard, and 3D cameras" on `cursor/vyanet-viewer-gate-home`, not on `main`.
+- No GitHub pull requests listed on this repo.
+
+### Watchouts
+Standing rules above. No `satellite.gs` deploy evidence.
+
+## 2026-08-25
+
+Reconstructed from v1 git (this VM cannot read the original OneDrive 8/25 block). If your local `log.md` already has a fuller 8/25 section, keep that block and leave this one as the git evidence.
+
+### Shipped
+- `8662883` "Identify element-review critiques by site_no instead of address." `element-review.html` BUILD **v6.8.2**. Duplicate lots were rejected as ambiguous when the review link only carried addr; links now include `site_no`. Same commit added `apps scripts/*.gs` copies to the public repo — **file copy, not an Apps Script deployment**.
+- `fb9a0f2` merge of `main`.
+
+### Still open (that day)
+- `d32bb4a` "Add gate and home shell to the Vyanet Viewer hub (1.1.1)" on `cursor/vyanet-viewer-gate-home`, not merged to `main` (later advanced to 1.6.4 on 8/26).
+
+### Watchouts
+`.gs` in git ≠ deployed. `data/*.json` is sync-owned.
