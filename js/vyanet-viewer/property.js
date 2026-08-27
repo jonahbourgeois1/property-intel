@@ -20,6 +20,22 @@ export async function fetchJson(url) {
   return await res.json();
 }
 
+// Property camera metadata. New layout is data/cameras/json/{id}.json;
+// the flat data/cameras/{id}.json path is a one-release fallback.
+export async function fetchCamerasFile(root, id) {
+  const paths = [
+    root + 'cameras/json/' + id + '.json',
+    root + 'cameras/' + id + '.json'
+  ];
+  for (let i = 0; i < paths.length; i++) {
+    try {
+      const j = await fetchJson(paths[i]);
+      if (j && Array.isArray(j.cameras) && j.cameras.length) return j;
+    } catch (e) {}
+  }
+  return null;
+}
+
 export function dataRoot() {
   const params = new URLSearchParams(window.location.search);
   const explicit = params.get('dataRoot');
@@ -113,13 +129,14 @@ export function liveAliasIds(idx, propertyId) {
 }
 
 // Does this property have cameras? Sources the gate can read without a key:
-// data/cameras/{idx.id}.json, data/cameras/{propertyId}.json (404 = none),
-// and a non-empty cameras array on ANY view record (not only the 3D view —
-// live feed is its own plugin and must work without a GLB). The gateway
-// allowlist is NOT probeable keylessly (it 401s before looking at
-// ?property=), so it cannot answer this question pre-gate. Any fetch error
-// counts as "no cameras". The hub still treats hasModel as a live proxy
-// until cameras files are published (Jones: gateway live, no cameras file).
+// data/cameras/json/{idx.id|propertyId}.json (flat data/cameras/{id}.json
+// is a fallback), and a non-empty cameras array on ANY view record (not
+// only the 3D view — live feed is its own plugin and must work without a
+// GLB). The gateway allowlist is NOT probeable keylessly (it 401s before
+// looking at ?property=), so it cannot answer this question pre-gate. Any
+// fetch error counts as "no cameras". The hub still treats hasModel as a
+// live proxy until cameras files are published (Jones: gateway live, no
+// cameras file).
 export async function detectCameras(root, idx, _spec, propertyId) {
   const jobs = [];
   const camIds = [];
@@ -130,7 +147,7 @@ export async function detectCameras(root, idx, _spec, propertyId) {
   addCam(idx && idx.id);
   addCam(propertyId);
   camIds.forEach(function (id) {
-    jobs.push(fetchJson(root + 'cameras/' + id + '.json').then(function (j) {
+    jobs.push(fetchCamerasFile(root, id).then(function (j) {
       return !!(j && Array.isArray(j.cameras) && j.cameras.length);
     }).catch(function () { return false; }));
   });

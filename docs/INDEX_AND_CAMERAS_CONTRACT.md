@@ -104,11 +104,16 @@ Promote Tracy extras **onto the plane (or drone) view the index already points a
 
 ## Cameras (chosen layout)
 
-- **Metadata (GitHub):** `data/cameras/{propertyId}.json`
-- **Served stills (CloudFront):** `https://d3fg47bqswi0rr.cloudfront.net/cameras/{propertyId}/cam-01.jpg` (stable keys, invalidate after replace)
+- **Metadata (GitHub):** `data/cameras/json/{propertyId}.json`
+- **Served stills (GitHub, until tiles ingest exists):** `data/cameras/images/{propertyId}/cam-NN.jpg`
+- **Served stills (CloudFront, later):** `https://d3fg47bqswi0rr.cloudfront.net/cameras/{propertyId}/cam-01.jpg` (stable keys, invalidate after replace)
 - **Raw technician photos (ingest only):** `s3://property-intel-ingest/cameras/{propertyId}/` — never the GitHub repo, never `property-intel-tiles` until orientation is normalized (`exif_transpose`, then Orientation=1). Headings still branch on `GPSImgDirectionRef` per photo.
 
-`data/cameras/{propertyId}.json` shape:
+Do not nest JSON under `images/`. Do not key the image folder on a view-record hash — both files and stills use the **index hub id**.
+
+Viewers fetch `data/cameras/json/{id}.json` first, then the legacy flat `data/cameras/{id}.json` (one-release fallback). 404 = no cameras file.
+
+`data/cameras/json/{propertyId}.json` shape:
 
 ```json
 {
@@ -117,7 +122,7 @@ Promote Tracy extras **onto the plane (or drone) view the index already points a
     {
       "id": "cam-01",
       "label": "Front walkway — driveway approach",
-      "photo": "https://d3fg47bqswi0rr.cloudfront.net/cameras/<propertyId>/cam-01.jpg",
+      "photo": "data/cameras/images/<propertyId>/cam-01.jpg",
       "lat": 44.0414194,
       "lng": -121.3786611,
       "heading": 241.45,
@@ -127,7 +132,7 @@ Promote Tracy extras **onto the plane (or drone) view the index already points a
 }
 ```
 
-`live` is optional per camera. Index does **not** inline this array. Presence is implied: viewer GETs `data/cameras/{propertyId}.json` and treats 404 as “no cameras.” `model-viewer.html` loads that same file (walking hub id → view ids, then any `cameras[]` still on the view record) so the Cameras tab and 3D camera pins work even when sync has stripped the array off the view JSON.
+`live` is optional per camera. Index does **not** inline this array. Presence is implied: viewer GETs `data/cameras/json/{propertyId}.json` and treats 404 as “no cameras.” `model-viewer.html` loads that same file (walking hub id → view ids, then any `cameras[]` still on the view record) so the Cameras tab and 3D camera pins work even when sync has stripped the array off the view JSON.
 
 Clicking a camera pin opens the **in-model** card (not the hub LIVE FEED tab). If that pin is associated with a CHEKT device (`live.device` on the record, or a unique name match against the gateway `/live` roster), the card starts the MJPEG feed and lists that camera’s clips from the last 72 hours. Pins without an association stay a still. Hub **LIVE FEED** remains the full wall + 7-day clips plugin.
 
@@ -140,7 +145,7 @@ Hub (`vyanet-viewer.html?property={id}`):
 1. Fetch `data/index/{id}.json`.
 2. If `views` has `drone-test` | `plane` | `drone`, enable **3D MODEL** and iframe `model-viewer.html?property={id}&view={that key}` (forwards `gw`, `chekt`, `debug`, `dataRoot`, …).
 3. If `views` has `security` | `wildfire` | `plane` | `drone` | `drone-test`, enable **SATELLITE** and iframe `viewer.html?property={id}&tab={that key}`.
-4. Enable **LIVE FEED** and iframe `live-viewer.html?property={id}&embed=1` when `detectCameras` finds a cameras file (`data/cameras/{idx.id|propertyId}.json`) or a non-empty `cameras` array on **any** view record, **or** when the property has a 3D view (`hasModel` is a live proxy until cameras files are published — Jones has gateway live with no cameras file). Live does **not** require a GLB.
+4. Enable **LIVE FEED** and iframe `live-viewer.html?property={id}&embed=1` when `detectCameras` finds a cameras file (`data/cameras/json/{idx.id|propertyId}.json`) or a non-empty `cameras` array on **any** view record, **or** when the property has a 3D view (`hasModel` is a live proxy until cameras files are published — Jones has gateway live with no cameras file). Live does **not** require a GLB.
 5. Default after the gate is the **home** shell, not a plugin (see "Hub gate + home"). `?stage=3d` / `?stage=satellite` / `?stage=live` jumps straight to that stage after the gate (`?stage=live` with no saved key lands on home and opens the passcode popup). Child pages stay mounted at full size and swap by z-index (no `display:none` / `visibility:hidden` — those freeze WebGL and Maps); home is an opaque layer *above* the mounted iframes, same rule. The live iframe does not start MJPEG until the hub posts `{type:'vyanet-stage', stage:'live'}`; leaving the stage posts `off`. The 3D iframe receives `{type:'vyanet-stage', stage:'3d'|'off'}` the same way (queued until `{type:'vyanet-ready', page:'model-viewer'}`): the canvas stays in the layout, but its render loop is paused off-stage so Home does not pay 60 fps for a covered mesh.
 6. The gateway `/live?property=` allowlist may still be keyed by an older hash; `live-viewer.html` retries aliases from the index (`id`, `views.drone-test`, `views.drone`, `views.plane`) — same walk as model-viewer.
 
@@ -168,10 +173,10 @@ Opening `vyanet-viewer.html?property={id}` never dumps a first-time visitor into
 - Flatten pin-catalog `role=`.
 - Put raw HEIC/JPEG with customer GPS on GitHub or CloudFront.
 - Default the unified viewer to `data/drone-test/` when the index has no `drone-test` pointer (that hid Jones’s plane/drone views).
-- Upload camera stills to CloudFront by hand before the ingest → normalize → tiles path exists. Tracy’s 14 JPEGs already live at `data/drone-test/cameras/{viewId}/cam-NN.jpg` (the paths the test record uses). Pages and localhost serve them. Manual tiles uploads would need JSON URL rewrites (sync-owned) and would collide with the later `cameras/{propertyId}/` keys.
+- Upload camera stills to CloudFront by hand before the ingest → normalize → tiles path exists. Tracy’s 14 JPEGs live at `data/cameras/images/{propertyId}/cam-NN.jpg` (hub id, not the drone-test view hash). Pages and localhost serve them. Manual tiles uploads would need JSON URL rewrites and would collide with the later CloudFront `cameras/{propertyId}/` keys.
 
 ## How to publish a change
 
-1. **Now (testing):** keep camera bytes in GitHub at the drone-test paths. Optionally add `views.drone-test` on Jones’s production index via the sheet so `?property=6de88883…` can select that folder. Viewer already walks index views in order `drone-test`, `plane`, `drone`, `security`, `wildfire`.
-2. **Later (automation):** Apps Script PUT `data/cameras/{propertyId}.json`; normalized stills to tiles `cameras/{propertyId}/cam-NN.jpg` + CloudFront invalidation; fold Tracy extras onto the plane/drone view; drop `views.drone-test`.
-3. Leave `data/drone-test/` in place until a property has been verified on the new paths.
+1. **Now (testing):** camera bytes and metadata both live under `data/cameras/` — JSON at `json/{propertyId}.json`, stills at `images/{propertyId}/cam-NN.jpg`. Optionally add `views.drone-test` on Jones’s production index via the sheet so `?property=6de88883…` can select that folder. Viewer already walks index views in order `drone-test`, `plane`, `drone`, `security`, `wildfire`.
+2. **Later (automation):** Apps Script PUT `data/cameras/json/{propertyId}.json`; normalized stills to tiles `cameras/{propertyId}/cam-NN.jpg` + CloudFront invalidation; fold Tracy extras onto the plane/drone view; drop `views.drone-test`.
+3. Leave `data/drone-test/` view **records** in place until a property has been verified on the new paths. Do not put camera stills back under `data/drone-test/cameras/`.

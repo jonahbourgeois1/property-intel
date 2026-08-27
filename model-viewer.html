@@ -1566,8 +1566,8 @@ function nadirPinSets(d) {
   }
   return { element: Array.isArray(n.pins) ? n.pins : [], concern: [] };
 }
-// Repo-relative stills ("data/drone-test/cameras/…/cam-01.jpg") resolve
-// against this page's URL. Absolute http(s) URLs pass through.
+// Repo-relative stills ("data/cameras/images/{propertyId}/cam-01.jpg")
+// resolve against this page's URL. Absolute http(s) URLs pass through.
 function resolveMediaUrl(src) {
   if (!src) return '';
   const s = String(src);
@@ -1575,23 +1575,35 @@ function resolveMediaUrl(src) {
   try { return new URL(s, window.location.href).href; }
   catch (e) { return s; }
 }
-// Cameras live in data/cameras/{propertyId}.json (contract). The view
-// record may still carry a cameras[] array as a fallback. Walk the same
-// alias ids the live gateway uses so a hub id, a view id, or a legacy
-// hash all find the file.
+// Cameras live in data/cameras/json/{propertyId}.json (contract).
+// data/cameras/{propertyId}.json is a one-release fallback. The view
+// record may still carry a cameras[] array as a last resort. Walk the
+// same alias ids the live gateway uses so a hub id, a view id, or a
+// legacy hash all find the file.
+async function fetchCamerasFile(id) {
+  const paths = [
+    DATA_ROOT + 'cameras/json/' + id + '.json',
+    DATA_ROOT + 'cameras/' + id + '.json'
+  ];
+  for (let i = 0; i < paths.length; i++) {
+    try {
+      const j = await fetchJson(paths[i]);
+      if (j && Array.isArray(j.cameras) && j.cameras.length) return j;
+    } catch (e) {}
+  }
+  return null;
+}
 async function attachCameras(rec) {
   const ids = await livePropertyIds();
   let cams = [];
   for (let i = 0; i < ids.length; i++) {
-    try {
-      const j = await fetchJson(DATA_ROOT + 'cameras/' + ids[i] + '.json');
-      if (j && Array.isArray(j.cameras) && j.cameras.length) {
-        cams = j.cameras;
-        dbg('Cameras file: ' + cams.length + ' (cameras/' +
-            String(ids[i]).substring(0, 12) + '\u2026)', 'ok');
-        break;
-      }
-    } catch (e) {}
+    const j = await fetchCamerasFile(ids[i]);
+    if (j) {
+      cams = j.cameras;
+      dbg('Cameras file: ' + cams.length + ' (cameras/json/' +
+          String(ids[i]).substring(0, 12) + '\u2026)', 'ok');
+      break;
+    }
   }
   if (!cams.length && Array.isArray(rec.cameras) && rec.cameras.length) {
     cams = rec.cameras;
