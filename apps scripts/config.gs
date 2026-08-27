@@ -131,8 +131,10 @@ const V2_ELIG_BATCH       = 5;  // v2 taxlot resolution batch (tile-opacity chec
 const PLANE_DESC_BATCH    = 4;  // description rows per manual run (each ~60-90s; stays under the 6-min ceiling)
 const PIN_CATALOG_URL  = 'https://responder-intel.vyanet.com/data/pin-catalog/pins-catalog.json';
 const PLANE_MAX_PINS   = 10; // hard cap per property (PLANE + drone-test)
-const SAT_MAX_PINS     = 12; // satellite element pins — matches the viewer's and
-                             // element-critique's 12 slots (PIN_HARD_LIMIT / CRITIQUE_PIN_SLOTS)
+const SAT_MAX_PINS     = 12; // standard satellite element pins
+const SAT_MAX_PINS_SCHOOL = 20; // school Pass 1 / review / rerun — campuses
+                             // have more physical elements than a house.
+                             // CRITIQUE_PIN_SLOTS must be >= this number.
 
 // v5.24: the merged catalog (pins-catalog.json) tags each pin with role
 // (primary|concern), account_type, and analysis (shared|fr|wf). fetchPinCatalog_
@@ -272,7 +274,25 @@ function getCredentials() {
 
 // ── Account type helpers ─────────────────────────────────────────────────────
 
+// Pass 1 school/standard split reads the RAW sheet cell (column B). Do not
+// fold School into this helper's return value — Pass 2 concern filters and
+// the published index only understand residential | commercial. School rows
+// publish and run Pass 2 as commercial (schools run as commercial accounts;
+// school-list pins are catalog-tagged commercial). The Pass 1 emit list is
+// chosen by isSchoolAccountType_, not by this function.
+function isSchoolAccountType_(val) {
+  return String(val || '').trim().toLowerCase() === 'school';
+}
+
+// The pin cap for this row's Pass 1 kind. Standard satellite stays 12;
+// school rows are 20. Plane / drone-test keep PLANE_MAX_PINS and do not
+// call this.
+function satMaxPins_(rawAccountType) {
+  return isSchoolAccountType_(rawAccountType) ? SAT_MAX_PINS_SCHOOL : SAT_MAX_PINS;
+}
+
 function normalizeAccountType(val) {
   const v = String(val || '').trim().toLowerCase();
-  return v.startsWith('comm') ? 'commercial' : 'residential';
+  if (v === 'school' || v.startsWith('comm')) return 'commercial';
+  return 'residential';
 }

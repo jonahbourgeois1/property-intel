@@ -145,7 +145,7 @@ Catalog rule:
 
 v1 repo:
 
-- `element-review.html` — pin QA on a Google Maps basemap (v6.8.1); posts critiques to
+- `element-review.html` — pin QA on a Google Maps basemap (v6.8.5); posts critiques to
   the Apps Script web app; side labels built but disabled (`ER_SIDES_DEFAULT=false`)
 - `nadir-geo.js` — v1.3.0 dependency-free Mercator geometry; must sit beside
   element-review; unit suite `test-nadir-geo.mjs`
@@ -246,8 +246,8 @@ In flight:
 
 - MOCKINGBIRD row-277 redo verification (first check after any satellite.gs deploy)
 - Reviewer revisit lists: Ross 88 rows / Eleanor 27 (mostly Parking/Entry/Driveway/
-  Sidewalk adds); known gaps: "church" has no catalog match; row 533 sits at the
-  12-pin ceiling
+  Sidewalk adds); known gaps: "church" has no catalog match; row 533 sat at the
+  12-pin ceiling (schools are 20 as of 2026-08-27)
 - Photo-intake transport: Zoho Creator probe 2 ready to run; fallback = own page +
   S3 presigned POST (`docs/PHOTO_INTAKE_DECISION.md`)
 - Eugene capture: Lane County GeoJSON downloaded (407 MB, untracked — **gitignore it
@@ -259,8 +259,8 @@ In flight:
   mismatch + clamp relocation)
 - Adopt the 08-19 CONTEXT draft; commit the dirty v2 tree; push
 
-Ranked open bugs: (1) critique add-loss guard missing; (2) 12-pin ceiling +
-prompt/rollback contradiction on full rows; (3) `?route=ping` deployed-vocab check
+Ranked open bugs: (1) critique add-loss guard missing; (2) standard 12-pin ceiling +
+prompt/rollback contradiction on full rows (schools are 20 as of 2026-08-27); (3) `?route=ping` deployed-vocab check
 wanted; (4) plane.gs reads the Satellite tab via stale COL_* (latent off-by-one);
 (5) menu.gs Drone-Test items name nonexistent functions; (6) responder-intel.html
 flat `pixelToLatLng` (0.488% N-S stretch — migrate to nadir-geo). Also:

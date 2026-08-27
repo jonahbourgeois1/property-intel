@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Live Feed</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; background: #0a0c0f; overflow: hidden;
+    font-family: monospace; color: #8a93a2; }
+  #live-mode {
+    display: flex; position: fixed; inset: 0; background: #0a0c0f;
+  }
+  #lm-main {
+    flex: 1; display: grid; gap: 10px; padding: 16px;
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 0;
+  }
+  #lm-side {
+    width: 320px; flex-shrink: 0; background: #12161b;
+    border-left: 1px solid rgba(255,255,255,0.10);
+    display: flex; flex-direction: column; overflow: hidden;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  .dp-head {
+    padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0;
+  }
+  .dp-title { font-size: 13px; font-weight: 600; color: #f0f2f5; }
+  .dp-sub { font-size: 10.5px; color: #555f6e; font-family: monospace; margin-top: 3px; }
+  #lm-clips { overflow-y: auto; flex: 1; padding: 0 14px 14px; scrollbar-width: thin; }
+  .lm-clip {
+    margin: 12px 0; border: 1px solid rgba(255,255,255,0.12); border-radius: 9px;
+    overflow: hidden; background: #0b0e12;
+  }
+  .lm-clip video {
+    width: 100%; display: block; aspect-ratio: 16 / 9; background: #000;
+  }
+  .lm-clip-meta { padding: 8px 10px 9px; }
+  .lm-clip-name { font-size: 12px; font-weight: 600; color: #f0f2f5; line-height: 1.35; }
+  .lm-clip-line {
+    font-family: monospace; font-size: 10px; color: #8a93a2; margin-top: 3px;
+    line-height: 1.5; overflow-wrap: anywhere;
+  }
+  .lm-older {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #8a93a2; margin: 16px 2px 6px;
+  }
+  .lm-clip.lm-lite {
+    display: flex; align-items: center; gap: 9px; padding: 8px 11px;
+    margin: 6px 0; cursor: pointer;
+  }
+  .lm-clip.lm-lite:hover { background: #171c23; border-color: rgba(255,255,255,0.22); }
+  .lm-lite-play { color: #ff5252; font-size: 9px; flex-shrink: 0; }
+  .lm-lite-name {
+    font-size: 11.5px; font-weight: 600; color: #f0f2f5; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .lm-lite-time {
+    font-family: monospace; font-size: 10px; color: #8a93a2;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  .quad-cell {
+    position: relative; background: #000; border-radius: 10px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.14); min-height: 0;
+  }
+  .quad-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .quad-name {
+    position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
+    background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  .quad-state {
+    position: absolute; right: 8px; top: 8px; padding: 2px 7px; border-radius: 4px;
+    font-family: monospace; font-size: 9px; font-weight: 700; letter-spacing: 0.07em;
+    color: #ef4444; border: 1px solid #ef4444; background: rgba(239,68,68,0.12);
+  }
+  .quad-state.bad { color: #f59e0b; border-color: rgba(245,158,11,0.6); background: none; }
+  .rd-note { font-size: 10.5px; color: #555f6e; font-family: monospace;
+    margin: auto; line-height: 1.55; padding: 16px; text-align: center; }
+  #pass-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1100;
+    background: rgba(10,12,15,0.72);
+    align-items: center; justify-content: center;
+  }
+  #pass-overlay.open { display: flex; }
+  #pass-card {
+    width: 340px; max-width: calc(100vw - 32px);
+    background: #12161b; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; padding: 18px 18px 16px;
+  }
+  #pass-card .pass-title { font-size: 14px; font-weight: 600; color: #f0f2f5; }
+  #pass-card .pass-sub {
+    font-family: monospace; font-size: 11px; color: #8a93a2;
+    line-height: 1.5; margin: 8px 0 14px;
+  }
+  #pass-err {
+    display: none; font-family: monospace; font-size: 11px; color: #ef4444;
+    margin: -6px 0 12px;
+  }
+  #pass-input {
+    width: 100%; background: #0b0e12;
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 6px;
+    color: #f0f2f5; font-family: monospace; font-size: 16px;
+    padding: 9px 10px; outline: none;
+  }
+  #pass-input:focus { border-color: #ef4444; }
+  .pass-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  #pass-cancel, #pass-go {
+    font-family: monospace; font-size: 11px; padding: 7px 12px;
+    border-radius: 6px; cursor: pointer;
+  }
+  #pass-cancel { background: none; border: 1px solid #2a3040; color: #8a93a2; }
+  #pass-go {
+    background: rgba(239,68,68,0.18); border: 1px solid #ef4444; color: #ef4444;
+    font-weight: 700;
+  }
+  #debug-panel {
+    display: none; position: fixed; bottom: 12px; left: 12px; width: 340px;
+    max-height: 180px; background: rgba(10,12,15,0.97);
+    border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; z-index: 999;
+    font-size: 11px; overflow: hidden; flex-direction: column;
+  }
+  #debug-panel.on { display: flex; }
+  #debug-log { overflow-y: auto; padding: 6px 10px; max-height: 160px; }
+  .debug-line { padding: 2px 0; line-height: 1.5; }
+  .debug-line.ok { color: #22c55e; }
+  .debug-line.warn { color: #f59e0b; }
+  .debug-line.error { color: #ef4444; }
+  .debug-line.info { color: #8a93a2; }
+  .debug-time { color: #555f6e; margin-right: 6px; }
+  @media (max-width: 800px) {
+    #live-mode { flex-direction: column; }
+    #lm-side { width: 100%; height: 40%; border-left: none;
+               border-top: 1px solid rgba(255,255,255,0.10); }
+  }
+</style>
+</head>
+<body>
+<div id="live-mode">
+  <div id="lm-main"><div class="rd-note">Waiting to start live feed&hellip;</div></div>
+  <div id="lm-side">
+    <div class="dp-head">
+      <div class="dp-title">Recent clips</div>
+      <div class="dp-sub" id="lm-sub">last 7 days</div>
+    </div>
+    <div id="lm-clips"></div>
+  </div>
+</div>
+<div id="pass-overlay" onclick="passOverlayClick(event)">
+  <form id="pass-card" onsubmit="submitViewerPasscode(event)">
+    <div class="pass-title">Live feed</div>
+    <div class="pass-sub">Enter the viewer passcode to open cameras and clips. It stays in this tab only.</div>
+    <div id="pass-err"></div>
+    <input id="pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
+    <div class="pass-actions">
+      <button type="button" id="pass-cancel" onclick="cancelViewerPasscode()">Cancel</button>
+      <button type="submit" id="pass-go">Open live</button>
+    </div>
+  </form>
+</div>
+<div id="debug-panel"><div id="debug-log"></div></div>
+<script type="module">
+import { fetchJson, dataRoot, liveAliasIds, gwConfig } from './js/vyanet-viewer/property.js?v=1.4.0';
+
+const BUILD = '1.0.0';
+const params = new URLSearchParams(window.location.search);
+const propertyId = (params.get('property') || '').trim();
+const embedded = params.get('embed') === '1';
+const debugOn = params.get('debug') === '1';
+const root = dataRoot();
+const gw = gwConfig();
+const LM_PRELOAD = 10;
+
+if (debugOn) document.getElementById('debug-panel').classList.add('on');
+
+function dbg(msg, type) {
+  const log = document.getElementById('debug-log');
+  if (!log) return;
+  const now = new Date();
+  const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(function (n) { return String(n).padStart(2, '0'); }).join(':');
+  const line = document.createElement('div');
+  line.className = 'debug-line ' + (type || 'info');
+  line.innerHTML = '<span class="debug-time">' + t + '</span>' + String(msg);
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+function wxTime(iso) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return '';
+  return t.toLocaleString([], { month: 'short', day: 'numeric',
+                                hour: 'numeric', minute: '2-digit' });
+}
+
+let idxCache = null;
+async function loadIndex() {
+  if (idxCache) return idxCache;
+  if (!propertyId) return null;
+  idxCache = await fetchJson(root + 'index/' + propertyId + '.json');
+  return idxCache;
+}
+
+let gwPassWait = null, gwPassResolve = null;
+function ssKey() {
+  try { return (sessionStorage.getItem('vyViewerKey') || '').trim(); } catch (e) { return ''; }
+}
+function showViewerPasscode(errText) {
+  return new Promise(function (resolve) {
+    gwPassResolve = resolve;
+    const ov = document.getElementById('pass-overlay');
+    const err = document.getElementById('pass-err');
+    const inp = document.getElementById('pass-input');
+    if (err) {
+      err.textContent = errText || '';
+      err.style.display = errText ? 'block' : 'none';
+    }
+    if (inp) inp.value = '';
+    if (ov) ov.classList.add('open');
+    setTimeout(function () { if (inp) inp.focus(); }, 40);
+  });
+}
+function finishViewerPasscode(value) {
+  const ov = document.getElementById('pass-overlay');
+  if (ov) ov.classList.remove('open');
+  const r = gwPassResolve;
+  gwPassResolve = null;
+  if (r) r(value || '');
+}
+window.submitViewerPasscode = function (ev) {
+  if (ev) ev.preventDefault();
+  const inp = document.getElementById('pass-input');
+  const k = (inp && inp.value ? inp.value : '').trim();
+  if (!k) {
+    const err = document.getElementById('pass-err');
+    if (err) { err.textContent = 'Enter a passcode'; err.style.display = 'block'; }
+    return;
+  }
+  try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
+  finishViewerPasscode(k);
+};
+window.cancelViewerPasscode = function () { finishViewerPasscode(''); };
+window.passOverlayClick = function (e) {
+  if (e.target === e.currentTarget) window.cancelViewerPasscode();
+};
+
+async function gwPasscode(force, interactive) {
+  let k = ssKey();
+  if (k && !force) return k;
+  if (!interactive) return '';
+  if (gwPassWait) return gwPassWait;
+  gwPassWait = showViewerPasscode(force ? 'Passcode not accepted. Try again.' : '');
+  const v = await gwPassWait;
+  gwPassWait = null;
+  return (v || '').trim();
+}
+
+async function gwGet(path, interactive) {
+  if (gw.off) throw new Error('gateway disabled by &gw=0');
+  const ask = interactive !== false;
+  let k = await gwPasscode(false, ask);
+  if (!k) throw new Error('no passcode entered');
+  let r = await fetch(gw.url + path, { headers: { 'x-viewer-key': k } });
+  if (r.status === 401) {
+    try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+    k = await gwPasscode(true, ask);
+    if (!k) throw new Error('no passcode entered');
+    r = await fetch(gw.url + path, { headers: { 'x-viewer-key': k } });
+  }
+  if (!r.ok) throw new Error('gateway HTTP ' + r.status);
+  return await r.json();
+}
+
+async function gwGetForProperty(makePath, interactive) {
+  const idx = await loadIndex();
+  const ids = liveAliasIds(idx, propertyId);
+  let last = null;
+  for (let i = 0; i < ids.length; i++) {
+    try {
+      const j = await gwGet(makePath(ids[i]), interactive);
+      if (ids[i] !== propertyId) {
+        dbg('Gateway mapped via alias ' + String(ids[i]).substring(0, 12) + '...', 'ok');
+      }
+      return j;
+    } catch (e) {
+      last = e;
+      const msg = (e && e.message) ? e.message : String(e);
+      if (!/gateway HTTP 404/.test(msg)) throw e;
+    }
+  }
+  throw last || new Error('gateway HTTP 404');
+}
+
+let gwLiveMap = null, gwLiveAt = 0, gwClipsCache = null, gwClipsAt = 0;
+async function gwEnsureLive(interactive) {
+  if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
+  const j = await gwGetForProperty(function (id) {
+    return '/live?property=' + encodeURIComponent(id);
+  }, interactive !== false);
+  const m = {};
+  (j.cameras || []).forEach(function (c) {
+    if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
+  });
+  gwLiveMap = m; gwLiveAt = Date.now();
+  dbg('Gateway: ' + Object.keys(m).length + ' live camera(s)', 'ok');
+  return m;
+}
+async function ensureClips(force, interactive) {
+  if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
+    return gwClipsCache;
+  }
+  const j = await gwGetForProperty(function (id) {
+    return '/clips?property=' + encodeURIComponent(id) + '&days=7';
+  }, interactive !== false);
+  gwClipsCache = j.events || [];
+  gwClipsAt = Date.now();
+  return gwClipsCache;
+}
+
+function lmCloseStreams() {
+  document.querySelectorAll('#lm-main img').forEach(function (img) {
+    img.onload = null; img.onerror = null; img.src = '';
+  });
+  document.getElementById('lm-main').innerHTML =
+    '<div class="rd-note">Live feed paused</div>';
+  document.querySelectorAll('#lm-clips video').forEach(function (v) {
+    try { v.pause(); } catch (e) {}
+    v.removeAttribute('src');
+    try { v.load(); } catch (e2) {}
+  });
+}
+
+let lmClipList = [];
+function lmClipCard(e, i) {
+  return '<div class="lm-clip" id="lm-clip-' + i + '">' +
+    (e.mp4 ? '<video controls playsinline preload="metadata"' +
+      (e.thumbnail ? ' poster="' + escHtml(e.thumbnail) + '"' : '') +
+      ' src="' + escHtml(e.mp4) + '"></video>' : '') +
+    '<div class="lm-clip-meta">' +
+      '<div class="lm-clip-name">' + escHtml(e.device_name || 'Camera') + '</div>' +
+      '<div class="lm-clip-line">' + escHtml(wxTime(e.event_time)) + '</div>' +
+    '</div></div>';
+}
+window.expandLmClip = function (i) {
+  const e = lmClipList[i];
+  const row = document.getElementById('lm-clip-' + i);
+  if (!e || !e.mp4 || !row) return;
+  row.outerHTML = lmClipCard(e, i);
+  const card = document.getElementById('lm-clip-' + i);
+  const v = card ? card.querySelector('video') : null;
+  if (v) v.play().catch(function () {});
+};
+async function renderLmClips() {
+  const div = document.getElementById('lm-clips');
+  div.innerHTML = '<div class="rd-note">loading clips&hellip;</div>';
+  try {
+    lmClipList = await ensureClips(true);
+    const head = lmClipList.slice(0, LM_PRELOAD);
+    const tail = lmClipList.slice(LM_PRELOAD);
+    div.innerHTML = lmClipList.length
+      ? head.map(function (e, i) { return lmClipCard(e, i); }).join('') +
+        (tail.length
+          ? '<div class="lm-older">Older clips (' + tail.length + ')</div>' +
+            tail.map(function (e, j) {
+              const i = j + LM_PRELOAD;
+              return '<div class="lm-clip lm-lite" id="lm-clip-' + i + '"' +
+                ' onclick="expandLmClip(' + i + ')">' +
+                '<span class="lm-lite-play">&#9654;</span>' +
+                '<span class="lm-lite-name">' + escHtml(e.device_name || 'Camera') + '</span>' +
+                '<span class="lm-lite-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
+                '</div>';
+            }).join('')
+          : '')
+      : '<div class="rd-note">no video events in the last 7 days</div>';
+    if (!div.dataset.playHook) {
+      div.dataset.playHook = '1';
+      div.addEventListener('play', function (ev) {
+        div.querySelectorAll('video').forEach(function (v) {
+          if (v !== ev.target) v.pause();
+        });
+      }, true);
+    }
+  } catch (e) {
+    div.innerHTML = '<div class="rd-note">Clips unavailable - ' +
+      escHtml(e && e.message) + '</div>';
+    dbg('Clips failed: ' + (e && e.message), 'warn');
+  }
+}
+
+let liveOpen = false;
+let wantLive = !embedded;
+async function startLivePage() {
+  if (liveOpen) return;
+  liveOpen = true;
+  const main = document.getElementById('lm-main');
+  main.innerHTML = '<div class="rd-note">connecting&hellip;</div>';
+  if (!propertyId) {
+    main.innerHTML = '<div class="rd-note">Pass ?property=&lt;id&gt;</div>';
+    return;
+  }
+  let m;
+  try { m = await gwEnsureLive(); }
+  catch (e) {
+    main.innerHTML = '<div class="rd-note">Live cameras unavailable - ' +
+                     escHtml(e && e.message) + '</div>';
+    dbg('Gateway failed: ' + (e && e.message), 'warn');
+    renderLmClips();
+    return;
+  }
+  const list = Object.keys(m).map(function (k) { return m[k]; })
+    .filter(function (c) { return c && c.mjpeg_url; });
+  if (!list.length) {
+    main.innerHTML = '<div class="rd-note">no cameras online</div>';
+    renderLmClips();
+    return;
+  }
+  main.style.gridTemplateColumns = list.length <= 2
+    ? '1fr '.repeat(list.length).trim() : '1fr 1fr';
+  main.style.gridTemplateRows = list.length <= 2 ? '1fr' : '1fr 1fr';
+  main.innerHTML = list.map(function (c, i) {
+    return '<div class="quad-cell">' +
+      '<img id="lm-img-' + i + '" alt="">' +
+      '<span class="quad-name">' + escHtml(c.name || c.mac) + '</span>' +
+      '<span class="quad-state" id="lm-state-' + i + '">connecting&hellip;</span></div>';
+  }).join('');
+  list.forEach(function (c, i) {
+    const img = document.getElementById('lm-img-' + i);
+    const st = document.getElementById('lm-state-' + i);
+    let done = false;
+    img.onload = function () {
+      done = true;
+      if (st) { st.textContent = 'LIVE'; st.classList.remove('bad'); }
+    };
+    img.onerror = function () {
+      done = true;
+      if (st) { st.textContent = 'no stream'; st.classList.add('bad'); }
+    };
+    setTimeout(function () {
+      if (!done && st) { st.textContent = 'no stream'; st.classList.add('bad'); }
+    }, 12000);
+    img.src = c.mjpeg_url;
+  });
+  dbg('Live: ' + list.length + ' streams', 'ok');
+  renderLmClips();
+}
+function stopLivePage() {
+  if (!liveOpen) return;
+  liveOpen = false;
+  lmCloseStreams();
+}
+
+window.addEventListener('message', function (e) {
+  if (e.origin !== window.location.origin) return;
+  if (!e.data || e.data.type !== 'vyanet-stage') return;
+  if (e.data.stage === 'live') {
+    wantLive = true;
+    startLivePage();
+  } else {
+    wantLive = false;
+    stopLivePage();
+  }
+});
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) stopLivePage();
+  else if (wantLive) startLivePage();
+});
+
+dbg('live-viewer ' + BUILD + (embedded ? ' embed' : ' standalone'), 'info');
+if (!embedded) startLivePage();
+if (embedded && window.parent !== window) {
+  try {
+    window.parent.postMessage({ type: 'vyanet-ready', page: 'live-viewer' },
+      window.location.origin);
+  } catch (e) {}
+}
+</script>
+</body>
+</html>

@@ -10,11 +10,11 @@ Single-file pages served by GitHub Pages at responder-intel.vyanet.com. No build
 
 ## Versioning
 
-Each viewer carries a `BUILD`/`VERSION` const near the top (element-review v6.8.1, viewer v2.9.0, responder-intel v2.5.1, hoa-viewer v2.3.2, plane-viewer v1.0.0, plane-test v0.2.0, nadir-geo 1.3.0; model-viewer is versioned via CHANGELOG/design doc, not in-file). Bump on every ship; element-review shows a build chip and stamps `version` into the critique payload. The critique payload is a compatibility contract: 19 keys, byte-identical across substrates except `substrate` — extend, never mutate or remove.
+Each viewer carries a `BUILD`/`VERSION` const near the top (element-review v6.8.5, viewer v2.9.0, responder-intel v2.5.1, hoa-viewer v2.3.2, plane-viewer v1.0.0, plane-test v0.2.0, nadir-geo 1.3.0; model-viewer is versioned via CHANGELOG/design doc, not in-file). Bump on every ship; element-review shows a build chip and stamps `version` into the critique payload. The critique payload is a compatibility contract: 19 keys, byte-identical across substrates except `substrate` — extend, never mutate or remove.
 
 ## Query param contracts (do not break; additions are fine)
 
-- **element-review.html**: `site, site_no, addr, type, nadir (URL-ENCODED Static-Maps URL — georeference is scraped from its center/zoom), pins, catalog, key, round, rationale, route, view, map (0=flat fallback), sides (1=A/B/C/D labels, default off), margin (placement margin m, default 30), parcels, debug` + `center/zoom` override. `qp()` is a regex that stops at the first `&` — nested URLs MUST be encoded or `zoom`/`size` leak as top-level params.
+- **element-review.html**: `site, site_no, addr, type, kind (school raises pin cap to 20), nadir (URL-ENCODED Static-Maps URL — georeference is scraped from its center/zoom), pins, catalog, key, round, rationale, route, view, map (0=flat fallback), sides (1=A/B/C/D labels, default off), margin (placement margin m, default 60), parcels, debug` + `center/zoom` override. `qp()` is a regex that stops at the first `&` — nested URLs MUST be encoded or `zoom`/`size` leak as top-level params.
 - **model-viewer.html**: `property, view, model, dataRoot, alpha, azimuth, polar, ent_x, ent_y, autocapture (headless — v1-Pages usage SUPERSEDED), tab, debug, proxy` + live layer: `chekt (JWT fallback mode), chektdev, chektch, livems, gw (0 disables gateway)`.
 - **viewer.html**: `property, mode, tab`. Record resolution everywhere: `?property=<hash>` → `data/index/{hash}.json` → `views` map → `data/{view}/{viewId}.json`; index 404 falls through to `data/drone-test/{id}.json`.
 - Live-layer precedence (locked): explicit `&chektdev/&chektch` → token's own sub/channel → record's `live.device`.
