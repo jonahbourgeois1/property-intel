@@ -127,13 +127,13 @@ Viewers fetch `data/cameras/json/{id}.json` first, then the flat `data/cameras/{
       "lat": 44.0414194,
       "lng": -121.3786611,
       "heading": 241.45,
-      "live": { "device": "E8ABFAAC68C9", "channel": 0 }
+      "live": { "device": "E8ABFAAC68C9", "channel": 0, "name": "FRONT DOOR" }
     }
   ]
 }
 ```
 
-`live` is optional per camera. Index does **not** inline this array. Presence is implied: viewer GETs `data/cameras/json/{propertyId}.json` and treats 404 as “no cameras.” `model-viewer.html` loads that same file (walking hub id → view ids → documented sibling hubs, then any `cameras[]` still on the view record) so the Cameras tab and 3D camera pins work even when sync has stripped the array off the view JSON.
+`live` is optional per camera. `live.device` is the CHEKT MAC. `live.name` is the CHEKT roster name when the technician still label does not unique-match (Eugene: "Britt's Office Cam View" → `SVC MGR OFFICE`). `joinLiveToPins` copies the MAC from `/live` when the name is unique. Index does **not** inline this array. Presence is implied: viewer GETs `data/cameras/json/{propertyId}.json` and treats 404 as “no cameras.” `model-viewer.html` loads that same file (walking hub id → view ids → documented sibling hubs, then any `cameras[]` still on the view record) so the Cameras tab and 3D camera pins work even when sync has stripped the array off the view JSON.
 
 **CHEKT live (gateway, 2026-08-27):** `GET /live` and `/clips` resolve the CHEKT site from the **opened property**, not a fixed Jones pair. Passcode is the gate. `PROPERTY_MAP` is an optional override for collisions (Jones). Otherwise the gateway caches CHEKT `/sites` and uniquely matches `site_no` → `account_reference_id`, then index **address**, then **name**. No unique hit → 404. Viewers send `address`/`name` from `data/index/{id}.json` (`gwLiveQuery`). The dealer key never leaves AWS. Do not put stream URLs or the dealer key in the public repo.
 

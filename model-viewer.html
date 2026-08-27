@@ -733,7 +733,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery } from './js/vyanet-viewer/property.js?v=1.7.2';
+import { liveAliasIds, gwLiveQuery } from './js/vyanet-viewer/property.js?v=1.7.3';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
@@ -1767,7 +1767,7 @@ function initDirections(d) {
   pinSets    = d._frPinSets || nadirPinSets(d);
   camBounds  = boundsOf(d);
   camList    = (Array.isArray(d.cameras) ? d.cameras : [])
-                 .filter(function (c) { return !!camLocal(c); });
+                 .filter(function (c) { return !!camLocal(c) || !!c.photo; });
   const nPins = pinSets.element.length + pinSets.concern.length;
   if (!dirList.length && !nPins && !camList.length) { dbg('Record has no pins, cameras or directions', 'warn'); return; }
   if (camList.length) dbg('Cameras in record: ' + camList.length + ' placeable', 'ok');
@@ -2213,25 +2213,31 @@ window.toggleCameras3D = function () {
   if (dirBusy) { dbg('Busy placing another layer — try again in a moment', 'warn'); return; }
   if (camerasShown()) { clearCameras3D(); dbg('Cameras hidden', 'info'); return; }
   if (!modelRoot || !camList.length) return;
-  const pts = camList.map(camLocal);
-  if (!pts.length) { dbg('No camera has usable coordinates', 'warn'); return; }
+  const placeable = [];
+  camList.forEach(function (cam, i) {
+    const pt = camLocal(cam);
+    if (pt) placeable.push({ cam: cam, i: i, pt: pt });
+  });
+  if (!placeable.length) { dbg('No camera has usable coordinates', 'warn'); return; }
+  const pts = placeable.map(function (x) { return x.pt; });
   const prog = document.getElementById('cam-prog');
   raycastGround(pts, prog, function (zs) {
     fillGaps(zs);
     const lift = liftBy(), mark = markerSize();
     camLayer = new THREE.Group();
-    camList.forEach(function (cam, i) {
-      const wedge = coverageWedge(cam, zs[i], lift);
+    placeable.forEach(function (x, j) {
+      const cam = x.cam;
+      const wedge = coverageWedge(cam, zs[j], lift);
       if (wedge) {
-        wedge.position.set(pts[i].x, pts[i].y, zs[i] + lift * 0.6);
+        wedge.position.set(pts[j].x, pts[j].y, zs[j] + lift * 0.6);
         camLayer.add(wedge);
       }
-      const sp = cameraSprite(String(i + 1), mark);
-      sp.position.set(pts[i].x, pts[i].y, zs[i] + lift + mark * 0.5);
-      sp.name = camName(cam, i);
+      const sp = cameraSprite(String(x.i + 1), mark);
+      sp.position.set(pts[j].x, pts[j].y, zs[j] + lift + mark * 0.5);
+      sp.name = camName(cam, x.i);
       sp.userData.camera = cam;
-      sp.userData.groundZ = zs[i];
-      decorateCamSprite(sp, cam, i);
+      sp.userData.groundZ = zs[j];
+      decorateCamSprite(sp, cam, x.i);
       registerLabelTarget(sp);
       camLayer.add(sp);
     });
@@ -2241,7 +2247,7 @@ window.toggleCameras3D = function () {
     const c = document.getElementById('cam-card');
     if (b) { b.classList.add('on'); b.textContent = 'Hide cameras from 3D'; }
     if (c) c.classList.add('on');
-    dbg('Cameras placed: ' + camList.length, 'ok');
+    dbg('Cameras placed: ' + placeable.length, 'ok');
     // If the prefetched clips landed before the sprites existed, this is the
     // moment their amber dots catch up.
     refreshCamIndicators();
@@ -2669,7 +2675,8 @@ function joinLiveToPins() {
   let n = 0;
   camList.forEach(function (cam) {
     if (cam.live && cam.live.device) return;
-    const keys = [normCamKey(cam.label), normCamKey(cam.id)].filter(Boolean);
+    const keys = [normCamKey(cam.label), normCamKey(cam.id),
+                  normCamKey(cam.live && cam.live.name)].filter(Boolean);
     if (!keys.length) return;
     const hits = roster.filter(function (g) {
       const mac = String(g.mac || '').toUpperCase();

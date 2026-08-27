@@ -10,7 +10,7 @@ export const MODEL_VIEWS = ['drone-test', 'plane', 'drone'];
 export const SAT_VIEWS = ['security', 'wildfire', 'plane', 'drone', 'drone-test'];
 export const ROLES = ['customer', 'tech', 'responder'];
 // Bump with the hub HTML BUILD so child iframes and this module cache-bust together.
-export const HUB_BUILD = '1.7.2';
+export const HUB_BUILD = '1.7.3';
 
 // Same default as model-viewer.html; ?gw= overrides, ?gw=0 disables.
 export const GW_DEFAULT = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
