@@ -8,54 +8,77 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #111318; overflow: hidden;
     font-family: monospace; color: #8a93a2; }
-  :root { --frame: 1100px; --frame-pad: 16px; }
+  :root { --frame: 1100px; --frame-pad: 16px; --bar-h: 64px; --pv-bar-h: 56px; }
   /* Bar background is full-bleed; its contents share the same max-width
-     column as home so HOME / 3D / SATELLITE / LIVE never drift to the far edge. */
+     column as home so HOME / PRIVATE / COMMUNITY / LIVE never drift to the far edge. */
   #bar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 40;
-    height: 48px; display: flex; justify-content: center;
+    height: var(--bar-h); display: flex; justify-content: center;
     background: #0b0e12;
     border-bottom: 1px solid rgba(255,255,255,0.10);
   }
   .bar-inner {
-    width: 100%; max-width: var(--frame); height: 48px;
+    width: 100%; max-width: var(--frame);
     display: flex; align-items: center; gap: 8px; min-width: 0;
     padding: 0 var(--frame-pad);
     padding-left: calc(var(--frame-pad) + env(safe-area-inset-left));
     padding-right: calc(var(--frame-pad) + env(safe-area-inset-right));
   }
-  #bar .name { color: #f0f2f5; font-size: 12px; font-weight: 600;
+  #bar .bar-inner { height: var(--bar-h); }
+  #bar .name { color: #f0f2f5; font-size: 15px; font-weight: 600;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #bar .addr { font-size: 10px; color: #555f6e; flex: 1; min-width: 0;
+  #bar .addr { font-size: 12px; color: #555f6e; flex: 1; min-width: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #bar .build { font-size: 9px; color: #555f6e; letter-spacing: 0.04em; }
-  #bar button {
-    font-family: monospace; font-size: 10px; letter-spacing: 0.06em;
-    padding: 9px 10px; border-radius: 6px; cursor: pointer;
+  #bar .build { font-size: 10px; color: #555f6e; letter-spacing: 0.04em; }
+  #bar button, #private-bar button {
+    font-family: monospace; font-size: 12px; letter-spacing: 0.06em;
+    padding: 11px 14px; border-radius: 8px; cursor: pointer;
     background: rgba(0,0,0,0.35); color: #8a93a2;
     border: 1px solid #2a3040; flex-shrink: 0;
   }
-  #bar button.on { color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16); }
-  #bar button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #bar button.on, #private-bar button.on {
+    color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16);
+  }
+  #bar button:disabled, #private-bar button:disabled { opacity: 0.35; cursor: not-allowed; }
   #bar button#btn-live { border-color: rgba(239,68,68,0.45); color: #c45c5c; }
   #bar button#btn-live.on { color: #ef4444; border-color: #ef4444; background: rgba(239,68,68,0.16); }
   #bar button#btn-live:disabled { border-color: #2a3040; color: #8a93a2; }
   @media (max-width: 560px) {
     #bar .addr, #bar .build { display: none; }
     #bar .name { flex: 1; min-width: 0; }
-    #bar button { padding: 9px 7px; font-size: 9px; }
+    #bar button, #private-bar button { padding: 10px 9px; font-size: 11px; }
     .bar-full { display: none; }
   }
-  #stage { position: fixed; top: 48px; left: 0; right: 0; bottom: 0; }
+  #private-bar {
+    display: none; position: fixed; top: var(--bar-h); left: 0; right: 0; z-index: 41;
+    height: var(--pv-bar-h); justify-content: center;
+    background: #0b0e12; border-bottom: 1px solid rgba(255,255,255,0.10);
+  }
+  body.private-open #private-bar { display: flex; }
+  body.private-open #stage { top: calc(var(--bar-h) + var(--pv-bar-h)); }
+  #private-bar .bar-inner { height: var(--pv-bar-h); gap: 8px; }
+  #stage { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; }
   iframe {
     position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
     background: #111318; z-index: 1; pointer-events: none;
   }
   iframe.on { z-index: 2; pointer-events: auto; }
-  /* Home is an opaque layer ABOVE the mounted iframes — never display:none
-     on the iframes themselves (that freezes WebGL/Maps ~5s). */
+  /* Public splits the hoa iframe so the dashboard panel does not cover the
+     map. The iframe stays in #stage (never display:none — Maps freeze). */
+  /* Iframes are replaced elements: width/height:auto collapses to the
+     300x150 intrinsic default. Size the Public pane with percentages so
+     panTo centers in the visible map, not under the dashboard. */
+  iframe.pub-split { }
+  @media (max-width: 799px) {
+    iframe.pub-split { height: 50%; bottom: auto; width: 100%; }
+  }
+  @media (min-width: 800px) {
+    iframe.pub-split { width: 58%; right: auto; height: 100%; }
+  }
+  /* Home / Public cards / Ahart are opaque layers ABOVE the mounted iframes
+     — never display:none on the iframes themselves (that freezes WebGL/Maps ~5s). */
   #home {
-    display: none; position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
+    display: none; position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0;
     z-index: 30; background: #111318; overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -99,34 +122,38 @@
   .hm-name { font-size: 22px; color: #f0f2f5; font-weight: 600; line-height: 1.25; }
   .hm-addr { font-size: 13px; color: #8a93a2; margin-top: 4px; }
   .hm-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .hm-prog-kicker { font-size: 10px; letter-spacing: 0.16em; color: #555f6e; }
+  .hm-prog-title { font-size: 20px; color: #f0f2f5; font-weight: 600; line-height: 1.3;
+    margin: 6px 0 10px; }
+  .hm-prog-lead { font-size: 13px; color: #8a93a2; line-height: 1.65; max-width: 62em; }
+  .hm-prog-points { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .hm-prog-points span {
+    font-size: 10px; letter-spacing: 0.04em; padding: 5px 10px;
+    border: 1px solid #2a3040; border-radius: 999px; color: #c6cdd7;
+  }
+  .hm-guide { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
+  @media (min-width: 720px) { .hm-guide { grid-template-columns: 1fr 1fr; } }
+  .hm-guide-card {
+    background: #171b22; border: 1px solid #2a3040; border-radius: 12px;
+    padding: 14px 15px 13px;
+  }
+  .hm-guide-card h3 { font-size: 12px; letter-spacing: 0.1em; color: #f0f2f5;
+    margin-bottom: 7px; }
+  .hm-guide-card p { font-size: 12px; color: #8a93a2; line-height: 1.6; }
+  .hm-prog-note { font-size: 12px; color: #8a93a2; line-height: 1.65; margin-top: 16px;
+    max-width: 62em; }
+  .hm-prog-contact { font-size: 12px; color: #555f6e; line-height: 1.6; margin-top: 10px; }
+  .hm-prog-contact a { color: #c6cdd7; }
   .chip {
     font-size: 10px; letter-spacing: 0.05em; padding: 4px 9px;
     border: 1px solid #2a3040; border-radius: 999px; color: #8a93a2;
     white-space: nowrap;
   }
-  /* Launch buttons stay a top row at every width. */
-  #hm-launch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
-    min-width: 0; }
-  .hm-go {
-    min-height: 62px; text-align: center; background: #171b22;
-    border: 1px solid #2a3040; border-radius: 12px; cursor: pointer;
-    font-family: monospace; padding: 10px 8px; color: #f0f2f5;
-  }
-  .hm-go .hm-go-t { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
-  .hm-go .hm-go-s { display: block; margin-top: 5px; font-size: 9.5px; color: #8a93a2; line-height: 1.4; }
-  .hm-go:hover { border-color: #a855f7; }
-  .hm-go:active { transform: scale(0.99); }
-  .hm-go:disabled { opacity: 0.35; cursor: not-allowed; }
-  .hm-go:disabled:hover { border-color: #2a3040; }
-  #go-live { border-color: rgba(239,68,68,0.55); }
-  #go-live .hm-go-t { color: #ef4444; }
-  #go-live:hover { border-color: #ef4444; }
-  #go-live:disabled:hover { border-color: rgba(239,68,68,0.55); }
-  /* Dashboard cards: weather full width, then fire|quake, fema|space,
-     sources full width. One column below 640px. */
-  #hm-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  /* Dashboard cards live on Public. Weather full width, then fire|quake,
+     fema|space, sources full width. One column below 640px. */
+  #pub-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
   @media (min-width: 640px) {
-    #hm-grid { grid-template-columns: 1fr 1fr; }
+    #pub-grid { grid-template-columns: 1fr 1fr; }
     #dash-wx, #dash-info { grid-column: 1 / -1; }
   }
   .dash-card {
@@ -302,6 +329,35 @@
   .dash-list-k { font-size: 10px; color: #8a93a2; margin-bottom: 2px; }
   #hm-none { display: none; font-size: 12px; color: #8a93a2; line-height: 1.6; }
   #hm-none.visible { display: block; }
+  #public, #ahart {
+    display: none; position: fixed; z-index: 30; background: #111318;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+  #public.visible, #ahart.visible { display: block; }
+  #ahart { top: calc(var(--bar-h) + var(--pv-bar-h)); left: 0; right: 0; bottom: 0; }
+  @media (max-width: 799px) {
+    #public.visible { top: 50%; left: 0; right: 0; bottom: 0; }
+    #public.full { top: var(--bar-h); }
+  }
+  @media (min-width: 800px) {
+    #public.visible { top: var(--bar-h); left: 58%; right: 0; bottom: 0; }
+    #public.full { left: 0; }
+  }
+  #pub-none { display: none; font-size: 12px; color: #8a93a2; line-height: 1.6;
+    margin-bottom: 12px; }
+  #public.full #pub-none.visible { display: block; }
+  .ahart-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 640px) { .ahart-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); } }
+  .ahart-card {
+    background: #171b22; border: 1px solid #2a3040; border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .ahart-card h3 { font-size: 13px; color: #f0f2f5; letter-spacing: 0.06em;
+    margin-bottom: 8px; }
+  .ahart-card p { font-size: 11px; color: #8a93a2; line-height: 1.5; }
+  .ahart-soon { display: inline-block; margin-top: 10px; font-size: 9px;
+    letter-spacing: 0.08em; color: #555f6e; border: 1px solid #2a3040;
+    border-radius: 999px; padding: 3px 8px; }
   #gate {
     display: none; position: fixed; inset: 0; z-index: 100;
     background: #111318; overflow-y: auto;
@@ -400,11 +456,18 @@
   <div class="bar-inner">
     <span class="name" id="nm">Vyanet</span>
     <span class="addr" id="addr"></span>
-    <span class="build" id="build">hub 1.7.3</span>
+    <span class="build" id="build">hub 1.8.11</span>
     <button id="btn-home" disabled onclick="showHome()">HOME</button>
-    <button id="btn-3d" disabled onclick="setStage('3d')" aria-label="3D MODEL">3D<span class="bar-full"> MODEL</span></button>
-    <button id="btn-sat" disabled onclick="setStage('satellite')" aria-label="SATELLITE">SAT<span class="bar-full">ELLITE</span></button>
-    <button id="btn-live" disabled onclick="openLive()" aria-label="LIVE FEED">LIVE<span class="bar-full"> FEED</span></button>
+    <button id="btn-private" disabled onclick="showPrivate()" aria-label="PRIVATE">PRIV<span class="bar-full">ATE</span></button>
+    <button id="btn-public" disabled onclick="showPublic()" aria-label="COMMUNITY">COMM<span class="bar-full">UNITY</span></button>
+    <button id="btn-live" disabled onclick="openLive()" aria-label="LIVE">LIVE</button>
+  </div>
+</div>
+<div id="private-bar">
+  <div class="bar-inner">
+    <button id="btn-pv-3d" disabled onclick="setPrivateSub('3d')">3D</button>
+    <button id="btn-pv-sat" disabled onclick="setPrivateSub('satellite')">2D</button>
+    <button id="btn-pv-ahart" onclick="setPrivateSub('ahart')">Plugins</button>
   </div>
 </div>
 <div id="stage"></div>
@@ -423,24 +486,51 @@
         <div class="hm-meta" id="hm-meta"></div>
       </div>
     </div>
-    <div id="hm-launch">
-      <button class="hm-go" id="go-3d" disabled onclick="setStage('3d')">
-        <span class="hm-go-t">3D MODEL</span>
-        <span class="hm-go-s">Interactive model, compass views</span>
-      </button>
-      <button class="hm-go" id="go-sat" disabled onclick="setStage('satellite')">
-        <span class="hm-go-t">SATELLITE</span>
-        <span class="hm-go-s">Aerial imagery &amp; analysis</span>
-      </button>
-      <button class="hm-go" id="go-live" disabled onclick="openLive()">
-        <span class="hm-go-t">LIVE FEED</span>
-        <span class="hm-go-s">Cameras &amp; recent clips</span>
-      </button>
-    </div>
-    <div>
-      <div id="hm-none">No views are published for this property yet.</div>
-      <div id="hm-grid"></div>
-    </div>
+    <section class="hm-prog" id="hm-prog">
+      <div class="hm-prog-kicker">PROPERTY INTEL</div>
+      <h2 class="hm-prog-title">Every property has a story. The view from above helps tell it.</h2>
+      <p class="hm-prog-lead">This is a professional aerial mapping of the property that requested it &mdash; not neighborhood surveillance. The drone is a measuring tool, the modern equivalent of a survey, so camera placement, lighting, wildfire readiness, and emergency access can be planned from a perspective that is hard to see from the ground.</p>
+      <div class="hm-prog-points">
+        <span>FAA licensed pilots</span>
+        <span>Fully insured</span>
+        <span>Local professional security</span>
+        <span>Respectful of neighbor privacy</span>
+      </div>
+      <div class="hm-guide">
+        <article class="hm-guide-card">
+          <h3>HOME</h3>
+          <p>This property&rsquo;s identity and a short guide to the program. The aerial at the top opens the mapping workspace.</p>
+        </article>
+        <article class="hm-guide-card">
+          <h3>PRIVATE</h3>
+          <p>The mapping workspace. <strong style="color:#f0f2f5">3D</strong> is the interactive model with pins, cameras, analysis, and response routes. <strong style="color:#f0f2f5">2D</strong> is the same intelligence on the aerial map. <strong style="color:#f0f2f5">Plugins</strong> are property-level add-ons as they ship.</p>
+        </article>
+        <article class="hm-guide-card">
+          <h3>COMMUNITY</h3>
+          <p>Neighborhood context around this property: HOA lots, weather, wildfire, earthquakes, FEMA, and space weather. It does not navigate you to a neighbor&rsquo;s mapping.</p>
+        </article>
+        <article class="hm-guide-card">
+          <h3>LIVE</h3>
+          <p>CHEKT cameras and recent clips for this property. Live video uses the viewer passcode and stays in this tab only.</p>
+        </article>
+      </div>
+      <p class="hm-prog-note">We map the customer who asked for the work. Neighboring roofs may appear at the edge of an aerial the same way they would in any photograph from above; those images are not analyzed or kept as information about anyone else&rsquo;s home.</p>
+      <p class="hm-prog-contact">Questions: (800) 489-2638 &middot; <a href="mailto:connect@vyanet.com">connect@vyanet.com</a> &middot; <a href="https://vyanet.com/mapping/" target="_blank" rel="noopener">vyanet.com/mapping</a></p>
+    </section>
+    <div id="hm-none">No views are published for this property yet.</div>
+  </div>
+</div>
+<div id="public">
+  <div class="hm-wrap">
+    <div id="pub-none">This property is not in a published community yet. Regional conditions still load below.</div>
+    <div id="pub-grid"></div>
+  </div>
+</div>
+<div id="ahart">
+  <div class="hm-wrap">
+    <div class="hm-name" style="font-size:18px;margin-bottom:6px;">Plugins</div>
+    <p class="dash-note" style="margin-bottom:14px;">Property-level add-ons for this mapping. Slots stay empty until a plugin has data.</p>
+    <div class="ahart-grid" id="ahart-grid"></div>
   </div>
 </div>
 <div id="gate">
@@ -483,9 +573,10 @@
 <script type="module">
 // ?v= matches BUILD so a cached property.js from hub 1.3 cannot drop liveHref.
 import { fetchJson, dataRoot, framesFromIndex, validateViewerKey,
-         liveAliasIds, gwConfig, findNadir, detectCameras, ROLES, HUB_BUILD
-       } from './js/vyanet-viewer/property.js?v=1.7.3';
-import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.7.3';
+         liveAliasIds, gwConfig, findNadir, detectCameras, ROLES, HUB_BUILD,
+         PLUGINS
+       } from './js/vyanet-viewer/property.js?v=1.8.11';
+import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.11';
 
 const BUILD = HUB_BUILD;
 const params = new URLSearchParams(window.location.search);
@@ -499,7 +590,7 @@ const state = {
   hasCams: false, needsKey: false, camsSettled: false, camsChecked: false,
   liveReady: false, pendingLive: false,
   modelReady: false, pending3d: false, dashStarted: false,
-  heroStage: '', passBusy: false
+  heroStage: '', passBusy: false, privateSub: '', stage: 'home'
 };
 
 function ss(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
@@ -552,9 +643,26 @@ function chips(el, idx) {
 
 function syncBar(mode) {
   document.getElementById('btn-home').classList.toggle('on', mode === 'home');
-  document.getElementById('btn-3d').classList.toggle('on', mode === '3d');
-  document.getElementById('btn-sat').classList.toggle('on', mode === 'satellite');
+  document.getElementById('btn-private').classList.toggle('on', mode === 'private');
+  document.getElementById('btn-public').classList.toggle('on', mode === 'public');
   document.getElementById('btn-live').classList.toggle('on', mode === 'live');
+}
+function syncPrivateBar(sub) {
+  document.getElementById('btn-pv-3d').classList.toggle('on', sub === '3d');
+  document.getElementById('btn-pv-sat').classList.toggle('on', sub === 'satellite');
+  document.getElementById('btn-pv-ahart').classList.toggle('on', sub === 'ahart');
+}
+function hideHubLayers() {
+  document.getElementById('home').classList.remove('visible');
+  document.getElementById('public').classList.remove('visible');
+  document.getElementById('ahart').classList.remove('visible');
+  document.body.classList.remove('private-open');
+}
+function hoaFrameOn(on) {
+  const fh = document.getElementById('frame-hoa');
+  if (!fh) return;
+  fh.classList.toggle('on', !!on);
+  fh.classList.toggle('pub-split', !!on && !!(state.spec && state.spec.hasHoa));
 }
 
 function postLiveStage(on) {
@@ -579,23 +687,49 @@ function post3dStage(on) {
 window.setStage = function (stage) {
   const spec = state.spec;
   if (!spec || !state.entered) return;
-  if (stage === '3d' && !spec.hasModel) return;
-  if (stage === 'satellite' && !spec.hasSatellite) return;
+  if (stage === 'private' && !spec.hasPrivate) return;
   if (stage === 'live' && !spec.hasLive) return;
+  if (stage === '3d' || stage === 'satellite' || stage === 'ahart') {
+    if (!spec.hasPrivate) return;
+    state.privateSub = stage;
+    stage = 'private';
+  }
   const f3 = spec.hasModel ? ensureFrame('frame-3d', spec.modelHref) : null;
   const fs = spec.hasSatellite ? ensureFrame('frame-sat', spec.satHref) : null;
   const fl = spec.hasLive ? ensureFrame('frame-live', spec.liveHref) : null;
-  if (f3) f3.classList.toggle('on', stage === '3d');
-  if (fs) fs.classList.toggle('on', stage === 'satellite');
+  const fh = spec.hasHoa ? ensureFrame('frame-hoa', spec.hoaHref) : null;
+  const sub = stage === 'private' ? (state.privateSub || spec.privateDefault) : '';
+  if (f3) f3.classList.toggle('on', stage === 'private' && sub === '3d');
+  if (fs) fs.classList.toggle('on', stage === 'private' && sub === 'satellite');
   if (fl) fl.classList.toggle('on', stage === 'live');
-  document.getElementById('home').classList.remove('visible');
+  hoaFrameOn(stage === 'public' && spec.hasHoa);
+  hideHubLayers();
+  if (stage === 'home') document.getElementById('home').classList.add('visible');
+  if (stage === 'public') {
+    const pub = document.getElementById('public');
+    pub.classList.add('visible');
+    pub.classList.toggle('full', !spec.hasHoa);
+    document.getElementById('pub-none').classList.toggle('visible', !spec.hasHoa);
+    startDashboard();
+  }
+  if (stage === 'private') {
+    document.body.classList.add('private-open');
+    if (sub === 'ahart') document.getElementById('ahart').classList.add('visible');
+    syncPrivateBar(sub);
+  }
+  state.stage = stage;
   syncBar(stage);
-  if (stage === 'satellite' && fs && fs.contentWindow) {
+  if (stage === 'public' && fh && fh.contentWindow) {
+    try {
+      fh.contentWindow.postMessage({ type: 'vyanet-stage', stage: 'public' }, window.location.origin);
+    } catch (e) {}
+  }
+  if (stage === 'private' && sub === 'satellite' && fs && fs.contentWindow) {
     try {
       fs.contentWindow.postMessage({ type: 'vyanet-stage', stage: 'satellite' }, window.location.origin);
     } catch (e) {}
   }
-  if (stage === '3d') {
+  if (stage === 'private' && sub === '3d') {
     if (state.modelReady) post3dStage(true);
     else state.pending3d = true;
   } else {
@@ -613,23 +747,43 @@ window.setStage = function (stage) {
 
 window.showHome = function () {
   if (!state.entered) return;
-  state.pendingLive = false;
-  state.pending3d = false;
-  postLiveStage(false);
-  post3dStage(false);
-  document.getElementById('home').classList.add('visible');
   document.getElementById('hm-role').textContent =
     state.role ? 'Viewing as ' + roleLabel(state.role) : '';
-  syncBar('home');
-  startDashboard();
+  setStage('home');
 };
 
-// The nadir hero doubles as a shortcut into the best available view.
+window.showPrivate = function () {
+  const spec = state.spec;
+  if (!spec || !state.entered || !spec.hasPrivate) return;
+  if (!state.privateSub) state.privateSub = spec.privateDefault;
+  if (state.privateSub === '3d' && !spec.hasModel) state.privateSub = spec.privateDefault;
+  if (state.privateSub === 'satellite' && !spec.hasSatellite) state.privateSub = spec.privateDefault;
+  setStage('private');
+};
+
+window.setPrivateSub = function (sub) {
+  const spec = state.spec;
+  if (!spec || !state.entered || !spec.hasPrivate) return;
+  if (sub === '3d' && !spec.hasModel) return;
+  if (sub === 'satellite' && !spec.hasSatellite) return;
+  state.privateSub = sub;
+  setStage('private');
+};
+
+window.showPublic = function () {
+  if (!state.entered) return;
+  setStage('public');
+};
+
+// The nadir hero doubles as a shortcut into Private.
 // Only when an image is actually showing — the plain identity block
 // (no-nadir properties) must not navigate on tap.
 window.heroGo = function () {
   if (!document.getElementById('hm-hero').classList.contains('has-img')) return;
-  if (state.heroStage) setStage(state.heroStage);
+  const spec = state.spec;
+  if (!spec || !spec.hasPrivate) return;
+  state.privateSub = spec.privateDefault;
+  showPrivate();
 };
 
 // ── Live feed: its own plugin (live-viewer.html), not the 3D page ────
@@ -642,6 +796,13 @@ function goLiveNow() {
   const spec = state.spec;
   if (!spec || !state.entered || !spec.hasLive) return;
   setStage('live');
+}
+function notifyChildKey() {
+  ['frame-sat', 'frame-3d', 'frame-live'].forEach(function (id) {
+    const f = document.getElementById(id);
+    if (!f || !f.contentWindow) return;
+    try { f.contentWindow.postMessage({ type: 'vyanet-key' }, window.location.origin); } catch (e) {}
+  });
 }
 function livePassErr(msg) {
   const el = document.getElementById('live-pass-err');
@@ -677,6 +838,7 @@ window.livePassSubmit = async function (ev) {
   go.disabled = false;
   if (!verdict.ok) { livePassErr('Passcode not accepted. Try again.'); return; }
   ssSet('vyViewerKey', key);
+  notifyChildKey();
   document.getElementById('live-pass').classList.remove('visible');
   goLiveNow();
 };
@@ -705,11 +867,11 @@ window.addEventListener('message', function (e) {
   }
 });
 
-// ── Dashboard: every source card loads as soon as home is first shown ──
+// ── Dashboard: every source card loads as soon as Public is first shown ──
 function startDashboard() {
   if (state.dashStarted || !state.idx) return;
   state.dashStarted = true;
-  const grid = document.getElementById('hm-grid');
+  const grid = document.getElementById('pub-grid');
   const la = Number(state.idx.lat), ln = Number(state.idx.lng);
   if (!isFinite(la) || !isFinite(ln)) {
     grid.innerHTML = '<div class="dash-note">This property has no coordinates yet, ' +
@@ -768,6 +930,9 @@ window.switchRole = function () {
     document.getElementById('role-' + x).classList.remove('on');
   });
   document.getElementById('home').classList.remove('visible');
+  document.getElementById('public').classList.remove('visible');
+  document.getElementById('ahart').classList.remove('visible');
+  document.body.classList.remove('private-open');
   syncBar('');
   showGate();
 };
@@ -818,6 +983,7 @@ window.gateSubmit = async function (ev) {
     refreshEnter();
     if (!verdict.ok) { gateErr('Passcode not accepted. Try again.'); return; }
     ssSet('vyViewerKey', key);
+    notifyChildKey();
     state.needsKey = false;
     paintPassBlock();
   }
@@ -833,27 +999,58 @@ window.gateSkipLive = function () {
   enterApp();
 };
 
+function paintAhart() {
+  const grid = document.getElementById('ahart-grid');
+  if (!grid || grid.childNodes.length) return;
+  PLUGINS.forEach(function (p) {
+    const card = document.createElement('div');
+    card.className = 'ahart-card';
+    card.id = 'ahart-' + p.id;
+    card.innerHTML = '<h3>' + esc(p.label) + '</h3><p>' + esc(p.blurb) +
+      '</p><span class="ahart-soon">Coming soon</span>';
+    grid.appendChild(card);
+  });
+}
+
 function enterApp() {
   state.entered = true;
   document.getElementById('gate').classList.remove('visible');
+  state.spec = framesFromIndex(state.idx);
+  state.spec.hasLive = !!(state.hasCams || state.spec.hasModel);
   const spec = state.spec;
+  paintAhart();
   // Mount plugins now so the later swap is instant; they render behind
   // the opaque home layer and swap by z-index only. Live streams stay
   // paused until the live stage posts vyanet-stage. The 3D loop stays
-  // paused until the 3D stage posts the matching message.
+  // paused until the 3D substrate posts the matching message.
   if (spec.hasModel) ensureFrame('frame-3d', spec.modelHref);
   if (spec.hasSatellite) ensureFrame('frame-sat', spec.satHref);
   if (spec.hasLive) ensureFrame('frame-live', spec.liveHref);
-  const start = (wantStage === '3d' && spec.hasModel) ? '3d'
-    : (wantStage === 'satellite' && spec.hasSatellite) ? 'satellite'
-    : (wantStage === 'live' && spec.hasLive) ? 'live' : '';
+  if (spec.hasHoa) ensureFrame('frame-hoa', spec.hoaHref);
+  const raw = wantStage;
+  let start = 'home';
+  let sub = spec.privateDefault;
+  if (raw === 'public') start = 'public';
+  else if (raw === 'live' && spec.hasLive) start = 'live';
+  else if (raw === 'private' && spec.hasPrivate) start = 'private';
+  else if ((raw === '3d' || raw === 'satellite' || raw === 'ahart') && spec.hasPrivate) {
+    start = 'private';
+    sub = raw;
+  }
+  if (start === 'private') {
+    if (sub === '3d' && !spec.hasModel) sub = spec.privateDefault;
+    if (sub === 'satellite' && !spec.hasSatellite) sub = spec.privateDefault;
+    state.privateSub = sub;
+  }
+  document.getElementById('hm-role').textContent =
+    state.role ? 'Viewing as ' + roleLabel(state.role) : '';
   if (start === 'live' && !ss('vyViewerKey')) {
     showHome();
     showLivePass();
-  } else if (start) {
-    setStage(start);
-  } else {
+  } else if (start === 'home') {
     showHome();
+  } else {
+    setStage(start);
   }
 }
 
@@ -884,14 +1081,13 @@ async function boot() {
   chips(document.getElementById('gt-meta'), idx);
   chips(document.getElementById('hm-meta'), idx);
   document.getElementById('btn-home').disabled = false;
-  document.getElementById('btn-3d').disabled = !state.spec.hasModel;
-  document.getElementById('btn-sat').disabled = !state.spec.hasSatellite;
-  document.getElementById('go-3d').disabled = !state.spec.hasModel;
-  document.getElementById('go-sat').disabled = !state.spec.hasSatellite;
+  document.getElementById('btn-private').disabled = !state.spec.hasPrivate;
+  document.getElementById('btn-public').disabled = false;
+  document.getElementById('btn-pv-3d').disabled = !state.spec.hasModel;
+  document.getElementById('btn-pv-sat').disabled = !state.spec.hasSatellite;
   // Hero nadir: the highest-caliber render available, as visual context.
   // Wire onload BEFORE src so a cached image still reveals the hero.
-  state.heroStage = state.spec.hasModel ? '3d'
-    : (state.spec.hasSatellite ? 'satellite' : '');
+  state.heroStage = state.spec.hasPrivate ? 'private' : '';
   findNadir(root, idx).then(function (url) {
     if (!url) return;
     const img = document.getElementById('hm-hero-img');
@@ -899,8 +1095,7 @@ async function boot() {
     function showHero() {
       hero.classList.add('has-img');
       document.getElementById('hm-hero-hint').textContent =
-        state.heroStage === '3d' ? 'Open 3D model' :
-        state.heroStage === 'satellite' ? 'Open satellite' : '';
+        state.spec.hasPrivate ? 'Open mapping' : '';
     }
     img.onload = showHero;
     img.onerror = function () { hero.classList.remove('has-img'); };
@@ -911,7 +1106,6 @@ async function boot() {
   state.hasCams = cams;
   state.spec.hasLive = !!(cams || state.spec.hasModel);
   document.getElementById('btn-live').disabled = !state.spec.hasLive;
-  document.getElementById('go-live').disabled = !state.spec.hasLive;
   document.getElementById('hm-none').classList.toggle('visible',
     !state.spec.hasModel && !state.spec.hasSatellite && !state.spec.hasLive);
   state.camsSettled = true;

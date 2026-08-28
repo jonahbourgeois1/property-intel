@@ -56,9 +56,9 @@
   .zoom-btn.on {
     border-color: #cd3333;
     color: #f0a8a8;
-    background: rgba(205, 51, 51, 0.16);
+    background: #3a1818;
   }
-  .zoom-btn.on:hover { border-color: #cd3333; background: rgba(205, 51, 51, 0.26); }
+  .zoom-btn.on:hover { border-color: #cd3333; background: #4a2020; }
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
   .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
@@ -138,7 +138,8 @@
   #lightbox-nav { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
   .nav-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border2); color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
   #lightbox-counter { font-size: 12px; color: var(--text3); font-family: 'DM Mono', monospace; }
-  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  #debug-panel { position: fixed; bottom: 70px; left: 12px; width: 340px; max-height: 220px; background: rgba(10,12,15,0.97); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px; z-index: 999; font-family: 'DM Mono', monospace; font-size: 11px; overflow: hidden; display: none; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.6); }
+  #debug-panel.show { display: flex; }
   #debug-panel.collapsed #debug-log { display: none; }
   #debug-header { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; background: rgba(59,130,246,0.12); border-bottom: 1px solid rgba(59,130,246,0.2); cursor: pointer; user-select: none; }
   #debug-header span { color: var(--accent); font-size: 10px; font-weight: 500; letter-spacing: 0.05em; }
@@ -162,6 +163,11 @@
     #panel.mobile-open { transform: translateY(0%) !important; }
     #debug-panel { width: calc(100vw - 24px); bottom: 80px; }
     #map-controls { bottom: 70px; }
+  }
+  .gm-style .gm-fullscreen-control,
+  .gm-style .gm-style-mtc button,
+  .gm-style .gm-control-active {
+    opacity: 1 !important;
   }
   .gm-style .gm-style-iw-c { background: #12161b !important; border-radius: 10px !important; padding: 0 !important; box-shadow: 0 4px 20px rgba(0,0,0,0.6) !important; }
   .gm-style .gm-style-iw-d { overflow: hidden !important; }
@@ -203,6 +209,238 @@
   #ground-banner .ground-banner-exit { display: flex; align-items: center; justify-content: center; padding: 8px 14px; border-radius: 7px; border: 1px solid rgba(205,51,51,0.5); background: rgba(205,51,51,0.08); color: var(--red); cursor: pointer; font-size: 12px; font-weight: 500; font-family: 'DM Sans', sans-serif; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
   #ground-banner .ground-banner-exit:hover { border-color: var(--red); background: rgba(205,51,51,0.18); color: #ff4444; }
   @media (max-width: 768px) { #immersive-overlay { right: 0; } }
+  /* Hub embed: the shell owns Home/Private chrome. Hide this page's header
+     and the old persistent intel column so 2D matches 3D (map + right rail). */
+  body.embed #header { display: none !important; }
+  body.embed { --header-h: 0px; }
+  #panel, #toggle-panel, #mobile-toggle { display: none !important; }
+  :root { --panel-w: 340px; }
+  #tab-rail {
+    position: fixed; top: 16px; right: 16px; z-index: 60;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 8px;
+    transition: transform 0.28s ease;
+  }
+  body.embed #tab-rail { top: 12px; }
+  #tab-rail.shifted { transform: translateX(calc(-1 * var(--panel-w))); }
+  .hz-toggle {
+    display: none; background: #12161b; border: 1px solid;
+    font-family: 'DM Mono', monospace; font-size: 11px; padding: 7px 13px;
+    border-radius: 6px; cursor: pointer; transition: background 0.15s;
+  }
+  .hz-toggle:hover { background: #1a1f27; }
+  .hz-toggle.on { background: #1a1f27; }
+  .hz-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: var(--panel-w); z-index: 56;
+    background: #12161b; border-left: 1px solid rgba(255,255,255,0.10);
+    transform: translateX(100%); transition: transform 0.28s ease;
+    display: flex; flex-direction: column; overflow: hidden;
+    font-family: 'DM Sans', sans-serif;
+  }
+  body.embed .hz-panel { top: 0; }
+  .hz-panel.open { transform: translateX(0); }
+  .dp-head {
+    padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-shrink: 0; display: flex; align-items: flex-start; gap: 8px;
+  }
+  .dp-title { font-size: 13px; font-weight: 600; color: #f0f2f5; }
+  .dp-sub { font-size: 10.5px; color: #555f6e; font-family: 'DM Mono', monospace; margin-top: 3px; }
+  .dp-close {
+    margin-left: auto; background: none; border: none; color: #555f6e;
+    font-size: 15px; cursor: pointer; line-height: 1; padding: 0 2px;
+  }
+  .dp-close:hover { color: #f0f2f5; }
+  .dp-body { overflow-y: auto; flex: 1; scrollbar-width: thin; }
+  .dp-note {
+    margin: 12px 16px 0; font-size: 10.5px; color: #555f6e;
+    font-family: 'DM Mono', monospace; line-height: 1.55;
+  }
+  .rd-card {
+    margin: 12px 16px; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; background: #1a1f27; overflow: hidden;
+  }
+  .rd-head { padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; }
+  .rd-num {
+    width: 22px; height: 22px; border-radius: 50%; background: #f59e0b;
+    color: #0b0e12; display: flex; align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 700;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .rd-num.pin { background: #22c55e; }
+  .rd-num.cam { background: #38bdf8; }
+  .rd-titles { flex: 1; min-width: 0; }
+  .rd-name { font-size: 12.5px; font-weight: 600; color: #f0f2f5; line-height: 1.35; overflow-wrap: anywhere; }
+  .rd-meta { font-size: 10.5px; color: #555f6e; font-family: 'DM Mono', monospace; margin-top: 4px; line-height: 1.55; }
+  .rd-body { padding: 0 14px 14px; }
+  .rd-trigger { font-size: 11.5px; color: #8a93a2; line-height: 1.65; margin-bottom: 10px; }
+  .rd-wp {
+    position: absolute; transform: translate(-50%, -50%);
+    width: 18px; height: 18px; border-radius: 50%; background: #f59e0b;
+    color: #0b0e12; border: 2px solid #0b0e12; display: flex;
+    align-items: center; justify-content: center;
+    font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; line-height: 1;
+  }
+  .rd-wp.start { background: #22c55e; }
+  .rd-wp.end { background: #ef4444; color: #fff; }
+  .rd-wp.el { background: #22c55e; }
+  .rd-wp.co { background: #ef4444; color: #fff; }
+  .rd-wp.cam { background: #38bdf8; color: #0b0e12; }
+  .rd-figure {
+    position: relative; border-radius: 8px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.10); line-height: 0; background: #0b0e12;
+  }
+  .rd-figure img { width: 100%; display: block; }
+  .rd-figure svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+  .cam-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+  .cam-thumb {
+    position: relative; border-radius: 6px; overflow: hidden; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.12); background: #0b0e12; aspect-ratio: 3 / 4; line-height: 0;
+  }
+  .cam-thumb:hover { border-color: #38bdf8; }
+  .cam-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cam-thumb-n {
+    position: absolute; left: 4px; top: 4px; min-width: 15px; height: 15px;
+    padding: 0 3px; border-radius: 4px; background: #38bdf8; color: #0b0e12;
+    font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; line-height: 1;
+  }
+  .cam-thumb-n.live { background: #ef4444; color: #fff; }
+  .cam-thumb-label {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 14px 5px 4px; background: linear-gradient(transparent, rgba(10,12,15,0.92));
+    color: #f0f2f5; font-size: 9px; line-height: 1.25; font-weight: 600;
+  }
+  /* Same camera card as model-viewer.html — not a Maps InfoWindow. */
+  #cam-popup {
+    display: none; position: fixed; z-index: 71;
+    transform: translate(-50%, -100%);
+    width: 210px; background: rgba(10,12,15,0.96);
+    border: 1px solid #38bdf8; border-radius: 8px; overflow: hidden;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.6); pointer-events: auto;
+  }
+  #cam-pop-img {
+    width: 100%; height: 150px; object-fit: cover; display: block;
+    cursor: zoom-in; border-bottom: 1px solid rgba(255,255,255,0.10);
+  }
+  #cam-pop-body { padding: 6px 8px 7px; }
+  #cam-pop-name {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11.5px; font-weight: 600; color: #f0f2f5; line-height: 1.35;
+  }
+  #cam-pop-meta {
+    font-family: 'DM Mono', monospace; font-size: 9.5px; color: #8a93a2; margin-top: 3px;
+  }
+  #cam-pop-hint {
+    font-family: 'DM Mono', monospace; font-size: 9px; color: #555f6e; margin-top: 4px;
+  }
+  .cam-live-tag {
+    display: none; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.08em; padding: 2px 6px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.18); color: #8a93a2; margin-top: 4px;
+  }
+  .cam-live-tag.on  { color: #ef4444; border-color: #ef4444;
+                      background: rgba(239,68,68,0.12); }
+  .cam-live-tag.bad { color: #f59e0b; border-color: rgba(245,158,11,0.5); }
+  #cam-pop-live-btn {
+    display: none; width: 100%; margin-top: 6px; padding: 5px 8px;
+    border-radius: 6px; border: 1px solid rgba(255,255,255,0.16);
+    background: #12161b; color: #f0f2f5; font-family: 'DM Mono', monospace;
+    font-size: 10px; cursor: pointer;
+  }
+  #cam-pop-live-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+  #cam-pop-live-btn.on { background: rgba(239,68,68,0.14);
+                         border-color: #ef4444; color: #ef4444; }
+  #cam-popup.big { width: 420px; }
+  #cam-popup.big #cam-pop-img { height: 300px; }
+  #cam-pop-event { display: none; margin-top: 8px; }
+  #cam-pop-event-hd { margin: 0 0 5px; }
+  #cam-pop-event-list { max-height: 122px; overflow-y: auto; scrollbar-width: thin; }
+  .pin-ev-row {
+    display: flex; align-items: center; gap: 8px; padding: 4px 7px;
+    border-radius: 6px; cursor: pointer;
+    font-family: 'DM Mono', monospace; font-size: 10.5px; color: #dfe3e9;
+  }
+  .pin-ev-row:hover { background: rgba(255,255,255,0.08); }
+  .pin-ev-play { color: #ff5252; font-size: 8px; flex-shrink: 0; }
+  .pin-ev-time { flex: 1; }
+  .pin-ev-none { font-family: 'DM Mono', monospace; font-size: 10px; color: #8a93a2; padding: 2px 0; }
+  #cam-pop-close {
+    position: absolute; right: 4px; top: 4px; width: 18px; height: 18px;
+    border: none; border-radius: 4px; background: rgba(10,12,15,0.75);
+    color: #8a93a2; font-size: 12px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #cam-pop-close:hover { color: #f0f2f5; }
+  #cam-lightbox {
+    display: none; position: fixed; inset: 0; z-index: 90;
+    background: rgba(6,8,11,0.92); padding: 24px;
+    align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  }
+  #cam-lightbox.open { display: flex; }
+  #cam-lb-img {
+    max-width: min(92vw, 900px); max-height: 74vh; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14); display: block;
+  }
+  #cam-lb-video {
+    max-width: min(92vw, 900px); max-height: 74vh; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.14); display: none; background: #000;
+  }
+  #cam-lb-title {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 14px; font-weight: 600; color: #f0f2f5; text-align: center;
+  }
+  #cam-lb-meta { font-family: 'DM Mono', monospace; font-size: 11px; color: #8a93a2; }
+  #cam-lb-actions { display: flex; gap: 8px; }
+  .cam-lb-btn {
+    background: #12161b; color: #f0f2f5; border: 1px solid rgba(255,255,255,0.16);
+    font-family: 'DM Mono', monospace; font-size: 11px; padding: 7px 14px;
+    border-radius: 6px; cursor: pointer;
+  }
+  .cam-lb-btn:hover { border-color: #38bdf8; color: #38bdf8; }
+  #pass-overlay {
+    display: none; position: fixed; inset: 0; z-index: 1100;
+    background: rgba(10,12,15,0.72);
+    align-items: center; justify-content: center;
+  }
+  #pass-overlay.open { display: flex; }
+  #pass-card {
+    width: 340px; max-width: calc(100vw - 32px);
+    background: #12161b; border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 10px; padding: 18px 18px 16px;
+  }
+  #pass-card .pass-title { font-size: 14px; font-weight: 600; color: #f0f2f5; }
+  #pass-card .pass-sub {
+    font-family: 'DM Mono', monospace; font-size: 11px; color: #8a93a2;
+    line-height: 1.5; margin: 8px 0 14px;
+  }
+  #pass-err {
+    display: none; font-family: 'DM Mono', monospace; font-size: 11px; color: #ef4444;
+    margin: -6px 0 12px;
+  }
+  #pass-input {
+    width: 100%; box-sizing: border-box; background: #0b0e12;
+    border: 1px solid rgba(255,255,255,0.16); border-radius: 6px;
+    color: #f0f2f5; font-family: 'DM Mono', monospace; font-size: 13px;
+    padding: 9px 10px; outline: none;
+  }
+  .pass-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  #pass-cancel, #pass-go {
+    font-family: 'DM Mono', monospace; font-size: 11px; padding: 7px 12px;
+    border-radius: 6px; cursor: pointer;
+  }
+  #pass-cancel { background: none; border: 1px solid #2a3040; color: #8a93a2; }
+  #pass-go { background: #3a1518; border: 1px solid #ef4444; color: #ef4444; font-weight: 700; }
+  .vw-section { margin-top: 12px; }
+  .vw-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .vw-badge { width: 20px; height: 20px; border-radius: 5px; background: #3b82f6; color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 9px; font-weight: 700; flex-shrink: 0; }
+  .vw-badge.nadir { background: #8b5cf6; }
+  .vw-label { font-size: 11.5px; font-weight: 600; color: #f0f2f5; }
+  .vw-img { width: 100%; display: block; border-radius: 8px; border: 1px solid rgba(255,255,255,0.10); cursor: zoom-in; }
+  .vw-bullets { margin: 7px 0 0 16px; padding: 0; }
+  .vw-bullets li { font-size: 11px; color: #8a93a2; line-height: 1.6; margin-bottom: 3px; }
+  @media (max-width: 640px) {
+    .hz-panel { width: 100%; }
+    #tab-rail.shifted { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -216,7 +454,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.9.5 — satellite split pins</div>
+    <div id="version-badge">v2.10.4</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -233,6 +471,7 @@
     <div class="zoom-btn reset" id="parcel-toggle" title="Show or hide the property boundary" style="display:none" onclick="toggleParcel()">Lot</div>
     <div class="zoom-btn reset" id="nadir-toggle" title="Show or hide the captured nadir image over the map" style="display:none" onclick="toggleOverlay()">Image</div>
   </div>
+  <div id="tab-rail"></div>
   <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
   <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
   <div id="panel">
@@ -254,6 +493,44 @@
   <div id="debug-log"></div>
   <button id="debug-clear" onclick="clearDebug()">clear log</button>
 </div>
+<div id="pass-overlay" onclick="if(event.target===this)cancelViewerPasscode()">
+  <form id="pass-card" onsubmit="submitViewerPasscode(event)">
+    <div class="pass-title">Live feed</div>
+    <div class="pass-sub">Enter the viewer passcode to open this camera. It stays in this tab only.</div>
+    <div id="pass-err"></div>
+    <input id="pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
+    <div class="pass-actions">
+      <button type="button" id="pass-cancel" onclick="cancelViewerPasscode()">Cancel</button>
+      <button type="submit" id="pass-go">Open live</button>
+    </div>
+  </form>
+</div>
+<div id="cam-popup">
+  <button id="cam-pop-close" onclick="hideCameraPopup()">&#10005;</button>
+  <img id="cam-pop-img" alt="Camera view" onclick="expandCameraPopup()">
+  <div id="cam-pop-body">
+    <div id="cam-pop-name"></div>
+    <div id="cam-pop-meta"></div>
+    <div id="cam-pop-hint">click image to expand</div>
+    <span id="cam-pop-live" class="cam-live-tag"></span>
+    <button id="cam-pop-live-btn" onclick="toggleLive()">Go live</button>
+    <div id="cam-pop-event">
+      <div class="pin-group-label" id="cam-pop-event-hd">Recent events (72h)</div>
+      <div id="cam-pop-event-list">
+      </div>
+    </div>
+  </div>
+</div>
+<div id="cam-lightbox" onclick="if(event.target===this)closeCameraPhoto()">
+  <img id="cam-lb-img" alt="Camera view">
+  <video id="cam-lb-video" controls playsinline preload="metadata"></video>
+  <div id="cam-lb-title"></div>
+  <div id="cam-lb-meta"></div>
+  <span id="cam-lb-live" class="cam-live-tag"></span>
+  <div id="cam-lb-actions">
+    <button class="cam-lb-btn" onclick="closeCameraPhoto()">Close</button>
+  </div>
+</div>
 <div id="lightbox">
   <button id="lightbox-close" onclick="closeLightbox()">✕</button>
   <img id="lightbox-img" src="" alt="">
@@ -268,8 +545,10 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.9.5';
+const VERSION     = 'v2.10.6';
 const _qs         = new URLSearchParams(window.location.search);
+const EMBEDDED    = _qs.get('embed') === '1';
+if (EMBEDDED) document.body.classList.add('embed');
 const DATA_ROOT   = (function () {
   const explicit = _qs.get('dataRoot');
   if (explicit) return explicit.replace(/\/*$/, '/');
@@ -287,8 +566,19 @@ const PARCEL_COUNTIES = [
 ];
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const VIEW_ORDER  = ['security','wildfire','plane','drone','drone-test','tour'];
-const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone', 'drone-test':'Drone Test' };
+const VIEW_ORDER  = EMBEDDED
+  ? ['drone-test']
+  : ['security','wildfire','plane','drone','drone-test','tour'];
+const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone', 'drone-test': EMBEDDED ? 'Drone' : 'Drone Test' };
+const GW_URL = (_qs.get('gw') || 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws').replace(/\/+$/, '');
+const GW_OFF = _qs.get('gw') === '0';
+const propertyId = (_qs.get('property') || '').trim();
+// Eugene currently has two index files for the same building. Keep in sync
+// with property.js CAMERA_HUB_SIBLINGS / liveAliasIds.
+const CAMERA_HUB_SIBLINGS = {
+  '8eea64e5c09dc806f667b079e111a38d': ['4a484f8c273abef3c02cf91e274f9e2f'],
+  '4a484f8c273abef3c02cf91e274f9e2f': ['8eea64e5c09dc806f667b079e111a38d']
+};
 
 // Maps each view suffix to the subfolder its JSON lives in
 function viewBaseUrl(viewSuffix) {
@@ -303,6 +593,17 @@ let propertyIndex = null, currentViews = null, currentViewData = null;
 let streetViewActive = false, matterportActive = false, djiViewerActive = false;
 let frMode = false;
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
+let cameraMarkers = [], pendingCameras = null, camList = [];
+let cameraWedges_ = [];
+let camFlashOn_ = true, camFlashTimer_ = null;
+let gwLiveMap = null, gwPassWait = null, gwPassResolve = null;
+let gwClipsCache = null, gwClipsAt = 0;
+let camPopupIdx = -1, camPopupEvents = [];
+let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false,
+    liveFrames = 0, liveMode = '', lbStandaloneLive = false;
+let mapProjOverlay = null;
+const PIN_EVENT_HOURS = 72;
+window.__camCount = 0;
 let groundOverlay = null, overlayVisible = false;
 let parcelPoly = null, parcelShown = true;
 let activePinId = null, infoWindow = null;
@@ -312,6 +613,10 @@ const isMobile = () => window.innerWidth <= 768;
 // Merged, tagged pin catalog — fetched once; ids resolve to names and full
 // definitions client-side (definitions never travel through Bedrock).
 let pinCatalogById = null;
+const viewRole = (_qs.get('role') || '').toLowerCase();
+const customerView = viewRole === 'customer';
+let hubPinSets = null;
+let modelNadirBounds = null;
 fetch(DATA_ROOT + 'pin-catalog/pins-catalog.json')
   .then(function (r) { return r.json(); })
   .then(function (c) {
@@ -339,6 +644,10 @@ function toggleDebug() {
   b.textContent = p.classList.contains('collapsed') ? '▲' : '▼';
 }
 function clearDebug() { const l = document.getElementById('debug-log'); if (l) l.innerHTML = ''; }
+if (_qs.get('debug') === '1') {
+  const dp = document.getElementById('debug-panel');
+  if (dp) dp.classList.add('show');
+}
 function togglePanel() {
   panelOpen = !panelOpen;
   document.getElementById('panel').classList.toggle('hidden', !panelOpen);
@@ -433,6 +742,96 @@ function makePinSvg(color, text) {
     anchor: new google.maps.Point(14, 36)
   };
 }
+function makeCamPinSvg_(text, liveDot, hasEvent) {
+  const led = liveDot === 'on'
+    ? '<circle cx="50" cy="14" r="8" fill="#ff0000" stroke="#0b0e12" stroke-width="2.5"/>'
+    : liveDot === 'off'
+    ? '<circle cx="50" cy="14" r="8" fill="rgba(255,0,0,0.18)" stroke="#0b0e12" stroke-width="2.5"/>'
+    : '';
+  const ev = hasEvent
+    ? '<circle cx="14" cy="14" r="7" fill="#f59e0b" stroke="#0b0e12" stroke-width="2.5"/>'
+    : '';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">' +
+    '<circle cx="32" cy="32" r="26" fill="#38bdf8" stroke="#0b0e12" stroke-width="5"/>' +
+    '<rect x="18" y="19" width="19" height="14" fill="#0b0e12"/>' +
+    '<path d="M37 23 L48 17 L48 35 L37 29 Z" fill="#0b0e12"/>' +
+    '<text x="32" y="51" text-anchor="middle" font-family="monospace" font-size="16" font-weight="700" fill="#0b0e12">' +
+    String(text || '') + '</text>' + led + ev + '</svg>';
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(40, 40),
+    anchor: new google.maps.Point(20, 20)
+  };
+}
+function destLatLng_(lat, lng, bearingDeg, meters) {
+  const R = 6378137;
+  const br = Number(bearingDeg) * Math.PI / 180;
+  const lat1 = Number(lat) * Math.PI / 180;
+  const lng1 = Number(lng) * Math.PI / 180;
+  const ang = meters / R;
+  const lat2 = Math.asin(Math.sin(lat1) * Math.cos(ang) +
+    Math.cos(lat1) * Math.sin(ang) * Math.cos(br));
+  const lng2 = lng1 + Math.atan2(Math.sin(br) * Math.sin(ang) * Math.cos(lat1),
+    Math.cos(ang) - Math.sin(lat1) * Math.sin(lat2));
+  return { lat: lat2 * 180 / Math.PI, lng: lng2 * 180 / Math.PI };
+}
+function clearCameraWedges_() {
+  cameraWedges_.forEach(function (p) { p.setMap(null); });
+  cameraWedges_ = [];
+}
+function dropCameraWedge_(cam, visible) {
+  const lat = Number(cam && cam.lat), lng = Number(cam && cam.lng);
+  const h = Number(cam && cam.heading);
+  if (!isFinite(lat) || !isFinite(lng) || !isFinite(h) || !map) return null;
+  const fov = isFinite(Number(cam.fov)) ? Number(cam.fov) : 90;
+  const rng = isFinite(Number(cam.range)) ? Number(cam.range) : 25;
+  const path = [{ lat: lat, lng: lng }];
+  const steps = 12;
+  for (let s = 0; s <= steps; s++) {
+    const br = h - fov / 2 + (fov * s) / steps;
+    path.push(destLatLng_(lat, lng, br, rng));
+  }
+  const poly = new google.maps.Polygon({
+    paths: path,
+    strokeColor: '#38bdf8',
+    strokeOpacity: 0.55,
+    strokeWeight: 1,
+    fillColor: '#38bdf8',
+    fillOpacity: 0.15,
+    map: visible ? map : null,
+    clickable: false,
+    zIndex: 20
+  });
+  cameraWedges_.push(poly);
+  return poly;
+}
+function camHasEvent_(cam) {
+  const l = camLive(cam);
+  return !!(l && pinEventsFor(l.device).length);
+}
+function camIconFor_(cam, label) {
+  const live = !!(cam && cam.live && cam.live.device);
+  return makeCamPinSvg_(label, live ? (camFlashOn_ ? 'on' : 'off') : null, camHasEvent_(cam));
+}
+function kickCamFlash_() {
+  const any = cameraMarkers.some(function (m) {
+    return m._cam && m._cam.live && m._cam.live.device;
+  });
+  if (!any) {
+    if (camFlashTimer_) { clearInterval(camFlashTimer_); camFlashTimer_ = null; }
+    camFlashOn_ = true;
+    return;
+  }
+  if (camFlashTimer_) return;
+  camFlashTimer_ = setInterval(function () {
+    camFlashOn_ = !camFlashOn_;
+    cameraMarkers.forEach(function (m) {
+      if (m._cam && m._cam.live && m._cam.live.device) {
+        m.setIcon(camIconFor_(m._cam, m._camNum));
+      }
+    });
+  }, 600);
+}
 function dropPins(pins, color, hexColor) {
   if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
   const immersiveActive = matterportActive || streetViewActive || djiViewerActive;
@@ -449,7 +848,641 @@ function dropPins(pins, color, hexColor) {
     activeMarkers.push(marker);
   });
 }
+function cameraAliasIds_(idx, propertyId) {
+  const ids = [];
+  function add(x) {
+    const s = String(x || '').trim();
+    if (s && ids.indexOf(s) === -1) ids.push(s);
+  }
+  add(propertyId);
+  if (idx) {
+    add(idx.id);
+    if (idx.views) {
+      add(idx.views['drone-test']);
+      add(idx.views.drone);
+      add(idx.views.plane);
+    }
+  }
+  ids.slice().forEach(function (id) {
+    (CAMERA_HUB_SIBLINGS[id] || []).forEach(add);
+  });
+  return ids;
+}
+async function fetchCamerasFile_(id) {
+  const paths = [
+    DATA_ROOT + 'cameras/json/' + id + '.json',
+    DATA_ROOT + 'cameras/' + id + '.json',
+    DATA_ROOT + 'cameras/images/json/' + id + '.json'
+  ];
+  for (let i = 0; i < paths.length; i++) {
+    try {
+      const res = await fetch(paths[i], { cache: 'no-store' });
+      if (!res.ok) continue;
+      const j = await res.json();
+      if (j && Array.isArray(j.cameras) && j.cameras.length) return j.cameras;
+    } catch (e) {}
+  }
+  return null;
+}
+async function loadCamerasForProperty_(propertyId, idx) {
+  const ids = cameraAliasIds_(idx, propertyId);
+  for (let i = 0; i < ids.length; i++) {
+    const cams = await fetchCamerasFile_(ids[i]);
+    if (cams) return cams;
+  }
+  const views = (idx && idx.views) || {};
+  const keys = ['drone-test', 'drone', 'plane', 'security', 'wildfire'];
+  for (let k = 0; k < keys.length; k++) {
+    const vid = views[keys[k]];
+    if (!vid) continue;
+    try {
+      const res = await fetch(viewBaseUrl(keys[k]) + vid + '.json', { cache: 'no-store' });
+      if (!res.ok) continue;
+      const rec = await res.json();
+      if (rec && Array.isArray(rec.cameras) && rec.cameras.length) return rec.cameras;
+    } catch (e) {}
+  }
+  return [];
+}
+function resolveMediaUrl_(src) {
+  if (!src) return '';
+  const s = String(src);
+  if (/^https?:\/\//i.test(s) || /^data:/i.test(s)) return s;
+  try { return new URL(s, window.location.href).href; }
+  catch (e) { return s; }
+}
+function escHtml_(s) {
+  return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function setCameraMarkersVisible_(on) {
+  cameraMarkers.forEach(function (m) { m.setMap(on && map ? map : null); });
+  cameraWedges_.forEach(function (p) { p.setMap(on && map ? map : null); });
+}
+function dropCameraPins(cams) {
+  pendingCameras = cams || [];
+  camList = pendingCameras;
+  cameraMarkers.forEach(function (m) { m.setMap(null); });
+  cameraMarkers = [];
+  clearCameraWedges_();
+  if (camFlashTimer_) { clearInterval(camFlashTimer_); camFlashTimer_ = null; }
+  window.__camCount = 0;
+  hideCameraPopup();
+  if (!map) return;
+  const immersiveActive = matterportActive || streetViewActive || djiViewerActive;
+  const show = !immersiveActive;
+  camList.forEach(function (cam, i) {
+    const lat = Number(cam && cam.lat), lng = Number(cam && cam.lng);
+    if (!isFinite(lat) || !isFinite(lng)) return;
+    const label = String(i + 1);
+    const title = cam.label || cam.id || ('Camera ' + label);
+    const marker = new google.maps.Marker({
+      position: { lat: lat, lng: lng },
+      map: show ? map : null,
+      icon: camIconFor_(cam, label),
+      title: camMarkerTitle_(cam, i),
+      zIndex: 25
+    });
+    marker._cam = cam;
+    marker._camIndex = i;
+    marker._camLabel = title;
+    marker._camPhoto = cam.photo ? resolveMediaUrl_(cam.photo) : '';
+    marker._camNum = label;
+    marker.addListener('click', function () { showCameraPopup(i); });
+    cameraMarkers.push(marker);
+    dropCameraWedge_(cam, show);
+  });
+  window.__camCount = cameraMarkers.length;
+  kickCamFlash_();
+  if (cameraMarkers.length) dbg('Cameras on 2D map: ' + cameraMarkers.length, 'ok');
+  populateFeatureTabs(currentViewData || {}, currentViewSuffix_());
+}
+function camMarkerColor_(cam) {
+  if (cam && cam.live && cam.live.device) return '#ef4444';
+  return '#38bdf8';
+}
+function camMarkerTitle_(cam, i) {
+  const base = (cam && (cam.label || cam.id)) || ('Camera ' + (i + 1));
+  const live = camLiveCaption_(cam);
+  return live ? (base + ' · ' + live) : base;
+}
+function camLiveCaption_(cam) {
+  if (!cam || !cam.live || !cam.live.device) return '';
+  const mac = String(cam.live.device).toUpperCase();
+  const g = gwLiveMap && gwLiveMap[mac];
+  return String((cam.live && cam.live.name) || (g && g.name) || mac);
+}
+function camName(cam, idx) {
+  return (cam && (cam.label || cam.id)) || ('Camera ' + ((idx || 0) + 1));
+}
+function camLive(cam) {
+  const l = cam && cam.live;
+  if (!l || !l.device) return null;
+  const ch = (l.channel !== undefined && l.channel !== null) ? Number(l.channel) : 0;
+  return { device: String(l.device).toUpperCase(), channel: isFinite(ch) ? ch : 0 };
+}
+function liveAvailable(cam) {
+  if (!camLive(cam)) return false;
+  return (!GW_OFF && !!propertyId);
+}
+function liveImgEl() {
+  const lb = document.getElementById('cam-lightbox');
+  return document.getElementById(
+    lb && lb.classList.contains('open') ? 'cam-lb-img' : 'cam-pop-img');
+}
+function setCardBig(on) {
+  const el = document.getElementById('cam-popup');
+  if (el) el.classList.toggle('big', !!on);
+}
+function setLiveStatus(text, cls) {
+  ['cam-pop-live', 'cam-lb-live'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = text || '';
+    el.className = 'cam-live-tag' + (cls ? ' ' + cls : '');
+    el.style.display = text ? 'inline-block' : 'none';
+  });
+}
+function clearImgHooks() {
+  ['cam-pop-img', 'cam-lb-img'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) { el.onload = null; el.onerror = null; }
+  });
+}
+function stopLive() {
+  liveSeq++;
+  if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
+  clearImgHooks();
+  liveIdx = -1; liveBusy = false; liveFrames = 0; liveMode = '';
+  setCardBig(false);
+  const b = document.getElementById('cam-pop-live-btn');
+  if (b) { b.classList.remove('on'); b.textContent = 'Go live'; }
+  setLiveStatus('', '');
+}
+function liveFail(msg, why) {
+  dbg('Live view stopped - ' + msg + (why ? ' (' + why + ')' : ''), 'warn');
+  const i = liveIdx;
+  stopLive();
+  setLiveStatus('live unavailable', 'bad');
+  const cam = camList[i], img = liveImgEl();
+  if (cam && img) img.src = resolveMediaUrl_(cam.photo || '') || cam.photo || '';
+}
+function startMjpeg(idx, url) {
+  liveMode = 'mjpeg';
+  const img = liveImgEl();
+  if (!img) return;
+  img.onload = function () {
+    if (liveIdx === idx && liveMode === 'mjpeg') {
+      liveFrames++;
+      setLiveStatus('LIVE', 'on');
+      setCardBig(true);
+      if (liveFrames === 1) dbg('Live (MJPEG stream): ' + camName(camList[idx], idx), 'ok');
+    }
+  };
+  img.onerror = function () {
+    if (liveIdx !== idx) return;
+    liveFail('MJPEG stream failed');
+  };
+  img.src = url;
+}
+async function startLive(idx) {
+  stopLive();
+  const cam = camList[idx], l = camLive(cam);
+  if (!cam || !l) return;
+  liveIdx = idx;
+  const b = document.getElementById('cam-pop-live-btn');
+  if (b) { b.classList.add('on'); b.textContent = 'Stop live'; }
+  setLiveStatus('connecting…', '');
+  if (!GW_OFF && propertyId) {
+    try {
+      const m = await gwEnsureLive();
+      if (liveIdx !== idx) return;
+      const g = m[l.device];
+      if (g && g.mjpeg_url) { startMjpeg(idx, g.mjpeg_url); return; }
+      dbg('Gateway has no camera ' + l.device + ' at this property', 'warn');
+    } catch (e) {
+      if (liveIdx !== idx) return;
+      dbg('Gateway unavailable: ' + e.message, 'warn');
+    }
+  }
+  liveFail('no live source for this camera');
+}
+window.toggleLive = function () {
+  if (liveIdx >= 0) {
+    const i = liveIdx;
+    stopLive();
+    const cam = camList[i], img = liveImgEl();
+    if (cam && img) img.src = resolveMediaUrl_(cam.photo || '') || cam.photo || '';
+    return;
+  }
+  if (camPopupIdx >= 0) startLive(camPopupIdx);
+};
+function wxTime_(iso) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  if (isNaN(t.getTime())) return '';
+  return t.toLocaleString([], { month: 'short', day: 'numeric',
+                                hour: 'numeric', minute: '2-digit' });
+}
+function eventsForDevice(mac) {
+  if (!gwClipsCache || !gwLiveMap || !mac) return [];
+  const cam = gwLiveMap[String(mac).toUpperCase()];
+  if (!cam || !cam.name) return [];
+  return gwClipsCache.filter(function (e) { return e.device_name === cam.name; });
+}
+function pinEventsFor(mac) {
+  const cutoff = Date.now() - PIN_EVENT_HOURS * 3600 * 1000;
+  return eventsForDevice(mac).filter(function (e) {
+    const t = Date.parse(e.event_time || '');
+    return isFinite(t) && t >= cutoff;
+  });
+}
+async function gwEnsureLive(interactive) {
+  await prefetchLiveJoin_(interactive !== false);
+  if (!gwLiveMap) throw new Error('no live roster');
+  return gwLiveMap;
+}
+async function ensureClips(force, interactive) {
+  if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
+    return gwClipsCache;
+  }
+  if (GW_OFF || !propertyId) return [];
+  const ask = interactive !== false;
+  let k = await gwPasscode_(false, ask);
+  if (!k) return [];
+  const idx = propertyIndex || {};
+  const ids = cameraAliasIds_(idx, propertyId);
+  for (let i = 0; i < ids.length; i++) {
+    try {
+      const r = await fetch(GW_URL + '/clips?' + gwLiveQuery_(ids[i], idx) + '&days=7', {
+        headers: { 'x-viewer-key': k }
+      });
+      if (r.status === 401) {
+        try { sessionStorage.removeItem('vyViewerKey'); } catch (e2) {}
+        k = await gwPasscode_(true, ask);
+        if (!k) return [];
+        i--;
+        continue;
+      }
+      if (r.status === 404) continue;
+      if (!r.ok) return gwClipsCache || [];
+      const j = await r.json();
+      gwClipsCache = j.events || [];
+      gwClipsAt = Date.now();
+      restyleCameraMarkers_();
+      return gwClipsCache;
+    } catch (e) { return gwClipsCache || []; }
+  }
+  return gwClipsCache || [];
+}
+async function fillPinEvent(idx) {
+  const box = document.getElementById('cam-pop-event');
+  if (!box) return;
+  camPopupEvents = [];
+  box.style.display = 'none';
+  if (GW_OFF || !propertyId) return;
+  try {
+    await gwEnsureLive(false);
+    joinLiveToPins_();
+    restyleCameraMarkers_();
+    await ensureClips(false, false);
+  } catch (e) { return; }
+  if (camPopupIdx !== idx) return;
+  const cam = camList[idx], l = camLive(cam);
+  if (!l) return;
+  camPopupEvents = pinEventsFor(l.device);
+  const list = document.getElementById('cam-pop-event-list');
+  if (!list) return;
+  list.innerHTML = camPopupEvents.length
+    ? camPopupEvents.map(function (e, i) {
+        return '<div class="pin-ev-row" onclick="watchPinEvent(' + i + ')">' +
+          '<span class="pin-ev-play">&#9654;</span>' +
+          '<span class="pin-ev-time">' + escHtml_(wxTime_(e.event_time)) + '</span>' +
+          '</div>';
+      }).join('')
+    : '<div class="pin-ev-none">none in the last 72 hours</div>';
+  box.style.display = 'block';
+}
+function lbShowImage() {
+  const v = document.getElementById('cam-lb-video');
+  if (v) { try { v.pause(); } catch (e) {} v.removeAttribute('src'); v.load(); v.style.display = 'none'; }
+  const im = document.getElementById('cam-lb-img');
+  if (im) im.style.display = 'block';
+}
+function lbShowVideo(src) {
+  const im = document.getElementById('cam-lb-img');
+  if (im) im.style.display = 'none';
+  const v = document.getElementById('cam-lb-video');
+  if (v) { v.style.display = 'block'; v.src = src; v.play().catch(function () {}); }
+}
+window.watchPinEvent = function (i) {
+  const e = camPopupEvents[i || 0];
+  if (!e || !e.mp4) return;
+  lbStandaloneLive = false;
+  lbShowVideo(e.mp4);
+  document.getElementById('cam-lb-title').textContent =
+    (e.device_name || 'Camera') + ' — recorded event';
+  document.getElementById('cam-lb-meta').textContent = wxTime_(e.event_time);
+  document.getElementById('cam-lightbox').classList.add('open');
+  dbg('Pin event playback: ' + (e.device_name || ''), 'info');
+};
+function updateCameraPopup() {
+  if (camPopupIdx < 0) return;
+  const el = document.getElementById('cam-popup');
+  if (!el || !map) return;
+  const marker = cameraMarkers.find(function (x) { return x._camIndex === camPopupIdx; });
+  const cam = camList[camPopupIdx];
+  const lat = marker ? marker.getPosition() : (cam && isFinite(Number(cam.lat)) && isFinite(Number(cam.lng))
+    ? new google.maps.LatLng(Number(cam.lat), Number(cam.lng)) : null);
+  if (!lat) { el.style.visibility = 'hidden'; return; }
+  const proj = mapProjOverlay && mapProjOverlay.getProjection && mapProjOverlay.getProjection();
+  if (!proj) return;
+  const pt = proj.fromLatLngToContainerPixel(lat);
+  const r = map.getDiv().getBoundingClientRect();
+  el.style.visibility = 'visible';
+  el.style.left = (r.left + pt.x) + 'px';
+  el.style.top  = (r.top + pt.y - 16) + 'px';
+}
+window.showCameraPopup = async function (idx) {
+  const cam = camList[idx];
+  if (!cam) return;
+  if (infoWindow) infoWindow.close();
+  stopLive();
+  camPopupIdx = idx;
+  const photo = resolveMediaUrl_(cam.photo || '') || cam.photo || '';
+  document.getElementById('cam-pop-img').src = photo;
+  document.getElementById('cam-pop-name').textContent = camName(cam, idx);
+  const bits = [];
+  if (isFinite(Number(cam.heading))) {
+    bits.push('facing ' + Number(cam.heading).toFixed(0) + '°');
+  }
+  if (isFinite(Number(cam.fov))) {
+    bits.push(Number(cam.fov).toFixed(0) + '° FOV');
+  }
+  document.getElementById('cam-pop-meta').textContent = bits.join('  ·  ');
+  const popEl = document.getElementById('cam-popup');
+  popEl.style.display = 'block';
+  popEl.classList.remove('big');
+  const evRow = document.getElementById('cam-pop-event');
+  if (evRow) evRow.style.display = 'none';
+  camPopupEvents = [];
+  const lb = document.getElementById('cam-pop-live-btn');
+  if (lb) lb.style.display = liveAvailable(cam) ? 'block' : 'none';
+  updateCameraPopup();
+  if (!GW_OFF && propertyId) {
+    try {
+      await gwEnsureLive(true);
+      joinLiveToPins_();
+      restyleCameraMarkers_();
+      paintCamThumbs_();
+      populateFeatureTabs(currentViewData || {}, currentViewSuffix_());
+    } catch (e) {
+      dbg('Live join on pin click failed: ' + e.message, 'warn');
+    }
+  }
+  if (camPopupIdx !== idx) return;
+  const c = camList[idx];
+  if (lb) lb.style.display = liveAvailable(c) ? 'block' : 'none';
+  const lv = camLive(c);
+  dbg('Camera popup: ' + camName(c, idx) +
+      (lv && liveAvailable(c) ? ' - live available (' + lv.device + ' ch' + lv.channel + ')' : ''), 'info');
+  if (liveAvailable(c)) startLive(idx);
+  fillPinEvent(idx);
+};
+window.hideCameraPopup = function () {
+  stopLive();
+  camPopupIdx = -1;
+  const el = document.getElementById('cam-popup');
+  if (el) el.style.display = 'none';
+};
+window.expandCameraPopup = function () {
+  if (camPopupIdx < 0) return;
+  const i = camPopupIdx;
+  const wasLive = (liveIdx === i);
+  hideCameraPopup();
+  openCameraPhoto(i);
+  if (wasLive) startLive(i);
+};
+window.openCameraPhoto = function (idx) {
+  const cam = camList[idx];
+  if (!cam) return;
+  const box = document.getElementById('cam-lightbox');
+  document.getElementById('cam-lb-img').src = resolveMediaUrl_(cam.photo || '') || cam.photo || '';
+  document.getElementById('cam-lb-title').textContent = camName(cam, idx);
+  const bits = [];
+  if (isFinite(Number(cam.heading))) {
+    bits.push('facing ' + Number(cam.heading).toFixed(0) + '°');
+  }
+  if (isFinite(Number(cam.fov))) {
+    bits.push(Number(cam.fov).toFixed(0) + '° field of view');
+  }
+  document.getElementById('cam-lb-meta').textContent = bits.join('  ·  ');
+  box.classList.add('open');
+  dbg('Camera photo: ' + camName(cam, idx), 'info');
+};
+window.closeCameraPhoto = function () {
+  document.getElementById('cam-lightbox').classList.remove('open');
+  lbShowImage();
+  const im = document.getElementById('cam-lb-img');
+  if (lbStandaloneLive) {
+    if (im) { im.onload = null; im.onerror = null; im.src = ''; }
+    lbStandaloneLive = false;
+    setLiveStatus('', '');
+  }
+  const i = liveIdx;
+  if (i >= 0) showCameraPopup(i);
+};
+function restyleCameraMarkers_() {
+  cameraMarkers.forEach(function (m) {
+    m.setIcon(camIconFor_(m._cam, m._camNum));
+    m.setTitle(camMarkerTitle_(m._cam, m._camIndex));
+  });
+  kickCamFlash_();
+}
+function gwLiveQuery_(id, idx) {
+  const q = new URLSearchParams();
+  q.set('property', String(id || ''));
+  if (idx && idx.address) q.set('address', String(idx.address));
+  if (idx && idx.name) q.set('name', String(idx.name));
+  if (idx && idx.site_no) q.set('site_no', String(idx.site_no));
+  return q.toString();
+}
+function normCamKey_(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+function camJoinKeys_(cam) {
+  const keys = [];
+  function add(s) {
+    const k = normCamKey_(s);
+    if (k && keys.indexOf(k) === -1) keys.push(k);
+  }
+  if (cam.live && cam.live.name) add(cam.live.name);
+  add(cam.label);
+  add(cam.id);
+  String(cam.label || '').split(/[\u2014\u2013\-,/]/).forEach(function (part) {
+    const k = normCamKey_(part);
+    if (k.length >= 6) add(part);
+  });
+  return keys;
+}
+function applyJoinHit_(cam, g, taken) {
+  cam.live = cam.live || {};
+  cam.live.device = String(g.mac).toUpperCase();
+  if (cam.live.channel === undefined || cam.live.channel === null) {
+    cam.live.channel = g.channel != null ? g.channel : 0;
+  }
+  if (!cam.live.name && g.name) cam.live.name = g.name;
+  taken[cam.live.device] = true;
+}
+function joinLiveToPins_() {
+  if (!gwLiveMap || !camList.length) return 0;
+  const roster = Object.keys(gwLiveMap).map(function (k) { return gwLiveMap[k]; });
+  const taken = {};
+  camList.forEach(function (cam) {
+    const d = cam.live && cam.live.device;
+    if (d) taken[String(d).toUpperCase()] = true;
+  });
+  function free(cam) { return !(cam.live && cam.live.device); }
+  let n = 0;
+  camList.forEach(function (cam) {
+    if (!free(cam)) return;
+    const keys = camJoinKeys_(cam);
+    const hits = roster.filter(function (g) {
+      const mac = String(g.mac || '').toUpperCase();
+      if (!mac || taken[mac]) return false;
+      const gn = normCamKey_(g.name);
+      return keys.indexOf(gn) !== -1 || keys.indexOf(normCamKey_(mac)) !== -1;
+    });
+    if (hits.length !== 1) return;
+    applyJoinHit_(cam, hits[0], taken);
+    n++;
+  });
+  roster.forEach(function (g) {
+    const mac = String(g.mac || '').toUpperCase();
+    if (!mac || taken[mac]) return;
+    const gn = normCamKey_(g.name);
+    if (gn.length < 8) return;
+    const cands = camList.filter(function (cam) {
+      if (!free(cam)) return false;
+      return camJoinKeys_(cam).some(function (k) { return k.indexOf(gn) !== -1; });
+    });
+    if (cands.length !== 1) return;
+    applyJoinHit_(cands[0], g, taken);
+    n++;
+  });
+  if (n) dbg('Joined ' + n + ' camera pin(s) to live devices from the cameras JSON', 'ok');
+  else if (roster.length && camList.length) {
+    dbg('Live roster ' + roster.length + ' and ' + camList.length +
+        ' pin(s) did not unique-match (need live.device or unique live.name/label)', 'warn');
+  }
+  return n;
+}
+function paintCamThumbs_() {
+  const nodes = document.querySelectorAll('#cam-card .cam-thumb-n');
+  for (let i = 0; i < nodes.length; i++) {
+    const live = !!(camList[i] && camList[i].live && camList[i].live.device);
+    nodes[i].classList.toggle('live', live);
+  }
+}
+function gwPasscode_(force, interactive) {
+  let k = '';
+  try { k = (sessionStorage.getItem('vyViewerKey') || '').trim(); } catch (e) {}
+  if (k && !force) return Promise.resolve(k);
+  if (!interactive) return Promise.resolve('');
+  if (gwPassWait) return gwPassWait;
+  gwPassWait = showViewerPasscode_(force ? 'Passcode not accepted. Try again.' : '');
+  return gwPassWait.then(function (v) {
+    gwPassWait = null;
+    return (v || '').trim();
+  });
+}
+function showViewerPasscode_(errText) {
+  return new Promise(function (resolve) {
+    gwPassResolve = resolve;
+    const ov = document.getElementById('pass-overlay');
+    const err = document.getElementById('pass-err');
+    const inp = document.getElementById('pass-input');
+    if (err) {
+      err.textContent = errText || '';
+      err.style.display = errText ? 'block' : 'none';
+    }
+    if (inp) inp.value = '';
+    if (ov) ov.classList.add('open');
+    setTimeout(function () { if (inp) inp.focus(); }, 40);
+  });
+}
+function finishViewerPasscode_(value) {
+  const ov = document.getElementById('pass-overlay');
+  if (ov) ov.classList.remove('open');
+  const r = gwPassResolve;
+  gwPassResolve = null;
+  if (r) r(value || '');
+}
+window.submitViewerPasscode = function (ev) {
+  if (ev) ev.preventDefault();
+  const inp = document.getElementById('pass-input');
+  const k = (inp && inp.value ? inp.value : '').trim();
+  if (!k) {
+    const err = document.getElementById('pass-err');
+    if (err) { err.textContent = 'Enter a passcode'; err.style.display = 'block'; }
+    return;
+  }
+  try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
+  finishViewerPasscode_(k);
+};
+window.cancelViewerPasscode = function () { finishViewerPasscode_(''); };
+async function prefetchLiveJoin_(interactive) {
+  if (GW_OFF) return;
+  if (gwLiveMap) {
+    joinLiveToPins_();
+    restyleCameraMarkers_();
+    paintCamThumbs_();
+    try { await ensureClips(false, false); } catch (e) {}
+    return;
+  }
+  const ask = interactive === true;
+  let k = await gwPasscode_(false, ask);
+  if (!k) return;
+  const idx = propertyIndex || {};
+  const ids = cameraAliasIds_(idx, (_qs.get('property') || ''));
+  for (let i = 0; i < ids.length; i++) {
+    try {
+      const r = await fetch(GW_URL + '/live?' + gwLiveQuery_(ids[i], idx), {
+        headers: { 'x-viewer-key': k }
+      });
+      if (r.status === 401) {
+        try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+        k = await gwPasscode_(true, ask);
+        if (!k) return;
+        i--;
+        continue;
+      }
+      if (r.status === 403) return;
+      if (r.status === 404) continue;
+      if (!r.ok) return;
+      const j = await r.json();
+      const m = {};
+      (j.cameras || []).forEach(function (c) {
+        if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
+      });
+      gwLiveMap = m;
+      joinLiveToPins_();
+      restyleCameraMarkers_();
+      populateFeatureTabs(currentViewData || {}, currentViewSuffix_());
+      paintCamThumbs_();
+      dbg('Gateway: ' + Object.keys(m).length + ' live camera(s) joined to 2D pins', 'ok');
+      try { await ensureClips(false, false); } catch (e2) {}
+      return;
+    } catch (e) { return; }
+  }
+}
+window.flyToCamera = function (i) {
+  const m = cameraMarkers.find(function (x) { return x._camIndex === i; });
+  if (m && map) map.panTo(m.getPosition());
+  showCameraPopup(i);
+};
 function activatePin(pinId, marker, fromMap) {
+  hideCameraPopup();
   document.querySelectorAll('.pin-row.active').forEach(r => r.classList.remove('active'));
   activePinId = pinId;
   const row = document.querySelector('.pin-row[data-pin-id="' + pinId + '"]');
@@ -652,10 +1685,17 @@ function initMap(lat, lng, storedRing) {
       center: { lat, lng }, zoom: 18,
       mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
       rotateControl: false, maxZoom: 21,
-      mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+      mapTypeControl: true, mapTypeControlOptions: {
+        style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+        mapTypeIds: ['satellite','hybrid','roadmap'],
+        position: google.maps.ControlPosition.TOP_LEFT
+      },
+      zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.LEFT_CENTER },
+      cameraControl: true,
+      cameraControlOptions: { position: google.maps.ControlPosition.LEFT_CENTER },
       streetViewControl: false,
       fullscreenControl: true,
+      fullscreenControlOptions: { position: google.maps.ControlPosition.LEFT_TOP },
       gestureHandling: 'greedy',
       scrollwheel: true
     });
@@ -669,9 +1709,9 @@ function initMap(lat, lng, storedRing) {
     drawParcelBoundary(lat, lng, storedRing || null);
     hideLoading();
     setTimeout(() => { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat, lng }); } }, 100);
-    if (!isMobile()) setTimeout(() => { if (!panelOpen) togglePanel(); }, 700);
     dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');
     flushPendingMapData();
+    if (pendingCameras && pendingCameras.length) dropCameraPins(pendingCameras);
   } catch(e) { dbg('initMap error: ' + e.message, 'error'); }
 }
 function wireMapMouse(gmap) {
@@ -685,6 +1725,8 @@ function wireMapMouse(gmap) {
   helper.draw = function () {};
   helper.onRemove = function () {};
   helper.setMap(gmap);
+  mapProjOverlay = helper;
+  helper.draw = function () { updateCameraPopup(); };
   function latLngAt(clientX, clientY) {
     const p = helper.getProjection();
     if (!p) return null;
@@ -757,6 +1799,32 @@ function buildTabs(views, activeView) {
 // recommendations prose. x,y are percentages converted to lat/lng via
 // pixelToLatLng (no bounds needed — it's a Maps overlay). Pin ids resolve to
 // names/definitions through the merged catalog (pinDisplay).
+function hubPinsLatLng_(kind, centerLat, centerLng, zoom, satArr) {
+  const fromFile = hubPinSets && hubPinSets.from === 'file';
+  const from3d = hubPinSets && (hubPinSets.source === '3d' || hubPinSets.from === '3d');
+  const arr = hubPinSets ? (hubPinSets[kind] || []) : (satArr || []);
+  const use3d = hubPinSets && (fromFile || from3d) && hubPinSets.source === '3d' && modelNadirBounds;
+  if (use3d) {
+    const b = modelNadirBounds;
+    return arr.map(function (p) {
+      const lat = b.north - (Number(p.y) / 100) * (b.north - b.south);
+      const lng = b.west + (Number(p.x) / 100) * (b.east - b.west);
+      return { label: pinDisplay(p).name, def: pinDisplay(p).def, lat: lat, lng: lng };
+    });
+  }
+  if (hubPinSets && hubPinSets.source === 'satellite') {
+    return satConcernLatLngPins_(arr, centerLat, centerLng, zoom);
+  }
+  if (hubPinSets && hubPinSets.from === '3d' && modelNadirBounds) {
+    const b = modelNadirBounds;
+    return arr.map(function (p) {
+      const lat = b.north - (Number(p.y) / 100) * (b.north - b.south);
+      const lng = b.west + (Number(p.x) / 100) * (b.east - b.west);
+      return { label: pinDisplay(p).name, def: pinDisplay(p).def, lat: lat, lng: lng };
+    });
+  }
+  return satConcernLatLngPins_(satArr || [], centerLat, centerLng, zoom);
+}
 function satElementLatLngPins_(d, centerLat, centerLng, zoom) {
   const els = Array.isArray(d.elements) ? d.elements : [];
   return els.map(function (p) {
@@ -789,8 +1857,8 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   if (!nadirUrl) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Security data not yet available.</div>'; return; }
   const zoom = extractZoom(nadirUrl);
 
-  const elements = satElementLatLngPins_(d, centerLat, centerLng, zoom);
-  const concerns = satConcernLatLngPins_(fr.concerns, centerLat, centerLng, zoom);
+  const elements = hubPinsLatLng_('element', centerLat, centerLng, zoom, d.elements);
+  const concerns = customerView ? [] : hubPinsLatLng_('concern', centerLat, centerLng, zoom, fr.concerns);
 
   setOverlay(nadirUrl, centerLat, centerLng, zoom);
   dropPins(elements, 'green', '#22c55e');
@@ -804,10 +1872,10 @@ function buildSecurityPanel(d, centerLat, centerLng) {
     html += satPinRowsHtml_('Responder Concerns', concerns, 'red', CONCERN_LABELS);
   }
   if (!html) html = '<div class="panel-empty">No elements identified yet.</div>';
-  if (fr.considerations) {
+  if (fr.considerations && !customerView) {
     html += '<div class="rec-block"><div class="rec-label security">Responder Considerations</div><div class="rec-text">' + fr.considerations + '</div></div>';
   }
-  if (fr.recommendations) {
+  if (fr.recommendations && !customerView) {
     html += '<div class="rec-block"><div class="rec-label security">First Responder Recommendations</div><div class="rec-text">' + fr.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
@@ -819,8 +1887,8 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   if (!nadirUrl) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Wildfire data not yet available.</div>'; return; }
   const zoom = extractZoom(nadirUrl);
 
-  const elements = satElementLatLngPins_(d, centerLat, centerLng, zoom);
-  const concerns = satConcernLatLngPins_(wf.concerns, centerLat, centerLng, zoom);
+  const elements = hubPinsLatLng_('element', centerLat, centerLng, zoom, d.elements);
+  const concerns = customerView ? [] : hubPinsLatLng_('concern', centerLat, centerLng, zoom, wf.concerns);
 
   setOverlay(nadirUrl, centerLat, centerLng, zoom);
   dropPins(elements, 'green', '#22c55e');
@@ -834,10 +1902,10 @@ function buildWildfirePanel(d, centerLat, centerLng) {
     html += satPinRowsHtml_('Wildfire Concerns', concerns, 'orange', CONCERN_LABELS);
   }
   if (!html) html = '<div class="panel-empty">No elements identified yet.</div>';
-  if (wf.considerations) {
+  if (wf.considerations && !customerView) {
     html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Considerations</div><div class="rec-text">' + wf.considerations + '</div></div>';
   }
-  if (wf.recommendations) {
+  if (wf.recommendations && !customerView) {
     html += '<div class="rec-block"><div class="rec-label wildfire">Wildfire Recommendations</div><div class="rec-text">' + wf.recommendations + '</div></div>';
   }
   document.getElementById('panel-content').innerHTML = html;
@@ -851,6 +1919,9 @@ function buildWildfirePanel(d, centerLat, centerLng) {
 // back to treating those as a single concern-less "element" set so the
 // viewer keeps working through the migration.
 function nadirPinSets_(nadir) {
+  if (hubPinSets && (hubPinSets.element.length || hubPinSets.concern.length) && hubPinSets.source === '3d') {
+    return { element: hubPinSets.element, concern: hubPinSets.concern, legacy: false };
+  }
   if (!nadir) return { element: [], concern: [], legacy: false };
   const hasSplit = Array.isArray(nadir.element_pins) || Array.isArray(nadir.concern_pins);
   if (hasSplit) {
@@ -867,6 +1938,260 @@ function pinDisplay(p) {
   if (p.label) return { name: p.label, def: '' };
   const c = pinCatalogById && pinCatalogById[p.id];
   return { name: c ? c.name : ('Pin ' + p.id), def: c ? (c.definition || '') : '' };
+}
+const PROP_TABS = [
+  { id: 'pins',     label: 'Pins',                accent: '#22c55e' },
+  { id: 'cams',     label: 'Cameras',             accent: '#38bdf8' },
+  { id: 'analysis', label: 'Property Analysis',   accent: '#3b82f6' },
+  { id: 'routes',   label: 'Response Directions', accent: '#f59e0b' }
+];
+function buildPropertyUi() {
+  const rail = document.getElementById('tab-rail');
+  if (!rail) return;
+  PROP_TABS.forEach(function (t) {
+    const b = document.createElement('button');
+    b.id = 'pp-btn-' + t.id;
+    b.className = 'hz-toggle';
+    b.textContent = t.label;
+    b.style.color = t.accent;
+    b.style.borderColor = t.accent;
+    b.onclick = function () { togglePropTab(t.id); };
+    rail.appendChild(b);
+    const p = document.createElement('div');
+    p.id = 'pp-panel-' + t.id;
+    p.className = 'hz-panel';
+    p.innerHTML =
+      '<div class="dp-head"><div><div class="dp-title">' + escHtml_(t.label) + '</div>' +
+      '<div class="dp-sub" id="pp-sub-' + t.id + '"></div></div>' +
+      '<button class="dp-close">&#10005;</button></div>' +
+      '<div class="hz-body dp-body" id="pp-body-' + t.id + '"></div>';
+    p.querySelector('.dp-close').onclick = function () { togglePropTab(t.id); };
+    document.body.appendChild(p);
+  });
+}
+window.togglePropTab = function (id) {
+  const p = document.getElementById('pp-panel-' + id);
+  const b = document.getElementById('pp-btn-' + id);
+  if (!p) return;
+  const open = !p.classList.contains('open');
+  PROP_TABS.forEach(function (t) {
+    const o = document.getElementById('pp-panel-' + t.id);
+    const btn = document.getElementById('pp-btn-' + t.id);
+    const on = open && t.id === id;
+    if (o) o.classList.toggle('open', on);
+    if (btn) btn.classList.toggle('on', on);
+  });
+  const any = PROP_TABS.some(function (t) {
+    const o = document.getElementById('pp-panel-' + t.id);
+    return o && o.classList.contains('open');
+  });
+  const rail = document.getElementById('tab-rail');
+  if (rail) rail.classList.toggle('shifted', any);
+};
+function currentViewSuffix_() {
+  const t = document.querySelector('.view-tab.active');
+  return t ? t.getAttribute('data-view') : (EMBEDDED ? 'drone-test' : '');
+}
+function pinsTabHtml_(d, viewSuffix) {
+  let el = [], co = [];
+  if (hubPinSets && (hubPinSets.element.length || hubPinSets.concern.length)) {
+    el = hubPinSets.element;
+    co = hubPinSets.concern;
+  } else if (viewSuffix === 'wildfire' && d.wildfire) {
+    el = d.elements || [];
+    co = customerView ? [] : (d.wildfire.concerns || []);
+  } else if (d.fr) {
+    el = d.elements || [];
+    co = customerView ? [] : ((d.fr && d.fr.concerns) || []);
+  } else {
+    const s = nadirPinSets_(d.nadir || {});
+    el = s.element;
+    co = customerView ? [] : s.concern;
+  }
+  if (!el.length && !co.length) return '';
+  let html = '<div class="rd-card" id="pin-card"><div class="rd-head"><div class="rd-num pin">P</div>' +
+    '<div class="rd-titles"><div class="rd-name">Property Pins</div><div class="rd-meta">' +
+    el.length + ' element' + (el.length === 1 ? '' : 's') + ' &middot; ' +
+    co.length + ' concern' + (co.length === 1 ? '' : 's') + '</div></div></div><div class="rd-body">';
+  if (el.length) {
+    html += '<div class="pin-group-label">Elements</div>';
+    el.forEach(function (p, i) {
+      const label = ELEMENT_LABELS[i] || String(i + 1);
+      html += '<div class="pin-row" data-pin-id="green-' + i + '" onclick="pinRowClick(\'green-' + i + '\')">' +
+        '<div class="pin-badge green">' + label + '</div>' +
+        '<div class="pin-label">' + escHtml_(pinDisplay(p).name) + '</div></div>';
+    });
+  }
+  if (co.length) {
+    html += '<div class="pin-group-label">Concerns</div>';
+    co.forEach(function (p, i) {
+      const label = CONCERN_LABELS[i] || String(i + 1);
+      const kind = viewSuffix === 'wildfire' ? 'orange' : 'red';
+      html += '<div class="pin-row" data-pin-id="' + kind + '-' + i + '" onclick="pinRowClick(\'' + kind + '-' + i + '\')">' +
+        '<div class="pin-badge ' + kind + '">' + label + '</div>' +
+        '<div class="pin-label">' + escHtml_(pinDisplay(p).name) + '</div></div>';
+    });
+  }
+  return html + '</div></div>';
+}
+function camsTabHtml_() {
+  if (!camList.length) return '';
+  const nadirUrl = (currentViewData && currentViewData.nadir && currentViewData.nadir.url) || '';
+  let html = '<div class="rd-card" id="cam-card"><div class="rd-head"><div class="rd-num cam">C</div>' +
+    '<div class="rd-titles"><div class="rd-name">Security Cameras</div><div class="rd-meta">' +
+    camList.length + ' camera' + (camList.length === 1 ? '' : 's') +
+    ' &middot; click a photo to find it on the map</div></div></div><div class="rd-body">';
+  if (nadirUrl) {
+    html += '<div class="rd-figure"><img src="' + escHtml_(nadirUrl) + '" alt="Camera positions" loading="lazy" onerror="this.parentNode.style.display=\'none\'">';
+    camList.forEach(function (cam, i) {
+      if (!isFinite(Number(cam.lat)) || !isFinite(Number(cam.lng))) return;
+      const b = currentViewData && currentViewData.nadir && currentViewData.nadir.bounds;
+      if (!b || b.north == null) return;
+      const x = ((Number(cam.lng) - b.west) / (b.east - b.west)) * 100;
+      const y = ((b.north - Number(cam.lat)) / (b.north - b.south)) * 100;
+      html += '<div class="rd-wp cam" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%">' + (i + 1) + '</div>';
+    });
+    html += '</div>';
+  }
+  html += '<div class="cam-grid">' + camList.map(function (cam, i) {
+    const live = !!(cam.live && cam.live.device);
+    const name = cam.label || cam.id || ('Camera ' + (i + 1));
+    const photo = cam.photo ? resolveMediaUrl_(cam.photo) : '';
+    return '<div class="cam-thumb" onclick="flyToCamera(' + i + ')" title="' + escHtml_(name) + '">' +
+      (photo ? '<img src="' + escHtml_(photo) + '" alt="' + escHtml_(name) + '" loading="lazy" onerror="this.style.display=\'none\'">' : '') +
+      '<span class="cam-thumb-n' + (live ? ' live' : '') + '">' + (i + 1) + '</span>' +
+      '<span class="cam-thumb-label">' + escHtml_(name) + '</span></div>';
+  }).join('') + '</div>';
+  const joined = camList.filter(function (c) { return c.live && c.live.device; }).length;
+  if (joined) {
+    html += '<div class="rd-meta" style="margin-top:10px;">' + joined +
+      ' pin' + (joined === 1 ? '' : 's') + ' matched to a CHEKT camera. Click a pin to watch live.</div>';
+  }
+  return html + '</div></div>';
+}
+function analysisTabHtml_(d, viewSuffix) {
+  let html = '';
+  const views = [
+    { label: 'Overhead View', badge: 'N', cls: ' nadir', data: d.nadir },
+    { label: 'Alpha Side', badge: 'A', cls: '', data: d.alpha },
+    { label: 'Bravo Side', badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie Side', badge: 'C', cls: '', data: d.charlie },
+    { label: 'Delta Side', badge: 'D', cls: '', data: d.delta }
+  ].filter(function (v) { return v.data && v.data.url; });
+  if (views.length) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#3b82f6;color:#fff">V</div>' +
+      '<div class="rd-titles"><div class="rd-name">Oblique Views</div><div class="rd-meta">' +
+      views.length + ' rendered view' + (views.length === 1 ? '' : 's') + '</div></div></div><div class="rd-body">';
+    views.forEach(function (v) {
+      const bullets = formatDesc(v.data.desc || '');
+      html += '<div class="vw-section"><div class="vw-head"><div class="vw-badge' + v.cls + '">' + v.badge +
+        '</div><div class="vw-label">' + escHtml_(v.label) + '</div></div>' +
+        '<img class="vw-img" src="' + escHtml_(v.data.url) + '" alt="' + escHtml_(v.label) +
+        '" loading="lazy" onclick="window.open(this.src,\'_blank\')">' +
+        (bullets.length ? '<ul class="vw-bullets">' + bullets.map(function (b) {
+          return '<li>' + escHtml_(b) + '</li>';
+        }).join('') + '</ul>' : '') + '</div>';
+    });
+    html += '</div></div>';
+  }
+  const fr = d.fr || {};
+  const wf = d.wildfire || {};
+  if (d.considerations && !customerView) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#8b5cf6;color:#fff">R</div>' +
+      '<div class="rd-titles"><div class="rd-name">Responder Considerations</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(d.considerations)) + '</div></div></div>';
+  }
+  if (fr.considerations && !customerView && viewSuffix === 'security') {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#8b5cf6;color:#fff">R</div>' +
+      '<div class="rd-titles"><div class="rd-name">Responder Considerations</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(fr.considerations)) + '</div></div></div>';
+  }
+  if (fr.recommendations && !customerView && viewSuffix === 'security') {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num pin">F</div>' +
+      '<div class="rd-titles"><div class="rd-name">First Responder Recommendations</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(fr.recommendations)) + '</div></div></div>';
+  }
+  if (wf.considerations && !customerView && viewSuffix === 'wildfire') {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#f97316;color:#fff">W</div>' +
+      '<div class="rd-titles"><div class="rd-name">Wildfire Considerations</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(wf.considerations)) + '</div></div></div>';
+  }
+  if (wf.recommendations && !customerView && viewSuffix === 'wildfire') {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#f97316;color:#fff">W</div>' +
+      '<div class="rd-titles"><div class="rd-name">Wildfire Recommendations</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(wf.recommendations)) + '</div></div></div>';
+  }
+  if (d.clarifications) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#8a93a2;color:#0b0e12">?</div>' +
+      '<div class="rd-titles"><div class="rd-name">Needs Clarification</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(d.clarifications)) + '</div></div></div>';
+  }
+  return html;
+}
+function routesTabHtml_(d) {
+  if (customerView) return '';
+  const list = (d.directions || []).filter(function (x) {
+    return Array.isArray(x.route) && x.route.length >= 2;
+  });
+  if (!list.length) return '';
+  const nadirUrl = (d.nadir && d.nadir.url) || '';
+  let html = '';
+  list.forEach(function (dir, i) {
+    const pts = (dir.route || []).slice().sort(function (a, b) {
+      return (Number(a.seq) || 0) - (Number(b.seq) || 0);
+    });
+    const last = pts.length - 1;
+    const poly = pts.map(function (w) { return Number(w.x) + ',' + Number(w.y); }).join(' ');
+    const meta = [];
+    if (dir.start) meta.push('FROM ' + escHtml_(dir.start));
+    if (dir.target) meta.push('TO ' + escHtml_(dir.target));
+    meta.push(pts.length + ' waypoint' + (pts.length === 1 ? '' : 's'));
+    let fig = '';
+    if (nadirUrl) {
+      fig = '<div class="rd-figure"><img src="' + escHtml_(nadirUrl) + '" alt="Route ' + (i + 1) +
+        '" loading="lazy" onerror="this.parentNode.style.display=\'none\'">' +
+        '<svg viewBox="0 0 100 100" preserveAspectRatio="none">' +
+        '<polyline points="' + poly + '" fill="none" stroke="#0b0e12" stroke-opacity="0.75" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>' +
+        '<polyline points="' + poly + '" fill="none" stroke="#f59e0b" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"></polyline>' +
+        '</svg>' +
+        pts.map(function (w, k) {
+          const cls = k === 0 ? ' start' : (k === last ? ' end' : '');
+          return '<div class="rd-wp' + cls + '" style="left:' + Number(w.x) + '%;top:' + Number(w.y) + '%">' + (k + 1) + '</div>';
+        }).join('') + '</div>';
+    }
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num">' + (i + 1) + '</div>' +
+      '<div class="rd-titles"><div class="rd-name">' + escHtml_(dir.name || ('Route ' + (i + 1))) + '</div>' +
+      '<div class="rd-meta">' + meta.join(' &middot; ') + '</div></div></div><div class="rd-body">' +
+      (dir.trigger ? '<div class="rd-trigger">' + escHtml_(dir.trigger) + '</div>' : '') + fig + '</div></div>';
+  });
+  return html;
+}
+function populateFeatureTabs(d, viewSuffix) {
+  d = d || {};
+  const filled = {
+    pins: pinsTabHtml_(d, viewSuffix),
+    cams: camsTabHtml_(),
+    analysis: analysisTabHtml_(d, viewSuffix),
+    routes: routesTabHtml_(d)
+  };
+  PROP_TABS.forEach(function (t) {
+    const body = document.getElementById('pp-body-' + t.id);
+    const btn = document.getElementById('pp-btn-' + t.id);
+    const sub = document.getElementById('pp-sub-' + t.id);
+    if (!body || !btn) return;
+    if (filled[t.id]) {
+      body.innerHTML = filled[t.id];
+      btn.style.display = 'block';
+      if (sub) {
+        const nm = document.getElementById('property-name');
+        sub.textContent = d.name || (nm && nm.textContent) || '';
+      }
+    } else {
+      btn.style.display = 'none';
+      const pan = document.getElementById('pp-panel-' + t.id);
+      if (pan && pan.classList.contains('open')) togglePropTab(t.id);
+    }
+  });
 }
 function buildPinnedNadirSection(v, idx) {
   const sets = nadirPinSets_(v.data);
@@ -970,7 +2295,7 @@ function buildPanel(d) {
   lightboxViews = [];
   views.forEach(v => { if (v.data && v.data.url) lightboxViews.push({ label: v.label, url: v.data.url, bullets: formatDesc(v.data.desc || '') }); });
   let html = '';
-  if (d.viewer360) {
+  if (d.viewer360 && !EMBEDDED) {
     html += `<div class="interior-launch-card"><div class="interior-card-header"><div class="interior-card-title">3D Aerial View</div><div class="interior-card-sub">Interactive drone model</div></div><div class="interior-card-actions"><div class="interior-action-btn${djiViewerActive ? ' active' : ''}" onclick="showDjiViewer()"><div class="interior-action-text"><div class="interior-action-label">Launch 3D Viewer</div><div class="interior-action-desc">Full interactive drone flyover</div></div><div class="interior-action-arrow">›</div></div></div></div>`;
   }
   let lbIndex = 0;
@@ -1030,6 +2355,7 @@ function launchImmersive(mode) {
   syncOverlayWidth();
   if (djiViewerActive) { document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible'); djiViewerActive = false; }
   activeMarkers.forEach(m => m.setMap(null));
+  setCameraMarkersVisible_(false);
   document.getElementById('map-controls').style.display = 'none';
   if (mode === 'matterport') { showMatterport(); } else { showStreetView(); }
 }
@@ -1039,6 +2365,7 @@ function showMatterport() {
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('map-controls').style.display = 'none';
   activeMarkers.forEach(m => m.setMap(null));
+  setCameraMarkersVisible_(false);
   document.getElementById('street-view-div').classList.remove('visible');
   document.getElementById('matterport-iframe').src = d.viewer360;
   document.getElementById('matterport-iframe').classList.add('visible');
@@ -1051,6 +2378,7 @@ function showStreetView() {
   if (!d || !d.lat || !d.lng) { dbg('No coordinates for Street View', 'warn'); return; }
   document.getElementById('matterport-iframe').src = ''; document.getElementById('matterport-iframe').classList.remove('visible');
   activeMarkers.forEach(m => m.setMap(null));
+  setCameraMarkersVisible_(false);
   document.getElementById('map-controls').style.display = 'none';
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('street-view-div').classList.add('visible');
@@ -1068,6 +2396,7 @@ function exitImmersive() {
   document.getElementById('map-controls').style.display = '';
   matterportActive = false; streetViewActive = false; djiViewerActive = false;
   activeMarkers.forEach(m => m.setMap(map));
+  setCameraMarkersVisible_(true);
   updateGroundBanner();
   const activeTab = document.querySelector('.view-tab.active');
   const activeView = activeTab ? activeTab.getAttribute('data-view') : null;
@@ -1087,6 +2416,7 @@ function showDjiViewer() {
   iframe.src = d.viewer360;
   iframe.classList.add('visible');
   activeMarkers.forEach(m => m.setMap(null));
+  setCameraMarkersVisible_(false);
   djiViewerActive = true; buildPanel(d);
   updateGroundBanner();
   dbg('DJI 3D viewer loaded: ' + d.viewer360, 'ok');
@@ -1097,6 +2427,7 @@ function exitDjiViewer() {
   document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('map-controls').style.display = '';
   activeMarkers.forEach(m => m.setMap(map));
+  setCameraMarkersVisible_(true);
   djiViewerActive = false;
   updateGroundBanner();
   const activeTab = document.querySelector('.view-tab.active');
@@ -1123,6 +2454,9 @@ async function loadView(views, viewSuffix) {
     else if (viewSuffix === 'tour')                    { buildInteriorPanel(d); }
     else if (d.fr || d.wildfire)                      { clearMarkers(); document.getElementById('panel-content').innerHTML = '<div class="panel-empty">Use the <strong style="color:var(--green)">Security</strong> or <strong style="color:var(--orange)">Wildfire</strong> tabs.</div>'; }
     else                                               { buildPanel(d); }
+    const pc = document.getElementById('panel-content');
+    if (pc) pc.innerHTML = '';
+    populateFeatureTabs(d, viewSuffix);
     dbg('View loaded: ' + viewSuffix, 'ok');
   } catch(e) { dbg('View load failed: ' + e.message, 'error'); document.getElementById('panel-content').innerHTML = '<div class="panel-empty" style="color:var(--red)">Failed to load: ' + e.message + '</div>'; }
 }
@@ -1153,7 +2487,51 @@ async function loadPropertyData() {
     if (!indexRes.ok) { showError('Property not found.'); return; }
     const entry = await indexRes.json();
     if (!entry || !entry.views) { showError('Property not found.'); return; }
+    propertyIndex = entry;
     dbg('Property found: ' + entry.name, 'ok');
+    try {
+      const pinRes = await fetch(DATA_ROOT + 'pins/' + propertyHash + '.json', { cache: 'no-store' });
+      if (pinRes.ok) {
+        const pf = await pinRes.json();
+        if (pf && (Array.isArray(pf.element) || Array.isArray(pf.concern))) {
+          hubPinSets = {
+            element: Array.isArray(pf.element) ? pf.element : [],
+            concern: customerView ? [] : (Array.isArray(pf.concern) ? pf.concern : []),
+            source: pf.source === 'satellite' ? 'satellite' : '3d',
+            from: 'file'
+          };
+        }
+      }
+    } catch (e) {}
+    if (!hubPinSets) {
+      const mk = ['drone-test', 'plane', 'drone'].find(function (k) { return entry.views[k]; });
+      if (mk) {
+        try {
+          const mr = await fetch(DATA_ROOT + mk + '/' + entry.views[mk] + '.json', { cache: 'no-store' });
+          if (mr.ok) {
+            const rec = await mr.json();
+            const n = (rec && rec.nadir) || {};
+            if (n.bounds) modelNadirBounds = n.bounds;
+            const el = Array.isArray(n.element_pins) ? n.element_pins : (Array.isArray(n.pins) ? n.pins : []);
+            const co = Array.isArray(n.concern_pins) ? n.concern_pins : [];
+            if (el.length || co.length) {
+              hubPinSets = { element: el, concern: customerView ? [] : co, source: '3d', from: '3d' };
+            }
+          }
+        } catch (e) {}
+      }
+    } else if (hubPinSets.source === '3d' && entry.views) {
+      const mk = ['drone-test', 'plane', 'drone'].find(function (k) { return entry.views[k]; });
+      if (mk) {
+        try {
+          const mr = await fetch(DATA_ROOT + mk + '/' + entry.views[mk] + '.json', { cache: 'no-store' });
+          if (mr.ok) {
+            const rec = await mr.json();
+            if (rec && rec.nadir && rec.nadir.bounds) modelNadirBounds = rec.nadir.bounds;
+          }
+        } catch (e) {}
+      }
+    }
     const propRes = await fetch(BASE_URL + propertyHash + '.json', { cache: 'no-store' });
     const propData = propRes.ok ? await propRes.json() : null;
     const views = Object.assign({}, entry.views);
@@ -1164,8 +2542,7 @@ async function loadPropertyData() {
     document.getElementById('panel-address').textContent = (entry.address || '').replace(/^\s+/, '');
     if (frMode) document.getElementById('view-tabs').style.display = 'none';
     dbg('Available views: ' + Object.keys(views).join(', '), 'info');
-    // v2.8.0: if a specific tab was requested but isn't published for this
-    // property, say so plainly rather than silently loading a different view.
+    if (tabParam && VIEW_ORDER.indexOf(tabParam) === -1) tabParam = '';
     if (tabParam && !views[tabParam]) {
       showError('The ' + (VIEW_LABELS[tabParam] || tabParam) + ' view isn’t published yet for ' + (entry.name || 'this property') + '.');
       return;
@@ -1177,6 +2554,10 @@ async function loadPropertyData() {
     await loadView(views, firstView);
     const storedRing = currentViewData && currentViewData.parcel_ring || null;
     if (storedRing) dbg('Stored parcel ring found (' + storedRing.length + ' pts)', 'ok');
+    pendingCameras = await loadCamerasForProperty_(propertyHash, entry);
+    camList = pendingCameras || [];
+    if (map) dropCameraPins(pendingCameras);
+    prefetchLiveJoin_();
     if (mapsApiReady) { resolveAndInitMap(entry, storedRing); }
     else { pendingEntry = entry; pendingStoredRing = storedRing; }
   } catch(e) { showError('Failed to load property: ' + e.message); }
@@ -1188,6 +2569,10 @@ window.initGoogleMaps = function() {
 };
 window.addEventListener('message', function (e) {
   if (e.origin !== window.location.origin) return;
+  if (e.data && e.data.type === 'vyanet-key') {
+    prefetchLiveJoin_(false);
+    return;
+  }
   if (!e.data || e.data.type !== 'vyanet-stage') return;
   if (e.data.stage === 'satellite' && map) {
     google.maps.event.trigger(map, 'resize');
@@ -1195,6 +2580,15 @@ window.addEventListener('message', function (e) {
     if (c) map.setCenter(c);
   }
 });
+document.addEventListener('keydown', function (e) {
+  if (e.key !== 'Escape') return;
+  const lb = document.getElementById('cam-lightbox');
+  if (lb && lb.classList.contains('open')) { closeCameraPhoto(); return; }
+  hideCameraPopup();
+});
+const vb = document.getElementById('version-badge');
+if (vb) vb.textContent = VERSION;
+buildPropertyUi();
 loadPropertyData();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>

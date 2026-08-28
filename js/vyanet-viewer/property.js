@@ -6,11 +6,44 @@
 export const MODEL_PAGE = 'model-viewer.html';
 export const SAT_PAGE = 'viewer.html';
 export const LIVE_PAGE = 'live-viewer.html';
+export const HOA_PAGE = 'hoa-viewer.html';
 export const MODEL_VIEWS = ['drone-test', 'plane', 'drone'];
-export const SAT_VIEWS = ['security', 'wildfire', 'plane', 'drone', 'drone-test'];
+export const SAT_VIEWS = ['drone-test', 'security', 'wildfire', 'plane', 'drone'];
 export const ROLES = ['customer', 'tech', 'responder'];
-// Bump with the hub HTML BUILD so child iframes and this module cache-bust together.
-export const HUB_BUILD = '1.7.3';
+export const PLUGINS = [
+  { id: 'security-companies', label: 'Security Companies', blurb: 'White-label property intelligence across entire protected customer portfolios.' },
+  { id: 'multifamily-housing', label: 'Multifamily Housing', blurb: 'Security, maintenance, operations, and resident intelligence across housing portfolios.' },
+  { id: 'property-portfolios', label: 'Property Portfolios', blurb: 'Enterprise intelligence across diverse commercial real estate holdings.' },
+  { id: 'industrial-facilities', label: 'Industrial Facilities', blurb: 'Security and operational intelligence for complex, changing industrial sites.' },
+  { id: 'healthcare-campuses', label: 'Healthcare Campuses', blurb: 'Spatial intelligence for security, operations, access, and emergency response.' },
+  { id: 'planned-communities', label: 'Planned Communities', blurb: 'Community-wide intelligence connecting shared assets, infrastructure, and residences.' },
+  { id: 'data-centers', label: 'Data Centers', blurb: 'Continuous change intelligence for critical campuses and surrounding environments.' },
+  { id: 'logistics-centers', label: 'Logistics Centers', blurb: 'Security and operational intelligence across warehouses, yards, and distribution networks.' },
+  { id: 'golf-courses', label: 'Golf Courses', blurb: 'Course, maintenance, security, environmental, and community intelligence from above.' },
+  { id: 'school-districts', label: 'School Districts', blurb: 'Districtwide security, responder, facility, and organizational execution intelligence.' },
+  { id: 'agricultural-farms', label: 'Agricultural Farms', blurb: 'Current crop, infrastructure, water, equipment, and operational property intelligence.' },
+  { id: 'vineyards-wineries', label: 'Vineyards Wineries', blurb: 'Agricultural, production, hospitality, asset, and security intelligence combined.' },
+  { id: 'local-governments', label: 'Local Governments', blurb: 'Portfolio intelligence across municipal facilities, infrastructure, parks, and assets.' },
+  { id: 'destination-resorts', label: 'Destination Resorts', blurb: 'Property-wide intelligence across lodging, amenities, infrastructure, and guest environments.' },
+  { id: 'construction-sites', label: 'Construction Sites', blurb: 'Recurring change intelligence documenting progress, conditions, assets, and risks.' },
+  { id: 'critical-infrastructure', label: 'Critical Infrastructure', blurb: 'Spatial intelligence for essential assets, access, resilience, and inspection.' },
+  { id: 'university-campuses', label: 'University Campuses', blurb: 'Campus-wide security, facilities, movement, infrastructure, and emergency intelligence.' },
+  { id: 'auto-dealerships', label: 'Auto Dealerships', blurb: 'Inventory, perimeter, parking, access, and theft-prevention intelligence.' },
+  { id: 'religious-campuses', label: 'Religious Campuses', blurb: 'Security and operational intelligence across worship and community facilities.' },
+  { id: 'self-storage', label: 'Self Storage', blurb: 'Scalable security and property intelligence across standardized national portfolios.' },
+  { id: 'specialty-orchards', label: 'Specialty Orchards', blurb: 'Recurring crop, irrigation, canopy, weather, and infrastructure intelligence.' },
+  { id: 'livestock-ranches', label: 'Livestock Ranches', blurb: 'Intelligence across vast fencing, water, livestock, equipment, and infrastructure.' },
+  { id: 'cannabis-cultivation', label: 'Cannabis Cultivation', blurb: 'High-value agricultural intelligence combined with intensive physical security.' },
+  { id: 'food-processing', label: 'Food Processing', blurb: 'Operational intelligence across processing, storage, utilities, loading, and security.' },
+  { id: 'retail-centers', label: 'Retail Centers', blurb: 'Parking, pedestrian, security, maintenance, and portfolio-wide property intelligence.' },
+  { id: 'outdoor-recreation', label: 'Outdoor Recreation', blurb: 'Intelligence across trails, campsites, infrastructure, hazards, and changing terrain.' },
+  { id: 'sports-complexes', label: 'Sports Complexes', blurb: 'Crowd, parking, facility, security, maintenance, and emergency intelligence.' },
+  { id: 'waterfront-marinas', label: 'Waterfront Marinas', blurb: 'Dock, shoreline, vessel, infrastructure, security, and storm intelligence.' },
+  { id: 'memorial-parks', label: 'Memorial Parks', blurb: 'Land, infrastructure, vegetation, maintenance, and location-management intelligence.' },
+  { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
+];
+export const AHART_PLUGINS = PLUGINS;
+export const HUB_BUILD = '1.8.11';
 
 // Same default as model-viewer.html; ?gw= overrides, ?gw=0 disables.
 export const GW_DEFAULT = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
@@ -39,6 +72,71 @@ export async function fetchCamerasFile(root, id) {
   return null;
 }
 
+// Property-level pin document. 404 = not published yet; viewers then fall
+// back to the supersession rule (3D nadir pins, else satellite).
+export async function fetchPropertyPins(root, propertyId) {
+  const id = String(propertyId || '').trim();
+  if (!id) return null;
+  try {
+    const rec = await fetchJson(root + 'pins/' + id + '.json');
+    if (!rec || typeof rec !== 'object') return null;
+    return rec;
+  } catch (e) {
+    return null;
+  }
+}
+
+function asPinArr(v) {
+  return Array.isArray(v) ? v : [];
+}
+
+export function nadirPinSetsFromRecord(rec) {
+  const n = (rec && rec.nadir) || {};
+  if (Array.isArray(n.element_pins) || Array.isArray(n.concern_pins)) {
+    return { element: asPinArr(n.element_pins), concern: asPinArr(n.concern_pins) };
+  }
+  return { element: asPinArr(n.pins), concern: [] };
+}
+
+// Highest-caliber pin set for Private. A published pins file always wins.
+// Else 3D/drone/plane nadir pins replace satellite. Else satellite
+// elements + FR concerns. Never flattens catalog role=.
+export function resolvePinSets(pinFile, modelRec, satRec) {
+  if (pinFile && (asPinArr(pinFile.element).length || asPinArr(pinFile.concern).length)) {
+    return {
+      element: asPinArr(pinFile.element),
+      concern: asPinArr(pinFile.concern),
+      source: pinFile.source === 'satellite' ? 'satellite' : '3d',
+      from: 'file'
+    };
+  }
+  const modelSets = nadirPinSetsFromRecord(modelRec);
+  if (modelSets.element.length || modelSets.concern.length) {
+    return { element: modelSets.element, concern: modelSets.concern, source: '3d', from: '3d' };
+  }
+  if (satRec) {
+    const element = asPinArr(satRec.elements);
+    const concern = asPinArr(satRec.fr && satRec.fr.concerns);
+    if (element.length || concern.length) {
+      return { element: element, concern: concern, source: 'satellite', from: 'satellite' };
+    }
+  }
+  return { element: [], concern: [], source: '', from: 'none' };
+}
+
+// Customer does not see responder-concern pins. Elements stay. Tech and
+// responder get the full set. Role never forks the HTML files.
+export function filterPinSetsForRole(sets, role) {
+  const element = asPinArr(sets && sets.element);
+  const concern = role === 'customer' ? [] : asPinArr(sets && sets.concern);
+  return {
+    element: element,
+    concern: concern,
+    source: (sets && sets.source) || '',
+    from: (sets && sets.from) || ''
+  };
+}
+
 export function dataRoot() {
   const params = new URLSearchParams(window.location.search);
   const explicit = params.get('dataRoot');
@@ -56,6 +154,10 @@ export function gwConfig() {
   return { url: (raw || GW_DEFAULT).replace(/\/+$/, ''), off: false };
 }
 
+function sessionRole() {
+  try { return sessionStorage.getItem('vyRole') || ''; } catch (e) { return ''; }
+}
+
 function childQuery(extra) {
   const src = new URLSearchParams(window.location.search);
   const out = new URLSearchParams();
@@ -63,6 +165,8 @@ function childQuery(extra) {
     const v = src.get(k);
     if (v) out.set(k, v);
   });
+  const role = src.get('role') || sessionRole();
+  if (role && ROLES.indexOf(role) !== -1) out.set('role', role);
   Object.keys(extra || {}).forEach(function (k) {
     if (extra[k] != null && extra[k] !== '') out.set(k, String(extra[k]));
   });
@@ -74,21 +178,27 @@ export function framesFromIndex(idx) {
   const views = (idx && idx.views) || {};
   const modelView = MODEL_VIEWS.find(function (v) { return views[v]; });
   const satView = SAT_VIEWS.find(function (v) { return views[v]; });
+  const hoa = String((idx && idx.hoa) || '').trim();
   return {
     name: (idx && idx.name) || '',
     address: (idx && idx.address) || '',
+    hoa: hoa,
     modelView: modelView || '',
     hasModel: !!modelView,
     hasSatellite: !!satView,
+    hasPrivate: !!(modelView || satView),
+    hasHoa: !!hoa,
     // hasLive is filled by the hub after detectCameras (cameras file / any
     // view-record cameras array) OR when hasModel is true — Jones has live
     // via the CHEKT gateway with no cameras file yet.
     hasLive: false,
+    privateDefault: modelView ? '3d' : (satView ? 'satellite' : ''),
     // embed=1 tells the child pages the hub owns the always-on chrome
     // (live/weather/hazard buttons), so they don't reveal their own copies.
     modelHref: modelView ? (MODEL_PAGE + '?' + childQuery({ view: modelView, embed: '1' })) : '',
     satHref: satView ? (SAT_PAGE + '?' + childQuery({ tab: satView, embed: '1' })) : '',
-    liveHref: LIVE_PAGE + '?' + childQuery({ embed: '1' })
+    liveHref: LIVE_PAGE + '?' + childQuery({ embed: '1' }),
+    hoaHref: hoa ? (HOA_PAGE + '?' + childQuery({ hoa: hoa, embed: '1' })) : ''
   };
 }
 

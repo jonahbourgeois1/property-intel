@@ -25,7 +25,9 @@
 // Canonical PUT: data/cameras/json/{hubId}.json
 // (camerasFileForSync_). Plane/satellite must not write that file.
 // pushAllToGitHub is UTF-8 text — never JPEG bytes through it.
-// Stills: data/cameras/images/{hubId}/cam-NN.jpg. Never nest JSON under images/.
+// v5.28: property-level pins. Canonical PUT: data/pins/{hubId}.json
+// (pinsFileForSync_). 3D writes always replace; satellite writes skip when
+// an existing file is source: "3d". Merge pins_source onto the index.
 // ============================================================
 
 // ── AWS SigV4 helpers ────────────────────────────────────────────────────────
@@ -215,6 +217,10 @@ function mergeIndexEntry_(existing, patch) {
     if (patch[k] !== undefined && patch[k] !== null && patch[k] !== '') base[k] = patch[k];
   });
   if (patch.has_nadir !== undefined) base.has_nadir = patch.has_nadir;
+  if (patch.pins_source === '3d') base.pins_source = '3d';
+  if (patch.pins_source === 'satellite' && base.pins_source !== '3d') {
+    base.pins_source = 'satellite';
+  }
   if (typeof patch.lat === 'number' && !isNaN(patch.lat) &&
       typeof patch.lng === 'number' && !isNaN(patch.lng)) {
     base.lat = patch.lat; base.lng = patch.lng;
@@ -312,6 +318,14 @@ function upsertIndexEntry_(id, patch) {
 //     not own this file. Drone-test sync is the writer for now.
 
 const CAMERAS_JSON_DIR = 'data/cameras/json';
+// Eugene stills and cameras JSON live on the name-hash hub. The site_no hub
+// must not publish a second copy — viewers walk CAMERA_HUB_SIBLINGS.
+const CAMERAS_JSON_CANONICAL = {
+  '8eea64e5c09dc806f667b079e111a38d': '4a484f8c273abef3c02cf91e274f9e2f'
+};
+function camerasCanonicalId_(propertyId) {
+  return CAMERAS_JSON_CANONICAL[propertyId] || propertyId;
+}
 
 function githubGetDecodedJson_(repoPath) {
   const creds = getCredentials();
@@ -393,18 +407,53 @@ function buildCamerasFile_(propertyId, rec) {
 // publish. Never invents an empty cameras file.
 function camerasFileForSync_(propertyId, fallbackViewPath) {
   if (!propertyId) return null;
-  let rec = fetchCamerasRecord_(propertyId);
+  const canonical = camerasCanonicalId_(propertyId);
+  let rec = fetchCamerasRecord_(canonical);
+  if (!rec || !Array.isArray(rec.cameras) || !rec.cameras.length) {
+    rec = fetchCamerasRecord_(propertyId);
+  }
   if (!rec || !Array.isArray(rec.cameras) || !rec.cameras.length) {
     if (fallbackViewPath) {
       const view = githubGetDecodedJson_(fallbackViewPath);
       if (view && Array.isArray(view.cameras) && view.cameras.length) {
-        rec = { property: propertyId, cameras: view.cameras };
+        rec = { property: canonical, cameras: view.cameras };
         Logger.log('camerasFileForSync_: lifted cameras[] from ' + fallbackViewPath);
       }
     }
   }
   if (!rec || !Array.isArray(rec.cameras) || !rec.cameras.length) return null;
-  return buildCamerasFile_(propertyId, rec);
+  return buildCamerasFile_(canonical, rec);
+}
+
+// ── Property-level pins (highest-caliber mapping wins) ───────────────────────
+// Canonical file: data/pins/{hubId}.json
+// 3D / drone-test / plane writes always replace. Satellite writes are skipped
+// when an existing file is source: "3d". Never flatten catalog role=. Never
+// invent an empty pins file. Never clamp; validators drop OOB pins first.
+const PINS_JSON_DIR = 'data/pins';
+
+function pinsFileForSync_(propertyId, rec) {
+  if (!propertyId || !rec || typeof rec !== 'object') return null;
+  const incoming = rec.source === '3d' ? '3d' : 'satellite';
+  const existing = githubGetDecodedJson_(PINS_JSON_DIR + '/' + propertyId + '.json');
+  if (incoming === 'satellite' && existing && existing.source === '3d') {
+    Logger.log('pinsFileForSync_: keep 3d pins for ' + propertyId);
+    return null;
+  }
+  const element = Array.isArray(rec.element) ? rec.element : [];
+  const concern = Array.isArray(rec.concern) ? rec.concern : [];
+  if (!element.length && !concern.length) return null;
+  const body = {
+    property: propertyId,
+    source: incoming,
+    element: element,
+    concern: concern,
+    poi: Array.isArray(rec.poi) ? rec.poi : []
+  };
+  return {
+    path: PINS_JSON_DIR + '/' + propertyId + '.json',
+    content: JSON.stringify(body, null, 2)
+  };
 }
 
 // ── Index hub id (satellite site_no) ─────────────────────────────────────────

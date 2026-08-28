@@ -1,4 +1,4 @@
-# Verification for vyanet-viewer.html (hub 1.7.2) against localhost:8899.
+# Verification for vyanet-viewer.html (hub 1.8.11) against localhost:8899.
 # Static referee first (node --check, ids, handlers, braces), then behavior.
 # Child pages, the live gateway, and the dashboard's public data APIs are
 # stubbed per scenario so every code path actually evaluates (unstubbed =
@@ -43,6 +43,11 @@ LIVE_STUB = ('<html><head><title>LIVE STUB</title></head><body>live stub<script>
              "if(e.data&&e.data.type==='vyanet-stage')window.__stages.push(e.data.stage);});"
              "parent.postMessage({type:'vyanet-ready',page:'live-viewer'},location.origin);"
              '</script></body></html>')
+HOA_STUB = ('<html><head><title>HOA STUB</title></head><body>hoa stub<script>'
+            'window.__gotStage=0;'
+            "window.addEventListener('message',function(e){"
+            "if(e.data&&e.data.type==='vyanet-stage')window.__gotStage++;});"
+            '</script></body></html>')
 
 def stub_children(ctx):
     # Regex (not glob): glob **/viewer.html* would also match live-viewer.html.
@@ -50,6 +55,8 @@ def stub_children(ctx):
               lambda r: r.fulfill(content_type='text/html', body=MV_STUB))
     ctx.route(re.compile(r'/live-viewer\.html(?:\?|$)'),
               lambda r: r.fulfill(content_type='text/html', body=LIVE_STUB))
+    ctx.route(re.compile(r'/hoa-viewer\.html(?:\?|$)'),
+              lambda r: r.fulfill(content_type='text/html', body=HOA_STUB))
     ctx.route(re.compile(r'/viewer\.html(?:\?|$)'),
               lambda r: r.fulfill(content_type='text/html', body=SAT_STUB))
 
@@ -132,8 +139,8 @@ def wait_settled(page):
 
 def wait_dash(page, timeout=30000):
     page.wait_for_function(
-        "document.querySelectorAll('#hm-grid .dash-body').length >= 6 && "
-        "Array.from(document.querySelectorAll('#hm-grid .dash-body'))"
+        "document.querySelectorAll('#pub-grid .dash-body').length >= 6 && "
+        "Array.from(document.querySelectorAll('#pub-grid .dash-body'))"
         ".every(function(b){return b.textContent.indexOf('Loading') === -1;})",
         timeout=timeout)
 
@@ -161,6 +168,12 @@ def static_checks():
     live_m = re.search(r'<script type="module">([\s\S]*?)</script>', live_html)
     check('S2b live-viewer module script present', live_m is not None)
     to_check.append(('live-viewer inline script', live_m.group(1) if live_m else ''))
+    hoa_path = 'C:/dev/property-intel/hoa-viewer.html'
+    hoa_html = open(hoa_path, encoding='utf-8').read()
+    hoa_scripts = re.findall(r'<script>([\s\S]*?)</script>', hoa_html)
+    check('S2c hoa-viewer inline script present', len(hoa_scripts) >= 1)
+    hoa_js = hoa_scripts[0] if hoa_scripts else ''
+    to_check.append(('hoa-viewer inline script', hoa_js))
     for i, (label, src) in enumerate(to_check):
         tmp = os.path.join(tempfile.gettempdir(), 'hub-check-' + str(i) + '.mjs')
         open(tmp, 'w', encoding='utf-8').write(src)
@@ -169,7 +182,7 @@ def static_checks():
         if r.returncode:
             print(r.stderr)
     html_ids = set(re.findall(r'id="([^"]+)"', html))
-    dynamic = {'frame-3d', 'frame-sat', 'frame-live'}
+    dynamic = {'frame-3d', 'frame-sat', 'frame-live', 'frame-hoa'}
     js_ids = re.findall(r"getElementById\('([^']+)'\)", js_src)
     missing = [i for i in js_ids if i not in html_ids and i not in dynamic
                and not i.startswith('dash-body-')]
@@ -232,6 +245,102 @@ def static_checks():
     check('S9 all ' + str(len(live_handlers)) + ' live-viewer handlers resolve on window', not live_unres)
     if live_unres:
         print('  unresolved: ' + ', '.join(live_unres))
+    hoa_ids = set(re.findall(r'id="([^"]+)"', hoa_html))
+    hoa_missing = [i for i in re.findall(r"getElementById\('([^']+)'\)", hoa_js)
+                   if i not in hoa_ids]
+    check('S10 hoa-viewer getElementById literals resolve', not hoa_missing)
+    if hoa_missing:
+        print('  missing: ' + ', '.join(hoa_missing))
+    hoa_handlers = set(re.findall(r'on(?:click|submit)="(\w+)\(', hoa_html))
+    hoa_unres = [h for h in hoa_handlers if not re.search(r'function ' + h + r'\s*\(', hoa_js)]
+    check('S11 all ' + str(len(hoa_handlers)) + ' hoa-viewer handlers resolve', not hoa_unres)
+    if hoa_unres:
+        print('  unresolved: ' + ', '.join(hoa_unres))
+    check('S12 hoa-viewer Lot control present', 'id="parcel-toggle"' in hoa_html)
+    check('S12b Public embed hides Fit and Image, no nadir overlay in embed',
+          'body.embed #zoom-reset' in hoa_html and 'body.embed #nadir-toggle' in hoa_html
+          and 'if (EMBEDDED) return;' in hoa_js)
+    check('S13 hoa-viewer satellite HOA fallback',
+          'function loadHoaMember_' in hoa_js and "satellite/' + hash" in hoa_js)
+    check('S14 hoa-viewer greedy map (matches Private satellite)',
+          "gestureHandling: 'greedy'" in hoa_js and 'function wireMapMouse' in hoa_js)
+    check('S15 hub pub-split actually shrinks the iframe',
+          'iframe.pub-split { width: 58%; right: auto; height: 100%; }' in html)
+    check('S16 hub build 1.8.11', "HUB_BUILD = '1.8.11'" in open(
+        'C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read())
+    check('S16b Community tab label (not Public)',
+          'aria-label="COMMUNITY"' in html
+          and 'COMM<span class="bar-full">UNITY</span>' in html
+          and 'aria-label="PUBLIC"' not in html)
+    check('S16c Home explains the program and each tab',
+          'id="hm-prog"' in html
+          and 'Every property has a story' in html
+          and '>COMMUNITY</h3>' in html
+          and 'vyanet.com/mapping' in html)
+    check('S16d hub header uses --bar-h and Private tabs share button chrome',
+          '--bar-h: 64px' in html
+          and '#bar button, #private-bar button' in html)
+    check('S17 Plugins list has 30 names from the mapping verticals',
+          open('C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read().count("id: '") >= 30
+          and 'Security Companies' in open('C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read()
+          and '>Plugins</button>' in html)
+    check('S18 Private 2D embed is drone-test only, labeled Drone',
+          "? ['drone-test']" in open('C:/dev/property-intel/viewer.html', encoding='utf-8').read()
+          and "EMBEDDED ? 'Drone' : 'Drone Test'" in open('C:/dev/property-intel/viewer.html', encoding='utf-8').read())
+    check('S19 nested bar labels 3D / 2D / Plugins',
+          '>2D</button>' in html and '>Plugins</button>' in html)
+    check('S20 embed drone panel omits 3D Aerial View',
+          'd.viewer360 && !EMBEDDED' in open('C:/dev/property-intel/viewer.html', encoding='utf-8').read())
+    viewer_html = open('C:/dev/property-intel/viewer.html', encoding='utf-8').read()
+    check('S21 2D debug console hidden unless debug=1',
+          '#debug-panel.show { display: flex; }' in viewer_html
+          and "get('debug') === '1'" in viewer_html)
+    check('S22 2D right rail matches 3D feature tabs',
+          'id="tab-rail"' in viewer_html
+          and "label: 'Pins'" in viewer_html
+          and "label: 'Cameras'" in viewer_html
+          and "label: 'Property Analysis'" in viewer_html
+          and "label: 'Response Directions'" in viewer_html
+          and 'function joinLiveToPins_' in viewer_html)
+    check('S23 2D Maps chrome is on the left, feature tabs stay opaque',
+          'ControlPosition.LEFT_CENTER' in viewer_html
+          and 'cameraControlOptions' in viewer_html
+          and 'ControlPosition.TOP_LEFT' in viewer_html
+          and 'fullscreenControlOptions' in viewer_html
+          and 'ControlPosition.LEFT_TOP' in viewer_html
+          and 'display: none; background: #12161b; border: 1px solid;' in viewer_html)
+    check('S24 camera pins join CHEKT from cameras JSON, 2D markers match 3D',
+          'function joinLiveToPins' in open('C:/dev/property-intel/model-viewer.html', encoding='utf-8').read()
+          and 'need live.device or unique live.name/label' in open('C:/dev/property-intel/model-viewer.html', encoding='utf-8').read()
+          and 'need live.device or unique live.name/label' in viewer_html
+          and 'leftoverPins' not in open('C:/dev/property-intel/model-viewer.html', encoding='utf-8').read()
+          and 'function makeCamPinSvg_' in viewer_html
+          and 'function dropCameraWedge_' in viewer_html
+          and "type: 'vyanet-key'" in html
+          and 'id="cam-popup"' in viewer_html
+          and 'window.showCameraPopup' in viewer_html
+          and 'window.watchPinEvent' in viewer_html
+          and 'function camHasEvent_' in viewer_html
+          and 'fill="#f59e0b"' in viewer_html)
+    cam_jsons = [f for f in os.listdir('C:/dev/property-intel/data/cameras/json') if f.endswith('.json')]
+    check('S24b exactly two cameras JSON files',
+          len(cam_jsons) == 2
+          and '6de88883bfd4a8349a901c54611ed9d7.json' in cam_jsons
+          and '4a484f8c273abef3c02cf91e274f9e2f.json' in cam_jsons)
+    jones_cams = json.loads(open(
+        'C:/dev/property-intel/data/cameras/json/6de88883bfd4a8349a901c54611ed9d7.json',
+        encoding='utf-8').read())['cameras']
+    jones_live = {c['id']: c.get('live') or {} for c in jones_cams if c.get('live')}
+    check('S24c Jones has all 4 CHEKT live cameras on the confirmed pins',
+          len(jones_live) == 4
+          and jones_live.get('cam-01', {}).get('name') == 'FRONT DOOR'
+          and jones_live.get('cam-07', {}).get('name') == 'UPPER DECK'
+          and jones_live.get('cam-08', {}).get('name') == 'LOWER DECK'
+          and jones_live.get('cam-14', {}).get('name') == 'DRIVEWAY'
+          and jones_live['cam-01'].get('device') == 'E8ABFAAC68C9'
+          and jones_live['cam-07'].get('device') == 'E8ABFAAC67AE'
+          and jones_live['cam-08'].get('device') == 'E8ABFAAC68DC'
+          and jones_live['cam-14'].get('device') == 'F4B1C20A440D')
 
 static_checks()
 
@@ -272,27 +381,45 @@ with sync_playwright() as p:
     check('A11b switch-role + viewing-as sit in the top row',
           page.evaluate("document.querySelector('.hm-top #hm-switch') !== null")
           and page.evaluate("document.querySelector('.hm-top #hm-role') !== null"))
-    check('A12 launch buttons enabled (3d/sat/live)',
-          not page.is_disabled('#go-3d') and not page.is_disabled('#go-sat')
-          and not page.is_disabled('#go-live'))
-    check('A12b LIVE FEED top-bar tab enabled', not page.is_disabled('#btn-live'))
+    check('A12 Private / Community / Live tabs enabled',
+          not page.is_disabled('#btn-private') and not page.is_disabled('#btn-public')
+          and not page.is_disabled('#btn-live'))
+    check('A12b no launch-button row on home', page.query_selector('#go-3d') is None
+          and page.query_selector('#hm-launch') is None)
+    check('A12c LIVE top-bar tab enabled', not page.is_disabled('#btn-live'))
+    check('A12d home program section is on Home',
+          page.query_selector('#hm-prog') is not None
+          and 'Every property has a story' in (page.text_content('#hm-prog') or ''))
     check('A13 HOME button lit', 'on' in page.get_attribute('#btn-home', 'class'))
     f3 = page.query_selector('#frame-3d')
     fs = page.query_selector('#frame-sat')
     fl = page.query_selector('#frame-live')
-    check('A14 3d, sat, and live iframes mounted at home',
-          f3 is not None and fs is not None and fl is not None)
+    check('A14 3d, sat, live, and hoa iframes mounted at home',
+          f3 is not None and fs is not None and fl is not None
+          and page.query_selector('#frame-hoa') is not None)
     check('A15 3D iframe src has view + embed', 'view=drone-test' in (f3.get_attribute('src') or '')
           and 'embed=1' in (f3.get_attribute('src') or ''))
-    check('A16 sat iframe src has tab + embed', 'tab=security' in (fs.get_attribute('src') or '')
+    check('A16 sat iframe src has tab + embed', 'tab=drone-test' in (fs.get_attribute('src') or '')
           and 'embed=1' in (fs.get_attribute('src') or ''))
     check('A16b live iframe is live-viewer.html + embed',
           'live-viewer.html' in (fl.get_attribute('src') or '')
           and 'embed=1' in (fl.get_attribute('src') or ''))
+    fh = page.query_selector('#frame-hoa')
+    check('A16c hoa iframe is hoa-viewer.html + embed + hoa slug',
+          'hoa-viewer.html' in (fh.get_attribute('src') or '')
+          and 'embed=1' in (fh.get_attribute('src') or '')
+          and 'hoa=highlands' in (fh.get_attribute('src') or ''))
+    check('A16d dashboard cards are not on home',
+          page.query_selector('#pub-grid .dash-card') is None)
+    page.click('#btn-public')
+    page.wait_for_selector('#public.visible')
+    check('A16e COMMUNITY tab lit, home hidden',
+          'on' in page.get_attribute('#btn-public', 'class')
+          and not visible(page, '#home'))
     # dashboard cards (stubbed data)
     wait_dash(page)
-    check('A17 six dashboard cards render', page.evaluate(
-        "document.querySelectorAll('#hm-grid .dash-card').length") == 6)
+    check('A17 six dashboard cards render on Public', page.evaluate(
+        "document.querySelectorAll('#pub-grid .dash-card').length") == 6)
     wx = page.text_content('#dash-body-wx')
     check('A18 weather card: obs temp + alert', '86' in wx and 'Red Flag Warning' in wx)
     check('A18e weather card: humidity + dewpoint + gusts',
@@ -356,9 +483,12 @@ with sync_playwright() as p:
           page.query_selector('#dash-zoom-in-quake') is not None)
     check('A20f quake map is draggable', page.evaluate(
         "!!document.querySelector('#dash-tiles-quake .dash-tiles-inner')"))
-    # hero nadir (stubbed CloudFront image loads instantly)
+    # hero nadir (stubbed CloudFront image loads instantly). Home was left
+    # for Public to load the dashboard; come back so the hero is visible.
+    page.click('#btn-home')
+    page.wait_for_selector('#home.visible')
     page.wait_for_selector('#hm-hero.has-img', timeout=8000)
-    check('A20c hero nadir shows with hint', page.text_content('#hm-hero-hint') == 'Open 3D model')
+    check('A20c hero nadir shows with hint', page.text_content('#hm-hero-hint') == 'Open mapping')
     check('A20d no passcode field on home', page.query_selector('#hm-pass') is None)
     fm = page.text_content('#dash-body-fema')
     check('A21 fema card: count since first year', '2' in fm and '1996' in fm and 'Deschutes County' in fm)
@@ -374,8 +504,12 @@ with sync_playwright() as p:
     check('A23 more-sources card lists planned', 'Air quality' in info)
     page.screenshot(path=os.path.join(SHOT_DIR, 'home-dashboard-mobile.png'))
     # stages
-    page.click('#go-3d')
-    check('A24 3D stage: home hidden', not visible(page, '#home'))
+    page.click('#btn-private')
+    check('A24 Private 3D: home and public hidden',
+          not visible(page, '#home') and not visible(page, '#public'))
+    check('A24b PRIVATE tab lit and nested 3D on',
+          'on' in page.get_attribute('#btn-private', 'class')
+          and 'on' in page.get_attribute('#btn-pv-3d', 'class'))
     check('A25 3D frame on top', 'on' in page.get_attribute('#frame-3d', 'class'))
     mv_stub = next((f for f in page.frames
                     if f.url.split('?')[0].endswith('/model-viewer.html')), None)
@@ -385,10 +519,11 @@ with sync_playwright() as p:
             "window.__stages && window.__stages.indexOf('3d') !== -1", timeout=5000)
         stages = mv_stub.evaluate('window.__stages')
     check('A25b 3D child received vyanet-stage 3d', '3d' in stages)
-    page.click('#btn-sat')
+    page.click('#btn-pv-sat')
     check('A26 satellite frame on top', 'on' in page.get_attribute('#frame-sat', 'class')
           and 'on' not in (page.get_attribute('#frame-3d', 'class') or '')
           and 'on' not in (page.get_attribute('#frame-live', 'class') or ''))
+    check('A26c nested bar says 2D', page.text_content('#btn-pv-sat') == '2D')
     if mv_stub:
         mv_stub.wait_for_function(
             "window.__stages && window.__stages.indexOf('off') !== -1", timeout=5000)
@@ -401,15 +536,23 @@ with sync_playwright() as p:
         sat_frame.wait_for_function('window.__gotStage > 0', timeout=5000)
         got = sat_frame.evaluate('window.__gotStage')
     check('A27 vyanet-stage postMessage received by satellite child', got and got > 0)
+    page.click('#btn-pv-ahart')
+    check('A27b Plugins stub visible', visible(page, '#ahart')
+          and page.text_content('#btn-pv-ahart') == 'Plugins')
+    check('A27c thirty coming-soon plugin cards', page.evaluate(
+        "document.querySelectorAll('#ahart-grid .ahart-card').length") == 30)
+    check('A27d first plugin is Security Companies',
+          page.text_content('#ahart-security-companies h3') == 'Security Companies')
     page.click('#btn-home')
-    check('A28 back to home, frames keep z classes', visible(page, '#home')
-          and 'on' in page.get_attribute('#frame-sat', 'class'))
+    check('A28 back to home, plugin frames not covering', visible(page, '#home')
+          and 'on' in page.get_attribute('#btn-home', 'class'))
     page.click('#hm-hero')
-    check('A28b hero click opens the 3D stage', not visible(page, '#home')
-          and 'on' in page.get_attribute('#frame-3d', 'class'))
+    check('A28b hero click opens Private 3D', not visible(page, '#home')
+          and 'on' in page.get_attribute('#frame-3d', 'class')
+          and 'on' in page.get_attribute('#btn-private', 'class'))
     page.click('#btn-home')
     # live feed without a key: hub popup, not a home-page field
-    page.click('#go-live')
+    page.click('#btn-live')
     check('A29 live without key opens passcode popup', visible(page, '#live-pass'))
     check('A29b stays on home until unlocked', visible(page, '#home'))
     page.click('#live-pass-cancel')
@@ -509,28 +652,26 @@ with sync_playwright() as p:
     fs = page.query_selector('#frame-sat')
     check('D4 both plugins from drone-test-only index', 'view=drone-test' in (f3.get_attribute('src') or '')
           and 'tab=drone-test' in (fs.get_attribute('src') or ''))
+    page.click('#btn-public')
+    page.wait_for_selector('#public.visible')
     wait_dash(page)
-    geo = page.evaluate("""() => {
-      const box = id => document.getElementById(id).getBoundingClientRect();
-      const go = box('go-3d'), grid = box('hm-grid'), live = box('btn-live');
-      const wrap = document.querySelector('.hm-wrap').getBoundingClientRect();
-      const inner = document.querySelector('.bar-inner').getBoundingClientRect();
-      return { goBottom: go.bottom, gridTop: grid.top,
-               barW: inner.width, wrapW: wrap.width,
-               barLeft: inner.left, wrapLeft: wrap.left,
-               btnRight: live.right, wrapRight: wrap.right };
-    }""")
-    check('D5 launch stays above cards (not a side column)',
-          geo['goBottom'] <= geo['gridTop'] + 2)
-    check('D6 top bar and home share the same frame',
-          abs(geo['barW'] - geo['wrapW']) < 8
-          and abs(geo['barLeft'] - geo['wrapLeft']) < 8
-          and geo['btnRight'] <= geo['wrapRight'] + 2)
+    check('D6 public dashboard is visible in the community panel',
+          page.evaluate("document.getElementById('pub-grid').getBoundingClientRect().width") > 180)
+    check('D6b Public map pane is the left side, dashboard on the right',
+          page.evaluate("""() => {
+            const fh = document.getElementById('frame-hoa');
+            const pub = document.getElementById('public');
+            if (!fh || !fh.classList.contains('pub-split') || !pub) return false;
+            const mr = fh.getBoundingClientRect(), pr = pub.getBoundingClientRect();
+            return mr.width < window.innerWidth * 0.7
+                && mr.right <= pr.left + 4
+                && mr.left < 8;
+          }"""))
     lay = page.evaluate("""() => {
       const box = id => document.getElementById(id).getBoundingClientRect();
       const wx = box('dash-wx'), fire = box('dash-fire'), quake = box('dash-quake');
       const fema = box('dash-fema'), space = box('dash-space'), info = box('dash-info');
-      const grid = box('hm-grid');
+      const grid = box('pub-grid');
       return {
         wxW: wx.width, gridW: grid.width, wxBottom: wx.bottom,
         fireTop: fire.top, quakeTop: quake.top,
@@ -569,13 +710,14 @@ with sync_playwright() as p:
     page = ctx.new_page()
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES + '&stage=satellite&role=responder')
     page.wait_for_selector('#frame-sat.on')
-    check('E1 stage param + role lands in satellite, no gate, no home',
+    check('E1 stage=satellite + role lands in Private satellite, no gate, no home',
           not visible(page, '#home') and not visible(page, '#gate')
-          and 'on' in page.get_attribute('#btn-sat', 'class'))
-    page.click('#btn-home')
+          and 'on' in page.get_attribute('#btn-private', 'class')
+          and 'on' in page.get_attribute('#btn-pv-sat', 'class'))
+    page.click('#btn-public')
     wait_dash(page)
-    check('E2 dashboard loads on first HOME visit', page.evaluate(
-        "document.querySelectorAll('#hm-grid .dash-card').length") == 6)
+    check('E2 dashboard loads on first PUBLIC visit', page.evaluate(
+        "document.querySelectorAll('#pub-grid .dash-card').length") == 6)
     ctx.close()
 
     # ── Scenario F: error paths ──
@@ -624,7 +766,7 @@ with sync_playwright() as p:
     page.click('#role-customer')
     page.click('#gt-skip')
     page.wait_for_selector('#home.visible')
-    page.click('#go-live')
+    page.click('#btn-live')
     check('H7 live after skip opens the passcode popup', visible(page, '#live-pass'))
     ctx.close()
 
@@ -644,7 +786,7 @@ with sync_playwright() as p:
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES + '&role=customer')
     page.wait_for_selector('#home.visible')
     check('I1 no home passcode field', page.query_selector('#hm-pass') is None)
-    page.click('#go-live')
+    page.click('#btn-live')
     check('I2 live without key opens popup', visible(page, '#live-pass'))
     page.click('#live-pass-go')
     check('I3 empty passcode refused', 'Enter the viewer passcode' in page.text_content('#live-pass-err'))
@@ -689,10 +831,12 @@ with sync_playwright() as p:
     page = ctx.new_page()
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES + '&role=customer')
     page.wait_for_selector('#home.visible')
-    check('J1 3D disabled when index has no model view',
-          page.is_disabled('#btn-3d') and page.is_disabled('#go-3d'))
+    check('J1 3D nested control disabled when index has no model view',
+          page.is_disabled('#btn-pv-3d'))
+    check('J1b PRIVATE still enabled via satellite',
+          not page.is_disabled('#btn-private'))
     check('J2 LIVE enabled from cameras file without a GLB',
-          not page.is_disabled('#btn-live') and not page.is_disabled('#go-live'))
+          not page.is_disabled('#btn-live'))
     check('J3 no 3D iframe mounted', page.query_selector('#frame-3d') is None)
     check('J4 live iframe mounted', page.query_selector('#frame-live') is not None)
     check('J5 satellite iframe still mounted', page.query_selector('#frame-sat') is not None)
@@ -707,7 +851,7 @@ with sync_playwright() as p:
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES + '&role=responder')
     page.wait_for_selector('#home.visible')
     page.wait_for_function(
-        "Array.from(document.querySelectorAll('iframe')).length === 3")
+        "Array.from(document.querySelectorAll('iframe')).length >= 3")
     titles = {}
     for f in page.frames:
         name = f.url.split('/')[-1].split('?')[0]
@@ -722,19 +866,23 @@ with sync_playwright() as p:
     check('G2b real live-viewer child loads (paused until LIVE tab)',
           titles.get('live-viewer.html') == 'Live Feed')
     try:
+        page.click('#btn-public')
+        page.wait_for_selector('#public.visible')
         wait_dash(page, timeout=45000)
         settled = True
     except Exception:
         settled = False
     check('G3 dashboard settles against the real APIs', settled)
     try:
+        page.click('#btn-home')
+        page.wait_for_selector('#home.visible')
         page.wait_for_selector('#hm-hero.has-img', timeout=15000)
         hero_ok = True
     except Exception:
         hero_ok = False
     check('G4 hero nadir loads from real CloudFront', hero_ok)
     bodies = page.evaluate(
-        "Array.from(document.querySelectorAll('#hm-grid .dash-body'))"
+        "Array.from(document.querySelectorAll('#pub-grid .dash-body'))"
         ".map(function(b){return b.textContent.indexOf('Could not load') !== -1 ? 'err' : 'ok';})")
     print('      G3 sources: ' + ', '.join(
         s['id'] + '=' + bodies[i] for i, s in enumerate([
@@ -760,7 +908,7 @@ with sync_playwright() as p:
         dpr_ok = mv.evaluate(
             'typeof window.__pixelRatio === "number" && window.__pixelRatio <= 1.5')
     check('G4c 3D pixel ratio capped at 1.5', dpr_ok)
-    page.click('#go-3d')
+    page.click('#btn-private')
     check('G5 3D stage opened', mv is not None)
     loop_on = False
     if mv:
