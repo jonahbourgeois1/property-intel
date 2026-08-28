@@ -216,7 +216,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.9.3 — satellite split pins</div>
+    <div id="version-badge">v2.9.5 — satellite split pins</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -268,7 +268,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.9.4';
+const VERSION     = 'v2.9.5';
 const _qs         = new URLSearchParams(window.location.search);
 const DATA_ROOT   = (function () {
   const explicit = _qs.get('dataRoot');
@@ -552,18 +552,58 @@ function parcelFileFor(lat, lng, county) {
   const lngCell = Math.floor((lng - county.lng0) / county.step) * county.step + county.lng0;
   return county.name + '_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
+// Keep in sync with NadirGeo.parcelMatch (nadir-geo.js 1.3.2). Lane ROW leftovers
+// (TAXLOT 77/88/99, ACCTNO 000None) are skipped; holes count; smallest lot wins.
+function isUnaccountedParcel(props) {
+  props = props || {};
+  if (String(props.ACCTNO || '') === '000None') return true;
+  const raw = String(props.TAXLOT || '');
+  if (!/^\d+$/.test(raw)) return false;
+  const n = Number(raw);
+  return n === 77 || n === 88 || n === 99;
+}
+function polyContains(poly, lat, lng) {
+  if (!poly || !poly[0] || poly[0].length < 4 || !pointInPolygon(lat, lng, poly[0])) return false;
+  for (let h = 1; h < poly.length; h++) {
+    if (poly[h] && poly[h].length >= 4 && pointInPolygon(lat, lng, poly[h])) return false;
+  }
+  return true;
+}
+function featArea(feat) {
+  const acres = Number((feat.properties || {}).MAPACRES);
+  if (isFinite(acres) && acres > 0) return acres;
+  const g = feat.geometry;
+  const polys = !g ? [] : g.type === 'Polygon' ? [g.coordinates]
+              : g.type === 'MultiPolygon' ? g.coordinates : [];
+  let sum = 0;
+  for (let i = 0; i < polys.length; i++) {
+    const ring = polys[i] && polys[i][0];
+    if (!ring) continue;
+    let a = 0;
+    for (let j = 0, k = ring.length - 1; j < ring.length; k = j++) {
+      a += ring[k][0] * ring[j][1] - ring[j][0] * ring[k][1];
+    }
+    sum += Math.abs(a) / 2;
+  }
+  return sum;
+}
 function parcelMatch(geojson, lat, lng) {
   if (!geojson || !geojson.features) return null;
+  let best = null, bestArea = Infinity;
   for (let i = 0; i < geojson.features.length; i++) {
     const f = geojson.features[i], g = f.geometry;
-    if (!g) continue;
+    if (!g || isUnaccountedParcel(f.properties)) continue;
     const polys = g.type === 'Polygon' ? [g.coordinates]
                 : g.type === 'MultiPolygon' ? g.coordinates : [];
-    for (let k = 0; k < polys.length; k++) {
-      if (polys[k] && polys[k][0] && pointInPolygon(lat, lng, polys[k][0])) return f;
+    let hit = false;
+    for (let p = 0; p < polys.length; p++) {
+      if (polyContains(polys[p], lat, lng)) { hit = true; break; }
     }
+    if (!hit) continue;
+    const area = featArea(f);
+    if (area < bestArea) { best = f; bestArea = area; }
   }
-  return null;
+  return best;
 }
 function drawParcelBoundary(lat, lng, storedRing) {
   if (parcelPoly) { parcelPoly.setMap(null); parcelPoly = null; }
