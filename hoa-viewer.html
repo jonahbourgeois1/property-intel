@@ -18,6 +18,11 @@
     --orange: #f97316; --header-h: 52px;
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+  body.embed #header, body.embed #panel, body.embed #mobile-toggle,
+  body.embed #debug-panel, body.embed #lightbox, body.embed #toggle-panel { display: none !important; }
+  body.embed #zoom-reset, body.embed #nadir-toggle { display: none !important; }
+  body.embed { --header-h: 0px; }
+  body.embed #main { }
   #header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; height: var(--header-h); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 100; }
   .logo { display: flex; align-items: center; gap: 10px; }
   .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: white; }
@@ -52,12 +57,27 @@
   .error-icon { font-size: 32px; color: var(--red); }
   .error-title { font-size: 16px; font-weight: 600; color: var(--text); }
   .error-msg { font-size: 13px; color: var(--text3); max-width: 300px; line-height: 1.6; }
-  #map-controls { position: absolute; bottom: 24px; left: 16px; z-index: 10; display: flex; flex-direction: column; gap: 8px; }
-  .map-ctrl-btn { display: flex; align-items: center; gap: 7px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border2); border-radius: 7px; font-size: 11px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.15s; box-shadow: 0 2px 12px rgba(0,0,0,0.5); white-space: nowrap; font-family: 'DM Mono', monospace; letter-spacing: 0.02em; }
-  .map-ctrl-btn:hover { background: var(--surface2); color: var(--text); }
-  .map-ctrl-btn.active { background: rgba(59,130,246,0.15); border-color: rgba(59,130,246,0.4); color: var(--accent); }
-  .map-ctrl-btn .ctrl-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
-  #overlay-btn { display: none; }
+  #map-controls { position: absolute; left: 16px; bottom: 16px; z-index: 10; display: flex; flex-direction: column; gap: 6px; }
+  .zoom-btn {
+    width: 34px; height: 34px;
+    border: 1px solid #3a444f;
+    background: #232a33;
+    color: #eef2f6;
+    border-radius: 8px;
+    font-family: 'DM Mono', monospace; font-size: 17px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    transition: background 0.1s ease, border-color 0.1s ease;
+  }
+  .zoom-btn:hover { background: #2c3540; border-color: #4fd1c5; }
+  .zoom-btn.reset { font-size: 12px; letter-spacing: 0.04em; }
+  .zoom-btn.on {
+    border-color: #cd3333;
+    color: #f0a8a8;
+    background: rgba(205, 51, 51, 0.16);
+  }
+  .zoom-btn.on:hover { border-color: #cd3333; background: rgba(205, 51, 51, 0.26); }
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
   .panel-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
@@ -198,7 +218,7 @@
     </div>
   </div>
   <div class="header-right">
-    <div id="version-badge">v2.3.4 — plane intel</div>
+    <div id="version-badge">v2.5.1 — community</div>
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
     <div id="hoa-badge">Loading...</div>
   </div>
@@ -206,9 +226,9 @@
 <div id="main">
   <div id="map"></div>
   <div id="map-controls">
-    <button class="map-ctrl-btn" id="overlay-btn" onclick="toggleOverlay()" title="Toggle nadir image overlay">
-      <span class="ctrl-dot"></span><span id="overlay-label">Show Overlay</span>
-    </button>
+    <div class="zoom-btn reset" id="zoom-reset" title="Reset to fit" onclick="fitView()">Fit</div>
+    <div class="zoom-btn reset" id="parcel-toggle" title="Show or hide the property boundary" onclick="toggleParcel()">Lot</div>
+    <div class="zoom-btn reset" id="nadir-toggle" title="Show or hide the captured nadir image over the map" style="display:none" onclick="toggleOverlay()">Image</div>
   </div>
   <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading community data...</div></div>
   <div id="error"><div class="error-icon">⚠</div><div class="error-title">Community not found</div><div class="error-msg" id="error-msg">No HOA data provided.</div></div>
@@ -255,11 +275,21 @@
   </div>
 </div>
 <script>
-const VERSION      = 'v2.3.4';
-const BASE_URL     = 'https://responder-intel.vyanet.com/data/satellite/';
-const DATA_ROOT    = 'https://responder-intel.vyanet.com/data/';
-const HOA_BASE_URL = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/hoa/';
-const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
+const VERSION      = 'v2.5.1';
+const _qs          = new URLSearchParams(window.location.search);
+const EMBEDDED     = _qs.get('embed') === '1';
+const HIGHLIGHT_ID = (_qs.get('property') || '').trim();
+const DATA_ROOT    = (function () {
+  const explicit = _qs.get('dataRoot');
+  if (explicit) return explicit.replace(/\/*$/, '/');
+  if (window.location.protocol === 'file:') {
+    return 'https://responder-intel.vyanet.com/data/';
+  }
+  return new URL('data/', window.location.href).href;
+})();
+const BASE_URL     = DATA_ROOT + 'satellite/';
+const HOA_BASE_URL = DATA_ROOT + 'hoa/';
+const PARCEL_BASE  = DATA_ROOT + 'parcels/';
 const GEOCODE_KEY  = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_COUNTIES = [
   { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
@@ -282,7 +312,8 @@ let mapsApiReady = false, hoaData = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
 let allMarkers = [], allPolygons = [], activeMarker = null;
 let intelMarkers = [], pendingPinSets = [], pendingOverlay = null;
-let groundOverlay = null, overlayVisible = false;
+let groundOverlay = null, overlayVisible = false, parcelShown = true;
+let communityBounds = null;
 let activePinId = null, infoWindow = null;
 let lightboxViews = [], lightboxIndex = 0;
 let propertyRegistry = [];
@@ -370,7 +401,7 @@ function selectPropertyFromDropdown(name) {
   if (!item) return;
   closePropertyDropdown();
   document.getElementById('panel-title').textContent = name + ' ▾';
-  if (map && item.lat && item.lng) { map.panTo({ lat: item.lat, lng: item.lng }); map.setZoom(18); }
+  if (map && item.lat && item.lng) { panToProperty(item.lat, item.lng, 18); }
   if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
   if (item.marker) {
     item.marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
@@ -471,7 +502,9 @@ function activatePin(pinId, marker, fromMap) {
   if (marker) {
     marker.setAnimation(google.maps.Animation.BOUNCE);
     setTimeout(function() { marker.setAnimation(null); }, 700);
-    if (!fromMap) map.panTo(marker.getPosition());
+    if (!fromMap && marker.getPosition()) {
+      panToProperty(marker.getPosition().lat(), marker.getPosition().lng(), null);
+    }
     if (!infoWindow) {
       infoWindow = new google.maps.InfoWindow({ disableAutoPan: false });
       map.addListener('click', function() { infoWindow.close(); });
@@ -492,6 +525,7 @@ function pinRowClick(pinId) {
   activatePin(pinId, marker, false);
 }
 function setOverlay(imageUrl, centerLat, centerLng, zoom) {
+  if (EMBEDDED) return;
   if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
   if (!imageUrl) return;
   if (!map) { pendingOverlay = { imageUrl: imageUrl, centerLat: centerLat, centerLng: centerLng, zoom: zoom }; return; }
@@ -507,11 +541,58 @@ function flushPendingMapData() {
   const sets = pendingPinSets.slice(); pendingPinSets = [];
   sets.forEach(function(s) { dropPins(s.pins, s.color, s.hexColor); });
 }
+function setNadirToggleVisible(on) {
+  const btn = document.getElementById('nadir-toggle');
+  if (btn) btn.style.display = on ? 'flex' : 'none';
+  applyNadirToggle();
+}
+function applyNadirToggle() {
+  const btn = document.getElementById('nadir-toggle');
+  if (btn) {
+    btn.classList.toggle('on', overlayVisible);
+    btn.title = overlayVisible
+      ? 'Hide the captured nadir image'
+      : 'Show the captured nadir image over the map';
+  }
+  if (groundOverlay) groundOverlay.setMap(overlayVisible && map ? map : null);
+}
 function toggleOverlay() {
   overlayVisible = !overlayVisible;
-  const btn = document.getElementById('overlay-btn'), lbl = document.getElementById('overlay-label');
-  if (overlayVisible) { btn.classList.add('active'); lbl.textContent = 'Hide Overlay'; if (groundOverlay) groundOverlay.setMap(map); }
-  else { btn.classList.remove('active'); lbl.textContent = 'Show Overlay'; if (groundOverlay) groundOverlay.setMap(null); }
+  applyNadirToggle();
+}
+function applyParcelToggle() {
+  const btn = document.getElementById('parcel-toggle');
+  if (btn) btn.classList.toggle('on', parcelShown);
+  allPolygons.forEach(function (poly) {
+    poly.setMap(parcelShown && map ? map : null);
+  });
+}
+function toggleParcel() {
+  parcelShown = !parcelShown;
+  applyParcelToggle();
+}
+function fitView() {
+  if (!map) return;
+  if (groundOverlay && groundOverlay.getBounds) {
+    const b = groundOverlay.getBounds();
+    if (b && !b.isEmpty()) { map.fitBounds(b, 24); return; }
+  }
+  if (communityBounds && !communityBounds.isEmpty()) {
+    map.fitBounds(communityBounds);
+    return;
+  }
+  if (!allPolygons.length) return;
+  const b = new google.maps.LatLngBounds();
+  allPolygons.forEach(function (poly) {
+    poly.getPath().forEach(function (ll) { b.extend(ll); });
+  });
+  if (!b.isEmpty()) map.fitBounds(b, 24);
+}
+function panToProperty(lat, lng, zoom) {
+  if (!map) return;
+  const pos = { lat: lat, lng: lng };
+  if (typeof zoom === 'number') map.setZoom(zoom);
+  map.panTo(pos);
 }
 function pointInPolygon(lat, lng, ring) {
   var inside = false;
@@ -582,8 +663,9 @@ function parcelMatch(geojson, lat, lng) {
 function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
   if (storedRing && storedRing.length >= 3) {
     var paths = storedRing.map(function(pt) { return { lat: pt.lat, lng: pt.lng }; });
-    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
+    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: parcelShown && mapInstance ? mapInstance : null });
     allPolygons.push(polygon);
+    applyParcelToggle();
     return;
   }
   var files = PARCEL_COUNTIES.map(function (c) { return parcelFileFor(lat, lng, c); });
@@ -606,21 +688,75 @@ function drawParcelBoundaryForProperty(lat, lng, mapInstance, storedRing) {
     var paths = polys.map(function (poly) {
       return poly[0].map(function (pt) { return { lat: pt[1], lng: pt[0] }; });
     });
-    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: mapInstance });
+    var polygon = new google.maps.Polygon({ paths: paths, strokeColor: '#cd3333', strokeOpacity: 1.0, strokeWeight: 4, fillOpacity: 0.0, map: parcelShown && mapInstance ? mapInstance : null });
     allPolygons.push(polygon);
+    applyParcelToggle();
   }).catch(function (e) { dbg('Parcel error: ' + e.message, 'error'); });
 }
 function initMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: 44.06, lng: -121.31 }, zoom: 13,
     mapTypeId: google.maps.MapTypeId.SATELLITE, tilt: 0,
+    rotateControl: false, maxZoom: 21,
     mapTypeControl: true, mapTypeControlOptions: { style: google.maps.MapTypeControlStyle.DROPDOWN_MENU, mapTypeIds: ['satellite','hybrid','roadmap'] },
-    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    streetViewControl: true, streetViewControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP },
-    fullscreenControl: true, fullscreenControlOptions: { position: google.maps.ControlPosition.RIGHT_TOP }
+    zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_CENTER },
+    streetViewControl: false,
+    fullscreenControl: true,
+    gestureHandling: 'greedy',
+    scrollwheel: true
   });
+  map.setTilt(0);
+  wireMapMouse(map);
+  applyParcelToggle();
   dbg('Map initialized', 'ok');
   flushPendingMapData();
+}
+function wireMapMouse(gmap) {
+  const el = gmap.getDiv();
+  const helper = new google.maps.OverlayView();
+  helper.onAdd = function () {};
+  helper.draw = function () {};
+  helper.onRemove = function () {};
+  helper.setMap(gmap);
+  function latLngAt(clientX, clientY) {
+    const p = helper.getProjection();
+    if (!p) return null;
+    const r = el.getBoundingClientRect();
+    return p.fromContainerPixelToLatLng(
+      new google.maps.Point(clientX - r.left, clientY - r.top));
+  }
+  function zoomAt(clientX, clientY, nextZoom) {
+    const z = Math.max(0, Math.min(21, nextZoom));
+    if (z === gmap.getZoom()) return;
+    const keep = latLngAt(clientX, clientY);
+    gmap.setZoom(z);
+    const now = latLngAt(clientX, clientY);
+    if (!keep || !now) return;
+    const c = gmap.getCenter();
+    if (!c) return;
+    gmap.panTo({
+      lat: c.lat() + (keep.lat() - now.lat()),
+      lng: c.lng() + (keep.lng() - now.lng())
+    });
+  }
+  let mid = null;
+  el.addEventListener('mousedown', function (e) {
+    if (e.button !== 1) return;
+    e.preventDefault();
+    e.stopPropagation();
+    mid = { y: e.clientY, zoom: gmap.getZoom() || 0 };
+  }, true);
+  window.addEventListener('mousemove', function (e) {
+    if (!mid) return;
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, mid.zoom + (mid.y - e.clientY) / 80);
+  });
+  window.addEventListener('mouseup', function (e) {
+    if (e.button === 1) mid = null;
+  });
+  el.addEventListener('auxclick', function (e) {
+    if (e.button === 1) e.preventDefault();
+  });
 }
 function dropAllPins(entries) {
   var bounds = new google.maps.LatLngBounds(), geocodeQueue = [];
@@ -628,24 +764,36 @@ function dropAllPins(entries) {
     if (entry.lat && entry.lng) { placePin(entry, entry.lat, entry.lng, bounds); }
     else { geocodeQueue.push(entry); }
   });
-  if (!bounds.isEmpty()) {
-    map.fitBounds(bounds);
+  communityBounds = bounds.isEmpty() ? null : bounds;
+  if (communityBounds) {
+    map.fitBounds(communityBounds);
     google.maps.event.addListenerOnce(map, 'bounds_changed', function() { if (map.getZoom() > 16) map.setZoom(16); });
   }
   geocodeQueue.forEach(function(entry) {
     fetch('https://maps.googleapis.com/maps/api/geocode/json?address=' + encodeURIComponent(entry.address.replace(/^\s+/, '')) + '&key=' + GEOCODE_KEY)
       .then(function(res) { return res.json(); })
-      .then(function(data) { if (data.status === 'OK' && data.results[0]) { var loc = data.results[0].geometry.location; placePin(entry, loc.lat, loc.lng, null); } })
+      .then(function(data) {
+        if (data.status === 'OK' && data.results[0]) {
+          var loc = data.results[0].geometry.location;
+          placePin(entry, loc.lat, loc.lng, null);
+          if (!communityBounds) communityBounds = new google.maps.LatLngBounds();
+          communityBounds.extend({ lat: loc.lat, lng: loc.lng });
+        }
+      })
       .catch(function(e) { dbg('Geocode failed: ' + entry.name + ': ' + e.message, 'warn'); });
   });
 }
 function placePin(entry, lat, lng, bounds) {
+  var isHere = !!(HIGHLIGHT_ID && (entry.hash === HIGHLIGHT_ID || entry.id === HIGHLIGHT_ID));
   var marker = new google.maps.Marker({
     position: { lat: lat, lng: lng }, map: map, title: entry.name,
     animation: google.maps.Animation.DROP,
-    icon: { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 },
-    zIndex: 10
+    icon: { path: google.maps.SymbolPath.CIRCLE, scale: isHere ? 11 : 8,
+      fillColor: isHere ? '#a855f7' : '#3b82f6', fillOpacity: 1,
+      strokeColor: '#ffffff', strokeWeight: 2 },
+    zIndex: isHere ? 20 : 10
   });
+  if (isHere) activeMarker = marker;
   if (bounds) bounds.extend({ lat: lat, lng: lng });
   var propId = entry.hash || (entry.views && (entry.views.security || entry.views.wildfire));
   if (propId) {
@@ -658,10 +806,13 @@ function placePin(entry, lat, lng, bounds) {
   }
   marker.addListener('click', function() {
     dbg('Pin clicked: ' + entry.name, 'info');
-    if (activeMarker) { activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 }); }
+    if (activeMarker && activeMarker !== marker) {
+      activeMarker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: '#3b82f6', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
+    }
     marker.setIcon({ path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#cd3333', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2 });
     activeMarker = marker;
-    if (map) { map.panTo({ lat: lat, lng: lng }); map.setZoom(18); }
+    panToProperty(lat, lng, 18);
+    if (EMBEDDED) return;
     document.getElementById('panel-title').textContent = (entry.name || 'Property') + ' ▾';
     loadPropertyIntoPanel(entry);
     if (!panelOpen) togglePanel();
@@ -705,7 +856,7 @@ function buildSecurityPanel(d, centerLat, centerLng) {
   setOverlay(d.nadir_raw || fr.nadir_url, centerLat, centerLng, zoom);
   dropPins(elements, 'green', '#22c55e');
   dropPins(considerations, 'red', '#cd3333');
-  document.getElementById('overlay-btn').style.display = 'flex';
+  setNadirToggleVisible(true);
   dbg('Security: ' + elements.length + ' elements, ' + considerations.length + ' considerations', 'ok');
   if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
   let html = '';
@@ -748,7 +899,7 @@ function buildWildfirePanel(d, centerLat, centerLng) {
   }
   setOverlay(d.nadir_raw || wf.nadir_url, centerLat, centerLng, zoom);
   dropPins(conditions, 'orange', '#f97316');
-  document.getElementById('overlay-btn').style.display = 'flex';
+  setNadirToggleVisible(true);
   dbg('Wildfire: ' + conditions.length + ' conditions', 'ok');
   if (hasError) { document.getElementById('panel-content').innerHTML = '<div class="panel-pending">⏳ Analysis pending.</div>'; return; }
   let html = '';
@@ -829,9 +980,7 @@ async function loadPropertyIntoPanel(entry) {
     clearIntelMarkers();
     if (groundOverlay) { groundOverlay.setMap(null); groundOverlay = null; }
     overlayVisible = false;
-    document.getElementById('overlay-btn').classList.remove('active');
-    document.getElementById('overlay-label').textContent = 'Show Overlay';
-    document.getElementById('overlay-btn').style.display = 'none';
+    setNadirToggleVisible(false);
     if (!entry.views) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>'; return; }
     const firstView = VIEW_ORDER.find(function(v) { return entry.views[v]; });
     if (!firstView) { document.getElementById('panel-content').innerHTML = '<div class="panel-empty">No views available.</div>'; return; }
@@ -853,8 +1002,53 @@ function updateLightbox() {
   document.getElementById('lightbox-counter').textContent = (lightboxIndex + 1) + ' / ' + lightboxViews.length;
   document.getElementById('lightbox-bullets').innerHTML = v.bullets.map(function(b) { return '<li>' + b + '</li>'; }).join('');
 }
+function entryFromSatellite_(hash, sat) {
+  const views = {};
+  if (sat.fr || sat.elements || sat.nadir_url || sat.nadir_raw) views.security = hash;
+  if (sat.wildfire) views.wildfire = hash;
+  return {
+    hash: hash,
+    id: hash,
+    name: sat.name || '',
+    address: sat.address || '',
+    hoa: sat.hoa || '',
+    account_type: sat.account_type || '',
+    lat: sat.lat,
+    lng: sat.lng,
+    views: views
+  };
+}
+async function loadHoaMember_(hash) {
+  let entry = null;
+  try {
+    const r = await fetch(DATA_ROOT + 'index/' + hash + '.json', { cache: 'no-store' });
+    if (r.ok) entry = await r.json();
+  } catch (e) {}
+  const needSat = !entry || !entry.lat || !entry.lng || !(entry.views && (entry.views.security || entry.views.wildfire));
+  let sat = null;
+  if (needSat) {
+    try {
+      const sr = await fetch(DATA_ROOT + 'satellite/' + hash + '.json', { cache: 'no-store' });
+      if (sr.ok) sat = await sr.json();
+    } catch (e) {}
+  }
+  if (!entry && sat) entry = entryFromSatellite_(hash, sat);
+  if (!entry) return null;
+  entry.hash = hash;
+  if (sat) {
+    if (!entry.lat && sat.lat) entry.lat = sat.lat;
+    if (!entry.lng && sat.lng) entry.lng = sat.lng;
+    if (!entry.name && sat.name) entry.name = sat.name;
+    if (!entry.address && sat.address) entry.address = sat.address;
+    if (!entry.views) entry.views = {};
+    if (!entry.views.security && (sat.fr || sat.elements || sat.nadir_url || sat.nadir_raw)) entry.views.security = hash;
+    if (!entry.views.wildfire && sat.wildfire) entry.views.wildfire = hash;
+  }
+  return entry;
+}
 async function loadHoaData() {
   dbg(VERSION + ' — HOA viewer loaded', 'ok');
+  if (EMBEDDED) document.body.classList.add('embed');
   const hoaSlug = new URLSearchParams(window.location.search).get('hoa');
   if (!hoaSlug) { showError('No HOA specified.'); return; }
   dbg('HOA slug: ' + hoaSlug, 'info');
@@ -867,32 +1061,50 @@ async function loadHoaData() {
     document.getElementById('hoa-badge').textContent = hoaData.name;
     document.getElementById('panel-title').textContent = hoaData.name + ' — Select Property ▾';
     setLoading('Loading property index...');
-    const indexRes = await fetch(DATA_ROOT + 'index.json');
-    if (!indexRes.ok) { showError('Index not found.'); return; }
-    propertyIndex = await indexRes.json();
-    dbg('Index loaded: ' + Object.keys(propertyIndex).length + ' total properties', 'ok');
-    const entries = hoaData.properties
-      .map(function(hash) {
-        const entry = propertyIndex[hash];
-        if (!entry) { dbg('Hash not found: ' + hash.substring(0,8) + '...', 'warn'); return null; }
-        entry.hash = hash;
+    // Per-property files (data/index/{hash}.json). The old monolithic
+    // data/index.json is gone — fetching it 404s and blanks the map.
+    const hashes = hoaData.properties || [];
+    const loaded = await Promise.all(hashes.map(function (hash) {
+      return loadHoaMember_(hash).then(function (entry) {
+        if (!entry) { dbg('Member missing: ' + String(hash).substring(0, 8) + '...', 'warn'); return null; }
         return entry;
-      })
-      .filter(Boolean);
+      }).catch(function () {
+        dbg('Member fetch failed: ' + String(hash).substring(0, 8), 'warn');
+        return null;
+      });
+    }));
+    const entries = loaded.filter(Boolean);
     dbg('Matched ' + entries.length + ' properties', 'ok');
     document.getElementById('property-count').textContent = entries.length + ' properties in this community';
     buildPropertyList(entries);
     hideLoading();
-    if (mapsApiReady) { initMap(); dropAllPins(entries); }
+    if (mapsApiReady) { initMap(); dropAllPins(entries); panToOpened_(); }
     else { window._pendingEntries = entries; }
-    setTimeout(function() { if (!panelOpen) togglePanel(); }, 800);
+    if (!EMBEDDED) setTimeout(function() { if (!panelOpen) togglePanel(); }, 800);
   } catch(e) { showError('Failed to load HOA: ' + e.message); }
+}
+function panToOpened_() {
+  if (!HIGHLIGHT_ID || !map) return;
+  propertyRegistry.forEach(function (r) {
+    if ((r.entry.hash || r.entry.id) === HIGHLIGHT_ID && r.lat && r.lng) {
+      panToProperty(r.lat, r.lng, map.getZoom() < 16 ? 17 : null);
+    }
+  });
 }
 window.initGoogleMaps = function() {
   mapsApiReady = true;
   dbg('Google Maps API ready', 'ok');
-  if (window._pendingEntries) { initMap(); dropAllPins(window._pendingEntries); window._pendingEntries = null; }
+  if (window._pendingEntries) { initMap(); dropAllPins(window._pendingEntries); panToOpened_(); window._pendingEntries = null; }
 };
+window.addEventListener('message', function (e) {
+  if (e.origin !== window.location.origin) return;
+  if (!e.data || e.data.type !== 'vyanet-stage') return;
+  if (e.data.stage === 'public' && map) {
+    google.maps.event.trigger(map, 'resize');
+    const c = map.getCenter();
+    if (c) map.setCenter(c);
+  }
+});
 loadHoaData();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>

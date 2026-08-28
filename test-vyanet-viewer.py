@@ -262,6 +262,9 @@ def static_checks():
           and 'if (EMBEDDED) return;' in hoa_js)
     check('S13 hoa-viewer satellite HOA fallback',
           'function loadHoaMember_' in hoa_js and "satellite/' + hash" in hoa_js)
+    check('S13b hoa-viewer does not fetch the deleted monolithic index.json',
+          "DATA_ROOT + 'index.json'" not in hoa_js
+          and "index/' + hash" in hoa_js)
     check('S14 hoa-viewer greedy map (matches Private satellite)',
           "gestureHandling: 'greedy'" in hoa_js and 'function wireMapMouse' in hoa_js)
     check('S15 hub pub-split actually shrinks the iframe',
