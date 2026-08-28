@@ -1,4 +1,4 @@
-# Verification for vyanet-viewer.html (hub 1.8.11) against localhost:8899.
+# Verification for vyanet-viewer.html (hub 1.8.12) against localhost:8899.
 # Static referee first (node --check, ids, handlers, braces), then behavior.
 # Child pages, the live gateway, and the dashboard's public data APIs are
 # stubbed per scenario so every code path actually evaluates (unstubbed =
@@ -269,7 +269,7 @@ def static_checks():
           "gestureHandling: 'greedy'" in hoa_js and 'function wireMapMouse' in hoa_js)
     check('S15 hub pub-split actually shrinks the iframe',
           'iframe.pub-split { width: 58%; right: auto; height: 100%; }' in html)
-    check('S16 hub build 1.8.11', "HUB_BUILD = '1.8.11'" in open(
+    check('S16 hub build 1.8.12', "HUB_BUILD = '1.8.12'" in open(
         'C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read())
     check('S16b Community tab label (not Public)',
           'aria-label="COMMUNITY"' in html
