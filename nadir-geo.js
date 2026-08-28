@@ -611,6 +611,101 @@
     return test;
   }
 
+  // ── Lot lookup against county GeoJSON tiles ──────────────────────────────
+  // Lane files unaccounted public leftovers as ACCTNO "000None" with reserved
+  // TAXLOT numbers: 77 = road ROW, 88 = railroad, 99 = roads. Those polygons
+  // are the leftover of a map sheet (streets, with city blocks as holes).
+  // Matching on the OUTER ring only, first-hit, painted the street grid onto
+  // every lot in the sheet (Cottage Grove 75 S 5th St, 2026-08-28).
+  function isUnaccountedParcel(props) {
+    props = props || {};
+    if (String(props.ACCTNO || '') === '000None') return true;
+    var raw = String(props.TAXLOT || '');
+    if (!/^\d+$/.test(raw)) return false;
+    var n = Number(raw);
+    return n === 77 || n === 88 || n === 99;
+  }
+
+  function geojsonPolys(geom) {
+    if (!geom) return [];
+    if (geom.type === 'Polygon') return geom.coordinates ? [geom.coordinates] : [];
+    if (geom.type === 'MultiPolygon') return geom.coordinates || [];
+    return [];
+  }
+
+  function geojsonRingContains(ring, lat, lng) {
+    var n = normaliseRing(ring);
+    return n.length >= 4 && ringContains(n, lat, lng);
+  }
+
+  // GeoJSON polygon = [outer, hole, hole, ...]. Inside iff in outer and in no hole.
+  function polyContains(poly, lat, lng) {
+    if (!poly || !poly[0] || !geojsonRingContains(poly[0], lat, lng)) return false;
+    for (var i = 1; i < poly.length; i++) {
+      if (poly[i] && geojsonRingContains(poly[i], lat, lng)) return false;
+    }
+    return true;
+  }
+
+  function ringAreaAbs(ring) {
+    var n = normaliseRing(ring);
+    var a = 0;
+    for (var i = 0, j = n.length - 1; i < n.length; j = i++) {
+      a += n[j].lng * n[i].lat - n[i].lng * n[j].lat;
+    }
+    return Math.abs(a) / 2;
+  }
+
+  function featArea(feat) {
+    var acres = Number((feat.properties || {}).MAPACRES);
+    if (isFinite(acres) && acres > 0) return acres;
+    var polys = geojsonPolys(feat && feat.geometry);
+    var sum = 0;
+    for (var i = 0; i < polys.length; i++) {
+      var poly = polys[i];
+      if (!poly || !poly[0]) continue;
+      var a = ringAreaAbs(poly[0]);
+      for (var h = 1; h < poly.length; h++) a -= ringAreaAbs(poly[h]);
+      if (a > 0) sum += a;
+    }
+    return sum;
+  }
+
+  function parcelContains(feat, lat, lng) {
+    var polys = geojsonPolys(feat && feat.geometry);
+    for (var k = 0; k < polys.length; k++) {
+      if (polyContains(polys[k], lat, lng)) return true;
+    }
+    return false;
+  }
+
+  // Accounted lot whose interior contains the point. If more than one, the
+  // smallest area wins (MAPACRES when present, otherwise ring area).
+  function parcelMatch(geojson, lat, lng) {
+    var feats = (geojson && geojson.features) || [];
+    var best = null, bestArea = Infinity;
+    for (var i = 0; i < feats.length; i++) {
+      var f = feats[i];
+      if (isUnaccountedParcel(f.properties)) continue;
+      if (!parcelContains(f, lat, lng)) continue;
+      var area = featArea(f);
+      if (area < bestArea) { best = f; bestArea = area; }
+    }
+    return best;
+  }
+
+  function parcelHit(geojson, lat, lng) {
+    var f = parcelMatch(geojson, lat, lng);
+    if (!f) return null;
+    var polys = geojsonPolys(f.geometry);
+    var ring = null;
+    for (var k = 0; k < polys.length; k++) {
+      if (polyContains(polys[k], lat, lng)) { ring = polys[k][0]; break; }
+    }
+    var p = f.properties || {};
+    return { ring: ring, taxlot: p.MAPTAXLOT || p.TAXLOT || '', feature: f };
+  }
+
   root.NadirGeo = {
     nadirGeo:         nadirGeo,
     makeProjector:    makeProjector,
@@ -629,6 +724,10 @@
     ringContains:     ringContains,
     ringDistanceM:    ringDistanceM,
     normaliseRing:    normaliseRing,
-    _version:         '1.3.1'
+    isUnaccountedParcel: isUnaccountedParcel,
+    polyContains:     polyContains,
+    parcelMatch:      parcelMatch,
+    parcelHit:        parcelHit,
+    _version:         '1.3.2'
   };
 })(typeof window !== 'undefined' ? window : globalThis);
