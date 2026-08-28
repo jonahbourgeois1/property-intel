@@ -145,7 +145,7 @@ Catalog rule:
 
 v1 repo:
 
-- `element-review.html` — pin QA on a Google Maps basemap (v6.8.11); posts critiques to
+- `element-review.html` — pin QA on a Google Maps basemap (v6.8.10); posts critiques to
   the Apps Script web app; side labels built but disabled (`ER_SIDES_DEFAULT=false`)
 - `nadir-geo.js` — v1.3.2 dependency-free Mercator geometry; must sit beside
   element-review; unit suite `test-nadir-geo.mjs`

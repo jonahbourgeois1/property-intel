@@ -42,11 +42,6 @@
     margin = IGNORED as of v6.8.6. Used to be metres outside the lot a pin
              could sit. v6.8.10: reviewers may pin on the Google Maps basemap
              outside the cropped nadir. Percentages may be <0 or >100.
-    earth  = (optional) NEW in v6.8.11 — 0 hides the oblique pane (Google
-             Earth Web cannot be iframed: X-Frame-Options SAMEORIGIN). Default
-             on in map mode. The pane is a second Maps satellite view with
-             tilt/rotate so reviewers can check obliques without leaving the
-             page. "Earth Web" in the pane bar still opens earth.google.com.
 
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
@@ -329,9 +324,7 @@
       grid-template-rows: auto auto auto;
       height: auto;
     }
-    .workspace { order: 1; min-height: 70vh; }
-    .workspace.earth-on .earth-pane { min-height: 280px; flex-basis: 320px; }
-    .stage  { order: unset; }
+    .stage  { order: 1; }
     .legend { order: 2; border-left: none; border-top: 1px solid var(--line); }
     .intake { order: 3; border-right: none; border-top: 1px solid var(--line);
               min-height: 640px; }
@@ -715,16 +708,11 @@
   .btn.ghost:hover { color: var(--ink); }
 
   /* ── Image stage ─────────────────────────────────────────── */
-  .workspace {
-    display: flex; flex-direction: column;
-    min-width: 0; min-height: 0; height: 100%;
-  }
   .stage {
     position: relative;
     display: flex; align-items: center; justify-content: center;
     padding: 20px;
     overflow: hidden;
-    flex: 1 1 auto; min-height: 0;
   }
   .frame {
     position: relative;
@@ -1018,62 +1006,6 @@
   .stage.mapmode #zoom-out,
   .stage.mapmode #zoom-level { display: none; }
   .stage.mapmode .zoom-controls { z-index: 5; }
-  /* v6.8.11: Google Earth Web sends X-Frame-Options: SAMEORIGIN, so it cannot
-     live in an iframe here. This pane is a second Maps satellite view WITH
-     tilt and rotate — the pin map above stays tilt:0. Reviewers check
-     obliques without leaving the page; Earth Web still opens in a tab. */
-  .earth-pane {
-    display: none;
-    flex-direction: column;
-    min-height: 0;
-    border-top: 1px solid var(--line);
-    background: #0a0c0f;
-  }
-  .workspace.earth-on .earth-pane {
-    display: flex;
-    flex: 1 1 42%;
-    min-height: 200px;
-  }
-  .workspace.earth-on .stage { flex: 1 1 58%; }
-  .earth-bar {
-    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--line);
-    background: var(--panel);
-    flex: 0 0 auto;
-  }
-  .earth-bar .earth-title {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--ink-faint);
-  }
-  .earth-bar .earth-note { font-size: 11px; color: var(--ink-faint); }
-  .earth-h {
-    display: flex; gap: 4px; margin-left: 6px;
-  }
-  .earth-h button {
-    width: 28px; height: 24px; padding: 0;
-    border: 1px solid var(--line); background: var(--panel-2);
-    color: var(--ink); border-radius: 5px;
-    font-family: var(--mono); font-size: 11px; font-weight: 600;
-    cursor: pointer;
-  }
-  .earth-h button:hover, .earth-h button.on {
-    border-color: var(--hot); color: var(--hot);
-  }
-  .earth-bar .earth-open {
-    margin-left: auto;
-    font-size: 12px; font-weight: 600; color: var(--ink);
-    text-decoration: none; border: 1px solid var(--line);
-    border-radius: 6px; padding: 3px 9px; white-space: nowrap;
-  }
-  .earth-bar .earth-open:hover { border-color: var(--hot); color: var(--hot); }
-  .earth-bar .earth-hide {
-    border: 1px solid var(--line); background: transparent;
-    color: var(--ink-dim); border-radius: 6px; padding: 3px 9px;
-    font-family: var(--sans); font-size: 12px; cursor: pointer;
-  }
-  .earth-bar .earth-hide:hover { color: var(--ink); border-color: var(--hot); }
-  #earthView { flex: 1 1 auto; min-height: 0; position: relative; background: #0a0c0f; }
   /* A refused drag has to be explained where the eye already is: on the image. */
   .er-toast {
     position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
@@ -1207,7 +1139,6 @@
       </form>
     </aside>
 
-    <div class="workspace" id="workspace">
     <section class="stage">
       <!-- v6.3: inert and display:none unless .stage carries .mapmode -->
       <div id="map"></div>
@@ -1242,28 +1173,9 @@
         <div class="zoom-btn reset" id="nadir-toggle"
              title="Show or hide the captured nadir image over the map"
              style="display:none">Image</div>
-        <div class="zoom-btn reset" id="earth-toggle"
-             title="Show or hide the oblique / Google Earth pane"
-             style="display:none">Earth</div>
         <div class="zoom-level" id="zoom-level">100%</div>
       </div>
     </section>
-    <section class="earth-pane" id="earthPane">
-      <div class="earth-bar">
-        <span class="earth-title">Oblique</span>
-        <span class="earth-note">45° satellite · rotate to compare sides</span>
-        <span class="earth-h" id="earthHeadings">
-          <button type="button" id="earthH0" title="Look from the north">N</button>
-          <button type="button" id="earthH90" title="Look from the east">E</button>
-          <button type="button" id="earthH180" title="Look from the south">S</button>
-          <button type="button" id="earthH270" title="Look from the west">W</button>
-        </span>
-        <a class="earth-open" id="earthOpenTab" target="_blank" rel="noopener">Earth Web ↗</a>
-        <button type="button" class="earth-hide" id="earthHide">Hide</button>
-      </div>
-      <div id="earthView"></div>
-    </section>
-    </div>
 
     <aside class="legend">
       <h2>Elements</h2>
@@ -1351,7 +1263,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.11';
+  var BUILD = 'v6.8.10';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1465,9 +1377,7 @@
   // v6.8.6: no lot-distance wall. v6.8.10: no 5..95 crop wall either.
   // `&margin=` is ignored. See placementAllowed.
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
-  var erMap = null, erOverlay = null, erEarthMap = null;
-  var erEarthHeading = 0;
-  var ER_EARTH_DEFAULT = qp('earth') !== '0';
+  var erMap = null, erOverlay = null;
   var erParcelPoly = null, erRangePoly = null;
   var erSideLabels = [], erSideEls = [], erSideBox = null;
   var erNadirOn = false, erToastT = null, erToastMsg = '';
@@ -1517,17 +1427,12 @@
     return '';
   }
   function paintEarthLink() {
-    var href = googleEarthHref();
     var a = document.getElementById('earthLink');
-    var tab = document.getElementById('earthOpenTab');
-    if (a) {
-      if (!href) a.hidden = true;
-      else { a.href = href; a.hidden = false; }
-    }
-    if (tab) {
-      if (!href) { tab.removeAttribute('href'); tab.style.opacity = '0.45'; }
-      else { tab.href = href; tab.style.opacity = ''; }
-    }
+    if (!a) return;
+    var href = googleEarthHref();
+    if (!href) { a.hidden = true; return; }
+    a.href = href;
+    a.hidden = false;
   }
   function lookupKind() {
     if (viewName === 'drone-test') return rowKey ? 'drone-test taxlot' : 'drone-test address';
@@ -3483,8 +3388,6 @@
   function erStart() {
     var nb = document.getElementById('nadir-toggle');
     if (nb) nb.style.display = '';
-    var eb = document.getElementById('earth-toggle');
-    if (eb) eb.style.display = '';
     erBounds = window.NadirGeo.nadirBounds(erGeo);
     erLoadMaps();
   }
@@ -3571,7 +3474,6 @@
     erWireButtons();
     erApplyNadir();
     paintEarthLink();
-    erSetEarthPane(ER_EARTH_DEFAULT);
     if (window.console) {
       console.log('[element-review] map mode: centre ' + erGeo.lat.toFixed(6) +
         ', ' + erGeo.lng.toFixed(6) + ' capture zoom ' + erGeo.zoom +
@@ -3898,86 +3800,6 @@
     // has claimed this button.
     var fb = document.getElementById('zoom-reset');
     if (fb) fb.addEventListener('click', erFitNadir);
-    var eb = document.getElementById('earth-toggle');
-    if (eb) eb.addEventListener('click', function () {
-      erSetEarthPane(!(document.getElementById('workspace') &&
-        document.getElementById('workspace').classList.contains('earth-on')));
-    });
-    var hide = document.getElementById('earthHide');
-    if (hide) hide.addEventListener('click', function () { erSetEarthPane(false); });
-    [['earthH0', 0], ['earthH90', 90], ['earthH180', 180], ['earthH270', 270]]
-      .forEach(function (pair) {
-        var el = document.getElementById(pair[0]);
-        if (!el) return;
-        el.addEventListener('click', function () { erPointEarth(pair[1]); });
-      });
-  }
-
-  function erResizeMaps() {
-    var g = window.google && google.maps;
-    if (!g || !g.event) return;
-    if (erMap) g.event.trigger(erMap, 'resize');
-    if (erEarthMap) g.event.trigger(erEarthMap, 'resize');
-  }
-
-  function erPaintEarthHeading() {
-    [['earthH0', 0], ['earthH90', 90], ['earthH180', 180], ['earthH270', 270]]
-      .forEach(function (pair) {
-        var el = document.getElementById(pair[0]);
-        if (el) el.classList.toggle('on', erEarthHeading === pair[1]);
-      });
-  }
-
-  function erPointEarth(deg) {
-    erEarthHeading = ((deg % 360) + 360) % 360;
-    erPaintEarthHeading();
-    if (erEarthMap && erEarthMap.setHeading) erEarthMap.setHeading(erEarthHeading);
-    if (erEarthMap && erEarthMap.setTilt) erEarthMap.setTilt(45);
-  }
-
-  function erEnsureEarthMap() {
-    if (erEarthMap || !erGeo) return;
-    var host = document.getElementById('earthView');
-    if (!host || !window.google || !google.maps) return;
-    var g = google.maps;
-    erEarthMap = new g.Map(host, {
-      mapTypeId: g.MapTypeId.SATELLITE,
-      tilt: 45,
-      heading: erEarthHeading,
-      rotateControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: true,
-      zoomControl: true,
-      gestureHandling: 'greedy',
-      maxZoom: 21
-    });
-    erEarthMap.setTilt(45);
-    erSyncEarthCamera();
-    erPaintEarthHeading();
-  }
-
-  function erSyncEarthCamera() {
-    if (!erEarthMap || !erGeo) return;
-    erEarthMap.setCenter({ lat: erGeo.lat, lng: erGeo.lng });
-    var z = erGeo.zoom;
-    if (!isFinite(z)) z = 19;
-    erEarthMap.setZoom(Math.min(20, Math.max(18, z)));
-    if (erEarthMap.setTilt) erEarthMap.setTilt(45);
-    if (erEarthMap.setHeading) erEarthMap.setHeading(erEarthHeading);
-  }
-
-  function erSetEarthPane(on) {
-    var workspace = document.getElementById('workspace');
-    var btn = document.getElementById('earth-toggle');
-    if (!workspace) return;
-    workspace.classList.toggle('earth-on', !!on);
-    if (btn) btn.classList.toggle('on', !!on);
-    if (on) {
-      erEnsureEarthMap();
-      erSyncEarthCamera();
-    }
-    setTimeout(erResizeMaps, 60);
   }
 
   function boot() {
