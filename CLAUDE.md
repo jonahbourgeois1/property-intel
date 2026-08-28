@@ -145,7 +145,7 @@ Catalog rule:
 
 v1 repo:
 
-- `element-review.html` — pin QA on a Google Maps basemap (v6.8.9); posts critiques to
+- `element-review.html` — pin QA on a Google Maps basemap (v6.8.10); posts critiques to
   the Apps Script web app; side labels built but disabled (`ER_SIDES_DEFAULT=false`)
 - `nadir-geo.js` — v1.3.2 dependency-free Mercator geometry; must sit beside
   element-review; unit suite `test-nadir-geo.mjs`
@@ -210,7 +210,7 @@ Not in any repo: the Apps Script files (editor only; `.gs.txt` exports land in t
 
 - Capture ids `bend-5-21-26-run3` (lowercase/digits/hyphens, flight-date-preserving).
 - Views: alpha = frontage bearing; bravo/charlie/delta = +90/180/270° **clockwise**.
-- Pins stored as % of the nadir frame (5–95 storable box); pin ids are catalog ints.
+- Pins stored as % of the nadir frame (may be <0 or >100 when a reviewer pins on the live basemap beyond the crop). Pin ids are catalog ints. Pass 2 concern pins still refuse the 5–95 box.
 - `account_type`: anything not starting "comm" normalizes to residential.
 - Viewers: single-file; `BUILD` const + visible build chip; URL-encode nested URLs
   (`qp()` stops at the first `&`); critique payload = 19-key compatibility contract.

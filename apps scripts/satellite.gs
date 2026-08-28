@@ -1236,17 +1236,7 @@ function openSatElementReviewForActiveRow() {
     return;
   }
   const address = String(sheet.getRange(row, SAT_COL_ADDRESS).getValue() || '').trim();
-  const html = HtmlService.createHtmlOutput(
-      '<div style="font-family:system-ui,-apple-system,sans-serif;padding:14px 16px;font-size:14px;line-height:1.5">' +
-      '<p style="margin:0 0 12px">Element review for<br><b>' +
-      (address ? address.replace(/</g, '&lt;') : 'row ' + row) + '</b></p>' +
-      '<p style="margin:0 0 16px"><a href="' + url + '" target="_blank" rel="noopener" ' +
-      'style="display:inline-block;background:#ffd23f;color:#1b2027;font-weight:600;' +
-      'text-decoration:none;padding:9px 16px;border-radius:8px">Open review page ↗</a></p>' +
-      '<p style="margin:0;color:#667380;font-size:12px">Opens in a new tab. Tick "Elements Reviewed" ' +
-      'once the pins look right, or write a "Nadir Fixes" note to rerun.</p></div>')
-    .setWidth(340).setHeight(180);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Element Review');
+  reviewOpenDialog_(address, url);
 }
 
 // ============================================================

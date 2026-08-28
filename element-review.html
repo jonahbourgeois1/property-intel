@@ -40,8 +40,8 @@
              mode works when the image URL has no Static Maps center/zoom.
     nz     = (optional) NEW in v6.8.7 — zoom for &nb= (default 20, NADIR_ZOOM).
     margin = IGNORED as of v6.8.6. Used to be metres outside the lot a pin
-             could sit. Reviewers may now place anywhere on the captured
-             nadir (still refused outside the 5..95 storable box).
+             could sit. v6.8.10: reviewers may pin on the Google Maps basemap
+             outside the cropped nadir. Percentages may be <0 or >100.
 
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
@@ -99,12 +99,9 @@
      A pin that has been moved is marked on the marker, the ghost, the legend
      row and the card, so the state is never ambiguous.
 
-     ⚠️ COORD_MIN / COORD_MAX (5 / 95) mirror clampCoords() in shared.gs, which
-     is what the pipeline will actually store. The drag is clamped to that box
-     ON PURPOSE: allowing 0–100 here would let a reviewer place a gate at x=2
-     and have the re-pin silently move it to x=5. If clampCoords is ever
-     widened, widen these two constants to match — they are the same decision
-     in two places.
+     ⚠️ Percentages are of the nadir frame and MAY sit outside 0..100 when the
+     reviewer pins on the basemap beyond the crop (v6.8.10). Round to 0.1.
+     Do not silently clamp — that relocates a pin the reviewer placed.
 
   2. ADD FROM CATALOG. "Add an element" searches the live pin catalog (filtered
      to role=primary and this property's account_type), then puts the page in
@@ -997,10 +994,13 @@
     /* Pointer events pass THROUGH to the map, so panning and wheel-zoom work
        anywhere - including over the property. Markers opt back in below. */
     pointer-events: none;
+    overflow: visible;
   }
+  .stage.mapmode .frame svg { overflow: visible; }
   .stage.mapmode .frame .marker { pointer-events: auto; }
   /* Place mode is the one time the frame itself must catch a click. */
   .stage.mapmode.placing .frame { pointer-events: auto; cursor: crosshair; }
+  .stage.mapmode.placing #map { cursor: crosshair; }
   /* The map draws its own zoom control, and there is no CSS transform to report. */
   .stage.mapmode #zoom-in,
   .stage.mapmode #zoom-out,
@@ -1048,6 +1048,17 @@
     color: var(--ink-faint); border: 1px solid var(--line);
     border-radius: 5px; padding: 2px 6px; margin-left: 10px;
   }
+  header .earth-link {
+    font-size: 12px; font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+  header .earth-link:hover { border-color: var(--hot); color: var(--hot); }
+  header .earth-link[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -1059,6 +1070,7 @@
          times on this project; a build tag answers "is the browser even running
          the new file?" with no URL param and no console. -->
     <span class="build" id="build"></span>
+    <a class="earth-link" id="earthLink" target="_blank" rel="noopener" hidden>Google Earth</a>
   </header>
 
   <main id="app">
@@ -1095,7 +1107,7 @@
           <div class="add-bar">
             <button type="button" class="add-toggle" id="addToggle">+ Add an element</button>
             <div class="add-panel" id="addPanel">
-              <input type="text" id="addSearch" placeholder="search the element catalog…">
+              <input type="text" id="addSearch" placeholder="search the catalog (most-used first)…">
               <ul class="add-results" id="addResults"></ul>
               <div class="add-warn" id="addWarn"></div>
               <div class="req-block">
@@ -1194,10 +1206,10 @@
   // says so, and "Copy JSON" still gives you the exact payload to test with.
   var CRITIQUE_POST_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 
-  // v5: these MIRROR clampCoords() in shared.gs — the box the pipeline can
-  // actually store. Drags are clamped here so what the reviewer sees is what
-  // the re-pin gets. Widen both together or not at all.
-  var COORD_MIN = 5, COORD_MAX = 95;
+  // v6.8.10: percentages of the nadir frame. Pins on the basemap outside the
+  // crop are stored as values <0 or >100. Round to 0.1. Do not clamp to 5..95
+  // (that was relocating pins the reviewer had placed on the live map).
+  var COORD_ABS_MAX = 500;
   // Set when the catalog fetch failed: the toggle label then reports that search
   // is unavailable and must not be overwritten by the pin-count label.
   var searchUnavailable = false;
@@ -1251,7 +1263,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.9';
+  var BUILD = 'v6.8.10';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1362,9 +1374,8 @@
   erBootMap();
   var erFwd = MAP_MODE ? window.NadirGeo.makeProjector(erGeo)   : null;
   var erInv = MAP_MODE ? window.NadirGeo.makeUnprojector(erGeo) : null;
-  // v6.8.6: no lot-distance wall. Reviewers place anywhere on the captured
-  // nadir. `&margin=` is ignored. The 5..95 box is still the storable bound
-  // (see placementAllowed).
+  // v6.8.6: no lot-distance wall. v6.8.10: no 5..95 crop wall either.
+  // `&margin=` is ignored. See placementAllowed.
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var erMap = null, erOverlay = null;
   var erParcelPoly = null, erRangePoly = null;
@@ -1405,6 +1416,23 @@
     if (siteNo) bits.push('site ' + siteNo);
     if (rowKey && viewName === 'drone-test') bits.push('taxlot ' + rowKey);
     el.textContent = bits.length ? '\u00b7 ' + bits.join(' \u00b7 ') : '';
+    paintEarthLink();
+  }
+  function googleEarthHref() {
+    if (addr) return 'https://earth.google.com/web/search/' + encodeURIComponent(addr);
+    if (erGeo && isFinite(erGeo.lat) && isFinite(erGeo.lng)) {
+      return 'https://earth.google.com/web/@' + erGeo.lat.toFixed(6) + ',' +
+        erGeo.lng.toFixed(6) + ',450a,900d,35y,0h,45t,0r';
+    }
+    return '';
+  }
+  function paintEarthLink() {
+    var a = document.getElementById('earthLink');
+    if (!a) return;
+    var href = googleEarthHref();
+    if (!href) { a.hidden = true; return; }
+    a.href = href;
+    a.hidden = false;
   }
   function lookupKind() {
     if (viewName === 'drone-test') return rowKey ? 'drone-test taxlot' : 'drone-test address';
@@ -1824,7 +1852,7 @@
         var m = v.split(/[ ,]+/).filter(function (s) { return s !== ''; });
         var x = parseFloat(m[0]), y = parseFloat(m[1]);
         if (!isFinite(x) || !isFinite(y)) { syncCoordField(i); return; }
-        movePin(i, clampPct(x), clampPct(y));
+        movePin(i, roundPct(x), roundPct(y));
       });
       card.querySelector('.reset').addEventListener('click', function () { resetPin(i); });
 
@@ -1844,10 +1872,10 @@
   // stays correct at any zoom without reading the transform state — the same
   // reasoning the xy readout uses.
 
-  function clampPct(n) {
-    return Math.max(COORD_MIN, Math.min(COORD_MAX, Math.round(n * 10) / 10));
+  function roundPct(n) {
+    return Math.round(Number(n) * 10) / 10;
   }
-  function fmtPct(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+  function fmtPct(n) { return roundPct(n).toFixed(1); }
 
   function pctFromClient(clientX, clientY) {
     var frame = document.getElementById('frame');
@@ -1880,7 +1908,7 @@
       if (!moved && Math.abs(e.clientX - sx) < 3 && Math.abs(e.clientY - sy) < 3) return;
       moved = true;
       var p = pctFromClient(e.clientX, e.clientY);
-      if (p) onMove(clampPct(p.x), clampPct(p.y));
+      if (p) onMove(roundPct(p.x), roundPct(p.y));
       e.preventDefault();
     });
     function finish(e) {
@@ -2009,10 +2037,9 @@
     // Refuse a drag or a typed coordinate on a locked pin. The guard lives here
     // rather than on the drag handler so BOTH input paths are covered.
     if (isLocked(idx)) return;
-    // v6.8.6: refuse a position the pipeline cannot store (5..95 box). Lot
-    // distance is not a bound — reviewers may pin on the neighbour, a road,
-    // or anywhere else the captured nadir covers. movePin is the ONLY path
-    // that writes a correction, so drag and typed coordinate share this guard.
+    // v6.8.10: refuse only non-finite / absurd percentages. Lot distance is
+    // not a bound, and the nadir crop is not a bound — reviewers may pin on
+    // the live basemap beyond the captured image.
     if (!placementAllowed(x, y)) return;
     state[idx].cx = x; state[idx].cy = y;
     // v5.6: a corrected position IS a Fix verdict. Before this, dragging a pin
@@ -2173,6 +2200,31 @@
     if (capped) cancelPlacement();
   }
 
+  function sortCatalogByFrequency(done) {
+    function apply(freq) {
+      freq = freq || {};
+      catalogElements = (catalogElements || []).slice().sort(function (a, b) {
+        var fa = Number(freq[a.id] || freq[String(a.id)] || 0) || 0;
+        var fb = Number(freq[b.id] || freq[String(b.id)] || 0) || 0;
+        if (fa !== fb) return fb - fa;
+        return String(a.name).localeCompare(String(b.name));
+      });
+      done();
+    }
+    if (!(CRITIQUE_POST_URL && CRITIQUE_POST_URL.indexOf('PASTE_') !== 0)) {
+      apply(null);
+      return;
+    }
+    var u = CRITIQUE_POST_URL + '?route=pin-freq&_=' + Date.now();
+    fetch(u, { redirect: 'follow' })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        var j;
+        try { j = JSON.parse(t); } catch (e) { apply(null); return; }
+        apply(j && j.ok !== false ? (j.freq || null) : null);
+      }, function () { apply(null); });
+  }
+
   function initAddElement(disabledReason) {
     var toggle = document.getElementById('addToggle');
     var panel = document.getElementById('addPanel');
@@ -2254,7 +2306,7 @@
         if (!p) return;
         e.preventDefault();
         e.stopPropagation();
-        placeAdded(placing, clampPct(p.x), clampPct(p.y));
+        placeAdded(placing, roundPct(p.x), roundPct(p.y));
         cancelPlacement();
       }, true);
     }
@@ -2323,7 +2375,7 @@
     var hint = document.getElementById('placeHint');
     if (stage) stage.classList.add('placing');
     if (hint) {
-      hint.textContent = 'Click on the nadir to place "' + entry.name + '"  ·  Esc to cancel';
+      hint.textContent = 'Click on the map to place "' + entry.name + '"  ·  Esc to cancel';
       hint.classList.add('on');
     }
   }
@@ -2344,9 +2396,7 @@
     // only function that creates a pin, so the count can never exceed the limit
     // however placement was reached.
     if (atPinLimit()) { cancelPlacement(); updateAddWarn(); return; }
-    // Guard 4: the storable box. placeAdded is the only function that creates
-    // a pin, so this is where the 5..95 invariant has to hold. Lot distance
-    // is not checked (v6.8.6).
+    // Guard 4: finite percentages of the nadir frame (may be <0 or >100).
     if (!placementAllowed(x, y)) { cancelPlacement(); return; }
 
     var rec = { id: parseInt(entry.id, 10), name: entry.name,
@@ -2396,7 +2446,7 @@
       var parts = String(cin.value || '').trim().split(/[ ,]+/).filter(function (s) { return s !== ''; });
       var nx = parseFloat(parts[0]), ny = parseFloat(parts[1]);
       if (!isFinite(nx) || !isFinite(ny)) { cin.value = fmtPct(rec.x) + ', ' + fmtPct(rec.y); return; }
-      rec.x = clampPct(nx); rec.y = clampPct(ny);
+      rec.x = roundPct(nx); rec.y = roundPct(ny);
       m.style.left = rec.x + '%'; m.style.top = rec.y + '%';
       cin.value = fmtPct(rec.x) + ', ' + fmtPct(rec.y);
     });
@@ -3059,8 +3109,7 @@
 
   function parcelNone(reason) {
     parcelSay('no parcel boundary: ' + reason);
-    // No lot lines. Placement is the storable 5..95 box only (v6.8.6);
-    // the dotted range ring is not drawn.
+    // No lot lines. Placement is still allowed on the map (v6.8.10).
     if (MAP_MODE) erDrawLimits();
     var btn = document.getElementById('parcel-toggle');
     if (btn) {
@@ -3198,10 +3247,14 @@
       // the request box instead. 96 of 178 primary pins reached a commercial row.
       // satFetchPinCatalog_ now hands Pass 1 all 239, so this must too.
       catalogRaw = catalog;
-      catalogElements = (catalog.pins || [])
-        .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      catalogElements = (catalog.pins || []).slice().sort(function (a, b) {
+        return String(a.name).localeCompare(String(b.name));
+      });
       initAddElement();
       boot();
+      sortCatalogByFrequency(function () {
+        if (refreshAddResults) refreshAddResults();
+      });
     })
     .catch(function (e) {
       // Degrade gracefully: still show markers, names as ids.
@@ -3245,7 +3298,7 @@
   //     .marker left/top  percentages
   //     ensureGhost / the ghost connector lines
   //     renderRoute()
-  //     collectPayload()  same percentages, same 0.1 rounding, same 5..95 clamp
+  //     collectPayload()  same percentages, same 0.1 rounding
   // Only the CAMERA changes hands: fitFrame() and initZoomPan() step aside.
   //
   // ⚠️ THE NADIR <img> STAYS INSIDE THE FRAME. It is NOT a
@@ -3315,21 +3368,21 @@
   }
 
   // ── The placement rule ────────────────────────────────────────────────────
-  // Reviewers may pin anywhere the captured nadir covers — on the lot, off
-  // the lot, 60 m out, 600 m out, neighbour's driveway. v6.8.6 dropped the
-  // lot-distance wall (was 60 m, then `&margin=`).
+  // Reviewers may pin anywhere on the map — on the lot, off the lot, on the
+  // neighbour, on the road the engine arrives on, or on live basemap beyond
+  // the cropped nadir. v6.8.6 dropped the lot-distance wall; v6.8.10 dropped
+  // the 5..95 crop wall. Percentages are still of the nadir frame, so a pin
+  // east of the image has x > 100.
   //
-  // ⚠️ The 5..95 box is not optional. clampCoords() in shared.gs clamps every
-  // stored coordinate to 5..95, so permitting a pin outside that band would let
-  // the pipeline silently relocate a gate a reviewer had placed deliberately.
-  // Refusing is the honest failure; clamping is the dishonest one. If
-  // clampCoords is ever widened, widen COORD_MIN / COORD_MAX to match.
+  // Silent clamp is the dishonest failure (it relocates a pin). Refuse only
+  // non-finite values or percentages so far from the crop they are not a pin.
   function placementAllowed(x, y) {
-    if (x >= COORD_MIN && x <= COORD_MAX && y >= COORD_MIN && y <= COORD_MAX) {
-      return true;
+    if (!isFinite(x) || !isFinite(y)) return false;
+    if (Math.abs(x) > COORD_ABS_MAX || Math.abs(y) > COORD_ABS_MAX) {
+      erToast('That is too far from the captured image to store as a pin.');
+      return false;
     }
-    erToast('Outside the captured image — that position cannot be stored.');
-    return false;
+    return true;
   }
 
   function erStart() {
@@ -3411,14 +3464,21 @@
       var q = erFwd(e.latLng.lat(), e.latLng.lng());
       mapCoordHook(q.x, q.y);
     });
+    erMap.addListener('click', function (e) {
+      if (!placing || !erFwd) return;
+      var q = erFwd(e.latLng.lat(), e.latLng.lng());
+      placeAdded(placing, roundPct(q.x), roundPct(q.y));
+      cancelPlacement();
+    });
     erDrawLimits();
     erWireButtons();
     erApplyNadir();
+    paintEarthLink();
     if (window.console) {
       console.log('[element-review] map mode: centre ' + erGeo.lat.toFixed(6) +
         ', ' + erGeo.lng.toFixed(6) + ' capture zoom ' + erGeo.zoom +
         ', size ' + erGeo.w + 'x' + erGeo.h +
-        ', placement = anywhere on nadir (5..95 box; no lot-distance wall)');
+        ', placement = anywhere on the map (nadir % may be <0 or >100)');
     }
   }
 
@@ -3544,14 +3604,14 @@
       });
     }
     // v6.8.4: the dotted grey pin-range ring is not drawn.
-    // v6.8.6: placement is not gated on lot distance either. The red lot
-    // line is the only parcel overlay. The 5..95 box is still refused.
+    // v6.8.10: placement is not gated on the nadir crop. The red lot
+    // line is the only parcel overlay.
     erComputeSideLabels();
     erRenderSideLabels();
     erApplyLimits();
   }
   // The Lot button governs the lot line. Placement does not use the lot
-  // (v6.8.6): reviewers pin anywhere on the captured nadir.
+  // (v6.8.6) and is not limited to the nadir crop (v6.8.10).
   //
   // ⚠️ THIS HAS NOTHING TO DO WITH THE Image TOGGLE. The lot is a map
   // overlay; the captured nadir is an <img> inside #frame. `parcelShown` is
@@ -3825,7 +3885,7 @@
     // from the MAP's mousemove instead. Same `last`, so click-to-copy is
     // unchanged. fmt() is a hoisted declaration, hence usable from here.
     mapCoordHook = function (x, y) {
-      if (x < 0 || x > 100 || y < 0 || y > 100) { box.classList.remove('on'); return; }
+      if (!isFinite(x) || !isFinite(y)) { box.classList.remove('on'); return; }
       last = { x: x, y: y };
       val.textContent = fmt(x) + ', ' + fmt(y);
       box.classList.add('on');
@@ -3838,7 +3898,7 @@
       if (!r.width || !r.height) return;
       var x = (e.clientX - r.left) / r.width * 100;
       var y = (e.clientY - r.top) / r.height * 100;
-      if (x < 0 || x > 100 || y < 0 || y > 100) return;
+      if (x < -COORD_ABS_MAX || x > COORD_ABS_MAX || y < -COORD_ABS_MAX || y > COORD_ABS_MAX) return;
       last = { x: x, y: y };
       val.textContent = fmt(x) + ', ' + fmt(y);
       box.classList.add('on');

@@ -873,12 +873,10 @@ function fetchPinCatalog_(accountType) {
 // validator had no callers. Pass 1 uses validateElementPins_ and Pass 2 uses
 // validateConcernPins_, both gated to tagged id sets from fetchPinCatalog_.)
 
-// Pass 1 validator: identical to validatePlanePins_ but the id must be
-// an ELEMENT-section id (present in catalog.elementIds). Any id outside
-// the element sections — including a concern-section id the model
-// proposed despite the element-only prompt — is dropped. Deduped,
-// refused if outside the 5–95 storable box (never clamped), capped at
-// PLANE_MAX_PINS.
+// Pass 1 validator: element-section ids only. Percentages of the nadir
+// frame; values may sit outside 0–100 when a reviewer pinned on the
+// basemap beyond the crop (v6.8.10). Never silently clamp to 5–95.
+// Deduped, capped at PLANE_MAX_PINS.
 function validateElementPins_(pins, elementIds) {
   if (!Array.isArray(pins)) return [];
   const out = [];
@@ -887,11 +885,11 @@ function validateElementPins_(pins, elementIds) {
     const p = pins[i] || {};
     const x = parseFloat(p.x), y = parseFloat(p.y);
     if (isNaN(x) || isNaN(y)) continue;
-    if (x < 5 || x > 95 || y < 5 || y > 95) continue;
     const id = parseInt(p.id, 10);
     if (isNaN(id) || !elementIds[id] || seen[id]) continue;
     seen[id] = true;
-    out.push({ id: id, x: x, y: y });
+    const c = clampCoords(x, y);
+    out.push({ id: id, x: c.x, y: c.y });
   }
   return out;
 }
@@ -1129,17 +1127,7 @@ function openElementReviewForActiveRow() {
     return;
   }
   const address = String(sheet.getRange(row, PLANE_COL_ADDRESS).getValue() || '').trim();
-  const html = HtmlService.createHtmlOutput(
-      '<div style="font-family:system-ui,-apple-system,sans-serif;padding:14px 16px;font-size:14px;line-height:1.5">' +
-      '<p style="margin:0 0 12px">Element review for<br><b>' +
-      (address ? address.replace(/</g,'&lt;') : 'row ' + row) + '</b></p>' +
-      '<p style="margin:0 0 16px"><a href="' + url + '" target="_blank" rel="noopener" ' +
-      'style="display:inline-block;background:#ffd23f;color:#1b2027;font-weight:600;' +
-      'text-decoration:none;padding:9px 16px;border-radius:8px">Open review page ↗</a></p>' +
-      '<p style="margin:0;color:#667380;font-size:12px">Opens in a new tab. Tick “Elements Reviewed” ' +
-      'once the pins look right, or write a “Nadir Fixes” note to rerun.</p></div>')
-    .setWidth(340).setHeight(180);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Element Review');
+  reviewOpenDialog_(address, url);
 }
 // Render the current element pins as human-readable lines for the rerun
 // prompt: one "<id> = <name> at (x, y)" line per pin, names resolved from

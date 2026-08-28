@@ -689,7 +689,51 @@ function zoomForBounds(minLat, maxLat, minLng, maxLng) {
 // ── Pin coordinate helpers ───────────────────────────────────────────────────
 
 function clampCoords(x, y) {
-  return { x: Math.max(5, Math.min(95, x)), y: Math.max(5, Math.min(95, y)) };
+  // Named clamp for history. As of 2026-08-28 this only ROUNDS to 0.1 — it
+  // does not squeeze into 5..95. Reviewers may pin on the Google Maps basemap
+  // outside the cropped nadir (percentages <0 or >100). A silent 5..95 clamp
+  // relocated those pins. Keep rounding in lockstep with element-review
+  // roundPct().
+  return { x: Math.round(Number(x) * 10) / 10, y: Math.round(Number(y) * 10) / 10 };
+}
+
+function googleEarthSearchUrl_(address) {
+  var q = String(address || '').trim();
+  if (!q) return '';
+  return 'https://earth.google.com/web/search/' + encodeURIComponent(q);
+}
+
+function htmlEscAttr_(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
+function reviewOpenDialog_(address, reviewUrl) {
+  var addr = String(address || '').trim();
+  var addrSafe = htmlEscAttr_(addr || 'this row');
+  var earth = googleEarthSearchUrl_(addr);
+  var buttons =
+    '<p style="margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap">' +
+    '<a href="' + htmlEscAttr_(reviewUrl) + '" target="_blank" rel="noopener" ' +
+    'style="display:inline-block;background:#ffd23f;color:#1b2027;font-weight:600;' +
+    'text-decoration:none;padding:9px 16px;border-radius:8px">Open review page ↗</a>';
+  if (earth) {
+    buttons +=
+      '<a href="' + htmlEscAttr_(earth) + '" target="_blank" rel="noopener" ' +
+      'style="display:inline-block;background:#1a73e8;color:#fff;font-weight:600;' +
+      'text-decoration:none;padding:9px 16px;border-radius:8px">Google Earth ↗</a>';
+  }
+  buttons += '</p>';
+  var html = HtmlService.createHtmlOutput(
+      '<div style="font-family:system-ui,-apple-system,sans-serif;padding:14px 16px;font-size:14px;line-height:1.5">' +
+      '<p style="margin:0 0 12px">Element review for<br><b>' + addrSafe + '</b></p>' +
+      buttons +
+      '<p style="margin:0;color:#667380;font-size:12px">Review pins on the page. Use Google Earth ' +
+      'to check the same address at an oblique angle. Tick "Elements Reviewed" when the pins look right.</p></div>')
+    .setWidth(440).setHeight(240);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Element Review');
 }
 
 function pixelToLatLng(centerLat, centerLng, zoom, xPct, yPct) {

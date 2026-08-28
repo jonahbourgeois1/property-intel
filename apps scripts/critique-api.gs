@@ -1,10 +1,13 @@
 // ============================================================
 // PROPERTY INTEL — Apps Script v5.25 — FILE 13: critique-api.gs
-// The element-review.html <-> sheet bridge. Two routes on ONE web app
+// The element-review.html <-> sheet bridge. Routes on ONE web app
 // deployment:
 //
 //   GET  ?route=elements&site_no=<siteNo>   -> the row's nadir + element pins
 //        (&key=, &addr= and &name= also resolve, in that order of preference)
+//   GET  ?route=pin-freq                    -> {freq:{id:count}} for add-search
+//        order (Satellite Nadir Elements + element-critique Pin n ID; 6 h cache)
+//   GET  ?route=ping                        -> deployed build / layout check
 //   POST ?route=critique  (JSON body)       -> file the analyst's critique
 //
 // HOW THE VIEWER IS REACHED
@@ -150,7 +153,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.5 (2026-08-27) — drone-test view= routing by taxlot; satellite path unchanged';
+const CRITIQUE_BUILD = 'v6.6 (2026-08-28) — pin-freq route; Earth dialog is in shared.gs';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -1389,6 +1392,9 @@ function critiqueApiGet_(e) {
                                 rerun_mode: CRITIQUE_RERUN_MODE,
                                 server_time: new Date().toISOString() }, cb);
     }
+    if (route === 'pin-freq') {
+      return critiqueJsonOut_(critiqueGetPinFreq_(), cb);
+    }
     if (route !== 'elements') throw new Error('unknown route "' + route + '"');
     return critiqueJsonOut_(critiqueGetElements_(p), cb);
   } catch (err) {
@@ -1418,6 +1424,62 @@ function critiqueApiPost_(e) {
 
 function doGet(e)  { return critiqueApiGet_(e); }
 function doPost(e) { return critiqueApiPost_(e); }
+
+// Catalog add-search order: most-used pin ids first, unused alphabetical
+// (the viewer sorts names client-side). Counts Satellite Nadir Elements (I)
+// plus every Pin n ID on the element-critique tab. Cached 6 hours so opening
+// review is not a full-sheet scan.
+function critiqueGetPinFreq_() {
+  var cache = CacheService.getScriptCache();
+  var hit = cache.get('pinFreqV1');
+  if (hit) {
+    try {
+      return { ok: true, route: 'pin-freq', freq: JSON.parse(hit), cached: true };
+    } catch (e) {}
+  }
+  var freq = {};
+  function bump(id) {
+    var n = parseInt(id, 10);
+    if (!isFinite(n) || n < 1) return;
+    var k = String(n);
+    freq[k] = (freq[k] || 0) + 1;
+  }
+  var opened = critiqueOpenSpreadsheet_();
+  var ss = opened && opened.ss;
+  if (!ss) return { ok: true, route: 'pin-freq', freq: freq, cached: false };
+
+  try {
+    var sat = ss.getSheetByName(SATELLITE_SHEET);
+    if (sat && sat.getLastRow() >= 2 && typeof parsePinCell_ === 'function') {
+      var vals = sat.getRange(2, SAT_COL_ELEMENTS, sat.getLastRow() - 1, 1).getValues();
+      for (var i = 0; i < vals.length; i++) {
+        var pins = parsePinCell_(vals[i][0]);
+        for (var p = 0; p < pins.length; p++) bump(pins[p].id);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    var log = ss.getSheetByName(CRITIQUE_SHEET);
+    if (log && log.getLastRow() >= 2) {
+      var lastCol = log.getLastColumn();
+      var headers = log.getRange(1, 1, 1, lastCol).getValues()[0];
+      var idCols = [];
+      for (var c = 0; c < headers.length; c++) {
+        if (/^Pin \d+ ID$/.test(String(headers[c] || ''))) idCols.push(c);
+      }
+      if (idCols.length) {
+        var data = log.getRange(2, 1, log.getLastRow() - 1, lastCol).getValues();
+        for (var r = 0; r < data.length; r++) {
+          for (var k = 0; k < idCols.length; k++) bump(data[r][idCols[k]]);
+        }
+      }
+    }
+  } catch (e2) {}
+
+  try { cache.put('pinFreqV1', JSON.stringify(freq), 21600); } catch (e) {}
+  return { ok: true, route: 'pin-freq', freq: freq, cached: false };
+}
 
 // ── Editor-runnable self test ───────────────────────────────────────────────
 // Run from the Apps Script editor (Run > critiqueSelfTest_) BEFORE deploying. It

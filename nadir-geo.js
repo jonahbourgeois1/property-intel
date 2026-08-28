@@ -163,9 +163,11 @@
   }
 
   // ── The STORABLE box, which is not the image edge ─────────────────────────
-  // clampCoords() in shared.gs clamps every stored coordinate to 5..95, so a
-  // pin placed outside that band is silently moved. Anything enforcing where a
-  // reviewer may place a pin has to know this box, not the picture's edge.
+  // Historical: clampCoords() in shared.gs used to squeeze every stored
+  // coordinate to 5..95 (silent relocation). As of 2026-08-28 it only rounds.
+  // element-review v6.8.10 lets reviewers pin on the live basemap beyond the
+  // crop (percentages <0 or >100). This helper remains for callers that still
+  // want the old 5..95 envelope (Pass 2 concerns).
   function storableBox(geo, coordMin, coordMax) {
     var lo = (coordMin === undefined) ? 5  : coordMin;
     var hi = (coordMax === undefined) ? 95 : coordMax;
@@ -552,9 +554,9 @@
   // wherever you want."
   //
   // So: the parcel polygon, grown by marginM metres, INTERSECTED with the
-  // storable 5..95 box. The intersection is not optional — a point outside
-  // 5..95 gets silently clamped by shared.gs, so allowing it would let a
-  // reviewer place a gate and have the pipeline move it.
+  // storable 5..95 box. element-review no longer uses this wall (v6.8.6 dropped
+  // the lot-distance rule; v6.8.10 dropped the crop rule). Pass 2 concern pins
+  // still refuse 5..95. Do not revive silent clamp.
   //
   // Growing by distance-to-edge rather than offsetting the polygon is
   // deliberate: a true polygon offset needs mitre/round joins and self-
