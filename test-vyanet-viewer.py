@@ -1,4 +1,4 @@
-# Verification for vyanet-viewer.html (hub 1.8.12) against localhost:8899.
+# Verification for vyanet-viewer.html (hub 1.8.13) against localhost:8899.
 # Static referee first (node --check, ids, handlers, braces), then behavior.
 # Child pages, the live gateway, and the dashboard's public data APIs are
 # stubbed per scenario so every code path actually evaluates (unstubbed =
@@ -269,7 +269,7 @@ def static_checks():
           "gestureHandling: 'greedy'" in hoa_js and 'function wireMapMouse' in hoa_js)
     check('S15 hub pub-split actually shrinks the iframe',
           'iframe.pub-split { width: 58%; right: auto; height: 100%; }' in html)
-    check('S16 hub build 1.8.12', "HUB_BUILD = '1.8.12'" in open(
+    check('S16 hub build 1.8.13', "HUB_BUILD = '1.8.13'" in open(
         'C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read())
     check('S16b Community tab label (not Public)',
           'aria-label="COMMUNITY"' in html
@@ -280,9 +280,9 @@ def static_checks():
           and 'Every property has a story' in html
           and '>COMMUNITY</h3>' in html
           and 'vyanet.com/mapping' in html)
-    check('S16d hub header uses --bar-h and Private tabs share button chrome',
+    check('S16d hub header uses --bar-h and nested bars share button chrome',
           '--bar-h: 64px' in html
-          and '#bar button, #private-bar button' in html)
+          and '#bar button, #private-bar button, #community-bar button' in html)
     check('S17 Plugins list has 30 names from the mapping verticals',
           open('C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read().count("id: '") >= 30
           and 'Security Companies' in open('C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read()
@@ -290,8 +290,13 @@ def static_checks():
     check('S18 Private 2D embed is drone-test only, labeled Drone',
           "? ['drone-test']" in open('C:/dev/property-intel/viewer.html', encoding='utf-8').read()
           and "EMBEDDED ? 'Drone' : 'Drone Test'" in open('C:/dev/property-intel/viewer.html', encoding='utf-8').read())
-    check('S19 nested bar labels 3D / 2D / Plugins',
-          '>2D</button>' in html and '>Plugins</button>' in html)
+    check('S19 nested Private bar is 3D / 2D / Live / Plugins',
+          '>2D</button>' in html and '>Plugins</button>' in html
+          and 'id="btn-pv-live"' in html)
+    check('S19b no top-level LIVE tab; Community has Map / Live',
+          'id="btn-live"' not in html
+          and 'id="btn-cm-map"' in html and 'id="btn-cm-live"' in html
+          and 'id="comm-live"' in html)
     check('S20 embed drone panel omits 3D Aerial View',
           'd.viewer360 && !EMBEDDED' in open('C:/dev/property-intel/viewer.html', encoding='utf-8').read())
     viewer_html = open('C:/dev/property-intel/viewer.html', encoding='utf-8').read()
@@ -384,12 +389,12 @@ with sync_playwright() as p:
     check('A11b switch-role + viewing-as sit in the top row',
           page.evaluate("document.querySelector('.hm-top #hm-switch') !== null")
           and page.evaluate("document.querySelector('.hm-top #hm-role') !== null"))
-    check('A12 Private / Community / Live tabs enabled',
+    check('A12 Private / Community tabs enabled; no top-level LIVE',
           not page.is_disabled('#btn-private') and not page.is_disabled('#btn-public')
-          and not page.is_disabled('#btn-live'))
+          and page.query_selector('#btn-live') is None)
     check('A12b no launch-button row on home', page.query_selector('#go-3d') is None
           and page.query_selector('#hm-launch') is None)
-    check('A12c LIVE top-bar tab enabled', not page.is_disabled('#btn-live'))
+    check('A12c Private nested Live enabled', not page.is_disabled('#btn-pv-live'))
     check('A12d home program section is on Home',
           page.query_selector('#hm-prog') is not None
           and 'Every property has a story' in (page.text_content('#hm-prog') or ''))
@@ -419,6 +424,16 @@ with sync_playwright() as p:
     check('A16e COMMUNITY tab lit, home hidden',
           'on' in page.get_attribute('#btn-public', 'class')
           and not visible(page, '#home'))
+    check('A16e2 Community nested bar is Map (not Live)',
+          page.evaluate("document.body.classList.contains('community-open')")
+          and 'on' in (page.get_attribute('#btn-cm-map', 'class') or '')
+          and 'on' not in (page.get_attribute('#btn-cm-live', 'class') or ''))
+    page.click('#btn-cm-live')
+    check('A16e3 Community Live is the empty placeholder, not CHEKT',
+          visible(page, '#comm-live')
+          and not visible(page, '#public')
+          and 'on' not in (page.get_attribute('#frame-live', 'class') or ''))
+    page.click('#btn-cm-map')
     # dashboard cards (stubbed data)
     wait_dash(page)
     check('A17 six dashboard cards render on Public', page.evaluate(
@@ -554,10 +569,12 @@ with sync_playwright() as p:
           and 'on' in page.get_attribute('#frame-3d', 'class')
           and 'on' in page.get_attribute('#btn-private', 'class'))
     page.click('#btn-home')
-    # live feed without a key: hub popup, not a home-page field
-    page.click('#btn-live')
+    # property CHEKT live lives under Private → Live
+    page.click('#btn-private')
+    page.click('#btn-pv-live')
     check('A29 live without key opens passcode popup', visible(page, '#live-pass'))
-    check('A29b stays on home until unlocked', visible(page, '#home'))
+    check('A29b stays off the live iframe until unlocked',
+          'on' not in (page.get_attribute('#frame-live', 'class') or ''))
     page.click('#live-pass-cancel')
     check('A30 cancel closes popup without storing a key',
           not visible(page, '#live-pass')
@@ -769,7 +786,8 @@ with sync_playwright() as p:
     page.click('#role-customer')
     page.click('#gt-skip')
     page.wait_for_selector('#home.visible')
-    page.click('#btn-live')
+    page.click('#btn-private')
+    page.click('#btn-pv-live')
     check('H7 live after skip opens the passcode popup', visible(page, '#live-pass'))
     ctx.close()
 
@@ -789,7 +807,8 @@ with sync_playwright() as p:
     page.goto(BASE + '/vyanet-viewer.html?property=' + JONES + '&role=customer')
     page.wait_for_selector('#home.visible')
     check('I1 no home passcode field', page.query_selector('#hm-pass') is None)
-    page.click('#btn-live')
+    page.click('#btn-private')
+    page.click('#btn-pv-live')
     check('I2 live without key opens popup', visible(page, '#live-pass'))
     page.click('#live-pass-go')
     check('I3 empty passcode refused', 'Enter the viewer passcode' in page.text_content('#live-pass-err'))
@@ -838,14 +857,16 @@ with sync_playwright() as p:
           page.is_disabled('#btn-pv-3d'))
     check('J1b PRIVATE still enabled via satellite',
           not page.is_disabled('#btn-private'))
-    check('J2 LIVE enabled from cameras file without a GLB',
-          not page.is_disabled('#btn-live'))
+    check('J2 Private Live enabled from cameras file without a GLB',
+          not page.is_disabled('#btn-pv-live'))
     check('J3 no 3D iframe mounted', page.query_selector('#frame-3d') is None)
     check('J4 live iframe mounted', page.query_selector('#frame-live') is not None)
     check('J5 satellite iframe still mounted', page.query_selector('#frame-sat') is not None)
-    page.click('#btn-live')
+    page.click('#btn-private')
+    page.click('#btn-pv-live')
     check('J6 live tab without key opens popup (not 3D)',
-          visible(page, '#live-pass') and visible(page, '#home'))
+          visible(page, '#live-pass')
+          and 'on' not in (page.get_attribute('#frame-live', 'class') or ''))
     ctx.close()
 
     # ── Scenario G: real children + real data APIs (no stubs), smoke ──

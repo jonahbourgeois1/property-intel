@@ -10,7 +10,7 @@
     font-family: monospace; color: #8a93a2; }
   :root { --frame: 1100px; --frame-pad: 16px; --bar-h: 64px; --pv-bar-h: 56px; }
   /* Bar background is full-bleed; its contents share the same max-width
-     column as home so HOME / PRIVATE / COMMUNITY / LIVE never drift to the far edge. */
+     column as home so HOME / PRIVATE / COMMUNITY never drift to the far edge. */
   #bar {
     position: fixed; top: 0; left: 0; right: 0; z-index: 40;
     height: var(--bar-h); display: flex; justify-content: center;
@@ -30,33 +30,36 @@
   #bar .addr { font-size: 12px; color: #555f6e; flex: 1; min-width: 0;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #bar .build { font-size: 10px; color: #555f6e; letter-spacing: 0.04em; }
-  #bar button, #private-bar button {
+  #bar button, #private-bar button, #community-bar button {
     font-family: monospace; font-size: 12px; letter-spacing: 0.06em;
     padding: 11px 14px; border-radius: 8px; cursor: pointer;
     background: rgba(0,0,0,0.35); color: #8a93a2;
     border: 1px solid #2a3040; flex-shrink: 0;
   }
-  #bar button.on, #private-bar button.on {
+  #bar button.on, #private-bar button.on, #community-bar button.on {
     color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16);
   }
-  #bar button:disabled, #private-bar button:disabled { opacity: 0.35; cursor: not-allowed; }
-  #bar button#btn-live { border-color: rgba(239,68,68,0.45); color: #c45c5c; }
-  #bar button#btn-live.on { color: #ef4444; border-color: #ef4444; background: rgba(239,68,68,0.16); }
-  #bar button#btn-live:disabled { border-color: #2a3040; color: #8a93a2; }
+  #bar button:disabled, #private-bar button:disabled,
+  #community-bar button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #private-bar button#btn-pv-live { border-color: rgba(239,68,68,0.45); color: #c45c5c; }
+  #private-bar button#btn-pv-live.on { color: #ef4444; border-color: #ef4444; background: rgba(239,68,68,0.16); }
+  #private-bar button#btn-pv-live:disabled { border-color: #2a3040; color: #8a93a2; }
   @media (max-width: 560px) {
     #bar .addr, #bar .build { display: none; }
     #bar .name { flex: 1; min-width: 0; }
-    #bar button, #private-bar button { padding: 10px 9px; font-size: 11px; }
+    #bar button, #private-bar button, #community-bar button { padding: 10px 9px; font-size: 11px; }
     .bar-full { display: none; }
   }
-  #private-bar {
+  #private-bar, #community-bar {
     display: none; position: fixed; top: var(--bar-h); left: 0; right: 0; z-index: 41;
     height: var(--pv-bar-h); justify-content: center;
     background: #0b0e12; border-bottom: 1px solid rgba(255,255,255,0.10);
   }
   body.private-open #private-bar { display: flex; }
-  body.private-open #stage { top: calc(var(--bar-h) + var(--pv-bar-h)); }
-  #private-bar .bar-inner { height: var(--pv-bar-h); gap: 8px; }
+  body.community-open #community-bar { display: flex; }
+  body.private-open #stage,
+  body.community-open #stage { top: calc(var(--bar-h) + var(--pv-bar-h)); }
+  #private-bar .bar-inner, #community-bar .bar-inner { height: var(--pv-bar-h); gap: 8px; }
   #stage { position: fixed; top: var(--bar-h); left: 0; right: 0; bottom: 0; }
   iframe {
     position: absolute; inset: 0; width: 100%; height: 100%; border: 0;
@@ -329,19 +332,21 @@
   .dash-list-k { font-size: 10px; color: #8a93a2; margin-bottom: 2px; }
   #hm-none { display: none; font-size: 12px; color: #8a93a2; line-height: 1.6; }
   #hm-none.visible { display: block; }
-  #public, #ahart {
+  #public, #ahart, #comm-live {
     display: none; position: fixed; z-index: 30; background: #111318;
     overflow-y: auto; -webkit-overflow-scrolling: touch;
   }
-  #public.visible, #ahart.visible { display: block; }
-  #ahart { top: calc(var(--bar-h) + var(--pv-bar-h)); left: 0; right: 0; bottom: 0; }
+  #public.visible, #ahart.visible, #comm-live.visible { display: block; }
+  #ahart, #comm-live { top: calc(var(--bar-h) + var(--pv-bar-h)); left: 0; right: 0; bottom: 0; }
   @media (max-width: 799px) {
     #public.visible { top: 50%; left: 0; right: 0; bottom: 0; }
     #public.full { top: var(--bar-h); }
+    body.community-open #public.full { top: calc(var(--bar-h) + var(--pv-bar-h)); }
   }
   @media (min-width: 800px) {
     #public.visible { top: var(--bar-h); left: 58%; right: 0; bottom: 0; }
     #public.full { left: 0; }
+    body.community-open #public.visible { top: calc(var(--bar-h) + var(--pv-bar-h)); }
   }
   #pub-none { display: none; font-size: 12px; color: #8a93a2; line-height: 1.6;
     margin-bottom: 12px; }
@@ -456,18 +461,24 @@
   <div class="bar-inner">
     <span class="name" id="nm">Vyanet</span>
     <span class="addr" id="addr"></span>
-    <span class="build" id="build">hub 1.8.12</span>
+    <span class="build" id="build">hub 1.8.13</span>
     <button id="btn-home" disabled onclick="showHome()">HOME</button>
     <button id="btn-private" disabled onclick="showPrivate()" aria-label="PRIVATE">PRIV<span class="bar-full">ATE</span></button>
     <button id="btn-public" disabled onclick="showPublic()" aria-label="COMMUNITY">COMM<span class="bar-full">UNITY</span></button>
-    <button id="btn-live" disabled onclick="openLive()" aria-label="LIVE">LIVE</button>
   </div>
 </div>
 <div id="private-bar">
   <div class="bar-inner">
     <button id="btn-pv-3d" disabled onclick="setPrivateSub('3d')">3D</button>
     <button id="btn-pv-sat" disabled onclick="setPrivateSub('satellite')">2D</button>
+    <button id="btn-pv-live" disabled onclick="openLive()">Live</button>
     <button id="btn-pv-ahart" onclick="setPrivateSub('ahart')">Plugins</button>
+  </div>
+</div>
+<div id="community-bar">
+  <div class="bar-inner">
+    <button id="btn-cm-map" onclick="setCommunitySub('map')">Map</button>
+    <button id="btn-cm-live" onclick="setCommunitySub('live')">Live</button>
   </div>
 </div>
 <div id="stage"></div>
@@ -503,15 +514,11 @@
         </article>
         <article class="hm-guide-card">
           <h3>PRIVATE</h3>
-          <p>The mapping workspace. <strong style="color:#f0f2f5">3D</strong> is the interactive model with pins, cameras, analysis, and response routes. <strong style="color:#f0f2f5">2D</strong> is the same intelligence on the aerial map. <strong style="color:#f0f2f5">Plugins</strong> are property-level add-ons as they ship.</p>
+          <p>The mapping workspace. <strong style="color:#f0f2f5">3D</strong> is the interactive model with pins, cameras, analysis, and response routes. <strong style="color:#f0f2f5">2D</strong> is the same intelligence on the aerial map. <strong style="color:#f0f2f5">Live</strong> is this property&rsquo;s CHEKT cameras and clips. <strong style="color:#f0f2f5">Plugins</strong> are property-level add-ons as they ship.</p>
         </article>
         <article class="hm-guide-card">
           <h3>COMMUNITY</h3>
-          <p>Neighborhood context around this property: HOA lots, weather, wildfire, earthquakes, FEMA, and space weather. It does not navigate you to a neighbor&rsquo;s mapping.</p>
-        </article>
-        <article class="hm-guide-card">
-          <h3>LIVE</h3>
-          <p>CHEKT cameras and recent clips for this property. Live video uses the viewer passcode and stays in this tab only.</p>
+          <p>Neighborhood context around this property: HOA lots, weather, wildfire, earthquakes, FEMA, and space weather. <strong style="color:#f0f2f5">Map</strong> is the community overlay. <strong style="color:#f0f2f5">Live</strong> is reserved for community cameras and will fill in later. It does not navigate you to a neighbor&rsquo;s mapping.</p>
         </article>
       </div>
       <p class="hm-prog-note">We map the customer who asked for the work. Neighboring roofs may appear at the edge of an aerial the same way they would in any photograph from above; those images are not analyzed or kept as information about anyone else&rsquo;s home.</p>
@@ -531,6 +538,12 @@
     <div class="hm-name" style="font-size:18px;margin-bottom:6px;">Plugins</div>
     <p class="dash-note" style="margin-bottom:14px;">Property-level add-ons for this mapping. Slots stay empty until a plugin has data.</p>
     <div class="ahart-grid" id="ahart-grid"></div>
+  </div>
+</div>
+<div id="comm-live">
+  <div class="hm-wrap">
+    <div class="hm-name" style="font-size:18px;margin-bottom:6px;">Community Live</div>
+    <p class="dash-note">Community cameras will appear here. This property&rsquo;s CHEKT feed stays under Private &rarr; Live.</p>
   </div>
 </div>
 <div id="gate">
@@ -575,8 +588,8 @@
 import { fetchJson, dataRoot, framesFromIndex, validateViewerKey,
          liveAliasIds, gwConfig, findNadir, detectCameras, ROLES, HUB_BUILD,
          PLUGINS
-       } from './js/vyanet-viewer/property.js?v=1.8.12';
-import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.12';
+       } from './js/vyanet-viewer/property.js?v=1.8.13';
+import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.13';
 
 const BUILD = HUB_BUILD;
 const params = new URLSearchParams(window.location.search);
@@ -590,7 +603,7 @@ const state = {
   hasCams: false, needsKey: false, camsSettled: false, camsChecked: false,
   liveReady: false, pendingLive: false,
   modelReady: false, pending3d: false, dashStarted: false,
-  heroStage: '', passBusy: false, privateSub: '', stage: 'home'
+  heroStage: '', passBusy: false, privateSub: '', communitySub: '', stage: 'home'
 };
 
 function ss(k) { try { return sessionStorage.getItem(k) || ''; } catch (e) { return ''; } }
@@ -645,18 +658,24 @@ function syncBar(mode) {
   document.getElementById('btn-home').classList.toggle('on', mode === 'home');
   document.getElementById('btn-private').classList.toggle('on', mode === 'private');
   document.getElementById('btn-public').classList.toggle('on', mode === 'public');
-  document.getElementById('btn-live').classList.toggle('on', mode === 'live');
 }
 function syncPrivateBar(sub) {
   document.getElementById('btn-pv-3d').classList.toggle('on', sub === '3d');
   document.getElementById('btn-pv-sat').classList.toggle('on', sub === 'satellite');
+  document.getElementById('btn-pv-live').classList.toggle('on', sub === 'live');
   document.getElementById('btn-pv-ahart').classList.toggle('on', sub === 'ahart');
+}
+function syncCommunityBar(sub) {
+  document.getElementById('btn-cm-map').classList.toggle('on', sub === 'map');
+  document.getElementById('btn-cm-live').classList.toggle('on', sub === 'live');
 }
 function hideHubLayers() {
   document.getElementById('home').classList.remove('visible');
   document.getElementById('public').classList.remove('visible');
   document.getElementById('ahart').classList.remove('visible');
+  document.getElementById('comm-live').classList.remove('visible');
   document.body.classList.remove('private-open');
+  document.body.classList.remove('community-open');
 }
 function hoaFrameOn(on) {
   const fh = document.getElementById('frame-hoa');
@@ -688,7 +707,11 @@ window.setStage = function (stage) {
   const spec = state.spec;
   if (!spec || !state.entered) return;
   if (stage === 'private' && !spec.hasPrivate) return;
-  if (stage === 'live' && !spec.hasLive) return;
+  if (stage === 'live') {
+    if (!spec.hasLive) return;
+    state.privateSub = 'live';
+    stage = 'private';
+  }
   if (stage === '3d' || stage === 'satellite' || stage === 'ahart') {
     if (!spec.hasPrivate) return;
     state.privateSub = stage;
@@ -699,18 +722,25 @@ window.setStage = function (stage) {
   const fl = spec.hasLive ? ensureFrame('frame-live', spec.liveHref) : null;
   const fh = spec.hasHoa ? ensureFrame('frame-hoa', spec.hoaHref) : null;
   const sub = stage === 'private' ? (state.privateSub || spec.privateDefault) : '';
+  const csub = stage === 'public' ? (state.communitySub || 'map') : '';
   if (f3) f3.classList.toggle('on', stage === 'private' && sub === '3d');
   if (fs) fs.classList.toggle('on', stage === 'private' && sub === 'satellite');
-  if (fl) fl.classList.toggle('on', stage === 'live');
-  hoaFrameOn(stage === 'public' && spec.hasHoa);
+  if (fl) fl.classList.toggle('on', stage === 'private' && sub === 'live');
+  hoaFrameOn(stage === 'public' && csub === 'map' && spec.hasHoa);
   hideHubLayers();
   if (stage === 'home') document.getElementById('home').classList.add('visible');
   if (stage === 'public') {
-    const pub = document.getElementById('public');
-    pub.classList.add('visible');
-    pub.classList.toggle('full', !spec.hasHoa);
-    document.getElementById('pub-none').classList.toggle('visible', !spec.hasHoa);
-    startDashboard();
+    document.body.classList.add('community-open');
+    syncCommunityBar(csub);
+    if (csub === 'live') {
+      document.getElementById('comm-live').classList.add('visible');
+    } else {
+      const pub = document.getElementById('public');
+      pub.classList.add('visible');
+      pub.classList.toggle('full', !spec.hasHoa);
+      document.getElementById('pub-none').classList.toggle('visible', !spec.hasHoa);
+      startDashboard();
+    }
   }
   if (stage === 'private') {
     document.body.classList.add('private-open');
@@ -719,7 +749,7 @@ window.setStage = function (stage) {
   }
   state.stage = stage;
   syncBar(stage);
-  if (stage === 'public' && fh && fh.contentWindow) {
+  if (stage === 'public' && csub === 'map' && fh && fh.contentWindow) {
     try {
       fh.contentWindow.postMessage({ type: 'vyanet-stage', stage: 'public' }, window.location.origin);
     } catch (e) {}
@@ -736,7 +766,7 @@ window.setStage = function (stage) {
     state.pending3d = false;
     post3dStage(false);
   }
-  if (stage === 'live') {
+  if (stage === 'private' && sub === 'live') {
     if (state.liveReady) postLiveStage(true);
     else state.pendingLive = true;
   } else {
@@ -758,6 +788,7 @@ window.showPrivate = function () {
   if (!state.privateSub) state.privateSub = spec.privateDefault;
   if (state.privateSub === '3d' && !spec.hasModel) state.privateSub = spec.privateDefault;
   if (state.privateSub === 'satellite' && !spec.hasSatellite) state.privateSub = spec.privateDefault;
+  if (state.privateSub === 'live' && !spec.hasLive) state.privateSub = spec.privateDefault;
   setStage('private');
 };
 
@@ -766,12 +797,21 @@ window.setPrivateSub = function (sub) {
   if (!spec || !state.entered || !spec.hasPrivate) return;
   if (sub === '3d' && !spec.hasModel) return;
   if (sub === 'satellite' && !spec.hasSatellite) return;
+  if (sub === 'live') { window.openLive(); return; }
   state.privateSub = sub;
   setStage('private');
 };
 
+window.setCommunitySub = function (sub) {
+  if (!state.entered) return;
+  if (sub !== 'map' && sub !== 'live') return;
+  state.communitySub = sub;
+  setStage('public');
+};
+
 window.showPublic = function () {
   if (!state.entered) return;
+  if (!state.communitySub) state.communitySub = 'map';
   setStage('public');
 };
 
@@ -795,7 +835,8 @@ window.heroGo = function () {
 function goLiveNow() {
   const spec = state.spec;
   if (!spec || !state.entered || !spec.hasLive) return;
-  setStage('live');
+  state.privateSub = 'live';
+  setStage('private');
 }
 function notifyChildKey() {
   ['frame-sat', 'frame-3d', 'frame-live'].forEach(function (id) {
@@ -932,7 +973,9 @@ window.switchRole = function () {
   document.getElementById('home').classList.remove('visible');
   document.getElementById('public').classList.remove('visible');
   document.getElementById('ahart').classList.remove('visible');
+  document.getElementById('comm-live').classList.remove('visible');
   document.body.classList.remove('private-open');
+  document.body.classList.remove('community-open');
   syncBar('');
   showGate();
 };
@@ -1031,8 +1074,10 @@ function enterApp() {
   let start = 'home';
   let sub = spec.privateDefault;
   if (raw === 'public') start = 'public';
-  else if (raw === 'live' && spec.hasLive) start = 'live';
-  else if (raw === 'private' && spec.hasPrivate) start = 'private';
+  else if (raw === 'live' && spec.hasLive) {
+    start = 'private';
+    sub = 'live';
+  } else if (raw === 'private' && spec.hasPrivate) start = 'private';
   else if ((raw === '3d' || raw === 'satellite' || raw === 'ahart') && spec.hasPrivate) {
     start = 'private';
     sub = raw;
@@ -1040,11 +1085,13 @@ function enterApp() {
   if (start === 'private') {
     if (sub === '3d' && !spec.hasModel) sub = spec.privateDefault;
     if (sub === 'satellite' && !spec.hasSatellite) sub = spec.privateDefault;
+    if (sub === 'live' && !spec.hasLive) sub = spec.privateDefault;
     state.privateSub = sub;
   }
+  if (start === 'public') state.communitySub = 'map';
   document.getElementById('hm-role').textContent =
     state.role ? 'Viewing as ' + roleLabel(state.role) : '';
-  if (start === 'live' && !ss('vyViewerKey')) {
+  if (start === 'private' && sub === 'live' && !ss('vyViewerKey')) {
     showHome();
     showLivePass();
   } else if (start === 'home') {
@@ -1085,6 +1132,7 @@ async function boot() {
   document.getElementById('btn-public').disabled = false;
   document.getElementById('btn-pv-3d').disabled = !state.spec.hasModel;
   document.getElementById('btn-pv-sat').disabled = !state.spec.hasSatellite;
+  document.getElementById('btn-pv-live').disabled = true;
   // Hero nadir: the highest-caliber render available, as visual context.
   // Wire onload BEFORE src so a cached image still reveals the hero.
   state.heroStage = state.spec.hasPrivate ? 'private' : '';
@@ -1105,7 +1153,7 @@ async function boot() {
   const cams = await detectCameras(root, idx, state.spec, propertyId);
   state.hasCams = cams;
   state.spec.hasLive = !!(cams || state.spec.hasModel);
-  document.getElementById('btn-live').disabled = !state.spec.hasLive;
+  document.getElementById('btn-pv-live').disabled = !state.spec.hasLive;
   document.getElementById('hm-none').classList.toggle('visible',
     !state.spec.hasModel && !state.spec.hasSatellite && !state.spec.hasLive);
   state.camsSettled = true;
