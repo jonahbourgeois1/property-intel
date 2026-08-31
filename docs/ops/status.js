@@ -1,6 +1,6 @@
 window.PI_STATUS = {
   "as_of": "2026-08-31",
-  "as_of_utc": "2026-08-31T00:04:39Z",
+  "as_of_utc": "2026-08-31T14:17:46Z",
   "repo": "jonahbourgeois1/property-intel",
   "ref": "origin/main",
   "head": {
@@ -183,5 +183,195 @@ window.PI_STATUS = {
       "item": "v2 pipeline tree not mounted for Log Bot",
       "evidence": "property-intel-v2 404; OneDrive Desktop/property-intel-v2/docs/ops not writable from this VM."
     }
-  ]
+  ],
+  "board": {
+    "title": "Property Intel",
+    "summary": "Production satellite + plane pipelines; live video shipped; Lane parcels published; photo transport and EagleView access still block scale-out.",
+    "as_of": "2026-08-31",
+    "last_write": "2026-08-31 09:17:46 CT",
+    "source": "Public v1 · docs/ops",
+    "kpis": [
+      {
+        "label": "Satellite records published",
+        "value": "506",
+        "sub": "target 30000 properties",
+        "evidence": "len(data/satellite/*.json)=506"
+      },
+      {
+        "label": "Plane-rendered properties",
+        "value": "22",
+        "sub": "target 44 Highlands roster",
+        "evidence": "len(data/plane/*.json)=22 (was 20 on 2026-08-25)"
+      },
+      {
+        "label": "Ranked open items",
+        "value": "17",
+        "sub": "still open of 18 listed",
+        "evidence": "2026-08-25 board. Original 18-item list is not in this clone; no evidence those items closed."
+      },
+      {
+        "label": "EagleView access",
+        "value": "Not granted",
+        "sub": "30-day eval clock has not started",
+        "evidence": "2026-08-25 board; no grant file in this checkout"
+      }
+    ],
+    "pipelines": [
+      {
+        "name": "1 — Ingest",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Capture ingest (5 gates, pyramid, manifest last)",
+            "note": "1-ingest/ingest_capture.py in production."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Promote to serving + registry (plane path)",
+            "note": "Works for plane captures. Operator still stamps parcels_ref by hand."
+          },
+          {
+            "status": "not_started",
+            "label": "NOT-STARTED",
+            "title": "Parameterize promote for drone prefix / type",
+            "note": "Still hardcoded. Eugene used option B: plane prefix + type plane. Do not stamp type:drone until the four Lambdas are redeployed."
+          }
+        ]
+      },
+      {
+        "name": "2 — Parcels",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Deschutes county published",
+            "note": "109,474 features."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Lane County source GeoJSON on disk",
+            "note": "407 MB file gitignored. Must never be committed."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Inspect → counties.json lane → publish → probe",
+            "note": "2026-08-31: 332 viewer tiles on GitHub Pages (8/27 board: 159,131 features, 323 shards). Join MAPTAXLOT. CDN probe was 5/5. Owner fields stripped."
+          }
+        ]
+      },
+      {
+        "name": "3 — Eligibility",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "One opacity function for eligibility and render",
+            "note": "Render gate imports 3-eligibility/eligibility_check.capture_coverage."
+          },
+          {
+            "status": "blocked",
+            "label": "BLOCKED",
+            "title": "Eugene origin taxlot below 80% clip/render gate",
+            "note": "Taxlot 1704233002104 is 65% opaque. Capture vyanet-eugene-2026-08-19 is in serving as type plane, parcels_ref lane."
+          }
+        ]
+      },
+      {
+        "name": "4 — Clip / render",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Drone captures parcel-clipped like plane",
+            "note": "Whole-mesh drone GLB path is superseded. parcels_ref required on every capture."
+          },
+          {
+            "status": "not_started",
+            "label": "NOT-STARTED",
+            "title": "load_captures() plane|drone edit not deployed",
+            "note": "Drone-typed captures stay invisible to clip/render until it ships. Re-baseline the row-3 oracle after."
+          },
+          {
+            "status": "unknown",
+            "label": "UNKNOWN",
+            "title": "Row-3 render oracle (18775 Macalpine Loop)",
+            "note": "Not re-run from this checkout. Expected: ok=true, tier ENTRANCE, alpha=231.3°, nadir 148/156."
+          }
+        ]
+      },
+      {
+        "name": "5 — Satellite",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Pass 1 emits the twenty; reruns keep all 239",
+            "note": "Two vocabularies by design. Do not unify. Catalog role= still on all 256 pins (195 primary, 61 concern)."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "MOCKINGBIRD row 277 redo",
+            "note": "First check after any real satellite.gs deploy. Critique add-loss guard still missing. Editor-save ≠ deploy."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Pass 1 placement-failure diagnostics",
+            "note": "Corner-stack hypothesis: unit mismatch + clamp relocation."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Reviewer revisit lists",
+            "note": "Ross 88 / Eleanor 27. School cap is 20 as of 2026-08-27. SAT_MAX_PINS stays 12 in the satellite.gs copy."
+          }
+        ]
+      },
+      {
+        "name": "6 — Live video + viewers",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Live CHEKT on the hub",
+            "note": "origin/main 53346bd; HUB_BUILD 1.8.12; live-viewer.html on main."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Element Review outside-crop pins + Earth",
+            "note": "element-review.html BUILD v6.8.10 on HEAD."
+          },
+          {
+            "status": "blocked",
+            "label": "BLOCKED",
+            "title": "responder-intel.html flat pixelToLatLng",
+            "note": "0.488% N-S stretch. Migrate to nadir-geo; do not copy the flat helper."
+          }
+        ]
+      },
+      {
+        "name": "7 — Photo intake + EagleView",
+        "items": [
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Photo-intake transport",
+            "note": "Zoho Forms closed. Creator probe 2 ready; fallback own page + S3 presigned POST."
+          },
+          {
+            "status": "blocked",
+            "label": "BLOCKED",
+            "title": "EagleView access",
+            "note": "Not granted. 30-day eval clock has not started. License rights (analyze/cache/derive/resell) and 3D-mesh questions first."
+          }
+        ]
+      }
+    ]
+  }
 };
