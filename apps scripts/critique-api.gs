@@ -8,7 +8,11 @@
 //   GET  ?route=pin-freq                    -> {freq:{id:count}} for add-search
 //        order (Satellite Nadir Elements + element-critique Pin n ID; 6 h cache)
 //   GET  ?route=ping                        -> deployed build / layout check
+//   GET  ?route=golf-catalog                -> Golf Pins sheet (NOT pins-catalog.json)
+//   GET  ?route=golf-elements&site_no=      -> Golf tab pins only (never Satellite)
 //   POST ?route=critique  (JSON body)       -> file the analyst's critique
+//   POST ?route=golf-save  (view:"golf")    -> write Golf Nadir Elements only
+//        Does NOT write element-critique, Nadir Fixes, or call Bedrock.
 //
 // HOW THE VIEWER IS REACHED
 // The Satellite sheet's "Open Element Review (This Row)" menu action
@@ -153,7 +157,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.6 (2026-08-28) — pin-freq route; Earth dialog is in shared.gs';
+const CRITIQUE_BUILD = 'v6.8 (2026-09-01) — golf-catalog / golf-elements GET, golf-save POST';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -685,20 +689,20 @@ function critiqueGetDtElements_(p) {
 // is a closed list validateElementPins_ enforces. Requests go to the sheet only.
 // Which pins did the analyst NOT ask to change?
 //
-// A pin is PROTECTED when its verdict is blank or 'ok' AND it carries no note and
-// no corrected coordinate — i.e. the analyst looked at it and asked for nothing.
-// Those must survive a re-pin. Everything else is fair game:
-//   - 'remove'  the analyst asked for it to go
-//   - 'fix'     the analyst may have said the ID ITSELF is wrong, so the model is
-//               allowed to return a different id in its place
-// Keeping the rule this narrow is what stops false alarms on legitimate rounds.
+// A pin is PROTECTED when the analyst did not ask to remove it and did not
+// ask to change its id. Blank/'ok' with no note is the original case
+// (PRIDESTAFF add-only wipe). A FIX that only MOVES the pin is the same
+// contract: keep that id, at the coordinate they gave. The model is still
+// allowed to change the id when the verdict is 'fix' with no corrected xy
+// (wrong label, no drag).
 function critiqueProtectedIds_(p) {
   var out = [];
   ((p && p.elements) || []).forEach(function (el) {
     var v = String(el.verdict || '').toLowerCase();
-    if (v === 'remove' || v === 'fix') return;
-    if (String(el.note || '').trim()) return;
-    if (critiqueXY_(el.corrected_x, el.corrected_y)) return;
+    if (v === 'remove') return;
+    var moved = !!critiqueXY_(el.corrected_x, el.corrected_y);
+    if (v === 'fix' && !moved) return;
+    if (!moved && String(el.note || '').trim()) return;
     var id = parseInt(el.id, 10);
     if (isFinite(id)) out.push(id);
   });
@@ -736,6 +740,51 @@ function critiquePinLoss_(p, beforeRaw, after) {
     if (before[id] && !have[id]) lost.push((names[id] || '#' + id) + ' (#' + id + ')');
   });
   return lost;
+}
+
+// Bedrock will not emit x,y outside 0–100 (the Pass 1 prompt says the nadir
+// frame is the whole world). A reviewer who dragged onto the live basemap
+// stores percentages <0 or >100. The model then DROPS that pin, and the
+// pin-loss guard used to treat FIX as fair game, so the note was consumed
+// and the pin vanished (Baert / Boyd Ct, 2026-08-28). The structured
+// payload is the authority: write those coordinates after the re-pin.
+var CRITIQUE_COORD_ABS_MAX = 500;
+
+function critiqueForcePin_(pins, id, x, y) {
+  var n = parseInt(id, 10);
+  var nx = parseFloat(x), ny = parseFloat(y);
+  if (!isFinite(n) || n < 1 || !isFinite(nx) || !isFinite(ny)) return;
+  if (Math.abs(nx) > CRITIQUE_COORD_ABS_MAX || Math.abs(ny) > CRITIQUE_COORD_ABS_MAX) return;
+  var c = { x: Math.round(nx * 10) / 10, y: Math.round(ny * 10) / 10 };
+  var i;
+  for (i = 0; i < pins.length; i++) {
+    if (parseInt(pins[i].id, 10) === n) {
+      pins[i] = { id: n, x: c.x, y: c.y };
+      return;
+    }
+  }
+  if (pins.length < CRITIQUE_PIN_SLOTS) pins.push({ id: n, x: c.x, y: c.y });
+}
+
+function critiqueApplyForcedPins_(p, pins) {
+  pins = (pins || []).slice();
+  ((p && p.elements) || []).forEach(function (el) {
+    if (String(el.verdict || '').toLowerCase() === 'remove') {
+      var rid = parseInt(el.id, 10);
+      pins = pins.filter(function (x) { return parseInt(x.id, 10) !== rid; });
+    }
+  });
+  ((p && p.elements) || []).forEach(function (el) {
+    if (critiqueXY_(el.corrected_x, el.corrected_y)) {
+      critiqueForcePin_(pins, el.id, el.corrected_x, el.corrected_y);
+    }
+  });
+  ((p && p.added) || []).forEach(function (a) {
+    if (a && a.id != null && isFinite(parseFloat(a.x)) && isFinite(parseFloat(a.y))) {
+      critiqueForcePin_(pins, a.id, a.x, a.y);
+    }
+  });
+  return pins;
 }
 
 // Is the 5-minute re-pin trigger actually installed?
@@ -1036,6 +1085,10 @@ function critiquePostDt_(p) {
         if (rerunRan) {
           var freshRaw = String(h.sheet.getRange(row, DT_COL_ELEMENTS).getValue() || '').trim();
           var candidate = (freshRaw.indexOf('ERROR:') === 0) ? [] : parsePinCell_(freshRaw);
+          candidate = critiqueApplyForcedPins_(p, candidate);
+          writePlainCell(h.sheet, row, DT_COL_ELEMENTS,
+            candidate.length ? JSON.stringify(candidate) : '');
+          SpreadsheetApp.flush();
           var lost = critiquePinLoss_(p, beforeRaw, candidate);
           if (lost.length) {
             writePlainCell(h.sheet, row, DT_COL_ELEMENTS, beforeRaw);
@@ -1053,7 +1106,7 @@ function critiquePostDt_(p) {
             writePlainCell(h.sheet, row, DT_COL_FIXES, '');
             SpreadsheetApp.flush();
             freshPins = candidate;
-            freshRev = critiqueRev_(freshRaw);
+            freshRev = critiqueRev_(candidate.length ? JSON.stringify(candidate) : '');
           }
         }
 
@@ -1269,6 +1322,10 @@ function critiquePost_(p) {
           // Read the result BEFORE consuming anything, so a bad round can be undone.
           var freshRaw = String(h.sheet.getRange(row, SAT_COL_ELEMENTS).getValue() || '').trim();
           var candidate = (freshRaw.indexOf('ERROR:') === 0) ? [] : parsePinCell_(freshRaw);
+          candidate = critiqueApplyForcedPins_(p, candidate);
+          writePlainCell(h.sheet, row, SAT_COL_ELEMENTS,
+            candidate.length ? JSON.stringify(candidate) : '');
+          SpreadsheetApp.flush();
 
           // ⭐ THE PIN-LOSS GUARD. The model is asked to keep every pin the
           // analyst did not comment on, and usually does — but not always, and a
@@ -1296,7 +1353,7 @@ function critiquePost_(p) {
             writePlainCell(h.sheet, row, SAT_COL_FIXES, '');
             SpreadsheetApp.flush();
             freshPins = candidate;
-            freshRev = critiqueRev_(freshRaw);
+            freshRev = critiqueRev_(candidate.length ? JSON.stringify(candidate) : '');
           }
         }
 
@@ -1390,10 +1447,24 @@ function critiqueApiGet_(e) {
                                 pin_slots: CRITIQUE_PIN_SLOTS,
                                 rerun_automated: CRITIQUE_QUEUE_RERUN,
                                 rerun_mode: CRITIQUE_RERUN_MODE,
+                                golf: true,
+                                golf_max_pins: (typeof GOLF_MAX_PINS === 'number') ? GOLF_MAX_PINS : 200,
                                 server_time: new Date().toISOString() }, cb);
     }
     if (route === 'pin-freq') {
       return critiqueJsonOut_(critiqueGetPinFreq_(), cb);
+    }
+    if (route === 'golf-catalog') {
+      if (typeof golfGetCatalog_ !== 'function') {
+        throw new Error('golfGetCatalog_ is not defined — paste golf.gs and save');
+      }
+      return critiqueJsonOut_(golfGetCatalog_(), cb);
+    }
+    if (route === 'golf-elements') {
+      if (typeof golfGetElements_ !== 'function') {
+        throw new Error('golfGetElements_ is not defined — paste golf.gs and save');
+      }
+      return critiqueJsonOut_(golfGetElements_(p), cb);
     }
     if (route !== 'elements') throw new Error('unknown route "' + route + '"');
     return critiqueJsonOut_(critiqueGetElements_(p), cb);
@@ -1413,6 +1484,14 @@ function critiqueApiPost_(e) {
     // The token may travel in the body too, so a POST still works if the query
     // string is lost to a redirect.
     if (!p.token && payload.token) critiqueCheckToken_({ token: payload.token });
+    var postRoute = String(p.route || payload.route || '').trim().toLowerCase();
+    var postView = String(payload.view || '').trim().toLowerCase();
+    if (postRoute === 'golf-save' || postView === 'golf') {
+      if (typeof golfSavePins_ !== 'function') {
+        throw new Error('golfSavePins_ is not defined — paste golf.gs and save');
+      }
+      return critiqueJsonOut_(golfSavePins_(payload));
+    }
     return critiqueJsonOut_(critiquePost_(payload));
   } catch (err) {
     return critiqueJsonOut_({ ok: false, error: String(err.message || err) });

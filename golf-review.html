@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Golf Review — Property Intel</title>
+<!--
+  golf-review.html — manual golf-course pin placement (v1.0.0, 2026-09-01)
+
+  Sibling of element-review.html, not a mode of it. No nadir overlay, no
+  critique form, no Bedrock rerun. Pins live as {id, lat, lng} on a live
+  Google Maps satellite view and save to the Golf tab Nadir Elements cell.
+
+  Query params:
+    site_no  = (required) Golf sheet identity
+    lat,lng  = (required unless the API returns them) map centre
+    addr     = (optional) display + Google Earth search
+
+  Catalog and existing pins load from the Apps Script web app:
+    GET  ?route=golf-catalog
+    GET  ?route=golf-elements&site_no=
+    POST view=golf  body {site_no, pins:[{id,lat,lng}]}  Content-Type: text/plain
+-->
+<style>
+  :root {
+    --ground:    #1b2027;
+    --panel:     #232a33;
+    --panel-2:   #2b333e;
+    --line:      #3a444f;
+    --ink:       #eef2f6;
+    --ink-dim:   #9aa7b4;
+    --ink-faint: #667380;
+    --marker:    #ffd23f;
+    --marker-ink:#1b2027;
+    --hot:       #4fd1c5;
+    --warn:      #e8955a;
+    --bad:       #ef6f6f;
+    --good:      #6ee7a8;
+    --radius:    10px;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, monospace;
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 14px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  header .kicker {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  header h1 {
+    font-size: 15px; font-weight: 600; margin: 0;
+    color: var(--ink);
+  }
+  header .addr { color: var(--ink-dim); font-weight: 400; }
+  header .count {
+    margin-left: auto;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-dim);
+  }
+  header .count b { color: var(--marker); font-weight: 600; }
+  header .build {
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em;
+    color: var(--ink-faint); border: 1px solid var(--line);
+    border-radius: 5px; padding: 2px 6px; margin-left: 10px;
+  }
+  header .earth-link {
+    font-size: 12px; font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
+  header .earth-link:hover { border-color: var(--hot); color: var(--hot); }
+  header .earth-link[hidden] { display: none; }
+
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    height: calc(100% - 51px);
+  }
+  @media (max-width: 900px) {
+    html, body { height: auto; overflow: auto; }
+    main { grid-template-columns: 1fr; height: auto; }
+    .stage { min-height: 60vh; }
+  }
+
+  .stage {
+    position: relative;
+    padding: 0;
+    overflow: hidden;
+    background: #0a0c0f;
+  }
+  #map { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage.placing #map { cursor: crosshair; }
+
+  .place-hint {
+    position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+    z-index: 7; display: none;
+    padding: 8px 14px; border-radius: 8px;
+    background: var(--hot); color: #10221f;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+  .place-hint.on { display: block; }
+
+  .coord {
+    position: absolute; right: 16px; bottom: 16px;
+    z-index: 5;
+    padding: 7px 11px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    border-radius: 8px;
+    font-family: var(--mono); font-size: 12px;
+    color: var(--ink-faint);
+  }
+  .coord b { color: var(--ink-dim); margin-right: 6px; }
+
+  .panel {
+    background: var(--panel);
+    border-left: 1px solid var(--line);
+    display: flex; flex-direction: column;
+    min-height: 0; min-width: 0;
+  }
+  .panel h2 {
+    margin: 0;
+    padding: 14px 18px 10px;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px 18px 8px;
+  }
+  .f { display: block; margin: 0 0 10px; }
+  .f .lab {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 4px;
+  }
+  .panel select {
+    width: 100%;
+    appearance: none; -webkit-appearance: none;
+    height: 30px; padding: 6px 26px 6px 9px; cursor: pointer;
+    background: var(--ground);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    font-family: var(--sans);
+    font-size: 13px;
+    background-image: linear-gradient(45deg, transparent 50%, var(--ink-dim) 50%),
+                      linear-gradient(135deg, var(--ink-dim) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 13px, calc(100% - 9px) 13px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+  #defBox {
+    min-height: 42px;
+    margin: 0 0 14px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--panel-2);
+    font-size: 12px;
+    color: var(--ink-dim);
+    line-height: 1.45;
+  }
+  #defBox.empty { color: var(--ink-faint); }
+  .placed-head {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 8px 0 8px;
+  }
+  #pinList { list-style: none; margin: 0; padding: 0; }
+  #pinList li {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+  }
+  #pinList li:hover, #pinList li.on { background: rgba(79, 209, 197, 0.08); }
+  #pinList .num {
+    flex: 0 0 22px;
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    color: var(--marker-ink);
+    background: var(--marker);
+    border-radius: 10px;
+    text-align: center;
+    line-height: 18px;
+    margin-top: 1px;
+  }
+  #pinList .meta { font-size: 11px; color: var(--ink-faint); }
+  #pinList .name { font-size: 13px; color: var(--ink); }
+  #pinList .mini {
+    margin-left: auto;
+    background: transparent; border: 1px solid var(--line);
+    color: var(--ink-dim); border-radius: 6px;
+    padding: 2px 7px; cursor: pointer; font-size: 12px;
+  }
+  #pinList .mini:hover { border-color: var(--bad); color: var(--bad); }
+  .submit-bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 12px 18px;
+    border-top: 1px solid var(--line);
+  }
+  .btn {
+    background: var(--panel-2);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--hot); }
+  .btn.primary {
+    background: var(--hot); border-color: var(--hot); color: #10221f;
+    font-weight: 600;
+  }
+  .btn[disabled] { opacity: 0.45; cursor: default; }
+  .status {
+    flex: 1 1 100%;
+    font-family: var(--mono); font-size: 11px; line-height: 1.45;
+    color: var(--ink-faint);
+    word-break: break-word;
+  }
+  .status.ok { color: var(--good); }
+  .status.err { color: var(--bad); }
+  .error {
+    padding: 40px 28px;
+    color: var(--ink-dim);
+    font-size: 15px;
+  }
+  .error code {
+    display: block; margin-top: 10px;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+  <header>
+    <span class="kicker">Golf · Element Review</span>
+    <h1 id="title">Course Elements <span class="addr" id="addr"></span></h1>
+    <span class="count" id="count"></span>
+    <span class="build" id="build"></span>
+    <a class="earth-link" id="earthLink" target="_blank" rel="noopener" hidden>Google Earth</a>
+  </header>
+  <main id="app">
+    <section class="stage" id="stage">
+      <div id="map"></div>
+      <div class="place-hint" id="placeHint"></div>
+      <div class="coord" id="coord"><b>ll</b> <span id="coordVal">—</span></div>
+    </section>
+    <aside class="panel">
+      <h2>Place elements</h2>
+      <div class="panel-scroll">
+        <div id="pinSelects"></div>
+        <div id="defBox" class="empty">Pick an item, then click the map to place it. Drag to move. Esc cancels.</div>
+        <div class="placed-head">Placed</div>
+        <ol id="pinList"></ol>
+      </div>
+      <div class="submit-bar">
+        <button type="button" class="btn primary" id="saveBtn">Save pins</button>
+        <button type="button" class="btn" id="copyBtn">Copy JSON</button>
+        <div class="status" id="status"></div>
+      </div>
+    </aside>
+  </main>
+<script>
+(function () {
+  var BUILD = 'v1.0.0';
+  var PIN_HARD_LIMIT = 200;
+  var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
+  var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+
+  function qp(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function round6(n) {
+    return Math.round(Number(n) * 1e6) / 1e6;
+  }
+
+  var siteNo = String(qp('site_no') || qp('site') || '').trim();
+  var addr = qp('addr') || '';
+  var startLat = parseFloat(qp('lat'));
+  var startLng = parseFloat(qp('lng'));
+  var catalog = { sections: [], byId: {} };
+  var placed = [];
+  var placing = null;
+  var map = null;
+  var dirty = false;
+
+  var buildEl = document.getElementById('build');
+  if (buildEl) buildEl.textContent = BUILD;
+  var addrEl = document.getElementById('addr');
+  if (addrEl && addr) addrEl.textContent = addr;
+  var earth = document.getElementById('earthLink');
+  if (earth && addr) {
+    earth.href = 'https://earth.google.com/web/search/' + encodeURIComponent(addr);
+    earth.hidden = false;
+  }
+
+  function setStatus(msg, kind) {
+    var el = document.getElementById('status');
+    if (!el) return;
+    el.textContent = msg || '';
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function fail(msg, detail) {
+    var stage = document.getElementById('stage');
+    if (stage) {
+      stage.innerHTML = '<div class="error">' + escapeHtml(msg) +
+        (detail ? '<code>' + escapeHtml(detail) + '</code>' : '') + '</div>';
+    }
+    setStatus(msg, 'err');
+  }
+
+  function updateCount() {
+    var el = document.getElementById('count');
+    if (el) el.innerHTML = '<b>' + placed.length + '</b> of ' + PIN_HARD_LIMIT;
+  }
+
+  function markerIcon() {
+    return {
+      path: google.maps.SymbolPath.CIRCLE,
+      scale: 12,
+      fillColor: '#ffd23f',
+      fillOpacity: 1,
+      strokeColor: '#1b2027',
+      strokeWeight: 2
+    };
+  }
+
+  function renumber() {
+    placed.forEach(function (rec, i) {
+      rec.seq = i + 1;
+      if (rec.marker) rec.marker.setLabel({
+        text: String(rec.seq),
+        color: '#1b2027',
+        fontSize: '11px',
+        fontWeight: '700'
+      });
+    });
+    renderList();
+    updateCount();
+  }
+
+  function renderList() {
+    var host = document.getElementById('pinList');
+    if (!host) return;
+    host.innerHTML = '';
+    placed.forEach(function (rec, i) {
+      var li = document.createElement('li');
+      li.innerHTML =
+        '<span class="num">' + rec.seq + '</span>' +
+        '<span><span class="name">' + escapeHtml(rec.name) + '</span>' +
+        '<div class="meta">#' + rec.id +
+          (rec.section ? ' · ' + escapeHtml(rec.section) : '') +
+          ' · ' + rec.lat.toFixed(6) + ', ' + rec.lng.toFixed(6) +
+        '</div></span>' +
+        '<button type="button" class="mini" title="Remove this pin">x</button>';
+      li.addEventListener('click', function (e) {
+        if (e.target && e.target.classList.contains('mini')) return;
+        if (map && rec.marker) {
+          map.panTo(rec.marker.getPosition());
+          rec.marker.setAnimation(google.maps.Animation.BOUNCE);
+          setTimeout(function () { rec.marker.setAnimation(null); }, 700);
+        }
+      });
+      li.querySelector('.mini').addEventListener('click', function (e) {
+        e.stopPropagation();
+        removePin(i);
+      });
+      host.appendChild(li);
+    });
+  }
+
+  function atLimit() { return placed.length >= PIN_HARD_LIMIT; }
+
+  function collectPins() {
+    return placed.map(function (p) {
+      return { id: p.id, lat: round6(p.lat), lng: round6(p.lng) };
+    });
+  }
+
+  function payload() {
+    return {
+      source: 'golf-review',
+      version: BUILD,
+      view: 'golf',
+      route: 'golf-save',
+      site_no: siteNo,
+      address: addr || '',
+      pins: collectPins()
+    };
+  }
+
+  function cancelPlacement() {
+    placing = null;
+    var stage = document.getElementById('stage');
+    var hint = document.getElementById('placeHint');
+    if (stage) stage.classList.remove('placing');
+    if (hint) hint.classList.remove('on');
+    var host = document.getElementById('pinSelects');
+    if (host) {
+      var sels = host.querySelectorAll('select');
+      for (var i = 0; i < sels.length; i++) sels[i].value = '';
+    }
+    var def = document.getElementById('defBox');
+    if (def) {
+      def.textContent = 'Pick an item, then click the map to place it. Drag to move. Esc cancels.';
+      def.className = 'empty';
+    }
+  }
+
+  function beginPlacement(entry) {
+    if (atLimit()) {
+      setStatus(PIN_HARD_LIMIT + ' pin limit reached. Remove one to add another.', 'err');
+      cancelPlacement();
+      return;
+    }
+    placing = entry;
+    var stage = document.getElementById('stage');
+    var hint = document.getElementById('placeHint');
+    if (stage) stage.classList.add('placing');
+    if (hint) {
+      hint.textContent = 'Click the map to place "' + entry.name + '"  ·  Esc to cancel';
+      hint.classList.add('on');
+    }
+    var def = document.getElementById('defBox');
+    if (def) {
+      def.textContent = entry.definition || entry.name;
+      def.className = '';
+    }
+  }
+
+  function addPin(entry, lat, lng, skipDirty) {
+    if (atLimit()) {
+      setStatus(PIN_HARD_LIMIT + ' pin limit reached.', 'err');
+      return;
+    }
+    if (!isFinite(lat) || !isFinite(lng)) return;
+    lat = round6(lat);
+    lng = round6(lng);
+    var rec = {
+      id: parseInt(entry.id, 10),
+      name: entry.name,
+      section: entry.section || '',
+      definition: entry.definition || '',
+      lat: lat,
+      lng: lng,
+      seq: placed.length + 1,
+      marker: null
+    };
+    if (map) {
+      rec.marker = new google.maps.Marker({
+        map: map,
+        position: { lat: lat, lng: lng },
+        draggable: true,
+        icon: markerIcon(),
+        label: {
+          text: String(rec.seq),
+          color: '#1b2027',
+          fontSize: '11px',
+          fontWeight: '700'
+        },
+        title: rec.name
+      });
+      rec.marker.addListener('dragend', function () {
+        var pos = rec.marker.getPosition();
+        rec.lat = round6(pos.lat());
+        rec.lng = round6(pos.lng());
+        dirty = true;
+        renderList();
+      });
+    }
+    placed.push(rec);
+    if (!skipDirty) dirty = true;
+    renderList();
+    updateCount();
+  }
+
+  function removePin(index) {
+    var rec = placed[index];
+    if (!rec) return;
+    if (rec.marker) rec.marker.setMap(null);
+    placed.splice(index, 1);
+    dirty = true;
+    renumber();
+  }
+
+  function renderSelects() {
+    var host = document.getElementById('pinSelects');
+    if (!host) return;
+    host.innerHTML = '';
+    (catalog.sections || []).forEach(function (sec, si) {
+      var lab = document.createElement('label');
+      lab.className = 'f';
+      lab.innerHTML = '<span class="lab">' + escapeHtml(sec.name) + '</span>';
+      var sel = document.createElement('select');
+      sel.id = 'pin-sec-' + si;
+      var opt0 = document.createElement('option');
+      opt0.value = '';
+      opt0.textContent = 'Select…';
+      sel.appendChild(opt0);
+      (sec.pins || []).forEach(function (p) {
+        var o = document.createElement('option');
+        o.value = String(p.id);
+        o.textContent = p.name;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', function () {
+        var id = parseInt(sel.value, 10);
+        if (!isFinite(id)) { cancelPlacement(); return; }
+        var entry = catalog.byId[id];
+        if (!entry) return;
+        var others = host.querySelectorAll('select');
+        for (var i = 0; i < others.length; i++) {
+          if (others[i] !== sel) others[i].value = '';
+        }
+        beginPlacement(entry);
+      });
+      lab.appendChild(sel);
+      host.appendChild(lab);
+    });
+  }
+
+  function initMap() {
+    if (!isFinite(startLat) || !isFinite(startLng)) {
+      fail('This row has no map coordinates.', 'Run Golf Pass 1 (Geocode) first.');
+      return;
+    }
+    var g = google.maps;
+    map = new g.Map(document.getElementById('map'), {
+      center: { lat: startLat, lng: startLng },
+      zoom: 16,
+      mapTypeId: 'satellite',
+      tilt: 0,
+      rotateControl: false,
+      streetViewControl: false,
+      fullscreenControl: false,
+      mapTypeControl: false,
+      gestureHandling: 'greedy'
+    });
+    map.setTilt(0);
+    map.addListener('mousemove', function (e) {
+      var el = document.getElementById('coordVal');
+      if (!el || !e || !e.latLng) return;
+      el.textContent = e.latLng.lat().toFixed(6) + ', ' + e.latLng.lng().toFixed(6);
+    });
+    map.addListener('click', function (e) {
+      if (!placing || !e || !e.latLng) return;
+      addPin(placing, e.latLng.lat(), e.latLng.lng());
+      cancelPlacement();
+    });
+    placed.slice().forEach(function (rec) {
+      if (rec.marker) return;
+      rec.marker = new g.Marker({
+        map: map,
+        position: { lat: rec.lat, lng: rec.lng },
+        draggable: true,
+        icon: markerIcon(),
+        label: {
+          text: String(rec.seq),
+          color: '#1b2027',
+          fontSize: '11px',
+          fontWeight: '700'
+        },
+        title: rec.name
+      });
+      rec.marker.addListener('dragend', function () {
+        var pos = rec.marker.getPosition();
+        rec.lat = round6(pos.lat());
+        rec.lng = round6(pos.lng());
+        dirty = true;
+        renderList();
+      });
+    });
+    renumber();
+  }
+
+  function loadMaps() {
+    if (window.google && window.google.maps) { initMap(); return; }
+    window.golfMapsReady = function () { initMap(); };
+    var sc = document.createElement('script');
+    sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
+      '&callback=golfMapsReady';
+    sc.onerror = function () { fail('Google Maps failed to load.'); };
+    document.head.appendChild(sc);
+  }
+
+  function apiGet(route, extra) {
+    var u = GOLF_API_URL + '?route=' + encodeURIComponent(route) + '&_=' + Date.now();
+    if (extra) u += extra;
+    return fetch(u, { redirect: 'follow' }).then(function (r) { return r.text(); })
+      .then(function (t) {
+        var j;
+        try { j = JSON.parse(t); } catch (e) { throw new Error('API did not return JSON'); }
+        if (j && j.ok === false) throw new Error(j.error || 'API error');
+        return j;
+      });
+  }
+
+  function savePins() {
+    var body = payload();
+    if (body.pins.length > PIN_HARD_LIMIT) {
+      setStatus('Refused: more than ' + PIN_HARD_LIMIT + ' pins.', 'err');
+      return;
+    }
+    setStatus('Saving…');
+    var btn = document.getElementById('saveBtn');
+    if (btn) btn.disabled = true;
+    fetch(GOLF_API_URL + '?route=golf-save', {
+      method: 'POST',
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.text(); })
+      .then(function (t) {
+        var j;
+        try { j = JSON.parse(t); } catch (e) { throw new Error('Save did not return JSON'); }
+        if (j && j.ok === false) throw new Error(j.error || 'Save failed');
+        dirty = false;
+        setStatus('Saved ' + ((j && j.count) || body.pins.length) + ' pin(s) to the Golf sheet.', 'ok');
+      })
+      .catch(function (err) {
+        setStatus(String(err.message || err), 'err');
+      })
+      .then(function () {
+        if (btn) btn.disabled = false;
+      });
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', savePins);
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var text = JSON.stringify(payload(), null, 2);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        setStatus('Copied JSON.', 'ok');
+      }, function () { setStatus('Copy failed.', 'err'); });
+    } else {
+      setStatus('Clipboard unavailable.', 'err');
+    }
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && placing) cancelPlacement();
+  });
+
+  if (!siteNo) {
+    fail('This page needs ?site_no= so it can save against the Golf tab.');
+    return;
+  }
+
+  apiGet('golf-catalog').then(function (cat) {
+    catalog.sections = cat.sections || [];
+    catalog.byId = {};
+    catalog.sections.forEach(function (sec) {
+      (sec.pins || []).forEach(function (p) {
+        p.section = p.section || sec.name;
+        catalog.byId[p.id] = p;
+      });
+    });
+    if (typeof cat.max_pins === 'number' && cat.max_pins > 0) PIN_HARD_LIMIT = cat.max_pins;
+    renderSelects();
+  }).catch(function (err) {
+    setStatus('Catalog: ' + String(err.message || err), 'err');
+    renderSelects();
+  }).then(function () {
+    return apiGet('golf-elements', '&site_no=' + encodeURIComponent(siteNo));
+  }).then(function (row) {
+    if (!row) return;
+    if (isFinite(row.lat) && isFinite(row.lng)) {
+      startLat = row.lat;
+      startLng = row.lng;
+    }
+    if (row.address && addrEl && !addr) {
+      addr = row.address;
+      addrEl.textContent = addr;
+    }
+    (row.pins || []).forEach(function (p) {
+      var entry = catalog.byId[p.id] || { id: p.id, name: '#' + p.id, section: '', definition: '' };
+      addPin(entry, p.lat, p.lng, true);
+    });
+    dirty = false;
+  }).catch(function (err) {
+    setStatus(String(err.message || err), 'err');
+  }).then(function () {
+    updateCount();
+    loadMaps();
+  });
+})();
+</script>
+</body>
+</html>

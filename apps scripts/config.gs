@@ -110,6 +110,8 @@ const PLANE_SHEET       = 'Plane';
 const DRONE_SHEET       = 'Drone';
 const INTERIOR_SHEET    = 'Interior';
 const INTEL_LINKS_SHEET = 'Intel Links';
+const GOLF_SHEET        = 'Golf';
+const GOLF_PINS_SHEET   = 'Golf Pins';
 const GITHUB_REPO       = 'jonahbourgeois1/property-intel';
 const GITHUB_BRANCH     = 'main';
 const VIEWER_BASE_URL   = 'https://responder-intel.vyanet.com/viewer.html';
@@ -135,12 +137,15 @@ const SAT_MAX_PINS     = 12; // standard satellite element pins
 const SAT_MAX_PINS_SCHOOL = 20; // school Pass 1 / review / rerun — campuses
                              // have more physical elements than a house.
                              // CRITIQUE_PIN_SLOTS must be >= this number.
+const GOLF_MAX_PINS    = 200; // manual golf placements; duplicates allowed.
+                              // Refuse a save over this; do not truncate.
 
 // v5.24: the merged catalog (pins-catalog.json) tags each pin with role
 // (primary|concern), account_type, and analysis (shared|fr|wf). fetchPinCatalog_
 // filters on those tags per account type — the old PIN_ELEMENT_RANGES /
 // PIN_CONCERN_RANGES id-range math is retired.
 const ELEMENT_REVIEW_URL = 'https://responder-intel.vyanet.com/element-review.html'; // Pass 1 pin QA page
+const GOLF_REVIEW_URL    = 'https://responder-intel.vyanet.com/golf-review.html'; // golf lat/lng pin QA page
 
 // (v5.24: PIN_ELEMENT_RANGES / PIN_CONCERN_RANGES removed — the merged
 // pins-catalog.json is tag-based; fetchPinCatalog_ filters on role/analysis/
@@ -198,6 +203,28 @@ const SAT_COL_WF_REC       = 17; // Q — Wildfire recommendations
 const SAT_COL_FR_LINK      = 18; // R
 const SAT_COL_WF_LINK      = 19; // S
 const SAT_COL_UPLOAD_DATE  = 20; // T
+
+// ── Golf sheet column map (1-indexed) — sibling of Satellite, not a mode ──
+// A Site No · B Account Type · C Account Name · D Property Address · E HOA
+// F Lat · G Lng · H Nadir Elements (JSON [{id,lat,lng}]) · I Elements Reviewed
+// J Status
+// No nadir URL, no Pass 2, no Nadir Fixes, no GitHub sync this round.
+const GOLF_COL_SITE_NO      = 1;  // A — identity; lookups key on this, never address
+const GOLF_COL_ACCOUNT_TYPE = 2;  // B
+const GOLF_COL_ACCOUNT      = 3;  // C
+const GOLF_COL_ADDRESS      = 4;  // D
+const GOLF_COL_HOA          = 5;  // E
+const GOLF_COL_LAT          = 6;  // F
+const GOLF_COL_LNG          = 7;  // G
+const GOLF_COL_ELEMENTS     = 8;  // H — [{id, lat, lng}, ...]
+const GOLF_COL_REVIEWED     = 9;  // I — operator tick; no Pass 2 gate
+const GOLF_COL_STATUS       = 10; // J
+
+const GOLF_HEADERS = [
+  'Site No', 'Account Type', 'Account Name', 'Property Address', 'HOA',
+  'Lat', 'Lng', 'Nadir Elements', 'Elements Reviewed', 'Status'
+];
+const GOLF_PIN_HEADERS = ['Id', 'Name', 'Definition', 'Section'];
 
 // ── Plane sheet column map (1-indexed) — NEW 27-column layout (v5.20) ───────
 // Migrated by plane-migration-v1.gs on 2026-07-14. Blocks read left-to-right
