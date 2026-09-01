@@ -5,11 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Review — Property Intel</title>
 <!--
-  golf-review.html — manual golf-course pin placement (v1.0.2, 2026-09-01)
+  golf-review.html — manual golf-course pin placement (v1.0.3, 2026-09-01)
 
   Sibling of element-review.html, not a mode of it. No nadir overlay, no
   critique form, no Bedrock rerun. Pins live as {id, lat, lng} on a live
   Google Maps satellite view and save to the Golf tab Nadir Elements cell.
+
+  Boot (same shape as element-review): Maps starts from ?lat=&lng= on the
+  review link. Catalog and saved pins load from Apps Script in parallel and
+  must never block the map. Apps Script cold start is ~30–60s; waiting for
+  it before maps.googleapis.com was the minute-long grey stage.
 
   Query params:
     site_no  = (required) Golf sheet identity
@@ -311,10 +316,11 @@
   </main>
 <script>
 (function () {
-  var BUILD = 'v1.0.2';
+  var BUILD = 'v1.0.3';
   var PIN_HARD_LIMIT = 200;
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+  var CAT_CACHE_KEY = 'golfReviewCatalog';
 
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
@@ -337,6 +343,9 @@
   var placed = [];
   var placing = null;
   var map = null;
+  var mapReady = false;
+  var mapsStarted = false;
+  var sheetPinsApplied = false;
   var dirty = false;
 
   var buildEl = document.getElementById('build');
@@ -507,28 +516,7 @@
       seq: placed.length + 1,
       marker: null
     };
-    if (map) {
-      rec.marker = new google.maps.Marker({
-        map: map,
-        position: { lat: lat, lng: lng },
-        draggable: true,
-        icon: markerIcon(),
-        label: {
-          text: String(rec.seq),
-          color: '#1b2027',
-          fontSize: '11px',
-          fontWeight: '700'
-        },
-        title: rec.name
-      });
-      rec.marker.addListener('dragend', function () {
-        var pos = rec.marker.getPosition();
-        rec.lat = round6(pos.lat());
-        rec.lng = round6(pos.lng());
-        dirty = true;
-        renderList();
-      });
-    }
+    if (mapReady) attachMarker(rec);
     placed.push(rec);
     if (!skipDirty) dirty = true;
     renderList();
@@ -580,11 +568,97 @@
     });
   }
 
-  function initMap() {
+  function attachMarker(rec) {
+    if (!map || rec.marker) return;
+    rec.marker = new google.maps.Marker({
+      map: map,
+      position: { lat: rec.lat, lng: rec.lng },
+      draggable: true,
+      icon: markerIcon(),
+      label: {
+        text: String(rec.seq),
+        color: '#1b2027',
+        fontSize: '11px',
+        fontWeight: '700'
+      },
+      title: rec.name
+    });
+    rec.marker.addListener('dragend', function () {
+      var pos = rec.marker.getPosition();
+      rec.lat = round6(pos.lat());
+      rec.lng = round6(pos.lng());
+      dirty = true;
+      renderList();
+    });
+  }
+
+  function applyCatalog(cat, fromCache) {
+    if (!cat) return;
+    catalog.sections = cat.sections || [];
+    catalog.byId = {};
+    catalog.sections.forEach(function (sec) {
+      (sec.pins || []).forEach(function (p) {
+        p.section = p.section || sec.name;
+        catalog.byId[p.id] = p;
+      });
+    });
+    if (typeof cat.max_pins === 'number' && cat.max_pins > 0) PIN_HARD_LIMIT = cat.max_pins;
+    placed.forEach(function (rec) {
+      var entry = catalog.byId[rec.id];
+      if (!entry) return;
+      rec.name = entry.name;
+      rec.section = entry.section || rec.section;
+      rec.definition = entry.definition || rec.definition;
+      if (rec.marker) rec.marker.setTitle(rec.name);
+    });
+    renderSelects();
+    renderList();
+    updateCount();
+    if (!fromCache) {
+      try {
+        sessionStorage.setItem(CAT_CACHE_KEY, JSON.stringify({
+          sections: catalog.sections,
+          max_pins: PIN_HARD_LIMIT
+        }));
+      } catch (e) {}
+    }
+  }
+
+  function applyRow(row) {
+    if (!row) {
+      if (!isFinite(startLat) || !isFinite(startLng)) {
+        hideMapLoading();
+        fail('This row has no map coordinates.', 'Run Golf Pass 1 (Geocode) first.');
+      }
+      return;
+    }
+    if (isFinite(row.lat) && isFinite(row.lng)) {
+      startLat = row.lat;
+      startLng = row.lng;
+    }
+    if (row.address && addrEl && !addr) {
+      addr = row.address;
+      addrEl.textContent = addr;
+    }
+    loadMaps();
     if (!isFinite(startLat) || !isFinite(startLng)) {
+      hideMapLoading();
       fail('This row has no map coordinates.', 'Run Golf Pass 1 (Geocode) first.');
       return;
     }
+    if (sheetPinsApplied) return;
+    sheetPinsApplied = true;
+    (row.pins || []).forEach(function (p) {
+      var entry = catalog.byId[p.id] || { id: p.id, name: '#' + p.id, section: '', definition: '' };
+      addPin(entry, p.lat, p.lng, true);
+    });
+    dirty = false;
+    updateCount();
+  }
+
+  function initMap() {
+    if (map) return;
+    if (!isFinite(startLat) || !isFinite(startLng)) return;
     var g = google.maps;
     map = new g.Map(document.getElementById('map'), {
       center: { lat: startLat, lng: startLng },
@@ -629,36 +703,22 @@
       addPin(placing, e.latLng.lat(), e.latLng.lng());
       cancelPlacement();
     });
-    placed.slice().forEach(function (rec) {
-      if (rec.marker) return;
-      rec.marker = new g.Marker({
-        map: map,
-        position: { lat: rec.lat, lng: rec.lng },
-        draggable: true,
-        icon: markerIcon(),
-        label: {
-          text: String(rec.seq),
-          color: '#1b2027',
-          fontSize: '11px',
-          fontWeight: '700'
-        },
-        title: rec.name
-      });
-      rec.marker.addListener('dragend', function () {
-        var pos = rec.marker.getPosition();
-        rec.lat = round6(pos.lat());
-        rec.lng = round6(pos.lng());
-        dirty = true;
-        renderList();
-      });
+    mapReady = true;
+    placed.forEach(function (rec) {
+      attachMarker(rec);
     });
     renumber();
   }
 
   function loadMaps() {
+    if (!isFinite(startLat) || !isFinite(startLng)) return;
     if (window.google && window.google.maps) { initMap(); return; }
+    if (mapsStarted) return;
+    mapsStarted = true;
     window.golfMapsReady = function () { initMap(); };
     var sc = document.createElement('script');
+    sc.async = true;
+    sc.defer = true;
     sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
       '&callback=golfMapsReady';
     sc.onerror = function () {
@@ -730,42 +790,39 @@
     return;
   }
 
-  apiGet('golf-catalog').then(function (cat) {
-    catalog.sections = cat.sections || [];
-    catalog.byId = {};
-    catalog.sections.forEach(function (sec) {
-      (sec.pins || []).forEach(function (p) {
-        p.section = p.section || sec.name;
-        catalog.byId[p.id] = p;
-      });
-    });
-    if (typeof cat.max_pins === 'number' && cat.max_pins > 0) PIN_HARD_LIMIT = cat.max_pins;
-    renderSelects();
-  }).catch(function (err) {
-    setStatus('Catalog: ' + String(err.message || err), 'err');
-    renderSelects();
-  }).then(function () {
-    return apiGet('golf-elements', '&site_no=' + encodeURIComponent(siteNo));
-  }).then(function (row) {
-    if (!row) return;
-    if (isFinite(row.lat) && isFinite(row.lng)) {
-      startLat = row.lat;
-      startLng = row.lng;
-    }
-    if (row.address && addrEl && !addr) {
-      addr = row.address;
-      addrEl.textContent = addr;
-    }
-    (row.pins || []).forEach(function (p) {
-      var entry = catalog.byId[p.id] || { id: p.id, name: '#' + p.id, section: '', definition: '' };
-      addPin(entry, p.lat, p.lng, true);
-    });
-    dirty = false;
-  }).catch(function (err) {
-    setStatus(String(err.message || err), 'err');
-  }).then(function () {
-    updateCount();
+  // Map first — same as element-review. The sheet link always carries lat/lng
+  // (buildGolfReviewUrl_). Do not wait for Apps Script; /exec cold start is
+  // what made this page sit on a spinner for ~a minute.
+  if (isFinite(startLat) && isFinite(startLng)) {
     loadMaps();
+  } else {
+    setStatus('Loading coordinates…');
+  }
+  try {
+    var cached = JSON.parse(sessionStorage.getItem(CAT_CACHE_KEY) || '');
+    if (cached && Array.isArray(cached.sections) && cached.sections.length) {
+      applyCatalog(cached, true);
+    }
+  } catch (e) {}
+
+  Promise.all([
+    apiGet('golf-catalog').then(function (cat) {
+      applyCatalog(cat, false);
+    }).catch(function (err) {
+      setStatus('Catalog: ' + String(err.message || err), 'err');
+      if (!(catalog.sections || []).length) renderSelects();
+    }),
+    apiGet('golf-elements', '&site_no=' + encodeURIComponent(siteNo)).then(function (row) {
+      applyRow(row);
+    }).catch(function (err) {
+      setStatus(String(err.message || err), 'err');
+      if (!isFinite(startLat) || !isFinite(startLng)) {
+        hideMapLoading();
+        fail('Could not load this Golf row.', String(err.message || err));
+      }
+    })
+  ]).then(function () {
+    updateCount();
   });
 })();
 </script>
