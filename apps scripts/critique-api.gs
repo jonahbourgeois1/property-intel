@@ -157,7 +157,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8 (2026-09-01) — golf-catalog / golf-elements GET, golf-save POST';
+const CRITIQUE_BUILD = 'v6.8.1 (2026-09-01) — duplicate catalog-id add keeps both pins';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -749,39 +749,115 @@ function critiquePinLoss_(p, beforeRaw, after) {
 // and the pin vanished (Baert / Boyd Ct, 2026-08-28). The structured
 // payload is the authority: write those coordinates after the re-pin.
 var CRITIQUE_COORD_ABS_MAX = 500;
+var CRITIQUE_SPOT_EPS = 0.15; // 1.5x the 0.1 rounding quantum
 
-function critiqueForcePin_(pins, id, x, y) {
-  var n = parseInt(id, 10);
+function critiqueRoundXY_(x, y) {
   var nx = parseFloat(x), ny = parseFloat(y);
-  if (!isFinite(n) || n < 1 || !isFinite(nx) || !isFinite(ny)) return;
-  if (Math.abs(nx) > CRITIQUE_COORD_ABS_MAX || Math.abs(ny) > CRITIQUE_COORD_ABS_MAX) return;
-  var c = { x: Math.round(nx * 10) / 10, y: Math.round(ny * 10) / 10 };
+  if (!isFinite(nx) || !isFinite(ny)) return null;
+  if (Math.abs(nx) > CRITIQUE_COORD_ABS_MAX || Math.abs(ny) > CRITIQUE_COORD_ABS_MAX) return null;
+  return { x: Math.round(nx * 10) / 10, y: Math.round(ny * 10) / 10 };
+}
+
+function critiqueSameSpot_(pin, x, y) {
+  var c = critiqueRoundXY_(x, y);
+  if (!c || !pin) return false;
+  return Math.abs(parseFloat(pin.x) - c.x) <= CRITIQUE_SPOT_EPS &&
+         Math.abs(parseFloat(pin.y) - c.y) <= CRITIQUE_SPOT_EPS;
+}
+
+function critiqueFindPinAt_(pins, id, x, y) {
+  var n = parseInt(id, 10);
   var i;
   for (i = 0; i < pins.length; i++) {
-    if (parseInt(pins[i].id, 10) === n) {
-      pins[i] = { id: n, x: c.x, y: c.y };
-      return;
-    }
+    if (parseInt(pins[i].id, 10) === n && critiqueSameSpot_(pins[i], x, y)) return i;
+  }
+  return -1;
+}
+
+function critiqueFirstPinId_(pins, id) {
+  var n = parseInt(id, 10);
+  var i;
+  for (i = 0; i < pins.length; i++) {
+    if (parseInt(pins[i].id, 10) === n) return i;
+  }
+  return -1;
+}
+
+// Relocate one instance. Prefer the pin sitting at fromX/fromY so a second
+// Parking lot is not the one that moves. Fall back to the first matching
+// catalog id only when the original spot is gone (unique-id Pass 1 case).
+function critiqueForceMove_(pins, id, fromX, fromY, toX, toY) {
+  var n = parseInt(id, 10);
+  var c = critiqueRoundXY_(toX, toY);
+  if (!isFinite(n) || n < 1 || !c) return;
+  var i = critiqueFindPinAt_(pins, n, fromX, fromY);
+  if (i < 0) i = critiqueFindPinAt_(pins, n, c.x, c.y);
+  if (i < 0) i = critiqueFirstPinId_(pins, n);
+  if (i >= 0) {
+    pins[i] = { id: n, x: c.x, y: c.y };
+    return;
   }
   if (pins.length < CRITIQUE_PIN_SLOTS) pins.push({ id: n, x: c.x, y: c.y });
+}
+
+// Append a new instance. Never overwrite another pin that shares the catalog
+// id — that is the "add a second parking lot, both pins jump to the new spot"
+// bug (critiqueForcePin_ used to match on id alone).
+function critiqueForceAdd_(pins, id, x, y) {
+  var n = parseInt(id, 10);
+  var c = critiqueRoundXY_(x, y);
+  if (!isFinite(n) || n < 1 || !c) return;
+  if (critiqueFindPinAt_(pins, n, c.x, c.y) >= 0) return;
+  if (pins.length < CRITIQUE_PIN_SLOTS) pins.push({ id: n, x: c.x, y: c.y });
+}
+
+// Kept for callers / grep. MOVE path only — adds must use critiqueForceAdd_.
+function critiqueForcePin_(pins, id, x, y) {
+  critiqueForceMove_(pins, id, null, null, x, y);
 }
 
 function critiqueApplyForcedPins_(p, pins) {
   pins = (pins || []).slice();
   ((p && p.elements) || []).forEach(function (el) {
-    if (String(el.verdict || '').toLowerCase() === 'remove') {
-      var rid = parseInt(el.id, 10);
-      pins = pins.filter(function (x) { return parseInt(x.id, 10) !== rid; });
+    if (String(el.verdict || '').toLowerCase() !== 'remove') return;
+    var rid = parseInt(el.id, 10);
+    if (!isFinite(rid)) return;
+    var i = critiqueFindPinAt_(pins, rid, el.x, el.y);
+    if (i < 0) {
+      // Bedrock may already have dropped it. Only then fall back to the
+      // first matching catalog id — and only if there is exactly one, so a
+      // duplicate sibling is not deleted by accident.
+      var hits = [];
+      var k;
+      for (k = 0; k < pins.length; k++) {
+        if (parseInt(pins[k].id, 10) === rid) hits.push(k);
+      }
+      if (hits.length === 1) i = hits[0];
     }
+    if (i >= 0) pins.splice(i, 1);
   });
   ((p && p.elements) || []).forEach(function (el) {
     if (critiqueXY_(el.corrected_x, el.corrected_y)) {
-      critiqueForcePin_(pins, el.id, el.corrected_x, el.corrected_y);
+      critiqueForceMove_(pins, el.id, el.x, el.y, el.corrected_x, el.corrected_y);
     }
   });
   ((p && p.added) || []).forEach(function (a) {
     if (a && a.id != null && isFinite(parseFloat(a.x)) && isFinite(parseFloat(a.y))) {
-      critiqueForcePin_(pins, a.id, a.x, a.y);
+      critiqueForceAdd_(pins, a.id, a.x, a.y);
+      // If Bedrock (or the note-force path) relocated the ORIGINAL instance
+      // onto the add's coordinates, put the sibling back. Without this, two
+      // Parking lots become two pins stacked on the new spot.
+      ((p && p.elements) || []).forEach(function (el) {
+        if (parseInt(el.id, 10) !== parseInt(a.id, 10)) return;
+        if (String(el.verdict || '').toLowerCase() === 'remove') return;
+        var ox = el.x, oy = el.y;
+        if (critiqueXY_(el.corrected_x, el.corrected_y)) {
+          ox = el.corrected_x;
+          oy = el.corrected_y;
+        }
+        if (critiqueSameSpot_({ x: ox, y: oy }, a.x, a.y)) return;
+        critiqueForceAdd_(pins, el.id, ox, oy);
+      });
     }
   });
   return pins;
@@ -1739,6 +1815,37 @@ function critiqueSelfTest_() {
     out.push((pick('Marked Fix') >= pick('Repositioned') ? 'OK ' : 'BAD') +
              ' Marked Fix (' + pick('Marked Fix') + ') >= Repositioned (' +
              pick('Repositioned') + ')');
+
+    // Duplicate catalog id: adding a second instance must not relocate the first.
+    // Fixture: Parking #105 at 20,30 already on the row; reviewer adds another
+    // #105 at 70,80. After force-apply both spots must survive.
+    var dupeBefore = [
+      { id: 105, x: 20, y: 30 },
+      { id: 101, x: 50, y: 50 }
+    ];
+    var dupePayload = {
+      elements: [
+        { seq: 1, id: 105, name: 'Parking lot', x: 20, y: 30,
+          corrected_x: null, corrected_y: null, verdict: 'ok', note: '' },
+        { seq: 2, id: 101, name: 'Front Door', x: 50, y: 50,
+          corrected_x: null, corrected_y: null, verdict: 'ok', note: '' }
+      ],
+      added: [{ seq: 3, id: 105, name: 'Parking lot', x: 70, y: 80, note: '' }]
+    };
+    var dupeAfter = critiqueApplyForcedPins_(dupePayload, dupeBefore);
+    var park = dupeAfter.filter(function (x) { return parseInt(x.id, 10) === 105; });
+    var parkSpots = park.map(function (x) { return x.x + ',' + x.y; }).sort().join(' ');
+    out.push((park.length === 2 ? 'OK ' : 'BAD') +
+             ' duplicate add keeps both #' + 105 + ' instances (' + park.length + ' of 2)');
+    out.push((parkSpots === '20,30 70,80' ? 'OK ' : 'BAD') +
+             ' duplicate add locations: ' + parkSpots + ' (want 20,30 and 70,80)');
+    // Bedrock relocated the original onto the add's coordinates — restore it.
+    var stacked = critiqueApplyForcedPins_(dupePayload, [{ id: 105, x: 70, y: 80 }, { id: 101, x: 50, y: 50 }]);
+    var stackedPark = stacked.filter(function (x) { return parseInt(x.id, 10) === 105; });
+    var stackedSpots = stackedPark.map(function (x) { return x.x + ',' + x.y; }).sort().join(' ');
+    out.push((stackedSpots === '20,30 70,80' ? 'OK ' : 'BAD') +
+             ' sibling restore after Bedrock stacked both at the add: ' + stackedSpots);
+
     out.push('    over the limit: ' + (built.overCap.length ? built.overCap.join(', ') : 'none'));
     out.push('    rerun automation: ' + (CRITIQUE_QUEUE_RERUN ? 'ON' : 'OFF (record only)'));
     var log = h.ss.getSheetByName(CRITIQUE_SHEET);

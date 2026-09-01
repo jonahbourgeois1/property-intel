@@ -99,6 +99,11 @@
      A pin that has been moved is marked on the marker, the ghost, the legend
      row and the card, so the state is never ambiguous.
 
+     v6.8.11: a catalog id is not a drag identity. Two Roof pins (same id,
+     even at the same x,y) move independently. Drag is bound to the marker
+     node, sibling markers ignore the pointer for the duration, and stacked
+     copies fan a few pixels so each is grabable (stored % coords unchanged).
+
      ⚠️ Percentages are of the nadir frame and MAY sit outside 0..100 when the
      reviewer pins on the basemap beyond the crop (v6.8.10). Round to 0.1.
      Do not silently clamp — that relocates a pin the reviewer placed.
@@ -111,6 +116,9 @@
      still may not (satValidateElementPins_ dedupes on a fresh run). Added
      pins get their own marker style, their own card with a remove button,
      and travel in a separate `added` array.
+     After submit, critiqueForceAdd_ must APPEND that second instance.
+     Matching on catalog id alone (old critiqueForcePin_) relocated the
+     original pin onto the new coordinates so both stacked at the add.
 
      ⚠️ TWO DIFFERENT CEILINGS, do not conflate them.
      PIN_HARD_LIMIT = CRITIQUE_PIN_SLOTS in critique-api.gs, the number of
@@ -841,12 +849,17 @@
     font-size: 12px; font-weight: 700;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer;
+    /* --stack-* fans two pins that share the same stored x,y so each is
+       grabable. Identity is the instance (data-seq), never catalog id. */
+    --stack-x: 0px;
+    --stack-y: 0px;
     transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+    transform: translate(var(--stack-x), var(--stack-y));
     z-index: 2;
   }
   .marker:hover, .marker.active {
     background: var(--hot);
-    transform: scale(1.25);
+    transform: translate(var(--stack-x), var(--stack-y)) scale(1.25);
     z-index: 3;
     box-shadow: 0 2px 10px rgba(0,0,0,0.6);
   }
@@ -859,7 +872,13 @@
   .marker.drag { cursor: grab; }
   /* A locked pin must not advertise a drag it will refuse. */
   .marker.drag.locked { cursor: default; }
-  .marker.drag.dragging { cursor: grabbing; transform: scale(1.3); z-index: 4; }
+  .marker.drag.dragging {
+    cursor: grabbing;
+    --stack-x: 0px;
+    --stack-y: 0px;
+    transform: scale(1.3);
+    z-index: 4;
+  }
   .marker.moved { background: var(--hot); box-shadow: 0 0 0 3px rgba(79,209,197,0.3), 0 2px 10px rgba(0,0,0,0.6); }
   .marker.added { background: var(--good); }
   /* Verdict = remove. Declared LAST so it beats .flag / .moved / .added / hover
@@ -1263,7 +1282,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.10';
+  var BUILD = 'v6.8.11';
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -1700,13 +1719,18 @@
     }
 
     // Markers on the image (percentage placement — no bounds needed).
+    // data-seq is THIS ROUND'S instance (1-based pin number). Catalog id is
+    // not unique — two Roof pins must drag independently.
     resolved.forEach(function (p, i) {
       var m = document.createElement('div');
       m.className = 'marker drag' + (p.flag ? ' flag' : '');
       m.style.left = p.x + '%';
       m.style.top = p.y + '%';
+      m.style.zIndex = String(2 + i);
       m.textContent = (i + 1);
       m.dataset.idx = i;
+      m.dataset.seq = String(i + 1);
+      m.dataset.pinId = String(p.id);
       m.title = p.name;
       frame.appendChild(m);
     });
@@ -1754,8 +1778,8 @@
       // v5: drag to correct. makeDraggable reports whether the pointer actually
       // moved, so a plain click still does the focus-the-field thing and only a
       // real drag writes a corrected coordinate.
-      makeDraggable(m, function (x, y) {
-        movePin(idx, x, y);
+      makeDraggable(m, function (x, y, markerEl) {
+        movePin(idx, x, y, markerEl);
       }, function (didMove) {
         if (didMove) return;
         if (rows[idx]) rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -1776,6 +1800,7 @@
       c.addEventListener('mouseenter', function () { setActive(idx, true); });
       c.addEventListener('mouseleave', function () { setActive(idx, false); });
     });
+    applyStackOffsets();
   }
 
   // ── v4: build the critique fields from the resolved element list ────────
@@ -1885,43 +1910,69 @@
     return { x: (clientX - r.left) / r.width * 100, y: (clientY - r.top) / r.height * 100 };
   }
 
-  // Generic pointer drag for a marker. onMove(x,y) fires continuously with
-  // clamped percentages; onEnd(didMove) fires once. Uses pointer events so the
-  // marker keeps receiving moves even when the pointer leaves it, and calls
-  // setPointerCapture so a fast drag can't be lost to the image underneath.
-  function makeDraggable(marker, onMove, onEnd) {
-    var down = false, moved = false, sx = 0, sy = 0;
-    marker.addEventListener('pointerdown', function (e) {
-      if (placing) return;            // place mode owns the next click
-      down = true; moved = false;
-      sx = e.clientX; sy = e.clientY;
-      // A locked pin still accepts the pointer (so a click can still jump to
-      // its card) but never shows the drag affordance or moves.
-      if (!marker.classList.contains('locked')) marker.classList.add('dragging');
-      if (marker.setPointerCapture) { try { marker.setPointerCapture(e.pointerId); } catch (err) {} }
-      e.preventDefault();
-      e.stopPropagation();            // never let initZoomPan start a pan
+  // Generic pointer drag for ONE marker instance. Catalog id is not identity:
+  // two Roof pins must not share a drag. Listeners live on document during the
+  // drag so a Maps overlay cannot retarget pointermove onto a sibling, and
+  // other markers have pointer-events disabled so a stacked duplicate cannot
+  // join the gesture.
+  var dragFrozen = [];
+  function freezeOtherMarkers(keep) {
+    var frame = document.getElementById('frame');
+    dragFrozen = [];
+    if (!frame) return;
+    each(frame.querySelectorAll('.marker.drag'), function (n) {
+      if (n === keep) return;
+      dragFrozen.push({ el: n, pe: n.style.pointerEvents });
+      n.style.pointerEvents = 'none';
     });
-    marker.addEventListener('pointermove', function (e) {
-      if (!down) return;
+  }
+  function unfreezeOtherMarkers() {
+    dragFrozen.forEach(function (s) {
+      s.el.style.pointerEvents = s.pe;
+    });
+    dragFrozen = [];
+  }
+
+  function makeDraggable(marker, onMove, onEnd) {
+    var pointerId = null, moved = false, sx = 0, sy = 0;
+    function onDocMove(e) {
+      if (e.pointerId !== pointerId) return;
       if (marker.classList.contains('locked')) return;
       if (!moved && Math.abs(e.clientX - sx) < 3 && Math.abs(e.clientY - sy) < 3) return;
       moved = true;
       var p = pctFromClient(e.clientX, e.clientY);
-      if (p) onMove(roundPct(p.x), roundPct(p.y));
+      if (p) onMove(roundPct(p.x), roundPct(p.y), marker);
       e.preventDefault();
-    });
-    function finish(e) {
-      if (!down) return;
-      down = false;
+      e.stopPropagation();
+    }
+    function onDocUp(e) {
+      if (pointerId === null || e.pointerId !== pointerId) return;
+      pointerId = null;
       marker.classList.remove('dragging');
-      if (marker.releasePointerCapture && e && e.pointerId !== undefined) {
+      document.removeEventListener('pointermove', onDocMove, true);
+      document.removeEventListener('pointerup', onDocUp, true);
+      document.removeEventListener('pointercancel', onDocUp, true);
+      unfreezeOtherMarkers();
+      if (marker.releasePointerCapture && e.pointerId !== undefined) {
         try { marker.releasePointerCapture(e.pointerId); } catch (err) {}
       }
       onEnd(moved);
     }
-    marker.addEventListener('pointerup', finish);
-    marker.addEventListener('pointercancel', finish);
+    marker.addEventListener('pointerdown', function (e) {
+      if (placing) return;
+      if (pointerId !== null) return;
+      pointerId = e.pointerId;
+      moved = false;
+      sx = e.clientX; sy = e.clientY;
+      if (!marker.classList.contains('locked')) marker.classList.add('dragging');
+      freezeOtherMarkers(marker);
+      if (marker.setPointerCapture) { try { marker.setPointerCapture(e.pointerId); } catch (err) {} }
+      document.addEventListener('pointermove', onDocMove, true);
+      document.addEventListener('pointerup', onDocUp, true);
+      document.addEventListener('pointercancel', onDocUp, true);
+      e.preventDefault();
+      e.stopPropagation();
+    });
   }
 
   // Scoped to #list on purpose: '.legend li' would also match the Route legend's
@@ -2031,8 +2082,11 @@
     }
   }
 
-  function movePin(idx, x, y) {
-    var p = elements[idx], m = elMarkers[idx], card = elCards[idx];
+  function movePin(idx, x, y, markerEl) {
+    var p = elements[idx], card = elCards[idx];
+    // Prefer the node that actually received the drag so a stale elMarkers
+    // slot cannot move a different instance of the same catalog id.
+    var m = markerEl || elMarkers[idx];
     if (!p || !m) return;
     // Refuse a drag or a typed coordinate on a locked pin. The guard lives here
     // rather than on the drag handler so BOTH input paths are covered.
@@ -2043,7 +2097,7 @@
     if (!placementAllowed(x, y)) return;
     state[idx].cx = x; state[idx].cy = y;
     // v5.6: a corrected position IS a Fix verdict. Before this, dragging a pin
-    // without also tapping the chip filed a row with "Pin n Fix XY" set and
+    // without also tapping the chip filed a round with "Pin n Fix XY" set and
     // "Pin n Verdict" blank — the note said FIX, the columns said nothing, and
     // "Marked Fix" undercounted. isLocked() already returned for ok/remove, so
     // the only verdict that can be standing here is '' or 'fix'.
@@ -2061,6 +2115,7 @@
     ensureGhost(idx, p.x, p.y, x, y);
     syncCoordField(idx);
     updateAddWarn();
+    applyStackOffsets();
   }
 
   // Undo a correction: marker back to the catalog position, ghost and flags off.
@@ -2087,6 +2142,7 @@
     removeGhost(idx);
     syncCoordField(idx);
     updateAddWarn();
+    applyStackOffsets();
   }
 
   function syncCoordField(idx) {
@@ -2131,6 +2187,32 @@
     }
   }
 
+  // Two pins can share stored x,y (duplicate catalog id stacked by a re-pin).
+  // Fan them a few pixels so each is a separate grab target. Stored % coords
+  // do not change — this is display only.
+  function applyStackOffsets() {
+    var frame = document.getElementById('frame');
+    if (!frame) return;
+    var groups = {};
+    each(frame.querySelectorAll('.marker.drag'), function (n) {
+      var key = String(n.style.left) + '/' + String(n.style.top);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(n);
+    });
+    Object.keys(groups).forEach(function (key) {
+      var g = groups[key];
+      g.forEach(function (n, i) {
+        if (g.length < 2 || n.classList.contains('dragging')) {
+          n.style.setProperty('--stack-x', '0px');
+          n.style.setProperty('--stack-y', '0px');
+          return;
+        }
+        n.style.setProperty('--stack-x', (i * 12) + 'px');
+        n.style.setProperty('--stack-y', (i * 12) + 'px');
+      });
+    });
+  }
+
   function removeGhost(idx) {
     var h = ghosts[idx];
     if (!h) return;
@@ -2144,6 +2226,9 @@
   // parking lots, two building entrances). Bedrock Pass 1 still may not —
   // satValidateElementPins_ dedupes on a fresh run. The result list no longer
   // greys out "already placed" rows.
+  // After submit, critiqueApplyForcedPins_ must APPEND that second instance.
+  // Matching on catalog id alone used to move the original pin onto the new
+  // coordinates so both markers stacked at the add.
 
   function totalPins() { return elements.length + added.length; }
 
@@ -2406,6 +2491,7 @@
     m.className = 'marker drag added';
     m.style.left = x + '%';
     m.style.top = y + '%';
+    m.dataset.pinId = String(rec.id);
     frame.appendChild(m);
     rec.marker = m;
 
@@ -2456,10 +2542,12 @@
 
     // Dragging an added pin just updates its own position — there is no
     // "original" to ghost against, because the reviewer chose the spot.
-    makeDraggable(m, function (nx, ny) {
+    makeDraggable(m, function (nx, ny, markerEl) {
       rec.x = nx; rec.y = ny;
-      m.style.left = nx + '%'; m.style.top = ny + '%';
+      var node = markerEl || m;
+      node.style.left = nx + '%'; node.style.top = ny + '%';
       cin.value = fmtPct(nx) + ', ' + fmtPct(ny);
+      applyStackOffsets();
     }, function (didMove) {
       if (!didMove) { card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); ta.focus(); }
     });
@@ -2484,10 +2572,14 @@
 
     host.appendChild(card);
     added.push(rec);
+    rec.marker.dataset.seq = String(elements.length + added.length);
+    rec.marker.dataset.pinId = String(rec.id);
+    rec.marker.style.zIndex = String(2 + elements.length + added.length);
     renumberAdded();
     updateHeaderCount();
     updateAddWarn();
     if (refreshAddResults) refreshAddResults();
+    applyStackOffsets();
     ta.focus();
   }
 
@@ -2500,6 +2592,7 @@
     updateHeaderCount();
     updateAddWarn();
     if (refreshAddResults) refreshAddResults();
+    applyStackOffsets();
   }
 
   // ── v4: payload assembly + submit ──────────────────────────────────────

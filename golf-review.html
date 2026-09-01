@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Review — Property Intel</title>
 <!--
-  golf-review.html — manual golf-course pin placement (v1.0.3, 2026-09-01)
+  golf-review.html — manual golf-course pin placement (v1.0.4, 2026-09-01)
 
   Sibling of element-review.html, not a mode of it. No nadir overlay, no
   critique form, no Bedrock rerun. Pins live as {id, lat, lng} on a live
@@ -316,7 +316,7 @@
   </main>
 <script>
 (function () {
-  var BUILD = 'v1.0.3';
+  var BUILD = 'v1.0.4';
   var PIN_HARD_LIMIT = 200;
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
@@ -398,12 +398,15 @@
   function renumber() {
     placed.forEach(function (rec, i) {
       rec.seq = i + 1;
-      if (rec.marker) rec.marker.setLabel({
-        text: String(rec.seq),
-        color: '#1b2027',
-        fontSize: '11px',
-        fontWeight: '700'
-      });
+      if (rec.marker) {
+        rec.marker.setLabel({
+          text: String(rec.seq),
+          color: '#1b2027',
+          fontSize: '11px',
+          fontWeight: '700'
+        });
+        rec.marker.setZIndex(10 + rec.seq);
+      }
     });
     renderList();
     updateCount();
@@ -574,6 +577,11 @@
       map: map,
       position: { lat: rec.lat, lng: rec.lng },
       draggable: true,
+      // Default optimized:true composites markers at the same lat/lng onto one
+      // canvas sprite, so dragging one duplicate moves every copy. Each pin is
+      // its own instance even when two share a catalog id.
+      optimized: false,
+      zIndex: 10 + rec.seq,
       icon: markerIcon(),
       label: {
         text: String(rec.seq),

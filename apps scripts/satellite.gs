@@ -68,6 +68,13 @@
 // menu handlers. Their prompts were deleted from prompts.gs in v5.26.
 // ⚠️ config.gs's legacy COL_* map is still read by plane.gs against THIS
 // sheet, which is now wrong by one column — see the delivery note.
+//
+// ⭐ 2026-08-28 (v5.30) — HOA MEMBERSHIP IS SATELLITE-OWNED.
+// data/hoa/{slug}.json lists every Satellite-tab row with a HOA tag and a
+// valid site_no. The element-pin publish gate does NOT apply: Public must
+// plot the whole community, not only rows that have Pass 1 pins (or a
+// plane mapping). Unpublished rows still get an identity-only index stub
+// (name/address/hoa/lat/lng, no views). Plane sync must not write hoa files.
 // ============================================================
 
 
@@ -398,7 +405,7 @@ COUNT CHECK BEFORE YOU ANSWER
 Start from ${currentCount}. Subtract only the pins the analyst explicitly asked to REMOVE. Add only the pins the analyst explicitly asked to ADD. That number is how many pins your answer must contain. If your answer has fewer pins than that, you have dropped something the analyst wanted kept — go back and put it in.
 
 CONSTRAINTS (unchanged from the element-pin pass)
-Select AT MOST ${maxPins} pins. Use ONLY approved ELEMENT ids from the vocabulary above — never invent an id, never use a non-element id. Coordinates are x,y percentages on the NADIR image ((0,0) top-left, (100,100) bottom-right). Place each pin at the feature's actual centroid.
+Select AT MOST ${maxPins} pins. Use ONLY approved ELEMENT ids from the vocabulary above — never invent an id, never use a non-element id. Coordinates are x,y percentages of the NADIR FRAME ((0,0) top-left, (100,100) bottom-right). If the analyst gave a coordinate outside 0–100, they pinned on the live map beyond the crop — emit those numbers exactly. Do not drop the pin and do not clamp it into 0–100.
 
 Return ONLY the single JSON object described in your instructions: {"nadir_pins": [{"id": 12, "x": 62.5, "y": 31.0}]}. No markdown, no commentary.`;
 }
@@ -469,9 +476,7 @@ function processSatelliteSheet() {
   });
 
   Object.keys(hoaMap).forEach(slug => {
-    const before = hoaMap[slug].properties.length;
-    hoaMap[slug].properties = hoaMap[slug].properties.filter(id => sheetIds.has(id));
-    if (before !== hoaMap[slug].properties.length) Logger.log('HOA ' + slug + ': removed stale entries');
+    hoaMap[slug].properties = [];
   });
   if (removed > 0) Logger.log('Swept satellite views from ' + removed + ' stale index files');
 
@@ -490,8 +495,6 @@ function processSatelliteSheet() {
     const lng         = parseFloat(row[SAT_COL_LNG - 1]);
 
     if (!accountName || !address) { skipped++; continue; }
-    // Publish gate (per Stage 5 decision): any row that has element pins.
-    if (!elementsRaw || elementsRaw.indexOf('ERROR:') === 0) { skipped++; continue; }
 
     const siteNo  = satValidSiteNo_(row[SAT_COL_SITE_NO - 1]);
     if (!siteNo) {
@@ -501,6 +504,27 @@ function processSatelliteSheet() {
     }
     const id      = satPropertyId_(siteNo, creds.hashSalt);
     const hoaSlug = slugify(hoaTag);
+
+    // HOA membership is satellite-owned and is NOT gated on element pins.
+    // Public plots every satellite-sheet row whose HOA column matches.
+    if (hoaSlug) {
+      if (!hoaMap[hoaSlug]) hoaMap[hoaSlug] = { name: hoaTag, properties: [] };
+      if (!hoaMap[hoaSlug].properties.includes(id)) hoaMap[hoaSlug].properties.push(id);
+    }
+
+    const identityPatch = {
+      name: accountName, address: address, hoa: hoaSlug || '', account_type: accountType
+    };
+    if (!isNaN(lat) && !isNaN(lng)) { identityPatch.lat = lat; identityPatch.lng = lng; }
+
+    // Publish gate (per Stage 5 decision): satellite JSON + security/wildfire
+    // views require element pins. Identity stub still lands so Public can
+    // plot the pin before Pass 1 runs.
+    if (!elementsRaw || elementsRaw.indexOf('ERROR:') === 0) {
+      files.push(upsertIndexEntry_(id, identityPatch).file);
+      Logger.log('HOA identity stub (no pins yet): ' + accountName);
+      continue;
+    }
 
     const propertyData = {
       name: accountName, address: address, hoa: hoaSlug || '', account_type: accountType,
@@ -531,13 +555,15 @@ function processSatelliteSheet() {
       deleteViews: ['satellite', 'safety', 'fr']
     };
     if (!isNaN(lat) && !isNaN(lng)) { patch.lat = lat; patch.lng = lng; }
+    const pinFile = pinsFileForSync_(id, {
+      property: id, source: 'satellite',
+      element: propertyData.elements,
+      concern: (propertyData.fr && propertyData.fr.concerns) || []
+    });
+    if (pinFile) patch.pins_source = 'satellite';
     const up = upsertIndexEntry_(id, patch);
     files.push(up.file);
-
-    if (hoaSlug) {
-      if (!hoaMap[hoaSlug]) hoaMap[hoaSlug] = { name: hoaTag, properties: [] };
-      if (!hoaMap[hoaSlug].properties.includes(id)) hoaMap[hoaSlug].properties.push(id);
-    }
+    if (pinFile) files.push(pinFile);
 
     updates.push({ rowIndex: i, id, accountName, address, hoaTag, views: up.entry.views });
     processed++;
@@ -644,6 +670,12 @@ function syncActiveRow() {
     deleteViews: ['satellite', 'safety', 'fr']
   };
   if (!isNaN(lat) && !isNaN(lng)) { patch.lat = lat; patch.lng = lng; }
+  const pinFile = pinsFileForSync_(id, {
+    property: id, source: 'satellite',
+    element: propertyData.elements,
+    concern: (propertyData.fr && propertyData.fr.concerns) || []
+  });
+  if (pinFile) patch.pins_source = 'satellite';
   const up = upsertIndexEntry_(id, patch);
 
   if (hoaSlug) {
@@ -655,6 +687,7 @@ function syncActiveRow() {
     { path: 'data/satellite/' + id + '.json', content: JSON.stringify(propertyData, null, 2) },
     up.file
   ];
+  if (pinFile) files.push(pinFile);
   if (hoaSlug && hoaMap[hoaSlug]) {
     files.push({ path: 'data/hoa/' + hoaSlug + '.json', content: JSON.stringify(hoaMap[hoaSlug], null, 2) });
   }
@@ -1008,7 +1041,77 @@ function rerunSatElementPinsRow_(sheet, row) {
   const catalog = satFetchPinCatalog_(accountTypeRaw);
   const currentPinsText = currentPinsAsText_(pinsRaw, catalog);
   const trailing = satElementRerunInstruction_(address, satTypeLabel_(accountTypeRaw), currentPinsText, fixesNote);
-  return runSatElementPinsCall_(sheet, row, trailing, true);
+  const ok = runSatElementPinsCall_(sheet, row, trailing, true);
+  if (ok !== true) return ok;
+  const freshRaw = String(sheet.getRange(row, SAT_COL_ELEMENTS).getValue() || '').trim();
+  if (!freshRaw || freshRaw.indexOf('ERROR:') === 0) return ok;
+  const applied = satApplyFixesNoteCoords_(parsePinCell_(freshRaw), fixesNote);
+  writePlainCell(sheet, row, SAT_COL_ELEMENTS,
+    applied.length ? JSON.stringify(applied) : freshRaw);
+  SpreadsheetApp.flush();
+  return true;
+}
+
+// Re-insert MOVE/ADD coordinates from the Nadir Fixes note. Bedrock drops
+// pins whose x,y sit outside 0–100; the note is the durable copy of what
+// the analyst typed. Same contract as critiqueApplyForcedPins_: MOVE
+// relocates one instance; ADD appends and must never overwrite a sibling
+// that shares the catalog id (two parking lots used to stack on the new
+// spot because force() matched on id alone).
+function satApplyFixesNoteCoords_(pins, fixesNote) {
+  pins = (pins || []).slice();
+  const note = String(fixesNote || '');
+  const max = SAT_MAX_PINS_SCHOOL || 20;
+  const eps = 0.15;
+  function roundXY(x, y) {
+    const nx = parseFloat(x), ny = parseFloat(y);
+    if (!isFinite(nx) || !isFinite(ny)) return null;
+    if (Math.abs(nx) > 500 || Math.abs(ny) > 500) return null;
+    return { x: Math.round(nx * 10) / 10, y: Math.round(ny * 10) / 10 };
+  }
+  function sameSpot(pin, x, y) {
+    const c = roundXY(x, y);
+    if (!c || !pin) return false;
+    return Math.abs(parseFloat(pin.x) - c.x) <= eps &&
+           Math.abs(parseFloat(pin.y) - c.y) <= eps;
+  }
+  function findAt(id, x, y) {
+    const n = parseInt(id, 10);
+    for (let i = 0; i < pins.length; i++) {
+      if (parseInt(pins[i].id, 10) === n && sameSpot(pins[i], x, y)) return i;
+    }
+    return -1;
+  }
+  function forceMove(id, fromX, fromY, toX, toY) {
+    const n = parseInt(id, 10);
+    const c = roundXY(toX, toY);
+    if (!isFinite(n) || n < 1 || !c) return;
+    let i = (fromX != null && fromY != null) ? findAt(n, fromX, fromY) : -1;
+    if (i < 0) i = findAt(n, c.x, c.y);
+    if (i < 0) {
+      for (i = 0; i < pins.length; i++) {
+        if (parseInt(pins[i].id, 10) === n) break;
+      }
+      if (i === pins.length) i = -1;
+    }
+    if (i >= 0) { pins[i] = { id: n, x: c.x, y: c.y }; return; }
+    if (pins.length < max) pins.push({ id: n, x: c.x, y: c.y });
+  }
+  function forceAdd(id, x, y) {
+    const n = parseInt(id, 10);
+    const c = roundXY(x, y);
+    if (!isFinite(n) || n < 1 || !c) return;
+    if (findAt(n, c.x, c.y) >= 0) return;
+    if (pins.length < max) pins.push({ id: n, x: c.x, y: c.y });
+  }
+  let m;
+  // Optional original "at X, Y" so a MOVE of one of two same-id pins
+  // relocates the right instance. ADD lines do not contain "move to".
+  const reMove = /#(\d+)(?:[^\n]*? at ([-\d.]+),\s*([-\d.]+))?[^\n]*move to \(([-\d.]+),\s*([-\d.]+)\)/gi;
+  while ((m = reMove.exec(note))) forceMove(m[1], m[2], m[3], m[4], m[5]);
+  const reAdd = /ADD #(\d+)[^\n]* at \(([-\d.]+),\s*([-\d.]+)\)/gi;
+  while ((m = reAdd.exec(note))) forceAdd(m[1], m[2], m[3]);
+  return pins;
 }
 
 function rerunSatElementPinsForActiveRow() {
