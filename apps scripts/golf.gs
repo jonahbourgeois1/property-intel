@@ -246,6 +246,28 @@ function golfRoundCoord_(n) {
   return Math.round(Number(n) * 1e6) / 1e6;
 }
 
+// Checkboxes on I for current rows plus a runway so new typed rows get a
+// box without re-running setup. Setup used to insert them only when the
+// tab already had data, so a headers-only first run left Golf-1..n with
+// a plain Elements Reviewed column. Also moves a stray "saved N pin(s)"
+// string (that is Status text) out of I and into J.
+function golfEnsureReviewedCheckboxes_(sheet) {
+  const last = Math.max(sheet.getLastRow(), 2);
+  const rows = Math.max(last - 1, 1) + 50;
+  const range = sheet.getRange(2, GOLF_COL_REVIEWED, rows, 1);
+  const vals = range.getValues();
+  for (let i = 0; i < vals.length; i++) {
+    const v = vals[i][0];
+    if (v === true || v === false || v === '' || v === null) continue;
+    const s = String(v).trim();
+    if (/^saved \d+ pin/i.test(s)) {
+      writePlainCell(sheet, i + 2, GOLF_COL_STATUS, s);
+    }
+    sheet.getRange(i + 2, GOLF_COL_REVIEWED).clearContent();
+  }
+  range.insertCheckboxes();
+}
+
 // ── Sheet setup ─────────────────────────────────────────────────────────────
 
 function setupGolfSheet() {
@@ -261,9 +283,7 @@ function setupGolfSheet() {
   sheet.getRange(1, 1, 1, GOLF_HEADERS.length).setValues([GOLF_HEADERS]).setFontWeight('bold');
   sheet.setFrozenRows(1);
   sheet.setFrozenColumns(4);
-
-  const lastRow = sheet.getLastRow();
-  if (lastRow > 1) sheet.getRange(2, GOLF_COL_REVIEWED, lastRow - 1, 1).insertCheckboxes();
+  golfEnsureReviewedCheckboxes_(sheet);
 
   ui.alert('Golf',
     (created ? 'Created the "' + GOLF_SHEET + '" tab.' : 'Updated the "' + GOLF_SHEET + '" header row.') +
@@ -497,6 +517,7 @@ function golfSavePins_(payload) {
       checked.pins.length ? JSON.stringify(checked.pins) : '');
     writePlainCell(sheet, row, GOLF_COL_STATUS,
       'saved ' + checked.pins.length + ' pin(s) ' + new Date().toISOString());
+    golfEnsureReviewedCheckboxes_(sheet);
     SpreadsheetApp.flush();
     return {
       ok: true,
@@ -534,6 +555,7 @@ function golfGeocodeRow_(sheet, row) {
   sheet.getRange(row, GOLF_COL_LAT).setValue(coords.lat);
   sheet.getRange(row, GOLF_COL_LNG).setValue(coords.lng);
   writePlainCell(sheet, row, GOLF_COL_STATUS, 'geocoded');
+  golfEnsureReviewedCheckboxes_(sheet);
   SpreadsheetApp.flush();
   return true;
 }

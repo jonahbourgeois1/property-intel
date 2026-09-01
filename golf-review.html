@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Review — Property Intel</title>
 <!--
-  golf-review.html — manual golf-course pin placement (v1.0.0, 2026-09-01)
+  golf-review.html — manual golf-course pin placement (v1.0.1, 2026-09-01)
 
   Sibling of element-review.html, not a mode of it. No nadir overlay, no
   critique form, no Bedrock rerun. Pins live as {id, lat, lng} on a live
@@ -274,7 +274,7 @@
       <h2>Place elements</h2>
       <div class="panel-scroll">
         <div id="pinSelects"></div>
-        <div id="defBox" class="empty">Pick an item, then click the map to place it. Drag to move. Esc cancels.</div>
+        <div id="defBox" class="empty">Yellow pin is the geocoded address. Pick an item, then click the map to place it. Drag to move. Esc cancels.</div>
         <div class="placed-head">Placed</div>
         <ol id="pinList"></ol>
       </div>
@@ -287,7 +287,7 @@
   </main>
 <script>
 (function () {
-  var BUILD = 'v1.0.0';
+  var BUILD = 'v1.0.1';
   var PIN_HARD_LIMIT = 200;
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
@@ -434,7 +434,7 @@
     }
     var def = document.getElementById('defBox');
     if (def) {
-      def.textContent = 'Pick an item, then click the map to place it. Drag to move. Esc cancels.';
+      def.textContent = 'Yellow pin is the geocoded address. Pick an item, then click the map to place it. Drag to move. Esc cancels.';
       def.className = 'empty';
     }
   }
@@ -569,6 +569,22 @@
       gestureHandling: 'greedy'
     });
     map.setTilt(0);
+    // Same role as Static Maps markers=color:yellow on a satellite nadir:
+    // the geocoded address / "nadir" point. Not a catalog pin — not saved,
+    // not draggable, not in the placed list.
+    new g.Marker({
+      map: map,
+      position: { lat: startLat, lng: startLng },
+      draggable: false,
+      clickable: false,
+      zIndex: 1,
+      title: 'Geocoded address (nadir)',
+      icon: {
+        url: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
+        scaledSize: new g.Size(32, 32),
+        anchor: new g.Point(16, 32)
+      }
+    });
     map.addListener('mousemove', function (e) {
       var el = document.getElementById('coordVal');
       if (!el || !e || !e.latLng) return;
