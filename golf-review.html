@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Review — Property Intel</title>
 <!--
-  golf-review.html — manual golf-course pin placement (v1.0.1, 2026-09-01)
+  golf-review.html — manual golf-course pin placement (v1.0.2, 2026-09-01)
 
   Sibling of element-review.html, not a mode of it. No nadir overlay, no
   critique form, no Bedrock rerun. Pins live as {id, lat, lng} on a live
@@ -107,6 +107,26 @@
   }
   #map { position: absolute; inset: 0; width: 100%; height: 100%; }
   .stage.placing #map { cursor: crosshair; }
+
+  .map-loading {
+    position: absolute; inset: 0;
+    z-index: 6;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 12px;
+    background: #0a0c0f;
+  }
+  .map-loading.off { display: none; }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--line);
+    border-top-color: var(--hot);
+    border-radius: 50%;
+    animation: golfspin 0.8s linear infinite;
+  }
+  @keyframes golfspin { to { transform: rotate(360deg); } }
+  .map-loading-text {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-faint);
+  }
 
   .place-hint {
     position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
@@ -267,6 +287,10 @@
   <main id="app">
     <section class="stage" id="stage">
       <div id="map"></div>
+      <div class="map-loading" id="mapLoading">
+        <div class="spinner"></div>
+        <div class="map-loading-text">Loading map…</div>
+      </div>
       <div class="place-hint" id="placeHint"></div>
       <div class="coord" id="coord"><b>ll</b> <span id="coordVal">—</span></div>
     </section>
@@ -274,7 +298,7 @@
       <h2>Place elements</h2>
       <div class="panel-scroll">
         <div id="pinSelects"></div>
-        <div id="defBox" class="empty">Yellow pin is the geocoded address. Pick an item, then click the map to place it. Drag to move. Esc cancels.</div>
+        <div id="defBox" class="empty">Blue dot is the geocoded address. Pick an item, then click the map to place it. Drag to move. Esc cancels.</div>
         <div class="placed-head">Placed</div>
         <ol id="pinList"></ol>
       </div>
@@ -287,7 +311,7 @@
   </main>
 <script>
 (function () {
-  var BUILD = 'v1.0.1';
+  var BUILD = 'v1.0.2';
   var PIN_HARD_LIMIT = 200;
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
@@ -330,6 +354,11 @@
     if (!el) return;
     el.textContent = msg || '';
     el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function hideMapLoading() {
+    var el = document.getElementById('mapLoading');
+    if (el) el.classList.add('off');
   }
 
   function fail(msg, detail) {
@@ -434,7 +463,7 @@
     }
     var def = document.getElementById('defBox');
     if (def) {
-      def.textContent = 'Yellow pin is the geocoded address. Pick an item, then click the map to place it. Drag to move. Esc cancels.';
+      def.textContent = 'Blue dot is the geocoded address. Pick an item, then click the map to place it. Drag to move. Esc cancels.';
       def.className = 'empty';
     }
   }
@@ -569,8 +598,7 @@
       gestureHandling: 'greedy'
     });
     map.setTilt(0);
-    // Same role as Static Maps markers=color:yellow on a satellite nadir:
-    // the geocoded address / "nadir" point. Not a catalog pin — not saved,
+    // Geocoded address / "nadir" point. Not a catalog pin — not saved,
     // not draggable, not in the placed list.
     new g.Marker({
       map: map,
@@ -580,11 +608,17 @@
       zIndex: 1,
       title: 'Geocoded address (nadir)',
       icon: {
-        url: 'https://maps.google.com/mapfiles/ms/icons/yellow-dot.png',
-        scaledSize: new g.Size(32, 32),
-        anchor: new g.Point(16, 32)
+        path: g.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: '#3b82f6',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2
       }
     });
+    g.event.addListenerOnce(map, 'tilesloaded', hideMapLoading);
+    g.event.addListenerOnce(map, 'idle', hideMapLoading);
+    setTimeout(hideMapLoading, 12000);
     map.addListener('mousemove', function (e) {
       var el = document.getElementById('coordVal');
       if (!el || !e || !e.latLng) return;
@@ -627,7 +661,10 @@
     var sc = document.createElement('script');
     sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
       '&callback=golfMapsReady';
-    sc.onerror = function () { fail('Google Maps failed to load.'); };
+    sc.onerror = function () {
+      hideMapLoading();
+      fail('Google Maps failed to load.');
+    };
     document.head.appendChild(sc);
   }
 
