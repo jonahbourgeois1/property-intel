@@ -1054,15 +1054,15 @@ function rerunSatElementPinsRow_(sheet, row) {
 
 // Re-insert MOVE/ADD coordinates from the Nadir Fixes note. Bedrock drops
 // pins whose x,y sit outside 0–100; the note is the durable copy of what
-// the analyst typed. Same contract as critiqueApplyForcedPins_: MOVE
-// relocates one instance; ADD appends and must never overwrite a sibling
-// that shares the catalog id (two parking lots used to stack on the new
-// spot because force() matched on id alone).
+// the analyst typed. Same contract as critiqueApplyForcedPins_: identity is
+// the review-page pin NUMBER plus the original "at x, y", never "the first
+// pin with this catalog id". A MOVE of pin 10 must not steal pin 9.
 function satApplyFixesNoteCoords_(pins, fixesNote) {
   pins = (pins || []).slice();
   const note = String(fixesNote || '');
   const max = SAT_MAX_PINS_SCHOOL || 20;
   const eps = 0.15;
+  const claimed = pins.map(function () { return false; });
   function roundXY(x, y) {
     const nx = parseFloat(x), ny = parseFloat(y);
     if (!isFinite(nx) || !isFinite(ny)) return null;
@@ -1075,41 +1075,61 @@ function satApplyFixesNoteCoords_(pins, fixesNote) {
     return Math.abs(parseFloat(pin.x) - c.x) <= eps &&
            Math.abs(parseFloat(pin.y) - c.y) <= eps;
   }
-  function findAt(id, x, y) {
+  // Claim the unused instance at this xy. Do not fall back to another placed
+  // pin that shares the catalog id — that deleted the sibling.
+  function claimAt(id, x, y) {
     const n = parseInt(id, 10);
+    if (!isFinite(parseFloat(x)) || !isFinite(parseFloat(y))) return -1;
     for (let i = 0; i < pins.length; i++) {
-      if (parseInt(pins[i].id, 10) === n && sameSpot(pins[i], x, y)) return i;
+      if (claimed[i]) continue;
+      if (parseInt(pins[i].id, 10) === n && sameSpot(pins[i], x, y)) {
+        claimed[i] = true;
+        return i;
+      }
     }
     return -1;
+  }
+  function claimOnlyIfUnique(id) {
+    const n = parseInt(id, 10);
+    const hits = [];
+    for (let i = 0; i < pins.length; i++) {
+      if (claimed[i]) continue;
+      if (parseInt(pins[i].id, 10) === n) hits.push(i);
+    }
+    if (hits.length !== 1) return -1;
+    claimed[hits[0]] = true;
+    return hits[0];
   }
   function forceMove(id, fromX, fromY, toX, toY) {
     const n = parseInt(id, 10);
     const c = roundXY(toX, toY);
     if (!isFinite(n) || n < 1 || !c) return;
-    let i = (fromX != null && fromY != null) ? findAt(n, fromX, fromY) : -1;
-    if (i < 0) i = findAt(n, c.x, c.y);
-    if (i < 0) {
-      for (i = 0; i < pins.length; i++) {
-        if (parseInt(pins[i].id, 10) === n) break;
-      }
-      if (i === pins.length) i = -1;
-    }
+    let i = claimAt(n, fromX, fromY);
+    if (i < 0) i = claimAt(n, c.x, c.y);
+    if (i < 0) i = claimOnlyIfUnique(n);
     if (i >= 0) { pins[i] = { id: n, x: c.x, y: c.y }; return; }
-    if (pins.length < max) pins.push({ id: n, x: c.x, y: c.y });
+    if (pins.length < max) {
+      claimed.push(true);
+      pins.push({ id: n, x: c.x, y: c.y });
+    }
   }
   function forceAdd(id, x, y) {
     const n = parseInt(id, 10);
     const c = roundXY(x, y);
     if (!isFinite(n) || n < 1 || !c) return;
-    if (findAt(n, c.x, c.y) >= 0) return;
-    if (pins.length < max) pins.push({ id: n, x: c.x, y: c.y });
+    if (claimAt(n, c.x, c.y) >= 0) return;
+    if (pins.length < max) {
+      claimed.push(true);
+      pins.push({ id: n, x: c.x, y: c.y });
+    }
   }
   let m;
-  // Optional original "at X, Y" so a MOVE of one of two same-id pins
-  // relocates the right instance. ADD lines do not contain "move to".
-  const reMove = /#(\d+)(?:[^\n]*? at ([-\d.]+),\s*([-\d.]+))?[^\n]*move to \(([-\d.]+),\s*([-\d.]+)\)/gi;
+  // Optional "pin N" is the number on the marker, not the catalog id. Bedrock
+  // pins have no seq, so N cannot index the array. The original "at x, y"
+  // picks the instance; missing origin → append rather than steal a sibling.
+  const reMove = /(?:pin\s+\d+\s+\()?#(\d+)(?:[^\n]*? at ([-\d.]+),\s*([-\d.]+))?[^\n]*move to \(([-\d.]+),\s*([-\d.]+)\)/gi;
   while ((m = reMove.exec(note))) forceMove(m[1], m[2], m[3], m[4], m[5]);
-  const reAdd = /ADD #(\d+)[^\n]* at \(([-\d.]+),\s*([-\d.]+)\)/gi;
+  const reAdd = /ADD (?:pin\s+\d+\s+\()?#(\d+)[^\n]* at \(([-\d.]+),\s*([-\d.]+)\)/gi;
   while ((m = reAdd.exec(note))) forceAdd(m[1], m[2], m[3]);
   return pins;
 }

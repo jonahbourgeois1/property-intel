@@ -157,7 +157,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8.1 (2026-09-01) — duplicate catalog-id add keeps both pins';
+const CRITIQUE_BUILD = 'v6.8.2 (2026-09-01) — pin seq is instance identity, not catalog id';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -704,7 +704,15 @@ function critiqueProtectedIds_(p) {
     if (v === 'fix' && !moved) return;
     if (!moved && String(el.note || '').trim()) return;
     var id = parseInt(el.id, 10);
-    if (isFinite(id)) out.push(id);
+    if (isFinite(id)) out.push({
+      seq: parseInt(el.seq, 10),
+      id: id,
+      name: String(el.name || ('#' + id)),
+      x: el.x,
+      y: el.y,
+      wantX: moved ? el.corrected_x : el.x,
+      wantY: moved ? el.corrected_y : el.y
+    });
   });
   return out;
 }
@@ -721,23 +729,34 @@ function critiqueProtectedIds_(p) {
 // satElementRerunInstruction_ has been strengthened, but a prompt is a request,
 // not a guarantee. This check is the guarantee.
 function critiquePinLoss_(p, beforeRaw, after) {
-  var before = {};
+  var beforeList = [];
   try {
-    parsePinCell_(beforeRaw).forEach(function (x) { before[parseInt(x.id, 10)] = true; });
-  } catch (e) { return []; }          // unreadable "before" = nothing to compare against
-  var have = {};
-  (after || []).forEach(function (x) { have[parseInt(x.id, 10)] = true; });
-
-  var names = {};
-  ((p && p.elements) || []).forEach(function (el) {
-    names[parseInt(el.id, 10)] = String(el.name || ('#' + el.id));
-  });
-
+    beforeList = parsePinCell_(beforeRaw);
+  } catch (e) { return []; }
+  var claimed = (after || []).map(function () { return false; });
   var lost = [];
-  critiqueProtectedIds_(p).forEach(function (id) {
-    // Only protect what was actually ON the row — an id the analyst reviewed but
-    // that had already gone is not this re-pin's fault.
-    if (before[id] && !have[id]) lost.push((names[id] || '#' + id) + ' (#' + id + ')');
+  critiqueProtectedIds_(p).forEach(function (inst) {
+    var onRow = false;
+    var b;
+    for (b = 0; b < beforeList.length; b++) {
+      if (parseInt(beforeList[b].id, 10) === inst.id &&
+          critiqueSameSpot_(beforeList[b], inst.x, inst.y)) {
+        onRow = true;
+        break;
+      }
+    }
+    if (!onRow) {
+      for (b = 0; b < beforeList.length; b++) {
+        if (parseInt(beforeList[b].id, 10) === inst.id) { onRow = true; break; }
+      }
+    }
+    if (!onRow) return;
+    var i = critiqueClaimPin_(after || [], claimed, inst.id, inst.wantX, inst.wantY);
+    if (i < 0) i = critiqueClaimPin_(after || [], claimed, inst.id, inst.x, inst.y);
+    if (i < 0) {
+      lost.push(inst.name + ' (#' + inst.id +
+        (isFinite(inst.seq) ? ', pin ' + inst.seq : '') + ')');
+    }
   });
   return lost;
 }
@@ -774,6 +793,37 @@ function critiqueFindPinAt_(pins, id, x, y) {
   return -1;
 }
 
+// Claim the unused instance at this id+xy. Do not fall back to another
+// placed pin that shares the catalog id — that is how pin 10 stole pin 9.
+function critiqueClaimPin_(pins, claimed, id, x, y) {
+  var n = parseInt(id, 10);
+  var i;
+  if (!isFinite(parseFloat(x)) || !isFinite(parseFloat(y))) return -1;
+  for (i = 0; i < pins.length; i++) {
+    if (claimed[i]) continue;
+    if (parseInt(pins[i].id, 10) === n && critiqueSameSpot_(pins[i], x, y)) {
+      claimed[i] = true;
+      return i;
+    }
+  }
+  return -1;
+}
+
+// Label-only FIX may change catalog id. Match the unused pin at this spot,
+// never another instance of the old id sitting elsewhere.
+function critiqueClaimUnusedAt_(pins, claimed, x, y) {
+  var i;
+  if (!isFinite(parseFloat(x)) || !isFinite(parseFloat(y))) return -1;
+  for (i = 0; i < pins.length; i++) {
+    if (claimed[i]) continue;
+    if (critiqueSameSpot_(pins[i], x, y)) {
+      claimed[i] = true;
+      return i;
+    }
+  }
+  return -1;
+}
+
 function critiqueFirstPinId_(pins, id) {
   var n = parseInt(id, 10);
   var i;
@@ -783,84 +833,83 @@ function critiqueFirstPinId_(pins, id) {
   return -1;
 }
 
-// Relocate one instance. Prefer the pin sitting at fromX/fromY so a second
-// Parking lot is not the one that moves. Fall back to the first matching
-// catalog id only when the original spot is gone (unique-id Pass 1 case).
-function critiqueForceMove_(pins, id, fromX, fromY, toX, toY) {
+// Relocate the instance at fromX/fromY. If that spot is gone, append — never
+// steal another placed pin that shares the catalog id.
+function critiqueForceMove_(pins, id, fromX, fromY, toX, toY, claimed) {
   var n = parseInt(id, 10);
   var c = critiqueRoundXY_(toX, toY);
   if (!isFinite(n) || n < 1 || !c) return;
-  var i = critiqueFindPinAt_(pins, n, fromX, fromY);
-  if (i < 0) i = critiqueFindPinAt_(pins, n, c.x, c.y);
-  if (i < 0) i = critiqueFirstPinId_(pins, n);
+  if (!claimed) claimed = pins.map(function () { return false; });
+  var i = critiqueClaimPin_(pins, claimed, n, fromX, fromY);
+  if (i < 0) i = critiqueClaimPin_(pins, claimed, n, c.x, c.y);
   if (i >= 0) {
     pins[i] = { id: n, x: c.x, y: c.y };
     return;
   }
-  if (pins.length < CRITIQUE_PIN_SLOTS) pins.push({ id: n, x: c.x, y: c.y });
+  if (pins.length < CRITIQUE_PIN_SLOTS) {
+    claimed.push(true);
+    pins.push({ id: n, x: c.x, y: c.y });
+  }
 }
 
-// Append a new instance. Never overwrite another pin that shares the catalog
-// id — that is the "add a second parking lot, both pins jump to the new spot"
-// bug (critiqueForcePin_ used to match on id alone).
 function critiqueForceAdd_(pins, id, x, y) {
   var n = parseInt(id, 10);
   var c = critiqueRoundXY_(x, y);
   if (!isFinite(n) || n < 1 || !c) return;
-  if (critiqueFindPinAt_(pins, n, c.x, c.y) >= 0) return;
   if (pins.length < CRITIQUE_PIN_SLOTS) pins.push({ id: n, x: c.x, y: c.y });
 }
 
-// Kept for callers / grep. MOVE path only — adds must use critiqueForceAdd_.
 function critiqueForcePin_(pins, id, x, y) {
   critiqueForceMove_(pins, id, null, null, x, y);
 }
 
+// Instance identity is the review-page pin NUMBER (seq — the number on the
+// marker), not catalog id. Reconstruct from payload.elements in that order:
+// skip only the removed seq, keep/move every other seq at its (corrected)
+// xy, append added[]. Bedrock is consulted only for a label-only FIX at the
+// same spot. Never steal another placed instance of the same catalog id —
+// that is how moving pin 10 deleted pin 9.
 function critiqueApplyForcedPins_(p, pins) {
   pins = (pins || []).slice();
+  var claimed = pins.map(function () { return false; });
+  var out = [];
+
   ((p && p.elements) || []).forEach(function (el) {
-    if (String(el.verdict || '').toLowerCase() !== 'remove') return;
-    var rid = parseInt(el.id, 10);
-    if (!isFinite(rid)) return;
-    var i = critiqueFindPinAt_(pins, rid, el.x, el.y);
-    if (i < 0) {
-      // Bedrock may already have dropped it. Only then fall back to the
-      // first matching catalog id — and only if there is exactly one, so a
-      // duplicate sibling is not deleted by accident.
-      var hits = [];
-      var k;
-      for (k = 0; k < pins.length; k++) {
-        if (parseInt(pins[k].id, 10) === rid) hits.push(k);
+    var v = String(el.verdict || '').toLowerCase();
+    var id = parseInt(el.id, 10);
+    if (v === 'remove') {
+      critiqueClaimPin_(pins, claimed, id, el.x, el.y);
+      return;
+    }
+    var moved = !!critiqueXY_(el.corrected_x, el.corrected_y);
+    var want = moved
+      ? critiqueRoundXY_(el.corrected_x, el.corrected_y)
+      : critiqueRoundXY_(el.x, el.y);
+    if (!isFinite(id) || !want) return;
+    if (v === 'fix' && !moved) {
+      var i = critiqueClaimPin_(pins, claimed, id, el.x, el.y);
+      if (i < 0) i = critiqueClaimUnusedAt_(pins, claimed, el.x, el.y);
+      if (i >= 0) {
+        var bid = parseInt(pins[i].id, 10);
+        out.push({ id: isFinite(bid) ? bid : id, x: want.x, y: want.y });
+        return;
       }
-      if (hits.length === 1) i = hits[0];
+    } else {
+      critiqueClaimPin_(pins, claimed, id, el.x, el.y);
     }
-    if (i >= 0) pins.splice(i, 1);
+    out.push({ id: id, x: want.x, y: want.y });
   });
-  ((p && p.elements) || []).forEach(function (el) {
-    if (critiqueXY_(el.corrected_x, el.corrected_y)) {
-      critiqueForceMove_(pins, el.id, el.x, el.y, el.corrected_x, el.corrected_y);
-    }
-  });
+
   ((p && p.added) || []).forEach(function (a) {
-    if (a && a.id != null && isFinite(parseFloat(a.x)) && isFinite(parseFloat(a.y))) {
-      critiqueForceAdd_(pins, a.id, a.x, a.y);
-      // If Bedrock (or the note-force path) relocated the ORIGINAL instance
-      // onto the add's coordinates, put the sibling back. Without this, two
-      // Parking lots become two pins stacked on the new spot.
-      ((p && p.elements) || []).forEach(function (el) {
-        if (parseInt(el.id, 10) !== parseInt(a.id, 10)) return;
-        if (String(el.verdict || '').toLowerCase() === 'remove') return;
-        var ox = el.x, oy = el.y;
-        if (critiqueXY_(el.corrected_x, el.corrected_y)) {
-          ox = el.corrected_x;
-          oy = el.corrected_y;
-        }
-        if (critiqueSameSpot_({ x: ox, y: oy }, a.x, a.y)) return;
-        critiqueForceAdd_(pins, el.id, ox, oy);
-      });
-    }
+    var id = parseInt(a.id, 10);
+    var want = critiqueRoundXY_(a.x, a.y);
+    if (!isFinite(id) || !want) return;
+    critiqueClaimPin_(pins, claimed, id, want.x, want.y);
+    out.push({ id: id, x: want.x, y: want.y });
   });
-  return pins;
+
+  if (out.length > CRITIQUE_PIN_SLOTS) out = out.slice(0, CRITIQUE_PIN_SLOTS);
+  return out;
 }
 
 // Is the 5-minute re-pin trigger actually installed?
@@ -945,7 +994,11 @@ function critiqueComposeFixesNote_(p) {
   (p.added || []).forEach(function (a) {
     var at = critiqueXY_(a.x, a.y);
     var note = String(a.note || '').trim();
-    lines.push('- ADD #' + a.id + ' ' + a.name + (at ? ' at (' + at + ')' : '') +
+    var seq = parseInt(a.seq, 10);
+    var label = isFinite(seq)
+      ? 'pin ' + seq + ' (#' + a.id + ' ' + a.name + ')'
+      : '#' + a.id + ' ' + a.name;
+    lines.push('- ADD ' + label + (at ? ' at (' + at + ')' : '') +
                (note ? ': ' + note : '.'));
   });
 
@@ -1845,6 +1898,58 @@ function critiqueSelfTest_() {
     var stackedSpots = stackedPark.map(function (x) { return x.x + ',' + x.y; }).sort().join(' ');
     out.push((stackedSpots === '20,30 70,80' ? 'OK ' : 'BAD') +
              ' sibling restore after Bedrock stacked both at the add: ' + stackedSpots);
+
+    // Placing a second Roof: Bedrock often emits two #61 both at the ADD
+    // spot (it treated the add as a move of the original). Payload pin 10
+    // stayed at 20,30; pin 9 is the add at 70,80. Both must survive there.
+    var placePayload = {
+      elements: [
+        { seq: 10, id: 61, name: 'Roof', x: 20, y: 30,
+          corrected_x: null, corrected_y: null, verdict: 'ok', note: '' }
+      ],
+      added: [{ seq: 9, id: 61, name: 'Roof', x: 70, y: 80, note: '' }]
+    };
+    var placeAfter = critiqueApplyForcedPins_(placePayload,
+      [{ id: 61, x: 70, y: 80 }, { id: 61, x: 70, y: 80 }]);
+    var placedRoofs = placeAfter.filter(function (x) { return parseInt(x.id, 10) === 61; });
+    var placedSpots = placedRoofs.map(function (x) { return x.x + ',' + x.y; }).sort().join(' ');
+    out.push((placedSpots === '20,30 70,80' ? 'OK ' : 'BAD') +
+             ' place pin 9 must not move pin 10: ' + placedSpots);
+
+    // MOVE of pin 10 when two Roof #61 share a spot. Bedrock often emits only
+    // one. Matching on catalog id stole pin 9 and the sibling vanished.
+    var movePayload = {
+      elements: [
+        { seq: 9, id: 61, name: 'Roof', x: 46.6, y: 39.7,
+          corrected_x: null, corrected_y: null, verdict: 'ok', note: '' },
+        { seq: 10, id: 61, name: 'Roof', x: 46.6, y: 39.7,
+          corrected_x: 70, corrected_y: 80, verdict: 'fix', note: '' }
+      ],
+      added: []
+    };
+    var moveAfter = critiqueApplyForcedPins_(movePayload, [{ id: 61, x: 70, y: 80 }]);
+    var roofs = moveAfter.filter(function (x) { return parseInt(x.id, 10) === 61; });
+    var roofSpots = roofs.map(function (x) { return x.x + ',' + x.y; }).sort().join(' ');
+    out.push((roofs.length === 2 ? 'OK ' : 'BAD') +
+             ' move of pin 10 keeps pin 9 (' + roofs.length + ' of 2 Roof pins)');
+    out.push((roofSpots === '46.6,39.7 70,80' ? 'OK ' : 'BAD') +
+             ' move of pin 10 locations: ' + roofSpots + ' (want 46.6,39.7 and 70,80)');
+    var lostMove = critiquePinLoss_(movePayload,
+      JSON.stringify([{ id: 61, x: 46.6, y: 39.7 }, { id: 61, x: 46.6, y: 39.7 }]),
+      moveAfter);
+    out.push((lostMove.length === 0 ? 'OK ' : 'BAD') +
+             ' pin-loss after duplicate move: ' + (lostMove.length ? lostMove.join(', ') : 'none'));
+    var remAfter = critiqueApplyForcedPins_({
+      elements: [
+        { seq: 9, id: 61, name: 'Roof', x: 46.6, y: 39.7, verdict: 'ok' },
+        { seq: 10, id: 61, name: 'Roof', x: 46.6, y: 39.7, verdict: 'remove' }
+      ],
+      added: []
+    }, [{ id: 61, x: 46.6, y: 39.7 }, { id: 61, x: 46.6, y: 39.7 }]);
+    var remRoofs = remAfter.filter(function (x) { return parseInt(x.id, 10) === 61; });
+    out.push((remRoofs.length === 1 && remRoofs[0].x === 46.6 ? 'OK ' : 'BAD') +
+             ' remove of pin 10 keeps pin 9 (' + remRoofs.length +
+             ' at ' + (remRoofs[0] ? remRoofs[0].x + ',' + remRoofs[0].y : '?') + ')');
 
     out.push('    over the limit: ' + (built.overCap.length ? built.overCap.join(', ') : 'none'));
     out.push('    rerun automation: ' + (CRITIQUE_QUEUE_RERUN ? 'ON' : 'OFF (record only)'));
