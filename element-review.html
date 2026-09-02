@@ -42,6 +42,10 @@
     margin = IGNORED as of v6.8.6. Used to be metres outside the lot a pin
              could sit. v6.8.10: reviewers may pin on the Google Maps basemap
              outside the cropped nadir. Percentages may be <0 or >100.
+    sandbox= (optional) NEW in v6.8.15 — '1' routes GET/POST to Satellite
+             Sandbox + Element Critique Sandbox. Production Satellite and
+             element-critique are never read or written. Sheet menu
+             "Open Element Review" under Satellite Sandbox sets this.
 
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
@@ -1064,6 +1068,10 @@
     color: var(--ink-faint); border: 1px solid var(--line);
     border-radius: 5px; padding: 2px 6px; margin-left: 10px;
   }
+  header .build.sandbox {
+    color: #2a1a00; background: #e67e22; border-color: #c0392b; font-weight: 700;
+  }
+  header .kicker.sandbox { color: #e67e22; }
   header .earth-link {
     font-size: 12px; font-weight: 600;
     color: var(--ink);
@@ -1112,6 +1120,7 @@
                 <option value="Ross">Ross</option>
                 <option value="Jonah">Jonah</option>
                 <option value="Steve">Steve</option>
+                <option value="DPC Prime">DPC Prime</option>
               </select>
             </label>
             <label class="f narrow">
@@ -1279,7 +1288,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.14';
+  var BUILD = 'v6.8.17';
   // The oldest SERVER build whose re-pin writer keeps duplicate catalog ids as
   // separate instances (pin seq identity, critique-api v6.8.2). Submitting
   // against anything older stacks or deletes duplicates — four separate
@@ -1439,13 +1448,24 @@
   // API response for every poll after that.
   var siteNo   = qp('site_no') || qp('site') || '';
   var roundIn  = parseInt(qp('round'), 10);
+  var IS_SANDBOX = (function () {
+    var s = String(qp('sandbox') || '').trim().toLowerCase();
+    if (s === '1' || s === 'true' || s === 'yes' || s === 'sandbox') return true;
+    // Leftover links from the first sandbox build used view=sandbox.
+    return viewName === 'sandbox';
+  })();
+
+  function sandboxQuery() {
+    return IS_SANDBOX ? '&sandbox=1' : '';
+  }
 
   function paintIdentity() {
     var el = document.getElementById('addr');
     if (!el) return;
     var bits = [];
     if (addr) bits.push(addr);
-    if (viewName) bits.push(viewName);
+    if (IS_SANDBOX) bits.push('SANDBOX');
+    if (viewName && viewName !== 'sandbox') bits.push(viewName);
     if (siteNo) bits.push('site ' + siteNo);
     if (rowKey && viewName === 'drone-test') bits.push('taxlot ' + rowKey);
     el.textContent = bits.length ? '\u00b7 ' + bits.join(' \u00b7 ') : '';
@@ -2341,7 +2361,8 @@
       apply(null);
       return;
     }
-    var u = CRITIQUE_POST_URL + '?route=pin-freq&_=' + Date.now();
+    var u = CRITIQUE_POST_URL + '?route=pin-freq' + sandboxQuery() +
+            '&_=' + Date.now();
     fetch(u, { redirect: 'follow' })
       .then(function (r) { return r.text(); })
       .then(function (t) {
@@ -2668,7 +2689,8 @@
       // here so the request is self-describing in a log.
       site_no: siteNo,
       key: rowKey,
-      view: viewName,
+      view: (viewName === 'sandbox') ? '' : viewName,
+      sandbox: IS_SANDBOX,
       address: addr || '',
       account_type: acctType || '',
       nadir_url: nadirUrl || '',
@@ -2939,8 +2961,8 @@
 
       // v6.0: REQUIRED. Rounds used to file with a blank Reviewer, so the note
       // read "round 1 (analyst, …)" and nothing could be traced to a person.
-      // With a four-name dropdown the cost of asking is one click, and Monday is
-      // four reviewers working the same sheet.
+      // With a named dropdown the cost of asking is one click, and the team
+      // working the same sheet is Eleanor / Ross / Jonah / Steve / DPC Prime.
       var who = document.getElementById('reviewer');
       if (who && !who.value) {
         setStatus('Choose a reviewer before filing — the round is recorded against a name.', 'err');
@@ -2958,7 +2980,7 @@
       // Content-Type text/plain keeps this a CORS "simple request", so the
       // browser sends no OPTIONS preflight — Apps Script cannot answer one.
       // Read it server-side with JSON.parse(e.postData.contents).
-      fetch(CRITIQUE_POST_URL, {
+      fetch(CRITIQUE_POST_URL + (IS_SANDBOX ? '?sandbox=1' : ''), {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),
@@ -3346,7 +3368,7 @@
   // then address. Address is last because it is the one that can be ambiguous.
   function lookupParam() {
     var parts = [];
-    if (viewName) parts.push('view=' + encodeURIComponent(viewName));
+    if (viewName && viewName !== 'sandbox') parts.push('view=' + encodeURIComponent(viewName));
     if (viewName === 'drone-test' || viewName === 'plane') {
       if (rowKey) parts.push('key=' + encodeURIComponent(rowKey));
       else if (addr) parts.push('addr=' + encodeURIComponent(addr));
@@ -3355,6 +3377,7 @@
     if (siteNo) parts.push('site_no=' + encodeURIComponent(siteNo));
     else if (rowKey) parts.push('key=' + encodeURIComponent(rowKey));
     else parts.push('addr=' + encodeURIComponent(addr));
+    if (IS_SANDBOX) parts.push('sandbox=1');
     return parts.join('&');
   }
 
@@ -3466,7 +3489,24 @@
   // tell you why map mode did not start.
   function erBootMap() {
     var tag = document.getElementById('build');
-    if (tag) tag.textContent = BUILD;
+    if (tag) {
+      tag.textContent = BUILD + (IS_SANDBOX ? ' SANDBOX' : '');
+      if (IS_SANDBOX) tag.classList.add('sandbox');
+    }
+    var kicker = document.querySelector('header .kicker');
+    if (kicker && IS_SANDBOX) {
+      kicker.textContent = 'SANDBOX · Pass 1 · Element Review';
+      kicker.classList.add('sandbox');
+    }
+    if (IS_SANDBOX) {
+      var who = document.getElementById('reviewer');
+      if (who && !who.querySelector('option[value="Review Bot"]')) {
+        var opt = document.createElement('option');
+        opt.value = 'Review Bot';
+        opt.textContent = 'Review Bot';
+        who.appendChild(opt);
+      }
+    }
     if (window.console) {
       if (!window.NadirGeo) {
         try {
@@ -3475,6 +3515,7 @@
         } catch (e) {}
       }
       console.log('[element-review] ' + BUILD +
+        ' | sandbox ' + (IS_SANDBOX ? 'ON' : 'off') +
         ' | map ' + (MAP_MODE ? 'ON' : 'OFF') +
         ' | nadir-geo ' + (window.NadirGeo ? 'v' + (window.NadirGeo._version || '?')
                                            : 'MISSING') +
