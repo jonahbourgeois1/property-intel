@@ -1279,7 +1279,24 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.13';
+  var BUILD = 'v6.8.14';
+  // The oldest SERVER build whose re-pin writer keeps duplicate catalog ids as
+  // separate instances (pin seq identity, critique-api v6.8.2). Submitting
+  // against anything older stacks or deletes duplicates — four separate
+  // "saved in the editor but never deployed" incidents surfaced exactly that
+  // way. The submit handler compares this against the build the POST response
+  // reports and says so ON SCREEN, not just in the console.
+  var ER_MIN_SERVER = [6, 8, 2];
+  function serverBuildCurrent(buildStr) {
+    var m = /v(\d+)\.(\d+)(?:\.(\d+))?/.exec(String(buildStr || ''));
+    if (!m) return false;      // pre-v5.6 deployments do not report a build
+    var have = [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3] || '0', 10)];
+    for (var i = 0; i < 3; i++) {
+      if (have[i] > ER_MIN_SERVER[i]) return true;
+      if (have[i] < ER_MIN_SERVER[i]) return false;
+    }
+    return true;
+  }
   // v6.4: THE MAP IS THE SUBSTRATE, ALWAYS. Not a mode, not a button, not a
   // param a reviewer has to know about.
   //
@@ -2987,6 +3004,16 @@
             if (j.rev) lastRev = j.rev;
             applyRefresh(j.pins, j.next_round || ((payload.round || 1) + 1));
             setStatus(note + ' The image now shows the new round.', 'ok');
+          }
+          // v6.8.14: a stale deployment is announced where the reviewer is
+          // looking, and it wins over the success message. j is null only for
+          // a non-JSON response, which has nothing to compare.
+          if (j && !serverBuildCurrent(j.build)) {
+            setStatus('Filed — but the SERVER is running "' +
+              (j.build || 'a build too old to report itself') +
+              '", older than v6.8.2. Duplicate pins WILL still stack or vanish ' +
+              'on re-pin. Apps Script editor: Deploy > Manage deployments > ' +
+              'edit (pencil) > Version: New version > Deploy.', 'err');
           }
           startPolling();
         })
