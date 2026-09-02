@@ -5,12 +5,20 @@
 //
 //   GET  ?route=elements&site_no=<siteNo>   -> the row's nadir + element pins
 //        (&key=, &addr= and &name= also resolve, in that order of preference)
+//        &sandbox=1 (or JSON sandbox:true) reads Satellite Sandbox instead
 //   GET  ?route=pin-freq                    -> {freq:{id:count}} for add-search
 //        order (Satellite Nadir Elements + element-critique Pin n ID; 6 h cache)
+//        &sandbox=1 counts the sandbox tabs instead (separate cache key)
 //   GET  ?route=ping                        -> deployed build / layout check
 //   GET  ?route=golf-catalog                -> Golf Pins sheet (NOT pins-catalog.json)
 //   GET  ?route=golf-elements&site_no=      -> Golf tab pins only (never Satellite)
+//   GET  ?route=rounds&site_no=             -> round history for element-review
+//        Round 0 = Bedrock (first critique row's published XY). Round 1+ =
+//        each filed review after verdicts. next_round is max(Round)+1, else 1.
+//        &sandbox=1 reads Element Critique Sandbox. CORS simple GET.
 //   POST ?route=critique  (JSON body)       -> file the analyst's critique
+//        sandbox:true / ?sandbox=1 files to Element Critique Sandbox and
+//        writes Nadir Fixes on Satellite Sandbox. Production tabs untouched.
 //   POST ?route=golf-save  (view:"golf")    -> write Golf Nadir Elements only
 //        Does NOT write element-critique, Nadir Fixes, or call Bedrock.
 //
@@ -51,12 +59,13 @@
 // settings and the timing trade.
 //
 // ⚠️ BEFORE YOU PASTE THIS: only ONE doGet and ONE doPost may exist in an Apps
-// Script project. Verified 2026-08-11 against the complete 12-file list
+// Script project. Verified 2026-08-11 against the complete file list
 // (Config, Prompts, Menu, Shared, Satellite, Plane, Drone Interior, Satellite
 // migration v2, Responder Intel, Import Accounts, drone-test,
-// responder-directions) plus no Libraries and no Services: NEITHER handler
-// exists. The two wrappers at the bottom are safe as written. If a file is ever
-// added that defines one, delete the wrappers and delegate instead:
+// responder-directions, golf, satellite-sandbox) plus no Libraries and no
+// Services: NEITHER handler exists. The two wrappers at the bottom are safe as
+// written. If a file is ever added that defines one, delete the wrappers and
+// delegate instead:
 //     if (e && e.parameter && e.parameter.route) return critiqueApiGet_(e);
 // Everything above the wrappers is critique*-prefixed and cannot collide.
 //
@@ -157,7 +166,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8.2 (2026-09-01) — pin seq is instance identity, not catalog id';
+const CRITIQUE_BUILD = 'v6.8.6 (2026-09-02) — round history for element-review';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -290,6 +299,14 @@ function critiqueXY_(x, y) {
   return (Math.round(nx * 10) / 10).toFixed(1) + ', ' + (Math.round(ny * 10) / 10).toFixed(1);
 }
 
+function critiqueParseXY_(s) {
+  var m = String(s || '').match(/(-?[\d.]+)\s*,\s*(-?[\d.]+)/);
+  if (!m) return null;
+  var x = parseFloat(m[1]), y = parseFloat(m[2]);
+  if (!isFinite(x) || !isFinite(y)) return null;
+  return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+}
+
 // JSON out, with optional JSONP. JSONP exists only as the CORS escape hatch: a
 // <script> tag is not an XHR, so no CORS rules apply to it at all.
 function critiqueJsonOut_(obj, callback) {
@@ -336,11 +353,34 @@ function critiqueOpenSpreadsheet_() {
     'between /d/ and /edit in the sheet URL.');
 }
 
-function critiqueOpenSatSheet_() {
+function critiqueIsSandbox_(p) {
+  if (!p) return false;
+  var v = p.sandbox;
+  if (v === true || v === 1) return true;
+  var s = String(v == null ? '' : v).trim().toLowerCase();
+  if (s === '1' || s === 'true' || s === 'yes' || s === 'sandbox') return true;
+  // Leftover review links from the first sandbox build used view=sandbox.
+  // That label is displayed in element-review, so NEW links must not set view=.
+  // Keep matching it so those old tabs still file to the sandbox after deploy.
+  var view = String((p.view || p.View) || '').trim().toLowerCase();
+  return view === 'sandbox' || view === 'sat-sandbox' || view === 'satellite-sandbox';
+}
+
+function critiqueSandboxNames_() {
+  return {
+    sat: (typeof SATELLITE_SANDBOX_SHEET === 'string') ? SATELLITE_SANDBOX_SHEET : 'Satellite Sandbox',
+    log: (typeof CRITIQUE_SANDBOX_SHEET === 'string') ? CRITIQUE_SANDBOX_SHEET : 'Element Critique Sandbox'
+  };
+}
+
+function critiqueOpenSatSheet_(p) {
   var opened = critiqueOpenSpreadsheet_();
-  var sheet = opened.ss.getSheetByName(SATELLITE_SHEET);
-  if (!sheet) throw new Error('sheet "' + SATELLITE_SHEET + '" not found');
-  return { ss: opened.ss, sheet: sheet, via: opened.via };
+  var sandbox = critiqueIsSandbox_(p);
+  var name = sandbox ? critiqueSandboxNames_().sat : SATELLITE_SHEET;
+  var sheet = opened.ss.getSheetByName(name);
+  if (!sheet) throw new Error('sheet "' + name + '" not found' +
+    (sandbox ? ' — run Property Intel → Satellite Sandbox → Set Up Sandbox Tabs' : ''));
+  return { ss: opened.ss, sheet: sheet, via: opened.via, sandbox: sandbox };
 }
 
 function critiqueViewOf_(p) {
@@ -475,12 +515,13 @@ function critiqueFindDtRow_(sheet, p) {
 // to 92 columns while printing "read-only: this test writes nothing". Benign that
 // time because the tab was empty, but a read that mutates the sheet is a lie in
 // the code, and the same class of bug as the earlier "a GET created the tab".
-function critiqueEnsureLogSheet_(ss, forWrite) {
+function critiqueEnsureLogSheet_(ss, forWrite, sheetName) {
   var headers = critiqueHeaders_();
-  var sh = ss.getSheetByName(CRITIQUE_SHEET);
+  var name = sheetName || CRITIQUE_SHEET;
+  var sh = ss.getSheetByName(name);
   if (!sh) {
     if (!forWrite) return null;
-    sh = ss.insertSheet(CRITIQUE_SHEET);
+    sh = ss.insertSheet(name);
   }
   // Hand a reader the tab exactly as it stands. Readers locate their columns from
   // the sheet's OWN header row (see critiqueNextRound_), so they do not need this
@@ -488,7 +529,12 @@ function critiqueEnsureLogSheet_(ss, forWrite) {
   if (!forWrite) return sh;
 
   if (sh.getMaxColumns() < headers.length) {
-    sh.insertColumnsAfter(sh.getMaxColumns(), headers.length - sh.getMaxColumns());
+    var step = 20;
+    while (sh.getMaxColumns() < headers.length) {
+      var add = Math.min(step, headers.length - sh.getMaxColumns());
+      sh.insertColumnsAfter(sh.getMaxColumns(), add);
+      SpreadsheetApp.flush();
+    }
   }
   var existing = sh.getRange(1, 1, 1, headers.length).getValues()[0];
   var firstMismatch = -1;
@@ -503,11 +549,11 @@ function critiqueEnsureLogSheet_(ss, forWrite) {
     var hasData = sh.getLastRow() > 1;
     var pureExtension = hasData && String(existing[firstMismatch] || '').trim() === '';
     if (hasData && !pureExtension) {
-      throw new Error('"' + CRITIQUE_SHEET + '" has ' + (sh.getLastRow() - 1) +
+      throw new Error('"' + name + '" has ' + (sh.getLastRow() - 1) +
         ' existing row(s) and its header no longer matches this layout (first ' +
         'difference at column ' + (firstMismatch + 1) + ': found "' +
         String(existing[firstMismatch] || '') + '", expected "' + headers[firstMismatch] +
-        '"). Rename that tab (e.g. "' + CRITIQUE_SHEET + ' v1") and a fresh one will ' +
+        '"). Rename that tab (e.g. "' + name + ' v1") and a fresh one will ' +
         'be created, so the old rows keep their own header.');
     }
     sh.getRange(1, 1, 1, headers.length).setValues([headers]).setFontWeight('bold');
@@ -568,6 +614,143 @@ function critiqueNextRound_(logSheet, siteNo, key) {
   return max + 1;
 }
 
+// Rebuild a pin array from one Element Critique row.
+//   published — Pin n XY only (what Pass 1 / the last re-pin showed). Skips
+//               additions, which have no published position.
+//   result    — after the reviewer's verdicts: OK/blank keep XY, FIX/ADD use
+//               Fix XY, REMOVE drops. A moved pin with a blank verdict still
+//               uses Fix XY (the ALLISON DERMATOLOGY case).
+function critiquePinsFromLogRow_(headers, rowVals, mode) {
+  var idx = {};
+  (headers || []).forEach(function (h, i) { idx[String(h || '').trim()] = i; });
+  var pins = [];
+  var want = String(mode || 'result');
+  for (var n = 1; n <= CRITIQUE_PIN_SLOTS; n++) {
+    var idAt = idx['Pin ' + n + ' ID'];
+    if (idAt === undefined) break;
+    var id = parseInt(rowVals[idAt], 10);
+    if (!isFinite(id)) continue;
+    var verdict = String(rowVals[idx['Pin ' + n + ' Verdict']] || '').trim().toLowerCase();
+    var pub = critiqueParseXY_(rowVals[idx['Pin ' + n + ' XY']]);
+    var fix = critiqueParseXY_(rowVals[idx['Pin ' + n + ' Fix XY']]);
+    if (want === 'published') {
+      if (verdict === 'added') continue;
+      if (!pub) continue;
+      pins.push({ id: id, x: pub.x, y: pub.y });
+      continue;
+    }
+    if (verdict === 'remove') continue;
+    var xy = null;
+    if (verdict === 'added') xy = fix;
+    else if (verdict === 'fix' || (fix && verdict !== 'ok')) xy = fix || pub;
+    else xy = pub || fix;
+    if (!xy) continue;
+    pins.push({ id: id, x: xy.x, y: xy.y });
+  }
+  return pins;
+}
+
+function critiqueStamp_(v) {
+  if (Object.prototype.toString.call(v) === '[object Date]' && !isNaN(v.getTime())) {
+    return v.toISOString();
+  }
+  return String(v || '').trim();
+}
+
+// Every filed critique for this site, plus Round 0 (Bedrock) when we can
+// recover it from the first review's published XY.
+function critiqueHistoryFor_(logSheet, siteNo, key) {
+  var empty = { next_round: 1, bedrock: null, rounds: [] };
+  if (!logSheet) return empty;
+  var lastRow = logSheet.getLastRow();
+  if (lastRow < 2) return empty;
+  if (!siteNo && !key) return empty;
+
+  var lastCol = Math.max(1, logSheet.getLastColumn());
+  var headers = logSheet.getRange(1, 1, 1, lastCol).getValues()[0]
+                        .map(function (c) { return String(c || '').trim(); });
+  var cSite = headers.indexOf('Site No');
+  var cKey = headers.indexOf('Property Key');
+  var cRound = headers.indexOf('Round');
+  var cWho = headers.indexOf('Reviewer');
+  var cAt = headers.indexOf('Submitted At');
+  if (cRound === -1) return empty;
+
+  var vals = logSheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+  var wantSite = critiqueNorm_(siteNo);
+  var byRound = {};
+  vals.forEach(function (r) {
+    var same = false;
+    if (wantSite && cSite !== -1 && critiqueNorm_(r[cSite]) === wantSite) same = true;
+    else if (key && cKey !== -1 && String(r[cKey] || '').trim() === key) same = true;
+    if (!same) return;
+    var n = parseInt(r[cRound], 10);
+    if (!isFinite(n) || n < 1) return;
+    var rec = {
+      round: n,
+      reviewer: cWho === -1 ? '' : String(r[cWho] || '').trim(),
+      submitted_at: cAt === -1 ? '' : critiqueStamp_(r[cAt]),
+      pins: critiquePinsFromLogRow_(headers, r, 'result'),
+      published: critiquePinsFromLogRow_(headers, r, 'published')
+    };
+    var prev = byRound[n];
+    if (!prev || String(rec.submitted_at) > String(prev.submitted_at)) byRound[n] = rec;
+  });
+  var rounds = Object.keys(byRound).map(function (k) { return parseInt(k, 10); })
+                 .sort(function (a, b) { return a - b; })
+                 .map(function (k) { return byRound[k]; });
+  var next = 1;
+  rounds.forEach(function (r) { if (r.round >= next) next = r.round + 1; });
+  var bedrock = rounds.length ? rounds[0].published : null;
+  return { next_round: next, bedrock: bedrock, rounds: rounds };
+}
+
+function critiqueGetRounds_(p) {
+  if (critiqueViewOf_(p) === 'drone-test') {
+    var dt = critiqueGetDtElements_(p);
+    return {
+      ok: true,
+      route: 'rounds',
+      view: 'drone-test',
+      sandbox: false,
+      site_no: dt.site_no || '',
+      key: dt.key || '',
+      next_round: dt.next_round || 1,
+      current: dt.pins || [],
+      bedrock: dt.pins || [],
+      rounds: []
+    };
+  }
+  var h = critiqueOpenSatSheet_(p);
+  var el = critiqueGetElements_(p);
+  var logName = h.sandbox ? critiqueSandboxNames_().log : CRITIQUE_SHEET;
+  var hist = { next_round: el.next_round || 1, bedrock: null, rounds: [] };
+  try {
+    hist = critiqueHistoryFor_(critiqueEnsureLogSheet_(h.ss, false, logName),
+                               el.site_no, el.key);
+  } catch (e) {
+    Logger.log('critiqueGetRounds_ history: ' + e.message);
+  }
+  return {
+    ok: true,
+    route: 'rounds',
+    sandbox: !!h.sandbox,
+    site_no: el.site_no,
+    key: el.key,
+    next_round: hist.next_round || el.next_round || 1,
+    current: el.pins || [],
+    bedrock: hist.bedrock || el.pins || [],
+    rounds: (hist.rounds || []).map(function (r) {
+      return {
+        round: r.round,
+        reviewer: r.reviewer,
+        submitted_at: r.submitted_at,
+        pins: r.pins
+      };
+    })
+  };
+}
+
 // ── GET route: serve the row's nadir + element pins ─────────────────────────
 // This is the viewer's live-refresh source. `rev` changes whenever the elements
 // cell changes, so the page can poll cheaply and re-render only on a real
@@ -575,7 +758,7 @@ function critiqueNextRound_(logSheet, siteNo, key) {
 // looking idle.
 function critiqueGetElements_(p) {
   if (critiqueViewOf_(p) === 'drone-test') return critiqueGetDtElements_(p);
-  var h = critiqueOpenSatSheet_();
+  var h = critiqueOpenSatSheet_(p);
   var hit = critiqueFindRow_(h.sheet, p);
   var v = hit.vals;
 
@@ -589,10 +772,12 @@ function critiqueGetElements_(p) {
   // hashing a blank into something that looks like a key.
   var propKey = critiqueValidSite_(siteNo)
     ? critiqueSiteId_(siteNo, getCredentials().hashSalt) : '';
+  var logName = h.sandbox ? critiqueSandboxNames_().log : CRITIQUE_SHEET;
 
   var out = {
     ok: true,
     route: 'elements',
+    sandbox: !!h.sandbox,
     row: hit.row,
     site_no: siteNo,
     key: propKey,
@@ -620,7 +805,7 @@ function critiqueGetElements_(p) {
 
   try {
     // false: a GET must never create the tab.
-    out.next_round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false),
+    out.next_round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false, logName),
                                         out.site_no, out.key);
   } catch (e) {
     out.next_round = 1;
@@ -936,9 +1121,9 @@ function critiqueStamp_(d) {
   }
 }
 
-function critiqueRerunTriggerState_() {
+function critiqueRerunTriggerState_(handlerName) {
   try {
-    var wanted = 'generateSatElementRerunAutoRun';
+    var wanted = handlerName || 'generateSatElementRerunAutoRun';
     var found = ScriptApp.getProjectTriggers().some(function (t) {
       return t.getHandlerFunction() === wanted;
     });
@@ -1283,6 +1468,8 @@ function critiquePostDt_(p) {
 
 function critiquePost_(p) {
   if (critiqueViewOf_(p) === 'drone-test') return critiquePostDt_(p);
+  Logger.log('critiquePost_ sandbox=' + critiqueIsSandbox_(p) +
+             ' view=' + critiqueViewOf_(p) + ' site_no=' + String((p && p.site_no) || ''));
   var lock = LockService.getScriptLock();
   // The same lock the two Satellite auto-runs take. Without it a submission
   // landing mid-rerun could interleave with the trigger's own writes.
@@ -1293,10 +1480,14 @@ function critiquePost_(p) {
     // Before anything reads a verdict: a corrected xy with no chip is a fix.
     critiqueNormalizeVerdicts_(p);
 
-    var h = critiqueOpenSatSheet_();
+    var h = critiqueOpenSatSheet_(p);
     var hit = critiqueFindRow_(h.sheet, p);
     var v = hit.vals;
     var row = hit.row;
+    var logName = h.sandbox ? critiqueSandboxNames_().log : CRITIQUE_SHEET;
+    var menuLabel = h.sandbox ? 'Satellite Sandbox' : 'Satellite';
+    var rerunHandler = h.sandbox ? 'generateSbElementRerunAutoRun' : 'generateSatElementRerunAutoRun';
+    var startRerunFn = h.sandbox ? 'startSbElementRerunAuto' : 'startSatElementRerunAuto';
 
     var accountName = String(v[SAT_COL_ACCOUNT - 1] || '').trim();
     var address = String(v[SAT_COL_ADDRESS - 1] || '').trim();
@@ -1317,7 +1508,7 @@ function critiquePost_(p) {
     // leave a new empty tab behind as its only trace.
     var round = parseInt(p.round, 10);
     if (!isFinite(round) || round < 1) {
-      round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false), siteNo, key);
+      round = critiqueNextRound_(critiqueEnsureLogSheet_(h.ss, false, logName), siteNo, key);
     }
 
     var now = new Date();
@@ -1360,13 +1551,13 @@ function critiquePost_(p) {
         // here would be a guess about work that has not happened yet.
         rerunStatus = '';
       } else {
-        trigState = critiqueRerunTriggerState_();
+        trigState = critiqueRerunTriggerState_(rerunHandler);
         var trig = trigState;
         rerunStatus = (trig === true)
           ? 'queued — auto re-pin within 5 min'
           : (trig === false
               ? 'note written to Nadir Fixes, but NO rerun trigger is installed — ' +
-                'run it from the Satellite menu, or install it with startSatElementRerunAuto'
+                'run it from the ' + menuLabel + ' menu, or install it with ' + startRerunFn
               : 'note written to Nadir Fixes — the rerun trigger could not be checked');
       }
     } else if (!note) {
@@ -1399,7 +1590,7 @@ function critiquePost_(p) {
 
     // Validated — now write. The row goes down BEFORE the re-pin is queued, so a
     // queued rerun always has its logged justification behind it.
-    var log = critiqueEnsureLogSheet_(h.ss, true);
+    var log = critiqueEnsureLogSheet_(h.ss, true, logName);
     var logRow = log.getLastRow() + 1;
     var target = logRow;
     log.getRange(target, 1, 1, built.headerCount).setValues([built.row]);
@@ -1492,7 +1683,7 @@ function critiquePost_(p) {
         rerunStatus = rerunRan
           ? 'RE-PINNED immediately — ' + (freshPins ? freshPins.length : 0) + ' pin(s), note consumed'
           : 'FAILED to re-pin: ' + rerunError + ' — the note is still in Nadir Fixes, so ' +
-            'the 5-minute trigger or the Satellite menu can retry it';
+            'the 5-minute trigger or the ' + menuLabel + ' menu can retry it';
         try {
           var cRerun = critiqueHeaders_().indexOf('Rerun Status') + 1;
           if (cRerun > 0) log.getRange(logRow, cRerun).setValue(rerunStatus);
@@ -1503,13 +1694,15 @@ function critiquePost_(p) {
       }
     }
 
-    Logger.log('critique filed: site ' + siteNo + ' ' + accountName +
+    Logger.log('critique filed' + (h.sandbox ? ' [SANDBOX]' : '') +
+               ': site ' + siteNo + ' ' + accountName +
                ' round ' + round + ' — ' +
                (p.elements || []).length + ' pins, ' + (p.added || []).length + ' added, ' +
                reqCount + ' request(s), rerun ' + (queued ? 'QUEUED' : 'not queued'));
 
     return {
       ok: true, route: 'critique', rows: 1, round: round, row: row,
+      sandbox: !!h.sandbox,
       site_no: siteNo, key: key,
       rerun_mode: CRITIQUE_RERUN_MODE,
       rerun_ran: rerunRan,             // true / false / null (not attempted)
@@ -1533,7 +1726,7 @@ function critiquePost_(p) {
       // and wrong, and the symptom surfaces much later looking like a bug here.
       message: (CRITIQUE_RERUN_MODE === 'inline' && queued
         ? (rerunRan
-            ? 'Round ' + round + ' filed and re-pinned — ' +
+            ? 'Round ' + round + ' filed and re-pinned' + (h.sandbox ? ' (sandbox)' : '') + ' — ' +
               (freshPins ? freshPins.length : 0) + ' new pin(s) on the image.'
             : 'Round ' + round + ' filed, but the re-pin FAILED: ' + rerunError +
               ' The note is still in Nadir Fixes, so it can be retried.')
@@ -1542,13 +1735,13 @@ function critiquePost_(p) {
             ? 'Round ' + round + ' filed — re-pin queued, runs within 5 minutes.'
             : trigState === false
               ? 'Round ' + round + ' filed, and the note was written to Nadir Fixes — ' +
-                'but no rerun trigger is installed, so run it from the Satellite menu.'
+                'but no rerun trigger is installed, so run it from the ' + menuLabel + ' menu.'
               : 'Round ' + round + ' filed, and the note was written to Nadir Fixes. ' +
                 'The rerun trigger could not be checked — confirm it ran.')
         : (note
-            ? 'Round ' + round + ' filed to "' + CRITIQUE_SHEET +
-              '". Run the rerun from the Satellite menu when ready.'
-            : 'Round ' + round + ' filed to "' + CRITIQUE_SHEET + '".')) +
+            ? 'Round ' + round + ' filed to "' + logName +
+              '". Run the rerun from the ' + menuLabel + ' menu when ready.'
+            : 'Round ' + round + ' filed to "' + logName + '".')) +
         (reqCount ? ' ' + reqCount + ' catalog request(s) logged for review.' : '')
     };
   } finally {
@@ -1570,7 +1763,13 @@ function critiqueApiGet_(e) {
     critiqueCheckToken_(p);
     var route = String(p.route || 'elements');
     if (route === 'ping') {
-      return critiqueJsonOut_({ ok: true, route: 'ping', sheet: CRITIQUE_SHEET,
+      var sbNames = critiqueSandboxNames_();
+      var sandboxOn = critiqueIsSandbox_(p);
+      return critiqueJsonOut_({ ok: true, route: 'ping',
+                                sheet: sandboxOn ? sbNames.log : CRITIQUE_SHEET,
+                                satellite_sheet: sandboxOn ? sbNames.sat : SATELLITE_SHEET,
+                                sandbox: sandboxOn,
+                                sandbox_tabs: { satellite: sbNames.sat, critique: sbNames.log },
                                 build: CRITIQUE_BUILD,
                                 columns: critiqueHeaders_().length,
                                 pin_slots: CRITIQUE_PIN_SLOTS,
@@ -1581,7 +1780,7 @@ function critiqueApiGet_(e) {
                                 server_time: new Date().toISOString() }, cb);
     }
     if (route === 'pin-freq') {
-      return critiqueJsonOut_(critiqueGetPinFreq_(), cb);
+      return critiqueJsonOut_(critiqueGetPinFreq_(p), cb);
     }
     if (route === 'golf-catalog') {
       if (typeof golfGetCatalog_ !== 'function') {
@@ -1594,6 +1793,9 @@ function critiqueApiGet_(e) {
         throw new Error('golfGetElements_ is not defined — paste golf.gs and save');
       }
       return critiqueJsonOut_(golfGetElements_(p), cb);
+    }
+    if (route === 'rounds') {
+      return critiqueJsonOut_(critiqueGetRounds_(p), cb);
     }
     if (route !== 'elements') throw new Error('unknown route "' + route + '"');
     return critiqueJsonOut_(critiqueGetElements_(p), cb);
@@ -1613,6 +1815,7 @@ function critiqueApiPost_(e) {
     // The token may travel in the body too, so a POST still works if the query
     // string is lost to a redirect.
     if (!p.token && payload.token) critiqueCheckToken_({ token: payload.token });
+    if (critiqueIsSandbox_(p) && !critiqueIsSandbox_(payload)) payload.sandbox = true;
     var postRoute = String(p.route || payload.route || '').trim().toLowerCase();
     var postView = String(payload.view || '').trim().toLowerCase();
     if (postRoute === 'golf-save' || postView === 'golf') {
@@ -1637,12 +1840,15 @@ function doPost(e) { return critiqueApiPost_(e); }
 // (the viewer sorts names client-side). Counts Satellite Nadir Elements (I)
 // plus every Pin n ID on the element-critique tab. Cached 6 hours so opening
 // review is not a full-sheet scan.
-function critiqueGetPinFreq_() {
+function critiqueGetPinFreq_(p) {
+  var sandbox = critiqueIsSandbox_(p);
+  var names = sandbox ? critiqueSandboxNames_() : { sat: SATELLITE_SHEET, log: CRITIQUE_SHEET };
+  var cacheKey = sandbox ? 'pinFreqSandboxV1' : 'pinFreqV1';
   var cache = CacheService.getScriptCache();
-  var hit = cache.get('pinFreqV1');
+  var hit = cache.get(cacheKey);
   if (hit) {
     try {
-      return { ok: true, route: 'pin-freq', freq: JSON.parse(hit), cached: true };
+      return { ok: true, route: 'pin-freq', sandbox: sandbox, freq: JSON.parse(hit), cached: true };
     } catch (e) {}
   }
   var freq = {};
@@ -1654,21 +1860,21 @@ function critiqueGetPinFreq_() {
   }
   var opened = critiqueOpenSpreadsheet_();
   var ss = opened && opened.ss;
-  if (!ss) return { ok: true, route: 'pin-freq', freq: freq, cached: false };
+  if (!ss) return { ok: true, route: 'pin-freq', sandbox: sandbox, freq: freq, cached: false };
 
   try {
-    var sat = ss.getSheetByName(SATELLITE_SHEET);
+    var sat = ss.getSheetByName(names.sat);
     if (sat && sat.getLastRow() >= 2 && typeof parsePinCell_ === 'function') {
       var vals = sat.getRange(2, SAT_COL_ELEMENTS, sat.getLastRow() - 1, 1).getValues();
       for (var i = 0; i < vals.length; i++) {
         var pins = parsePinCell_(vals[i][0]);
-        for (var p = 0; p < pins.length; p++) bump(pins[p].id);
+        for (var pi = 0; pi < pins.length; pi++) bump(pins[pi].id);
       }
     }
   } catch (e) {}
 
   try {
-    var log = ss.getSheetByName(CRITIQUE_SHEET);
+    var log = ss.getSheetByName(names.log);
     if (log && log.getLastRow() >= 2) {
       var lastCol = log.getLastColumn();
       var headers = log.getRange(1, 1, 1, lastCol).getValues()[0];
@@ -1685,8 +1891,8 @@ function critiqueGetPinFreq_() {
     }
   } catch (e2) {}
 
-  try { cache.put('pinFreqV1', JSON.stringify(freq), 21600); } catch (e) {}
-  return { ok: true, route: 'pin-freq', freq: freq, cached: false };
+  try { cache.put(cacheKey, JSON.stringify(freq), 21600); } catch (e) {}
+  return { ok: true, route: 'pin-freq', sandbox: sandbox, freq: freq, cached: false };
 }
 
 // ── Editor-runnable self test ───────────────────────────────────────────────
@@ -1849,6 +2055,18 @@ function critiqueSelfTest_() {
     out.push('    pin 1 group: ' + JSON.stringify(grp(1)));
     out.push('    pin 4 group (dragged, no chip): ' + JSON.stringify(grp(4)));
     out.push('    pin 5 group (the addition): ' + JSON.stringify(grp(5)));
+    var pubPins = critiquePinsFromLogRow_(headers, built.row, 'published');
+    var resPins = critiquePinsFromLogRow_(headers, built.row, 'result');
+    var pubIds = pubPins.map(function (p) { return p.id; }).join(',');
+    var resIds = resPins.map(function (p) { return p.id; }).join(',');
+    out.push((pubIds === '101,102,901,148' ? 'OK ' : 'BAD') +
+             ' round-0 published pins skip the add: ' + pubIds);
+    out.push((resIds === '101,102,148,105' ? 'OK ' : 'BAD') +
+             ' round-result drops REMOVE, keeps FIX/ADD: ' + resIds);
+    var door = resPins.filter(function (p) { return p.id === 101; })[0];
+    out.push((door && door.x === 30 && door.y === 40 ? 'OK ' : 'BAD') +
+             ' FIX uses Fix XY (want 30,40 got ' +
+             (door ? door.x + ',' + door.y : 'missing') + ')');
     out.push((grp(4)[0] === 148 ? 'OK ' : 'BAD') +
              ' pin 4 id coerced from the string "148" to the number ' + JSON.stringify(grp(4)[0]));
 
@@ -1971,6 +2189,26 @@ function critiqueSelfTest_() {
                                     : 'MISMATCH with ' + rows + ' row(s) present — the write will REFUSE; ' +
                                       'rename the tab and let a fresh one be created')));
       if (cur.length && !match) out.push('    current: ' + JSON.stringify(cur.slice(0, 8)));
+    }
+    var sb = critiqueSandboxNames_();
+    var sbSat = h.ss.getSheetByName(sb.sat);
+    var sbLog = h.ss.getSheetByName(sb.log);
+    out.push('    sandbox satellite tab "' + sb.sat + '": ' +
+             (sbSat ? (Math.max(0, sbSat.getLastRow() - 1) + ' data row(s)')
+                    : 'missing — run Set Up Sandbox Tabs'));
+    out.push('    sandbox critique tab "' + sb.log + '": ' +
+             (sbLog ? (Math.max(0, sbLog.getLastRow() - 1) + ' submission(s)')
+                    : 'missing — run Set Up Sandbox Tabs'));
+    if (sbSat && sbSat.getLastRow() >= 2) {
+      try {
+        var sbEl = critiqueGetElements_({ site_no: siteNo, sandbox: true });
+        out.push((sbEl.sandbox === true ? 'OK ' : 'BAD') +
+                 ' GET sandbox=1 stays on "' + sb.sat + '" (row ' + sbEl.row +
+                 ', sandbox=' + sbEl.sandbox + ')');
+      } catch (sbErr) {
+        out.push('OK  GET sandbox=1 refused (sandbox empty or site not copied yet): ' +
+                 String(sbErr.message || sbErr).slice(0, 90));
+      }
     }
     out.push('NOTE read-only: no cell is written and no tab is created. Every');
     out.push('     critiqueEnsureLogSheet_ call here passes forWrite=false, which');

@@ -29,7 +29,8 @@
              v6.8.7: view=drone-test routes the critique API to the drone-test
              tab (taxlot in &key=). Without it, an address-only link looks up
              Satellite and can match two rows.
-    round  = (optional) NEW in v4 — analysis round number, prefills the field.
+    round  = (optional) NEW in v4 — analysis round number, prefills until
+             ?route=rounds sets next_round (first review is always 1).
     parcels= (optional) NEW in v6.1 — override the parcel-tile directory.
              Defaults to the same-origin 'data/parcels/' in this repo.
     kind   = (optional) NEW in v6.8.4 — 'school' raises the pin cap from 12
@@ -46,6 +47,13 @@
              Sandbox + Element Critique Sandbox. Production Satellite and
              element-critique are never read or written. Sheet menu
              "Open Element Review" under Satellite Sandbox sets this.
+
+  v6.8.20 (round history): "Show pins" swaps the map to a previous round.
+    Round 0 = Bedrock (first filed critique's published XY, else live pins).
+    Round 1+ = each filed review after verdicts. Now = the live sheet pins,
+    which is the round you file. Opening the page asks GET ?route=rounds
+    and sets filing round to next_round (first review is always 1).
+    Previewing is read-only; in-progress Now work is restored on return.
 
   v2 (merged catalog): DEFAULT_CATALOG now points at pins-catalog.json (the
   merged, tagged catalog). Each pin carries role / account_type / analysis;
@@ -385,6 +393,25 @@
   .f { display: block; }
   .f.grow { flex: 1 1 auto; min-width: 0; }
   .f.narrow { flex: 0 0 78px; }
+  .f.view-round { flex: 1 1 160px; min-width: 140px; }
+  .intake.previewing .submit-bar .btn.primary { opacity: 0.45; pointer-events: none; }
+  .intake.previewing .add-bar { opacity: 0.45; pointer-events: none; }
+  body.previewing-round .el-card .verdict,
+  body.previewing-round .el-card textarea,
+  body.previewing-round .el-card .coord-in,
+  body.previewing-round .el-card .reset,
+  body.previewing-round #missed { pointer-events: none; }
+  .preview-note {
+    display: none;
+    margin: 0 18px 8px;
+    padding: 7px 10px;
+    font-size: 12px;
+    background: rgba(230, 126, 34, 0.12);
+    border: 1px solid #e67e22;
+    border-radius: 6px;
+    color: #e67e22;
+  }
+  .intake.previewing .preview-note { display: block; }
   .f .lab {
     display: block;
     font-family: var(--mono);
@@ -1123,11 +1150,15 @@
                 <option value="DPC'">DPC'</option>
               </select>
             </label>
-            <label class="f narrow">
-              <span class="lab">Round</span>
-              <input type="number" id="round" min="1" step="1" value="1">
+            <label class="f view-round">
+              <span class="lab">Show pins</span>
+              <select id="roundView">
+                <option value="now">Now</option>
+              </select>
             </label>
+            <input type="hidden" id="round" value="1">
           </div>
+          <div class="preview-note" id="previewNote">Viewing a previous round. Switch Show pins back to Now to file a critique.</div>
           <div id="fields"></div>
           <div class="add-bar">
             <button type="button" class="add-toggle" id="addToggle">+ Add an element</button>
@@ -1288,7 +1319,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.19';
+  var BUILD = 'v6.8.20';
   // The oldest SERVER build whose re-pin writer keeps duplicate catalog ids as
   // separate instances (pin seq identity, critique-api v6.8.2). Submitting
   // against anything older stacks or deletes duplicates — four separate
@@ -1522,6 +1553,11 @@
   // is warranted exactly when this changes — comparing pin arrays ourselves would
   // mean deciding what "different" means, which is the server's job.
   var lastRev = null;
+  var roundHistory = { next_round: 1, current: [], bedrock: [], rounds: [] };
+  var viewingRound = 'now';
+  // Snapshot of the live review (pins + verdicts + adds) taken when leaving
+  // Now. Previewing a past round rebuilds the panel; this puts it back.
+  var liveSession = null;
   // v6.1: the parcel ring as [{lat,lng}], once fetched. null = not asked yet.
   var parcelRing = null;
   var parcelShown = true;
@@ -1565,12 +1601,7 @@
     var r = document.getElementById('round');
     if (r && isFinite(roundIn) && roundIn > 0) r.value = roundIn;
     var chip = document.getElementById('roundChip');
-    if (chip) chip.textContent = 'round ' + (r ? r.value : '1');
-    if (r && chip) {
-      r.addEventListener('input', function () {
-        chip.textContent = 'round ' + (r.value || '1');
-      });
-    }
+    if (chip) chip.textContent = 'filing round ' + (r ? r.value : '1');
   })();
 
   // Wired BEFORE the param guards below, so the buttons still work on a page
@@ -2019,6 +2050,7 @@
     }
     marker.addEventListener('pointerdown', function (e) {
       if (placing) return;
+      if (viewingRound !== 'now') return;
       if (dragOwner && dragOwner !== marker) return;
       if (pointerId !== null) return;
       pointerId = e.pointerId;
@@ -2826,6 +2858,11 @@
 
   function applyRefresh(newPins, nextRound) {
     setRefreshBanner(null);
+    viewingRound = 'now';
+    liveSession = null;
+    setPreviewing(false);
+    var rv = document.getElementById('roundView');
+    if (rv) rv.value = 'now';
     pins = newPins;
     drawPins(pins);                       // render() calls clearOverlay() first
     // The parcel lives in its OWN svg, so clearOverlay does not touch it — but
@@ -2845,19 +2882,10 @@
     // derived from the log's own Round column for this key, so it stays right
     // when a round was filed from another tab or the page has been reloaded.
     // Incrementing locally is only the fallback.
-    var r = document.getElementById('round');
-    if (r) {
-      var n = parseInt(nextRound, 10);
-      if (!(isFinite(n) && n > 0)) {
-        var cur = parseInt(r.value, 10);
-        n = isFinite(cur) ? cur + 1 : 1;
-      }
-      r.value = n;
-      var chip = document.getElementById('roundChip');
-      if (chip) chip.textContent = 'round ' + r.value;
-    }
+    setFilingRound(nextRound);
+    fetchRounds().catch(function () { /* history is additive; a miss leaves Now */ });
     setStatus(newPins.length + ' new pin(s) loaded — this is round ' +
-              (r ? r.value : '?') + '.', 'ok');
+              ((document.getElementById('round') || {}).value || '?') + '.', 'ok');
   }
 
   // Run one poll cycle now instead of waiting for the interval. Split out of
@@ -2948,6 +2976,11 @@
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
+      var intake = document.getElementById('intake');
+      if (intake && intake.classList.contains('previewing')) {
+        setStatus('Switch Show pins back to Now before filing — this view is a previous round.', 'err');
+        return;
+      }
       var payload = collectPayload();
 
       if (!hasContent(payload)) {
@@ -3402,6 +3435,191 @@
         return j;
       });
   }
+
+  function setFilingRound(n) {
+    var r = document.getElementById('round');
+    var chip = document.getElementById('roundChip');
+    var v = parseInt(n, 10);
+    if (!(isFinite(v) && v > 0)) {
+      v = r ? parseInt(r.value, 10) : 1;
+      if (!(isFinite(v) && v > 0)) v = 1;
+    }
+    if (r) r.value = v;
+    if (chip) chip.textContent = 'filing round ' + v;
+  }
+
+  function setPreviewing(on, label) {
+    var intake = document.getElementById('intake');
+    if (intake) intake.classList.toggle('previewing', !!on);
+    document.body.classList.toggle('previewing-round', !!on);
+    var note = document.getElementById('previewNote');
+    if (note && on) {
+      note.textContent = 'Viewing ' + (label || 'a previous round') +
+        '. Switch Show pins back to Now to file a critique.';
+    }
+  }
+
+  function clonePinList(arr) {
+    return (arr || []).map(function (p) { return { id: p.id, x: p.x, y: p.y }; });
+  }
+
+  function snapshotLiveSession() {
+    var missed = document.getElementById('missed');
+    liveSession = {
+      pins: clonePinList(pins),
+      state: (state || []).map(function (s) {
+        return {
+          verdict: s.verdict || '',
+          note: s.note || '',
+          cx: s.cx, cy: s.cy,
+          autoFix: !!s.autoFix
+        };
+      }),
+      added: (added || []).map(function (a) {
+        return {
+          id: a.id, name: a.name, section: a.section || '',
+          x: a.x, y: a.y, note: a.note || ''
+        };
+      }),
+      missed: missed ? missed.value : ''
+    };
+  }
+
+  function restoreLiveSession() {
+    if (!liveSession) return;
+    (liveSession.state || []).forEach(function (s, i) {
+      if (!state[i]) return;
+      if (s.cx !== null && s.cy !== null && isFinite(s.cx) && isFinite(s.cy)) {
+        state[i].verdict = '';
+        state[i].autoFix = false;
+        movePin(i, s.cx, s.cy);
+      }
+      state[i].verdict = s.verdict || '';
+      state[i].autoFix = !!s.autoFix;
+      state[i].note = s.note || '';
+      syncVerdictChips(i);
+      var card = elCards[i];
+      var ta = card && card.querySelector('textarea');
+      if (ta) ta.value = s.note || '';
+      markRemoving(i, s.verdict === 'remove');
+      if (s.verdict === 'ok' || s.verdict === 'remove') setCardLock(i, true);
+    });
+    (liveSession.added || []).forEach(function (a) {
+      placeAdded({ id: a.id, name: a.name, section: a.section || '' }, a.x, a.y);
+      if (!added.length) return;
+      var rec = added[added.length - 1];
+      rec.note = a.note || '';
+      var ta = rec.card && rec.card.querySelector('textarea');
+      if (ta) ta.value = rec.note;
+    });
+    var missed = document.getElementById('missed');
+    if (missed) missed.value = liveSession.missed || '';
+  }
+
+  function fillRoundView() {
+    var sel = document.getElementById('roundView');
+    if (!sel) return;
+    var keep = viewingRound;
+    var filing = parseInt((document.getElementById('round') || {}).value, 10) || 1;
+    var opts = [{ value: 'now', label: 'Now — round ' + filing }];
+    var bedrock = roundHistory.bedrock && roundHistory.bedrock.length
+      ? roundHistory.bedrock
+      : (roundHistory.current || []);
+    if (bedrock.length) {
+      opts.push({ value: '0', label: 'Round 0 — Bedrock' });
+    }
+    (roundHistory.rounds || []).forEach(function (r) {
+      var who = r.reviewer || 'review';
+      var when = '';
+      if (r.submitted_at) {
+        var d = new Date(r.submitted_at);
+        when = isNaN(d.getTime()) ? '' : ' · ' + d.toLocaleDateString();
+      }
+      opts.push({
+        value: String(r.round),
+        label: 'Round ' + r.round + ' — ' + who + when
+      });
+    });
+    sel.innerHTML = '';
+    opts.forEach(function (o) {
+      var el = document.createElement('option');
+      el.value = o.value;
+      el.textContent = o.label;
+      sel.appendChild(el);
+    });
+    var found = opts.some(function (o) { return o.value === keep; });
+    sel.value = found ? keep : 'now';
+  }
+
+  function pinsForRoundKey(key) {
+    if (key === 'now') return (liveSession && liveSession.pins) || pins;
+    if (key === '0') {
+      if (roundHistory.bedrock && roundHistory.bedrock.length) return roundHistory.bedrock;
+      return roundHistory.current || [];
+    }
+    var n = parseInt(key, 10);
+    var rec = (roundHistory.rounds || []).filter(function (r) { return r.round === n; })[0];
+    return rec && rec.pins ? rec.pins : pins;
+  }
+
+  function applyRoundView(key) {
+    var sel = document.getElementById('roundView');
+    if (key === undefined && sel) key = sel.value;
+    key = key || 'now';
+    if (viewingRound === 'now' && key !== 'now') snapshotLiveSession();
+    viewingRound = key;
+    var nextPins;
+    var label = 'a previous round';
+    var backToNow = (key === 'now');
+    if (backToNow) {
+      nextPins = (liveSession && liveSession.pins) || pins;
+      setPreviewing(false);
+    } else if (key === '0') {
+      nextPins = pinsForRoundKey('0');
+      label = 'Round 0 — Bedrock';
+      setPreviewing(true, label);
+    } else {
+      nextPins = pinsForRoundKey(key);
+      var rec = (roundHistory.rounds || []).filter(function (r) {
+        return String(r.round) === String(key);
+      })[0];
+      label = rec
+        ? ('Round ' + rec.round + (rec.reviewer ? ' — ' + rec.reviewer : ''))
+        : ('round ' + key);
+      setPreviewing(true, label);
+    }
+    pins = clonePinList(nextPins);
+    drawPins(pins);
+    if (backToNow) restoreLiveSession();
+    drawParcel();
+    if (MAP_MODE && erOverlay && typeof erOverlay.draw === 'function') {
+      try { erOverlay.draw(); } catch (e) { /* projection not ready yet */ }
+    }
+  }
+
+  function fetchRounds() {
+    if (!canFetchPins) return Promise.resolve(null);
+    var u = CRITIQUE_POST_URL + '?route=rounds&' + lookupParam() +
+            '&_=' + Date.now();
+    return fetch(u, { redirect: 'follow' })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        var j;
+        try { j = JSON.parse(t); }
+        catch (e) { throw new Error('rounds endpoint did not return JSON'); }
+        if (!j || j.ok === false) throw new Error(j && j.error ? j.error : 'rounds lookup failed');
+        roundHistory = j;
+        if (j.next_round) setFilingRound(j.next_round);
+        fillRoundView();
+        return j;
+      });
+  }
+
+  (function initRoundView() {
+    var sel = document.getElementById('roundView');
+    if (!sel) return;
+    sel.addEventListener('change', function () { applyRoundView(sel.value); });
+  })();
 
   fetch(catalogUrl)
     .then(function (r) {
@@ -4014,6 +4232,8 @@
       if (canFetchPins) {
         fetchElements().then(function (j) {
           lastRev = j.rev || null;
+          if (j.next_round) setFilingRound(j.next_round);
+          fetchRounds().catch(function () { /* Now still works without history */ });
           if (window.console) {
             console.log('[element-review] identity OK — site_no ' + (j.site_no || '?') +
                         ', row ' + (j.row || '?') + ', rev ' + (j.rev || '?') +
@@ -4043,14 +4263,17 @@
     fetchElements().then(function (j) {
       lastRev = j.rev || null;
       pins = j.pins;
+      if (j.next_round) setFilingRound(j.next_round);
       drawPins(pins);
       loadParcel();
       if (j.address && !addr) {
         addr = j.address;
       }
       paintIdentity();
+      fetchRounds().catch(function () { /* Now still works without history */ });
       setStatus(j.pins.length + ' pin(s) loaded from the sheet' +
-                (j.fixes_pending ? ' — a re-pin is still pending on this row.' : '.'), 'ok');
+                (j.fixes_pending ? ' — a re-pin is still pending on this row.' : '.') +
+                ' Filing as round ' + ((document.getElementById('round') || {}).value || '1') + '.', 'ok');
     }, function (err) {
       // No pins in the URL and none from the API: there is nothing to review, so
       // say which lookup failed rather than showing an empty image.
