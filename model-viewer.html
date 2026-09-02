@@ -87,6 +87,26 @@
   .rd-meta { font-size: 10.5px; color: #555f6e; font-family: monospace; margin-top: 4px; line-height: 1.55; overflow-wrap: anywhere; }
   .rd-body { padding: 0 14px 14px; }
   .rd-trigger { font-size: 11.5px; color: #8a93a2; line-height: 1.65; margin-bottom: 10px; }
+  .gis-group {
+    font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em;
+    text-transform: uppercase; font-family: monospace;
+    margin: 10px 0 4px;
+  }
+  .gis-group:first-child { margin-top: 0; }
+  .gis-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .gis-row:last-child { border-bottom: 0; }
+  .gis-k {
+    flex: 0 0 42%; font-size: 10.5px; color: #8a93a2;
+    font-family: monospace; line-height: 1.45;
+  }
+  .gis-v {
+    flex: 1; font-size: 11.5px; color: #f0f2f5; line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .gis-sub { font-size: 10px; color: #8a93a2; margin-top: 2px; font-family: monospace; }
   .rd-figure {
     position: relative; border-radius: 8px; overflow: hidden;
     border: 1px solid rgba(255,255,255,0.10); line-height: 0; background: #0b0e12;
@@ -734,7 +754,8 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery } from './js/vyanet-viewer/property.js?v=1.7.3';
+import { liveAliasIds, gwLiveQuery } from './js/vyanet-viewer/property.js?v=1.8.14';
+import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const { GLTFLoader }     = await import(`${BASE}/loaders/GLTFLoader.js`);
@@ -1360,6 +1381,8 @@ let dirLayer = null, activeDir = -1, dirBusy = false;
 let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
 let dirRecord = null;
 let camList = [], camLayer = null, camBounds = null;
+let hubGisRec = null;
+let factsAutoOpened = false;
 let pinCatalogById = null;
 let groundJobSeq = 0;
 // ── Click a marker, read its name ─────────────────────────────────────
@@ -1718,8 +1741,13 @@ async function loadFrPinSets(bounds) {
 function startDirections(rec) {
   if (!rec) return;
   const bounds = boundsOf(rec);
-  loadFrPinSets(bounds).then(function (fr) {
-    rec._frPinSets = fr || null;
+  const gisP = propertyId ? fetchPropertyGis(DATA_ROOT, propertyId) : Promise.resolve(null);
+  Promise.all([loadFrPinSets(bounds).catch(function (e) {
+    dbg('FR pin load failed: ' + (e && e.message ? e.message : e), 'warn');
+    return null;
+  }), gisP]).then(function (pair) {
+    rec._frPinSets = pair[0] || null;
+    hubGisRec = pair[1];
     initDirections(rec);
   }).catch(function (e) {
     dbg('FR pin load failed: ' + (e && e.message ? e.message : e), 'warn');
@@ -1803,14 +1831,15 @@ function initDirections(d) {
   camList    = (Array.isArray(d.cameras) ? d.cameras : [])
                  .filter(function (c) { return !!camLocal(c) || !!c.photo; });
   const nPins = pinSets.element.length + pinSets.concern.length;
-  if (!dirList.length && !nPins && !camList.length) { dbg('Record has no pins, cameras or directions', 'warn'); return; }
+  const hFacts = gisFactsHtml(hubGisRec, escHtml);
+  if (!dirList.length && !nPins && !camList.length && !hFacts) { dbg('Record has no pins, cameras, directions or GIS facts', 'warn'); return; }
   if (camList.length) dbg('Cameras in record: ' + camList.length + ' placeable', 'ok');
   dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
       pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)' +
       (d._frPinSets ? ' (FR/satellite set)' : ''), 'ok');
   dbg(dirCorners ? 'nadir.local present — percentages map to model meters'
                  : 'nadir.local MISSING — 3D placement unavailable', dirCorners ? 'ok' : 'warn');
-  // Four independent bodies. A tab with nothing to say is left hidden rather
+  // Five independent bodies. A tab with nothing to say is left hidden rather
   // than shown empty, so the rail reflects what this property actually has.
   let hPins = '', hCams = '', hAna = '', hRoutes = '';
   if (!dirCorners) {
@@ -1951,7 +1980,7 @@ function initDirections(d) {
                 (drawable ? '' : '<div class="rd-note">No model coordinates for this route.</div>') +
               '</div></div>';
   });
-  const filled = { pins: hPins, cams: hCams, analysis: hAna, routes: hRoutes };
+  const filled = { facts: hFacts, pins: hPins, cams: hCams, analysis: hAna, routes: hRoutes };
   PROP_TABS.forEach(function (t) {
     const body = document.getElementById('pp-body-' + t.id);
     const btn  = document.getElementById('pp-btn-' + t.id);
@@ -1965,6 +1994,10 @@ function initDirections(d) {
       btn.style.display = 'none';
     }
   });
+  if (hFacts && !factsAutoOpened) {
+    factsAutoOpened = true;
+    window.togglePropTab('facts');
+  }
   initWeather(d);
   // Pins are permanent scenery, like the entrance marker: place them on load
   // whenever the record can be placed at all. The panel button stays a toggle
@@ -1989,11 +2022,12 @@ function initDirections(d) {
     })();
   }
 }
-// The property record used to be one long scrolling panel. It is now four,
-// because pins, cameras, analysis and routes are four different questions and
+// The property record used to be one long scrolling panel. It is now five,
+// because facts, pins, cameras, analysis and routes are different questions and
 // nobody wants to scroll past two of them to reach the third. Same registry
 // pattern as the hazard tabs.
 const PROP_TABS = [
+  { id: 'facts',    label: 'Property Facts',      accent: '#a3e635' },
   { id: 'pins',     label: 'Pins',                accent: '#22c55e' },
   { id: 'cams',     label: 'Cameras',             accent: '#38bdf8' },
   { id: 'analysis', label: 'Property Analysis',   accent: '#3b82f6' },

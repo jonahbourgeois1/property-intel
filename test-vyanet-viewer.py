@@ -1,4 +1,4 @@
-# Verification for vyanet-viewer.html (hub 1.8.13) against localhost:8899.
+# Verification for vyanet-viewer.html (hub 1.8.14) against localhost:8899.
 # Static referee first (node --check, ids, handlers, braces), then behavior.
 # Child pages, the live gateway, and the dashboard's public data APIs are
 # stubbed per scenario so every code path actually evaluates (unstubbed =
@@ -152,7 +152,8 @@ def static_checks():
     mv_path = 'C:/dev/property-intel/model-viewer.html'
     live_path = 'C:/dev/property-intel/live-viewer.html'
     mod_paths = [('property.js', 'C:/dev/property-intel/js/vyanet-viewer/property.js'),
-                 ('dashboard.js', 'C:/dev/property-intel/js/vyanet-viewer/dashboard.js')]
+                 ('dashboard.js', 'C:/dev/property-intel/js/vyanet-viewer/dashboard.js'),
+                 ('gis-facts.js', 'C:/dev/property-intel/js/vyanet-viewer/gis-facts.js')]
     html = open(hub_path, encoding='utf-8').read()
     m = re.search(r'<script type="module">([\s\S]*?)</script>', html)
     check('S1 hub module script present', m is not None)
@@ -269,7 +270,7 @@ def static_checks():
           "gestureHandling: 'greedy'" in hoa_js and 'function wireMapMouse' in hoa_js)
     check('S15 hub pub-split actually shrinks the iframe',
           'iframe.pub-split { width: 58%; right: auto; height: 100%; }' in html)
-    check('S16 hub build 1.8.13', "HUB_BUILD = '1.8.13'" in open(
+    check('S16 hub build 1.8.14', "HUB_BUILD = '1.8.14'" in open(
         'C:/dev/property-intel/js/vyanet-viewer/property.js', encoding='utf-8').read())
     check('S16b Community tab label (not Public)',
           'aria-label="COMMUNITY"' in html
@@ -305,11 +306,13 @@ def static_checks():
           and "get('debug') === '1'" in viewer_html)
     check('S22 2D right rail matches 3D feature tabs',
           'id="tab-rail"' in viewer_html
+          and "label: 'Property Facts'" in viewer_html
           and "label: 'Pins'" in viewer_html
           and "label: 'Cameras'" in viewer_html
           and "label: 'Property Analysis'" in viewer_html
           and "label: 'Response Directions'" in viewer_html
-          and 'function joinLiveToPins_' in viewer_html)
+          and 'function joinLiveToPins_' in viewer_html
+          and "label: 'Property Facts'" in open('C:/dev/property-intel/model-viewer.html', encoding='utf-8').read())
     check('S23 2D Maps chrome is on the left, feature tabs stay opaque',
           'ControlPosition.LEFT_CENTER' in viewer_html
           and 'cameraControlOptions' in viewer_html

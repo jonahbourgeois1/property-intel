@@ -28,6 +28,8 @@
 // v5.28: property-level pins. Canonical PUT: data/pins/{hubId}.json
 // (pinsFileForSync_). 3D writes always replace; satellite writes skip when
 // an existing file is source: "3d". Merge pins_source onto the index.
+// v5.29: property-level GIS facts. Canonical PUT: data/gis/{hubId}.json
+// (gisFileForSync_). Private rail "Property Facts" is the reader.
 // ============================================================
 
 // ── AWS SigV4 helpers ────────────────────────────────────────────────────────
@@ -452,6 +454,33 @@ function pinsFileForSync_(propertyId, rec) {
   };
   return {
     path: PINS_JSON_DIR + '/' + propertyId + '.json',
+    content: JSON.stringify(body, null, 2)
+  };
+}
+
+// ── Property-level GIS facts (assessor / DOGAMI / fire / flood / WUI) ────────
+// Canonical file: data/gis/{hubId}.json
+// Facts panel in Private (2D + 3D). Do not put overlay color-legend data here.
+// Callers (satellite fetch bundle, later) pass { taxlot, facts, hydrants? }.
+const GIS_JSON_DIR = 'data/gis';
+
+function gisFileForSync_(propertyId, rec) {
+  if (!propertyId || !rec || typeof rec !== 'object') return null;
+  const facts = rec.facts && typeof rec.facts === 'object' ? rec.facts : rec;
+  if (!facts || typeof facts !== 'object') return null;
+  const keys = Object.keys(facts).filter(function (k) {
+    const v = facts[k];
+    return v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && !v.length);
+  });
+  if (!keys.length) return null;
+  const body = {
+    property: propertyId,
+    taxlot: rec.taxlot || facts.taxlot || '',
+    facts: rec.facts && typeof rec.facts === 'object' ? rec.facts : facts
+  };
+  if (Array.isArray(rec.hydrants) && rec.hydrants.length) body.hydrants = rec.hydrants;
+  return {
+    path: GIS_JSON_DIR + '/' + propertyId + '.json',
     content: JSON.stringify(body, null, 2)
   };
 }

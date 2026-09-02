@@ -272,6 +272,26 @@
   .rd-meta { font-size: 10.5px; color: #555f6e; font-family: 'DM Mono', monospace; margin-top: 4px; line-height: 1.55; }
   .rd-body { padding: 0 14px 14px; }
   .rd-trigger { font-size: 11.5px; color: #8a93a2; line-height: 1.65; margin-bottom: 10px; }
+  .gis-group {
+    font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em;
+    text-transform: uppercase; font-family: 'DM Mono', monospace;
+    margin: 10px 0 4px;
+  }
+  .gis-group:first-child { margin-top: 0; }
+  .gis-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .gis-row:last-child { border-bottom: 0; }
+  .gis-k {
+    flex: 0 0 42%; font-size: 10.5px; color: #8a93a2;
+    font-family: 'DM Mono', monospace; line-height: 1.45;
+  }
+  .gis-v {
+    flex: 1; font-size: 11.5px; color: #f0f2f5; line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .gis-sub { font-size: 10px; color: #8a93a2; margin-top: 2px; font-family: 'DM Mono', monospace; }
   .rd-wp {
     position: absolute; transform: translate(-50%, -50%);
     width: 18px; height: 18px; border-radius: 50%; background: #f59e0b;
@@ -454,7 +474,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.4</div>
+    <div id="version-badge">v2.10.7</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -545,7 +565,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.6';
+const VERSION     = 'v2.10.7';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -616,6 +636,9 @@ let pinCatalogById = null;
 const viewRole = (_qs.get('role') || '').toLowerCase();
 const customerView = viewRole === 'customer';
 let hubPinSets = null;
+let hubGisRec = null;
+let hubGisHtml = '';
+let factsAutoOpened = false;
 let modelNadirBounds = null;
 fetch(DATA_ROOT + 'pin-catalog/pins-catalog.json')
   .then(function (r) { return r.json(); })
@@ -1940,6 +1963,7 @@ function pinDisplay(p) {
   return { name: c ? c.name : ('Pin ' + p.id), def: c ? (c.definition || '') : '' };
 }
 const PROP_TABS = [
+  { id: 'facts',    label: 'Property Facts',      accent: '#a3e635' },
   { id: 'pins',     label: 'Pins',                accent: '#22c55e' },
   { id: 'cams',     label: 'Cameras',             accent: '#38bdf8' },
   { id: 'analysis', label: 'Property Analysis',   accent: '#3b82f6' },
@@ -2169,6 +2193,7 @@ function routesTabHtml_(d) {
 function populateFeatureTabs(d, viewSuffix) {
   d = d || {};
   const filled = {
+    facts: hubGisHtml || '',
     pins: pinsTabHtml_(d, viewSuffix),
     cams: camsTabHtml_(),
     analysis: analysisTabHtml_(d, viewSuffix),
@@ -2192,6 +2217,10 @@ function populateFeatureTabs(d, viewSuffix) {
       if (pan && pan.classList.contains('open')) togglePropTab(t.id);
     }
   });
+  if (filled.facts && !factsAutoOpened) {
+    factsAutoOpened = true;
+    togglePropTab('facts');
+  }
 }
 function buildPinnedNadirSection(v, idx) {
   const sets = nadirPinSets_(v.data);
@@ -2474,7 +2503,8 @@ function updateLightbox() {
 async function loadPropertyData() {
   dbg(VERSION + ' — Property Intel loaded', 'ok');
   const params = new URLSearchParams(window.location.search);
-  const propertyHash = params.get('property'), tabParam = params.get('tab');
+  const propertyHash = params.get('property');
+  let tabParam = params.get('tab');
   frMode = params.get('mode') === 'fr';
   if (!propertyHash) { showError('No property ID provided.'); return; }
   if (frMode) dbg('FR mode — single view, tabs hidden', 'info');
@@ -2503,6 +2533,11 @@ async function loadPropertyData() {
         }
       }
     } catch (e) {}
+    try {
+      const gisMod = await import('./js/vyanet-viewer/gis-facts.js?v=1.8.14');
+      hubGisRec = await gisMod.fetchPropertyGis(DATA_ROOT, propertyHash);
+      hubGisHtml = gisMod.gisFactsHtml(hubGisRec, escHtml_) || '';
+    } catch (e) { hubGisRec = null; hubGisHtml = ''; }
     if (!hubPinSets) {
       const mk = ['drone-test', 'plane', 'drone'].find(function (k) { return entry.views[k]; });
       if (mk) {
@@ -2542,12 +2577,18 @@ async function loadPropertyData() {
     document.getElementById('panel-address').textContent = (entry.address || '').replace(/^\s+/, '');
     if (frMode) document.getElementById('view-tabs').style.display = 'none';
     dbg('Available views: ' + Object.keys(views).join(', '), 'info');
-    if (tabParam && VIEW_ORDER.indexOf(tabParam) === -1) tabParam = '';
+    // embed=1 hides Security/Wildfire chrome (VIEW_ORDER is drone-test only) but
+    // the hub still passes tab=security for satellite-only properties.
+    if (tabParam && VIEW_ORDER.indexOf(tabParam) === -1 && !(EMBEDDED && views[tabParam])) {
+      tabParam = '';
+    }
     if (tabParam && !views[tabParam]) {
       showError('The ' + (VIEW_LABELS[tabParam] || tabParam) + ' view isn’t published yet for ' + (entry.name || 'this property') + '.');
       return;
     }
-    const firstView = (tabParam && views[tabParam]) ? tabParam : VIEW_ORDER.find(v => views[v]);
+    const firstView = (tabParam && views[tabParam])
+      ? tabParam
+      : (VIEW_ORDER.find(v => views[v]) || ['security','wildfire','plane','drone'].find(v => views[v]));
     if (!firstView) { showError('No views available.'); return; }
     if (!frMode) buildTabs(views, firstView);
     setLoading('Loading ' + firstView + '...');

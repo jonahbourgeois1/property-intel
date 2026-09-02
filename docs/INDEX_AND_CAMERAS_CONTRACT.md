@@ -11,12 +11,12 @@
 
 Edits go to those pages. The hub only chooses which page to show and forwards query params (`gw`, `chekt`, `debug`, `dataRoot`, `role`, …). `?view=` stays the data-folder selector on the child page.
 
-**Three-tab shell (hub 1.8.13).** After the gate the bar is **HOME · PRIVATE · COMMUNITY**. Internal stage id for Community stays `public` (`#btn-public`, `?stage=public`). Property CHEKT live is a nested Private substrate (with 3D / 2D / Plugins). Community has its own nested bar: **Map · Live**. Community Live is an empty hub placeholder until neighborhood cameras exist — it must not load `live-viewer.html`.
+**Three-tab shell (hub 1.8.14).** After the gate the bar is **HOME · PRIVATE · COMMUNITY**. Internal stage id for Community stays `public` (`#btn-public`, `?stage=public`). Property CHEKT live is a nested Private substrate (with 3D / 2D / Plugins). Community has its own nested bar: **Map · Live**. Community Live is an empty hub placeholder until neighborhood cameras exist — it must not load `live-viewer.html`.
 
 | Tab | What it is | Plugin |
 |---|---|---|
 | Home | This property’s identity (name, address, HOA, account, coords, hero nadir) plus a short Property Intel program guide (what the mapping is, privacy, and what each tab is for). No launch row, no community dashboard. | Hub-owned layer |
-| Private | Mapping workspace. Default substrate is 3D when a model view exists, otherwise 2D. Nested swap: **3D · 2D · Live · Plugins**. Nested **Live** is this property’s CHEKT cameras and clips (`live-viewer.html`); passcode gate is unchanged. Nested **Plugins** stub (30 mapping verticals, coming-soon). Nested buttons use the same chrome as HOME/PRIVATE/COMMUNITY. Pins: highest-caliber mapping only (see Pins). Private 2D (`viewer.html?embed=1`) matches 3D: right rail **Pins / Cameras / Property Analysis / Response Directions**, no debug console unless `debug=1`, no product header. Maps chrome (satellite dropdown, fullscreen under it, zoom, camera) sits on the left so it does not cover the rail. Camera map pins use the same file order as 3D and `joinLiveToPins` (live.device, then unique live.name/label). 2D camera markers use the same cyan circle + camera glyph + number + flashing red LED as 3D, plus a heading wedge. Clicking a camera pin opens the **same card as 3D** (`#cam-popup`: still, heading/FOV, “click image to expand”, Go live, 72-hour events, expand lightbox) — not a Google Maps InfoWindow. Standalone `viewer.html` keeps Security / Wildfire / Plane / Drone / Drone Test under the same rail. | `model-viewer.html` + `viewer.html` + `live-viewer.html` |
+| Private | Mapping workspace. Default substrate is 3D when a model view exists, otherwise 2D. Nested swap: **3D · 2D · Live · Plugins**. Nested **Live** is this property’s CHEKT cameras and clips (`live-viewer.html`); passcode gate is unchanged. Nested **Plugins** stub (30 mapping verticals, coming-soon). Nested buttons use the same chrome as HOME/PRIVATE/COMMUNITY. Pins: highest-caliber mapping only (see Pins). Private 2D (`viewer.html?embed=1`) matches 3D: right rail **Property Facts / Pins / Cameras / Property Analysis / Response Directions**, no debug console unless `debug=1`, no product header. Property Facts is GIS-known context (assessor, DOGAMI, fire, flood, WUI) from `data/gis/{id}.json` — not the overlay color legend. Maps chrome (satellite dropdown, fullscreen under it, zoom, camera) sits on the left so it does not cover the rail. Camera map pins use the same file order as 3D and `joinLiveToPins` (live.device, then unique live.name/label). 2D camera markers use the same cyan circle + camera glyph + number + flashing red LED as 3D, plus a heading wedge. Clicking a camera pin opens the **same card as 3D** (`#cam-popup`: still, heading/FOV, “click image to expand”, Go live, 72-hour events, expand lightbox) — not a Google Maps InfoWindow. Standalone `viewer.html` keeps Security / Wildfire / Plane / Drone / Drone Test under the same rail. | `model-viewer.html` + `viewer.html` + `live-viewer.html` |
 | Community (stage `public`) | Nested **Map · Live**. Map is HOA lot lines for every satellite-sheet property whose HOA slug matches (`data/hoa/{slug}.json`, satellite-owned — not plane-only mappings), plus the weather/wildfire/quake/FEMA/space cards that used to sit on Home. Neighbor click highlights and Fit/Lot/Image match Private satellite; it does not navigate the hub or open FR/WF intel. `hoa-viewer.html` loads each `properties[]` hash from `data/index/{hash}.json` (satellite JSON fallback if the index file is missing lat/lng/views). It must not fetch a monolithic `data/index.json` — that file was removed when the hub went per-property, and a 404 blanks the Community map. Nested **Live** is a hub placeholder (`#comm-live`); empty until community cameras ship. | `hoa-viewer.html` + hub dashboard |
 
 Deep links: `?stage=home` / `private` / `public`. `?stage=3d`, `?stage=satellite`, and `?stage=live` still work as aliases into Private’s nested substrate. `?stage=ahart` opens Private on the Ahart stub. `?stage=live` with no saved key lands on Home and opens the passcode popup.
@@ -184,9 +184,54 @@ Pin markers (2D and 3D): cyan circle with camera glyph and number; flashing red 
 
 **Readers** (`model-viewer.html`, `viewer.html`): fetch `data/pins/{id}.json` with `cache: no-store`. If the file exists and has pins, use it on both Private substrates. If it 404s, apply the same supersession in the viewer: 3D view-record `nadir.element_pins` / `concern_pins` (or legacy `nadir.pins`) replace satellite `elements` + `fr.concerns`. Placement still refuses out-of-bounds; never clamp.
 
-**Role filter (on top of supersession):** `customer` sees element pins only (no concern pins, no FR/WF considerations/recommendations, no response directions). `tech` and `responder` see the full set. Live stays available to every role when the property has cameras.
+**Role filter (on top of supersession):** `customer` sees element pins only (no concern pins, no FR/WF considerations/recommendations, no response directions). `tech` and `responder` see the full set. Live stays available to every role when the property has cameras. **GIS facts are public-record context** (assessor, footprint, fire, flood) and show to every role.
 
 Satellite imagery and FR/WF prose can remain on the satellite substrate; the **pin layer** in Private is the higher-caliber set.
+
+## GIS facts — one file per property (hub 1.8.14)
+
+**Path:** `data/gis/{propertyId}.json` (same id as the index hub). **Writer:** Apps Script only (`gisFileForSync_`). Do not hand-edit published files. This is the overlay **facts panel** (right-hand known-property context), not the color legend and not VLM-traced regions.
+
+```json
+{
+  "property": "<propertyId>",
+  "taxlot": "181101A007101",
+  "facts": {
+    "address": "10 SW QUAIL BUTTE PL",
+    "taxlot": "181101A007101",
+    "subdivision": "SKYLINER SUMMIT AT BROKEN TOP PHASE 5",
+    "year_built": "2002",
+    "stat_class": "One story with basement",
+    "living_sqft": 4710,
+    "garage_sqft": 1330,
+    "accessory": "Class 6 Accessory Complex",
+    "beds_baths": "4/5",
+    "roof_mean_ft": 22.2,
+    "roof_max_ft": 36.8,
+    "dogami_sqft": 6458,
+    "e911_placement": "H",
+    "situs_street": "10 QUAIL BUTTE PL",
+    "frontage": "SW QUAIL BUTTE PL",
+    "fire_first_due": "BFD 301",
+    "fire_district": "none (city / BFD, not a rural FPD)",
+    "wildfire_county": "Y",
+    "wui": true,
+    "flood_zone": "not in SFHA",
+    "slope_over_25": false,
+    "vegetation": "Northern Rocky Mountain Ponderosa Pine Woodland and Savanna",
+    "hydrants_150m": 5
+  },
+  "hydrants": [{ "id": "3502", "location": "SKYLINER SUMMIT LP", "flow_rate": 0, "meters": 62 }]
+}
+```
+
+- `facts` is required. Keys may be omitted when the source had nothing. Extra keys render under the groups in `js/vyanet-viewer/gis-facts.js`.
+- `hydrants` is optional. Shown as a second card in Property Facts when present.
+- 404 = the Property Facts rail button stays hidden. Do not invent an empty file.
+- Readers: `viewer.html` and `model-viewer.html` fetch with `cache: no-store`. The panel auto-opens once when facts exist.
+- **Example (not a published hub):** fixture `001` (10 SW Quail Butte Pl, taxlot `181101A007101`) lives under `fixtures/001/` so Apps Script sync cannot clobber it. Open `vyanet-viewer.html?property=001&dataRoot=fixtures/001/&role=responder&stage=private&gw=0`. Production properties wait until satellite sync calls `gisFileForSync_` and PUTs `data/gis/{hash}.json`.
+
+**Embed satellite-only:** Private 2D `embed=1` still hides Security/Wildfire chrome, but `?tab=security` (hub `satView`) must load. Do not clear `tab=` just because embed `VIEW_ORDER` is drone-test-only.
 
 ## Viewer resolution
 
@@ -217,7 +262,7 @@ Opening `vyanet-viewer.html?property={id}` never dumps a first-time visitor into
 
 **Community** (stage `public`) is the HOA page. A second bar (**Map / Live**) sits under the main bar. Map lists every satellite-sheet property in that HOA (`data/hoa/{slug}.json`), including members that have no plane view and no index file yet (viewer falls back to `data/satellite/{id}.json`). Condition cards auto-load the first time Community Map is shown, in this layout (≥640px): Weather spans the full row (now/metrics on the left, forecast + hourly on the right at ≥800px); Wildfire and Earthquakes share the next row (maps are the same width and height — a shared 5:3 box, drag-to-pan and +/- zoom); FEMA and Space Wx share the row below that; More sources spans the bottom. Below 640px the cards stack in that same order. Weather (NWS — current observation including wind/gusts, humidity, dewpoint, visibility, pressure, heat index/wind chill; sunrise/sunset and civil twilight from `/points`; NOAA weather radio callsign; expandable alerts; 8-period forecast with wind/PoP; next-18-hour strip; today's narrative; forecast icons fill each cell), Wildfire (NIFC WFIGS + Esri map filling the bottom half of the card, starts zoomed to nearby towns, drag-to-pan and +/- zoom, blue dot is the property, marker size = acreage), Earthquakes (USGS + full-width map kept zoomed out, same drag-to-pan and +/- zoom, marker size = magnitude), FEMA (OpenFEMA by county — every declaration in a scrollable list), Space Wx (NOAA SWPC scale meter + every bulletin in a scrollable list), More sources. The loaders live in `js/vyanet-viewer/dashboard.js`, lifted from model-viewer's weather/hazard panels — same endpoints, radii, and thresholds, so the hub card and the 3D panel can never disagree about the numbers. Each card fails independently to a source link + retry. The hoa-viewer iframe (`embed=1`) draws every HOA member’s parcel ring and highlights the opened property; it does not show its product header or FR/WF intel panel. Community nested **Live** is `#comm-live`: an empty placeholder that does not start CHEKT. Available iframes mount the moment the gate passes (they warm up behind the opaque home layer), so the first tab switch is instant. The 3D WebGL loop stays paused until the Private 3D substrate (and while the tab is hidden). Pixel ratio is capped at 1.5; idle frames are not drawn.
 
-**Chrome ownership (`embed=1`).** The hub appends `embed=1` to child iframes. In embed mode `model-viewer.html` never reveals its LIVE FEED / Weather / hazard rail buttons — the hub owns that chrome. `hoa-viewer.html` hides its product header, intel panel, and debug console. Private nested **Live** enters `live-viewer.html` and posts `{type:'vyanet-stage', stage:'live'}` (queued until `{type:'vyanet-ready', page:'live-viewer'}`) so MJPEG starts only while that substrate is showing. Community nested Live does not post that message. Standalone `model-viewer.html` links keep their own live overlay. **Pins / Cameras / Analysis / Response Directions** stay on model-viewer (they act on the 3D scene), filtered by `role=`. Element/concern pins and camera pins auto-place on the mesh when the record can be placed. Clicking a camera pin opens the in-model card (still + live/clips when associated; not the hub Private Live substrate). The hub posts `{type:'vyanet-stage', stage:'3d'|'off'}` so the 3D render loop runs only on that substrate.
+**Chrome ownership (`embed=1`).** The hub appends `embed=1` to child iframes. In embed mode `model-viewer.html` never reveals its LIVE FEED / Weather / hazard rail buttons — the hub owns that chrome. `hoa-viewer.html` hides its product header, intel panel, and debug console. Private nested **Live** enters `live-viewer.html` and posts `{type:'vyanet-stage', stage:'live'}` (queued until `{type:'vyanet-ready', page:'live-viewer'}`) so MJPEG starts only while that substrate is showing. Community nested Live does not post that message. Standalone `model-viewer.html` links keep their own live overlay. **Property Facts / Pins / Cameras / Analysis / Response Directions** stay on model-viewer and viewer.html (they act on the scene), filtered by `role=` (GIS facts are not filtered). Element/concern pins and camera pins auto-place on the mesh when the record can be placed. Clicking a camera pin opens the in-model card (still + live/clips when associated; not the hub Private Live substrate). The hub posts `{type:'vyanet-stage', stage:'3d'|'off'}` so the 3D render loop runs only on that substrate.
 
 ## 3D pins vs FR / satellite (hub 1.8.0)
 
