@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nearmap Review — Property Intel</title>
+<!--
+  nearmap-review.html — isolated Nearmap trial QA (v1.0.1, 2026-09-07)
+  Sibling of golf-review / element-review. Not on VIEW_ORDER.
+  Nadir is a CloudFront JPEG with explicit bounds (GroundOverlay).
+  Query: property= (data/nearmap/{id}.json) and/or delivery= (CloudFront/local tiles).
+  Optional tiles= overrides the CloudFront prefix. site_no= enables sheet save.
+-->
+<style>
+  :root {
+    --ground: #1b2027; --panel: #232a33; --line: #3a444f;
+    --ink: #eef2f6; --ink-dim: #9aa7b4; --hot: #4fd1c5; --err: #f97066;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ground); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 14px; font-weight: 600; margin: 0; }
+  #build { color: var(--ink-dim); font-size: 11px; }
+  #addr { color: var(--ink-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  main { display: grid; grid-template-columns: 1fr 280px; height: calc(100% - 42px); }
+  #stage { position: relative; min-width: 0; }
+  #map { position: absolute; inset: 0; }
+  .panel { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-width: 0; }
+  .panel h2 { margin: 0; padding: 10px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); }
+  .panel-scroll { flex: 1; overflow: auto; padding: 10px 12px; }
+  .meta { color: var(--ink-dim); font-size: 11px; margin: 0 0 8px; }
+  .ai-list { margin: 0; padding: 0; list-style: none; }
+  .ai-list li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  #pinList { margin: 8px 0 0; padding: 0; list-style: none; }
+  #pinList li { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  .submit-bar { padding: 10px 12px; border-top: 1px solid var(--line); }
+  .btn { background: #2b333e; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer; }
+  .btn.primary { background: #1f6feb; border-color: #1f6feb; }
+  .status { margin-top: 8px; min-height: 1.2em; color: var(--ink-dim); }
+  .status.err { color: var(--err); }
+  .error { padding: 24px; color: var(--err); }
+  label.toggle { display: flex; align-items: center; gap: 6px; margin: 8px 0; font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Nearmap Review</h1>
+  <span id="build"></span>
+  <span id="addr"></span>
+</header>
+<main>
+  <div id="stage"><div id="map"></div></div>
+  <aside class="panel">
+    <h2>Delivery</h2>
+    <div class="panel-scroll">
+      <p class="meta" id="survey"></p>
+      <label class="toggle"><input type="checkbox" id="aiToggle" checked> AI polygons</label>
+      <label class="toggle"><input type="checkbox" id="hintToggle" checked> AI hint points</label>
+      <p class="meta">Kept classes / counts</p>
+      <ul class="ai-list" id="aiCounts"></ul>
+      <p class="meta">Catalog pins (percent of nadir JPEG)</p>
+      <ol id="pinList"></ol>
+    </div>
+    <div class="submit-bar">
+      <button type="button" class="btn primary" id="saveBtn">Save pins to sheet</button>
+      <button type="button" class="btn" id="copyBtn">Copy JSON</button>
+      <div class="status" id="status"></div>
+    </div>
+  </aside>
+</main>
+<script>
+(function () {
+  var BUILD = 'v1.0.1';
+  var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
+  var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+  var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
+  var PIN_HARD_LIMIT = 12;
+
+  function qp(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+    return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  }
+
+  function joinUrl(base, path) {
+    if (!base) return path;
+    if (base.charAt(base.length - 1) !== '/') base += '/';
+    return base + path.replace(/^\//, '');
+  }
+
+  var propertyId = String(qp('property') || '').trim();
+  var delivery = String(qp('delivery') || '').trim();
+  var siteNo = String(qp('site_no') || qp('site') || '').trim();
+  var tilesBase = String(qp('tiles') || CF_TILES);
+  var dataRoot = String(qp('dataRoot') || '');
+  var record = null;
+  var catalogById = {};
+  var map = null;
+  var overlay = null;
+  var aiShapes = [];
+  var pinMarkers = [];
+
+  document.getElementById('build').textContent = BUILD;
+
+  function setStatus(msg, kind) {
+    var el = document.getElementById('status');
+    el.textContent = msg || '';
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
+  function fail(msg) {
+    document.getElementById('stage').innerHTML = '<div class="error">' + escapeHtml(msg) + '</div>';
+    setStatus(msg, 'err');
+  }
+
+  function pctToLatLng(x, y, b) {
+    var lng = b.west + (Number(x) / 100) * (b.east - b.west);
+    var lat = b.north - (Number(y) / 100) * (b.north - b.south);
+    return { lat: lat, lng: lng };
+  }
+
+  function fetchJson(url) {
+    return fetch(url).then(function (r) {
+      if (!r.ok) throw new Error(r.status + ' ' + url);
+      return r.json();
+    });
+  }
+
+  function loadCatalog() {
+    var url = (dataRoot || '.') + '/data/pin-catalog/pins-catalog.json';
+    return fetchJson(url).then(function (cat) {
+      (cat.pins || []).forEach(function (p) { catalogById[p.id] = p; });
+    }).catch(function () {});
+  }
+
+  function applyRecord(rec) {
+    record = rec;
+    if (rec.address) document.getElementById('addr').textContent = rec.address;
+    var survey = rec.survey_date || '';
+    var did = rec.delivery_id || delivery;
+    document.getElementById('survey').textContent =
+      (did || '') + (survey ? ' · ' + survey : '');
+    if (!delivery && did) delivery = did;
+  }
+
+  function loadFromGithub() {
+    if (!propertyId) return Promise.resolve(null);
+    var url = (dataRoot ? joinUrl(dataRoot, 'data/nearmap/' + propertyId + '.json')
+      : 'data/nearmap/' + propertyId + '.json');
+    return fetchJson(url).then(applyRecord).catch(function () { return null; });
+  }
+
+  function loadFromSheet() {
+    if (!siteNo) return Promise.resolve(null);
+    var u = NM_API_URL + '?route=nearmap-elements&site_no=' +
+      encodeURIComponent(siteNo) + '&_=' + Date.now();
+    return fetch(u, { redirect: 'follow' }).then(function (r) { return r.text(); })
+      .then(function (t) {
+        var row;
+        try { row = JSON.parse(t); } catch (e) { return null; }
+        if (!row || row.ok === false) return null;
+        if (!record) {
+          record = { view: 'nearmap', source: 'nearmap', elements: [] };
+        }
+        if (row.pins && row.pins.length) record.elements = row.pins;
+        if (row.delivery_id && !delivery) delivery = String(row.delivery_id);
+        if (row.address) record.address = row.address;
+        if (row.nadir_url && row.bounds && !(record.nadir && record.nadir.url)) {
+          record.nadir = { url: row.nadir_url, bounds: row.bounds };
+        }
+        if (row.ai_url && !record.ai_url) record.ai_url = row.ai_url;
+        applyRecord(record);
+        return record;
+      }).catch(function () { return null; });
+  }
+
+  function loadFromTiles() {
+    if (!delivery) return Promise.resolve(null);
+    var url = joinUrl(tilesBase, delivery + '/manifest.json');
+    return fetchJson(url).then(function (man) {
+      var rec = {
+        view: 'nearmap',
+        source: 'nearmap',
+        address: man.address,
+        survey_date: man.survey_date,
+        delivery_id: man.delivery_id,
+        nadir: { url: (man.urls && man.urls.vert) || joinUrl(tilesBase, delivery + '/vert.jpg'), bounds: man.bounds },
+        obliques: {},
+        ai_url: (man.urls && man.urls.ai) || joinUrl(tilesBase, delivery + '/ai/features.json'),
+        elements: (record && record.elements) || []
+      };
+      applyRecord(rec);
+      return rec;
+    });
+  }
+
+  function renderCounts(ai) {
+    var host = document.getElementById('aiCounts');
+    host.innerHTML = '';
+    var counts = (ai && ai.counts) || {};
+    Object.keys(counts).sort().forEach(function (k) {
+      var li = document.createElement('li');
+      li.innerHTML = '<span>' + escapeHtml(k) + '</span><span>' + counts[k] + '</span>';
+      host.appendChild(li);
+    });
+  }
+
+  function renderPinList() {
+    var host = document.getElementById('pinList');
+    host.innerHTML = '';
+    var pins = (record && record.elements) || [];
+    pins.forEach(function (p, i) {
+      var name = (catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id);
+      var li = document.createElement('li');
+      li.innerHTML = '<span>' + (i + 1) + '</span><span>' + escapeHtml(name) +
+        ' <span class="meta">#' + p.id + ' · ' + p.x + ',' + p.y + '</span></span>';
+      host.appendChild(li);
+    });
+  }
+
+  function ringToPath(ring) {
+    return ring.map(function (p) { return { lat: p[1], lng: p[0] }; });
+  }
+
+  function drawAi(ai) {
+    aiShapes.forEach(function (s) { s.setMap(null); });
+    aiShapes = [];
+    if (!map || !ai) return;
+    var showPoly = document.getElementById('aiToggle').checked;
+    var showHints = document.getElementById('hintToggle').checked;
+    (ai.features || []).forEach(function (f) {
+      var g = f.geometry || {};
+      var t = g.type;
+      if (showPoly && (t === 'Polygon' || t === 'MultiPolygon')) {
+        var rings = t === 'Polygon' ? [g.coordinates[0]] : g.coordinates.map(function (p) { return p[0]; });
+        rings.forEach(function (ring) {
+          var poly = new google.maps.Polygon({
+            paths: ringToPath(ring),
+            strokeColor: '#4fd1c5',
+            strokeOpacity: 0.9,
+            strokeWeight: 1,
+            fillColor: '#4fd1c5',
+            fillOpacity: 0.18,
+            map: map,
+            clickable: false
+          });
+          aiShapes.push(poly);
+        });
+      }
+      if (showHints && t === 'Point' && g.coordinates) {
+        var mk = new google.maps.Marker({
+          position: { lat: g.coordinates[1], lng: g.coordinates[0] },
+          map: map,
+          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#ffd23f', fillOpacity: 1, strokeWeight: 0 }
+        });
+        aiShapes.push(mk);
+      }
+    });
+  }
+
+  function drawPins() {
+    pinMarkers.forEach(function (m) { m.setMap(null); });
+    pinMarkers = [];
+    var b = record && record.nadir && record.nadir.bounds;
+    if (!map || !b) return;
+    ((record && record.elements) || []).forEach(function (p, i) {
+      var ll = pctToLatLng(p.x, p.y, b);
+      var mk = new google.maps.Marker({
+        position: ll,
+        map: map,
+        label: { text: String(i + 1), color: '#1b2027', fontSize: '11px', fontWeight: '700' }
+      });
+      pinMarkers.push(mk);
+    });
+    renderPinList();
+  }
+
+  function initMap() {
+    var b = record && record.nadir && record.nadir.bounds;
+    var url = record && record.nadir && record.nadir.url;
+    if (!b || !url) {
+      fail('No nadir bounds/url. Import registry or pass ?delivery=');
+      return;
+    }
+    var center = {
+      lat: (b.north + b.south) / 2,
+      lng: (b.east + b.west) / 2
+    };
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: center,
+      zoom: 19,
+      mapTypeId: 'satellite',
+      tilt: 0,
+      rotateControl: false,
+      gestureHandling: 'greedy',
+      streetViewControl: false
+    });
+    overlay = new google.maps.GroundOverlay(url, b, { opacity: 1, clickable: false });
+    overlay.setMap(map);
+    map.fitBounds(b);
+    drawPins();
+    if (record.ai_url) {
+      fetchJson(record.ai_url).then(function (ai) {
+        renderCounts(ai);
+        drawAi(ai);
+        window.__nmAi = ai;
+      }).catch(function (e) { setStatus('AI JSON: ' + e.message, 'err'); });
+    }
+  }
+
+  function bootMaps() {
+    var s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY + '&callback=nmMapsReady';
+    s.async = true;
+    s.onerror = function () { fail('Maps JS failed to load'); };
+    document.head.appendChild(s);
+  }
+
+  window.nmMapsReady = function () { initMap(); };
+
+  document.getElementById('aiToggle').addEventListener('change', function () {
+    if (window.__nmAi) drawAi(window.__nmAi);
+  });
+  document.getElementById('hintToggle').addEventListener('change', function () {
+    if (window.__nmAi) drawAi(window.__nmAi);
+  });
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var text = JSON.stringify((record && record.elements) || [], null, 2);
+    navigator.clipboard.writeText(text).then(function () { setStatus('Copied pins JSON'); },
+      function () { setStatus('Clipboard failed', 'err'); });
+  });
+  document.getElementById('saveBtn').addEventListener('click', function () {
+    if (!siteNo) { setStatus('No site_no — cannot save to sheet', 'err'); return; }
+    var body = {
+      source: 'nearmap-review',
+      version: BUILD,
+      view: 'nearmap',
+      route: 'nearmap-save',
+      site_no: siteNo,
+      pins: (record && record.elements) || []
+    };
+    fetch(NM_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.ok) setStatus('Saved ' + (j.saved || 0) + ' pin(s)');
+      else setStatus((j && j.error) || 'Save failed', 'err');
+    }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
+  });
+
+  loadCatalog().then(loadFromGithub).then(function () {
+    if (record && record.nadir && record.nadir.url && record.nadir.bounds) return record;
+    return loadFromTiles();
+  }).then(loadFromSheet).then(function () {
+    if (!record) {
+      fail('Need ?property= and/or ?delivery=. Optional &tiles= for a local serving folder.');
+      return;
+    }
+    if (record.nadir && record.nadir.url && record.nadir.url.indexOf('http') !== 0 && delivery) {
+      record.nadir.url = joinUrl(tilesBase, delivery + '/vert.jpg');
+    }
+    bootMaps();
+  }).catch(function (e) { fail(String(e.message || e)); });
+})();
+</script>
+</body>
+</html>
