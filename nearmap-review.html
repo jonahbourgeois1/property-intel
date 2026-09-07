@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.0.1, 2026-09-07)
+  nearmap-review.html — isolated Nearmap trial QA (v1.2.0, 2026-09-07)
   Sibling of golf-review / element-review. Not on VIEW_ORDER.
   Nadir is a CloudFront JPEG with explicit bounds (GroundOverlay).
   Query: property= (data/nearmap/{id}.json) and/or delivery= (CloudFront/local tiles).
@@ -22,7 +22,7 @@
   header h1 { font-size: 14px; font-weight: 600; margin: 0; }
   #build { color: var(--ink-dim); font-size: 11px; }
   #addr { color: var(--ink-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  main { display: grid; grid-template-columns: 1fr 280px; height: calc(100% - 42px); }
+  main { display: grid; grid-template-columns: 1fr 300px; height: calc(100% - 42px); }
   #stage { position: relative; min-width: 0; }
   #map { position: absolute; inset: 0; }
   .panel { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-width: 0; }
@@ -31,6 +31,11 @@
   .meta { color: var(--ink-dim); font-size: 11px; margin: 0 0 8px; }
   .ai-list { margin: 0; padding: 0; list-style: none; }
   .ai-list li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  .swatch { width: 12px; height: 12px; border-radius: 2px; flex: 0 0 12px; border: 1px solid rgba(255,255,255,0.45); }
+  .layer-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px; }
+  .layer-row span.name { flex: 1; min-width: 0; }
+  .layer-row span.n { color: var(--ink-dim); }
+  .layer-btns { display: flex; gap: 6px; margin: 6px 0 8px; }
   #pinList { margin: 8px 0 0; padding: 0; list-style: none; }
   #pinList li { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
   .submit-bar { padding: 10px 12px; border-top: 1px solid var(--line); }
@@ -54,11 +59,14 @@
     <h2>Delivery</h2>
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
-      <label class="toggle"><input type="checkbox" id="aiToggle" checked> AI polygons</label>
-      <label class="toggle"><input type="checkbox" id="hintToggle" checked> AI hint points</label>
-      <p class="meta">Kept classes / counts</p>
-      <ul class="ai-list" id="aiCounts"></ul>
-      <p class="meta">Catalog pins (percent of nadir JPEG)</p>
+      <p class="meta">AI layers (one class each). Polygons + centroids share the same checkbox.</p>
+      <label class="toggle"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
+      <div class="layer-btns">
+        <button type="button" class="btn" id="aiAll">All</button>
+        <button type="button" class="btn" id="aiNone">None</button>
+      </div>
+      <div id="aiLayers"></div>
+      <p class="meta" id="pinHeading">Catalog pins (percent of nadir JPEG)</p>
       <ol id="pinList"></ol>
     </div>
     <div class="submit-bar">
@@ -70,7 +78,7 @@
 </main>
 <script>
 (function () {
-  var BUILD = 'v1.0.1';
+  var BUILD = 'v1.2.0';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -101,7 +109,10 @@
   var map = null;
   var overlay = null;
   var aiShapes = [];
+  var hintMarkers = [];
   var pinMarkers = [];
+  var layerOn = {};
+  var aiPack = null;
 
   document.getElementById('build').textContent = BUILD;
 
@@ -160,12 +171,18 @@
     return fetch(u, { redirect: 'follow' }).then(function (r) { return r.text(); })
       .then(function (t) {
         var row;
-        try { row = JSON.parse(t); } catch (e) { return null; }
-        if (!row || row.ok === false) return null;
+        try { row = JSON.parse(t); } catch (e) {
+          setStatus('Sheet pins: response was not JSON', 'err');
+          return null;
+        }
+        if (!row || row.ok === false) {
+          setStatus('Sheet pins: ' + ((row && row.error) || 'no row'), 'err');
+          return null;
+        }
         if (!record) {
           record = { view: 'nearmap', source: 'nearmap', elements: [] };
         }
-        if (row.pins && row.pins.length) record.elements = row.pins;
+        if (row.pins) record.elements = row.pins;
         if (row.delivery_id && !delivery) delivery = String(row.delivery_id);
         if (row.address) record.address = row.address;
         if (row.nadir_url && row.bounds && !(record.nadir && record.nadir.url)) {
@@ -197,21 +214,86 @@
     });
   }
 
-  function renderCounts(ai) {
-    var host = document.getElementById('aiCounts');
+  function colorForClass(name) {
+    var fixed = {
+      Building: '#e85d04',
+      'Building (Deprecated)': '#9d0208',
+      Roof: '#dc2f02',
+      'Translucent Roofing': '#f48c06',
+      Driveway: '#6c757d',
+      Asphalt: '#495057',
+      'Road (Driveable Surface)': '#343a40',
+      'Concrete Slab': '#adb5bd',
+      'Solar Panel': '#3a86ff',
+      'Swimming Pool': '#4cc9f0',
+      'Water Body': '#0077b6',
+      'Residential Chimney': '#7b2cbf',
+      Skylight: '#ffd166',
+      'Woody Vegetation': '#2d6a4f',
+      'Medium and High Vegetation (>2m)': '#40916c',
+      'Medium and High Vegetation with Woody Vegetation': '#1b4332',
+      'Low Vegetation (0.5m-2m)': '#74c69d',
+      'Very Low Vegetation (<0.5m)': '#95d5b2',
+      'Lawn Grass': '#52b788',
+      'Natural (soft)': '#b7e4c7'
+    };
+    if (fixed[name]) return fixed[name];
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = ((h << 5) - h) + name.charCodeAt(i);
+    return 'hsl(' + (Math.abs(h) % 360) + ', 62%, 46%)';
+  }
+
+  function featureClass(f) {
+    return (f && f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown';
+  }
+
+  function renderLayers(ai) {
+    var host = document.getElementById('aiLayers');
     host.innerHTML = '';
     var counts = (ai && ai.counts) || {};
-    Object.keys(counts).sort().forEach(function (k) {
-      var li = document.createElement('li');
-      li.innerHTML = '<span>' + escapeHtml(k) + '</span><span>' + counts[k] + '</span>';
-      host.appendChild(li);
+    var names = Object.keys(counts);
+    if (!names.length && ai && ai.features) {
+      ai.features.forEach(function (f) {
+        var c = featureClass(f);
+        counts[c] = (counts[c] || 0) + 1;
+      });
+      names = Object.keys(counts);
+    }
+    names.sort();
+    names.forEach(function (name) {
+      if (layerOn[name] === undefined) {
+        layerOn[name] = !/vegetation|natural \(soft\)/i.test(name);
+      }
+      var row = document.createElement('label');
+      row.className = 'layer-row';
+      row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
+        (layerOn[name] ? 'checked' : '') + '>' +
+        '<span class="swatch" style="background:' + colorForClass(name) + '"></span>' +
+        '<span class="name">' + escapeHtml(name) + '</span>' +
+        '<span class="n">' + counts[name] + '</span>';
+      host.appendChild(row);
     });
+  }
+
+  function setAllLayers(on) {
+    Object.keys(layerOn).forEach(function (k) { layerOn[k] = on; });
+    var boxes = document.querySelectorAll('#aiLayers input[type=checkbox]');
+    for (var i = 0; i < boxes.length; i++) boxes[i].checked = on;
+    redrawAi();
   }
 
   function renderPinList() {
     var host = document.getElementById('pinList');
     host.innerHTML = '';
     var pins = (record && record.elements) || [];
+    document.getElementById('pinHeading').textContent =
+      'Catalog pins (' + pins.length + ')';
+    if (!pins.length) {
+      var empty = document.createElement('li');
+      empty.innerHTML = '<span class="meta">None yet. Run Nearmap Pass 1, then open with site_no= or sync to GitHub.</span>';
+      host.appendChild(empty);
+      return;
+    }
     pins.forEach(function (p, i) {
       var name = (catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id);
       var li = document.createElement('li');
@@ -225,53 +307,104 @@
     return ring.map(function (p) { return { lat: p[1], lng: p[0] }; });
   }
 
-  function drawAi(ai) {
+  function clearAiShapes() {
     aiShapes.forEach(function (s) { s.setMap(null); });
     aiShapes = [];
+    hintMarkers.forEach(function (m) { m.setMap(null); });
+    hintMarkers = [];
+  }
+
+  function drawPolygons(ai) {
     if (!map || !ai) return;
-    var showPoly = document.getElementById('aiToggle').checked;
-    var showHints = document.getElementById('hintToggle').checked;
     (ai.features || []).forEach(function (f) {
+      var cls = featureClass(f);
+      if (layerOn[cls] === false) return;
+      var color = colorForClass(cls);
       var g = f.geometry || {};
       var t = g.type;
-      if (showPoly && (t === 'Polygon' || t === 'MultiPolygon')) {
-        var rings = t === 'Polygon' ? [g.coordinates[0]] : g.coordinates.map(function (p) { return p[0]; });
-        rings.forEach(function (ring) {
-          var poly = new google.maps.Polygon({
-            paths: ringToPath(ring),
-            strokeColor: '#4fd1c5',
-            strokeOpacity: 0.9,
-            strokeWeight: 1,
-            fillColor: '#4fd1c5',
-            fillOpacity: 0.18,
-            map: map,
-            clickable: false
-          });
-          aiShapes.push(poly);
-        });
-      }
-      if (showHints && t === 'Point' && g.coordinates) {
-        var mk = new google.maps.Marker({
-          position: { lat: g.coordinates[1], lng: g.coordinates[0] },
+      if (t !== 'Polygon' && t !== 'MultiPolygon') return;
+      var rings = t === 'Polygon' ? [g.coordinates[0]] : g.coordinates.map(function (p) { return p[0]; });
+      rings.forEach(function (ring) {
+        var poly = new google.maps.Polygon({
+          paths: ringToPath(ring),
+          strokeColor: color,
+          strokeOpacity: 0.95,
+          strokeWeight: 1.5,
+          fillColor: color,
+          fillOpacity: 0.32,
           map: map,
-          icon: { path: google.maps.SymbolPath.CIRCLE, scale: 4, fillColor: '#ffd23f', fillOpacity: 1, strokeWeight: 0 }
+          clickable: false,
+          zIndex: 2
         });
-        aiShapes.push(mk);
-      }
+        aiShapes.push(poly);
+      });
     });
+  }
+
+  function hintRows(ai) {
+    if (ai && Array.isArray(ai.hints) && ai.hints.length) return ai.hints;
+    return [];
+  }
+
+  function drawHints(ai) {
+    if (!map || !ai) return;
+    if (!document.getElementById('hintToggle').checked) return;
+    hintRows(ai).forEach(function (h) {
+      var cls = String((h && h['class']) || '');
+      if (!cls || layerOn[cls] === false) return;
+      var lat = Number(h.lat), lon = Number(h.lon);
+      if (!isFinite(lat) || !isFinite(lon)) return;
+      var color = colorForClass(cls);
+      var mk = new google.maps.Marker({
+        position: { lat: lat, lng: lon },
+        map: map,
+        clickable: false,
+        optimized: false,
+        zIndex: 4,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 4.5,
+          fillColor: color,
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 1
+        },
+        title: cls
+      });
+      hintMarkers.push(mk);
+    });
+  }
+
+  function redrawAi() {
+    clearAiShapes();
+    if (!aiPack) return;
+    drawPolygons(aiPack);
+    drawHints(aiPack);
+    drawPins();
+    window.__nmDebug = {
+      polys: aiShapes.length,
+      hints: hintMarkers.length,
+      pins: pinMarkers.length
+    };
   }
 
   function drawPins() {
     pinMarkers.forEach(function (m) { m.setMap(null); });
     pinMarkers = [];
     var b = record && record.nadir && record.nadir.bounds;
-    if (!map || !b) return;
+    if (!map || !b) {
+      renderPinList();
+      return;
+    }
     ((record && record.elements) || []).forEach(function (p, i) {
       var ll = pctToLatLng(p.x, p.y, b);
       var mk = new google.maps.Marker({
         position: ll,
         map: map,
-        label: { text: String(i + 1), color: '#1b2027', fontSize: '11px', fontWeight: '700' }
+        optimized: false,
+        zIndex: 20,
+        label: { text: String(i + 1), color: '#1b2027', fontSize: '11px', fontWeight: '700' },
+        title: ((catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id)) + ' ' + p.x + ',' + p.y
       });
       pinMarkers.push(mk);
     });
@@ -303,10 +436,18 @@
     map.fitBounds(b);
     drawPins();
     if (record.ai_url) {
-      fetchJson(record.ai_url).then(function (ai) {
-        renderCounts(ai);
-        drawAi(ai);
-        window.__nmAi = ai;
+      var aiUrl = record.ai_url;
+      var hintsUrl = String(aiUrl).replace(/\/ai\/features\.json(\?|$)/i, '/ai/hints.json$1');
+      fetchJson(aiUrl).then(function (ai) {
+        if (hintsUrl === aiUrl) return ai;
+        return fetchJson(hintsUrl).then(function (h) {
+          if (h && Array.isArray(h.hints) && h.hints.length) ai.hints = h.hints;
+          return ai;
+        }).catch(function () { return ai; });
+      }).then(function (ai) {
+        aiPack = ai;
+        renderLayers(ai);
+        redrawAi();
       }).catch(function (e) { setStatus('AI JSON: ' + e.message, 'err'); });
     }
   }
@@ -321,12 +462,17 @@
 
   window.nmMapsReady = function () { initMap(); };
 
-  document.getElementById('aiToggle').addEventListener('change', function () {
-    if (window.__nmAi) drawAi(window.__nmAi);
+  document.getElementById('aiLayers').addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (!t || t.type !== 'checkbox') return;
+    var name = t.getAttribute('data-layer');
+    if (!name) return;
+    layerOn[name] = t.checked;
+    redrawAi();
   });
-  document.getElementById('hintToggle').addEventListener('change', function () {
-    if (window.__nmAi) drawAi(window.__nmAi);
-  });
+  document.getElementById('aiAll').addEventListener('click', function () { setAllLayers(true); });
+  document.getElementById('aiNone').addEventListener('click', function () { setAllLayers(false); });
+  document.getElementById('hintToggle').addEventListener('change', function () { redrawAi(); });
   document.getElementById('copyBtn').addEventListener('click', function () {
     var text = JSON.stringify((record && record.elements) || [], null, 2);
     navigator.clipboard.writeText(text).then(function () { setStatus('Copied pins JSON'); },
