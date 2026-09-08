@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.2.0, 2026-09-07)
+  nearmap-review.html — isolated Nearmap trial QA (v1.2.1, 2026-09-08)
   Sibling of golf-review / element-review. Not on VIEW_ORDER.
   Nadir is a CloudFront JPEG with explicit bounds (GroundOverlay).
   Query: property= (data/nearmap/{id}.json) and/or delivery= (CloudFront/local tiles).
@@ -78,7 +78,7 @@
 </main>
 <script>
 (function () {
-  var BUILD = 'v1.2.0';
+  var BUILD = 'v1.2.1';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -113,6 +113,8 @@
   var pinMarkers = [];
   var layerOn = {};
   var aiPack = null;
+  var featuresPromise = null;
+  var mapsBooted = false;
 
   document.getElementById('build').textContent = BUILD;
 
@@ -133,11 +135,33 @@
     return { lat: lat, lng: lng };
   }
 
-  function fetchJson(url) {
-    return fetch(url).then(function (r) {
+  function fetchJson(url, opt) {
+    var ms = (opt && opt.timeout) || 0;
+    var ctrl = ms ? new AbortController() : null;
+    var timer = null;
+    if (ctrl) timer = setTimeout(function () { ctrl.abort(); }, ms);
+    return fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(function (r) {
+      if (timer) clearTimeout(timer);
       if (!r.ok) throw new Error(r.status + ' ' + url);
       return r.json();
     });
+  }
+
+  function fetchTextTimeout(url, ms) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, ms);
+    return fetch(url, { redirect: 'follow', signal: ctrl.signal }).then(function (r) {
+      clearTimeout(timer);
+      return r.text();
+    });
+  }
+
+  function hasNadir() {
+    return !!(record && record.nadir && record.nadir.url && record.nadir.bounds);
+  }
+
+  function hintsUrlFrom(aiUrl) {
+    return String(aiUrl || '').replace(/\/ai\/features\.json(\?|$)/i, '/ai/hints.json$1');
   }
 
   function loadCatalog() {
@@ -168,8 +192,7 @@
     if (!siteNo) return Promise.resolve(null);
     var u = NM_API_URL + '?route=nearmap-elements&site_no=' +
       encodeURIComponent(siteNo) + '&_=' + Date.now();
-    return fetch(u, { redirect: 'follow' }).then(function (r) { return r.text(); })
-      .then(function (t) {
+    return fetchTextTimeout(u, 4000).then(function (t) {
         var row;
         try { row = JSON.parse(t); } catch (e) {
           setStatus('Sheet pins: response was not JSON', 'err');
@@ -261,9 +284,7 @@
     }
     names.sort();
     names.forEach(function (name) {
-      if (layerOn[name] === undefined) {
-        layerOn[name] = !/vegetation|natural \(soft\)/i.test(name);
-      }
+      if (layerOn[name] === undefined) layerOn[name] = false;
       var row = document.createElement('label');
       row.className = 'layer-row';
       row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
@@ -279,7 +300,15 @@
     Object.keys(layerOn).forEach(function (k) { layerOn[k] = on; });
     var boxes = document.querySelectorAll('#aiLayers input[type=checkbox]');
     for (var i = 0; i < boxes.length; i++) boxes[i].checked = on;
-    redrawAi();
+    if (on) {
+      setStatus('Loading AI polygons…');
+      ensureFeatures().then(function () {
+        setStatus('');
+        redrawAi();
+      });
+    } else {
+      redrawAi();
+    }
   }
 
   function renderPinList() {
@@ -359,7 +388,7 @@
         position: { lat: lat, lng: lon },
         map: map,
         clickable: false,
-        optimized: false,
+        optimized: true,
         zIndex: 4,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
@@ -381,11 +410,6 @@
     drawPolygons(aiPack);
     drawHints(aiPack);
     drawPins();
-    window.__nmDebug = {
-      polys: aiShapes.length,
-      hints: hintMarkers.length,
-      pins: pinMarkers.length
-    };
   }
 
   function drawPins() {
@@ -412,6 +436,7 @@
   }
 
   function initMap() {
+    if (map) return;
     var b = record && record.nadir && record.nadir.bounds;
     var url = record && record.nadir && record.nadir.url;
     if (!b || !url) {
@@ -435,24 +460,59 @@
     overlay.setMap(map);
     map.fitBounds(b);
     drawPins();
-    if (record.ai_url) {
-      var aiUrl = record.ai_url;
-      var hintsUrl = String(aiUrl).replace(/\/ai\/features\.json(\?|$)/i, '/ai/hints.json$1');
-      fetchJson(aiUrl).then(function (ai) {
-        if (hintsUrl === aiUrl) return ai;
-        return fetchJson(hintsUrl).then(function (h) {
-          if (h && Array.isArray(h.hints) && h.hints.length) ai.hints = h.hints;
-          return ai;
-        }).catch(function () { return ai; });
-      }).then(function (ai) {
-        aiPack = ai;
-        renderLayers(ai);
-        redrawAi();
-      }).catch(function (e) { setStatus('AI JSON: ' + e.message, 'err'); });
+    loadAiIndex();
+  }
+
+  function anyLayerOn() {
+    var names = Object.keys(layerOn);
+    for (var i = 0; i < names.length; i++) {
+      if (layerOn[names[i]]) return true;
     }
+    return false;
+  }
+
+  function loadAiIndex() {
+    if (!record || !record.ai_url) return;
+    var hintsUrl = hintsUrlFrom(record.ai_url);
+    fetchJson(hintsUrl).then(function (h) {
+      aiPack = {
+        counts: (h && h.counts) || {},
+        hints: (h && h.hints) || [],
+        features: null
+      };
+      renderLayers(aiPack);
+      if (anyLayerOn()) {
+        ensureFeatures().then(function () { redrawAi(); });
+      } else {
+        redrawAi();
+      }
+    }).catch(function (e) { setStatus('AI hints: ' + e.message, 'err'); });
+  }
+
+  function ensureFeatures() {
+    if (aiPack && Array.isArray(aiPack.features)) return Promise.resolve(aiPack);
+    if (featuresPromise) return featuresPromise;
+    if (!record || !record.ai_url) return Promise.resolve(aiPack);
+    featuresPromise = fetchJson(record.ai_url).then(function (fc) {
+      if (!aiPack) aiPack = { counts: {}, hints: [], features: [] };
+      aiPack.features = fc.features || [];
+      if (fc.counts) aiPack.counts = fc.counts;
+      return aiPack;
+    }).catch(function (e) {
+      featuresPromise = null;
+      setStatus('AI polygons: ' + e.message, 'err');
+      throw e;
+    });
+    return featuresPromise;
   }
 
   function bootMaps() {
+    if (mapsBooted) return;
+    mapsBooted = true;
+    if (window.google && google.maps && google.maps.Map) {
+      initMap();
+      return;
+    }
     var s = document.createElement('script');
     s.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY + '&callback=nmMapsReady';
     s.async = true;
@@ -460,7 +520,7 @@
     document.head.appendChild(s);
   }
 
-  window.nmMapsReady = function () { initMap(); };
+  window.nmMapsReady = function () { if (!map) initMap(); };
 
   document.getElementById('aiLayers').addEventListener('change', function (ev) {
     var t = ev.target;
@@ -468,7 +528,11 @@
     var name = t.getAttribute('data-layer');
     if (!name) return;
     layerOn[name] = t.checked;
-    redrawAi();
+    if (t.checked) {
+      ensureFeatures().then(function () { redrawAi(); }).catch(function () {});
+    } else {
+      redrawAi();
+    }
   });
   document.getElementById('aiAll').addEventListener('click', function () { setAllLayers(true); });
   document.getElementById('aiNone').addEventListener('click', function () { setAllLayers(false); });
@@ -498,18 +562,20 @@
     }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
   });
 
-  loadCatalog().then(loadFromGithub).then(function () {
-    if (record && record.nadir && record.nadir.url && record.nadir.bounds) return record;
+  loadFromGithub().then(function () {
+    if (hasNadir()) return record;
     return loadFromTiles();
-  }).then(loadFromSheet).then(function () {
-    if (!record) {
+  }).then(function () {
+    if (!hasNadir()) {
       fail('Need ?property= and/or ?delivery=. Optional &tiles= for a local serving folder.');
       return;
     }
-    if (record.nadir && record.nadir.url && record.nadir.url.indexOf('http') !== 0 && delivery) {
+    if (record.nadir.url.indexOf('http') !== 0 && delivery) {
       record.nadir.url = joinUrl(tilesBase, delivery + '/vert.jpg');
     }
     bootMaps();
+    loadCatalog().then(function () { if (map) drawPins(); });
+    loadFromSheet().then(function () { if (map) drawPins(); });
   }).catch(function (e) { fail(String(e.message || e)); });
 })();
 </script>

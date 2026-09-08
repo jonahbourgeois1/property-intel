@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-08 — Review v1.2.1: map-first boot, lazy AI polygons
+
+**What.** Map + nadir overlay start as soon as the serving manifest is in. Apps Script and the pin catalog load in parallel afterward (sheet fetch aborts at 4s). Class list comes from `hints.json`. `features.json` (~3.4MB) is fetched only when a layer is checked. Layers start unchecked. Maps init works if the JS API is already on the page. No accept/brush/draw.
+
+**Why.** Live v1.2.0 waited on Apps Script then parsed 1,555 polygons before the map appeared; reloads sometimes never called `initMap`.
+
+**Files.** `nearmap-review.html` (v1.2.1), `docs/NEARMAP_CHANGELOG.md`
+
+**How it was checked.** `node --check` on extracted module; getElementById vs ids. Not verified in this commit: live Pages after push.
+
+**Status.** Overlay-viewer load-fix only. Reviewer tools stay local/unpushed.
+
 ## 2026-09-07 — Review v1.2.0: per-layer colors, hint centroids, catalog pins
 
 **What.** Hint points come from `ai/hints.json` lon/lat (v1.0.1 only drew Point geometries, and the packed AI file has polygons). Each class has its own color and checkbox. Vegetation layers start unchecked so the house/driveway/pool stay readable; All/None still available. Catalog pins are numbered markers on top of the overlay; empty list explains Pass 1 / `site_no`.
