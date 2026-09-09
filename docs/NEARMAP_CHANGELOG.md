@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.9: close only under this stroke; leave other holes
+
+**What.** Gap-close no longer runs on the whole region. Dilate/erode is copied onto the mask only within `brushR + gapM` of this stroke's stamps. Holes that already existed (`existingHolesFrom`) are restored unless a stamp actually covers them. Locked erase cutouts still punched.
+
+**Why.** Jonah: a modest draw over the north driveway filled the courtyard he had not covered and also filled the hole further down the drive. Cause: close ran on every cell of the union, so any hole smaller than the kernel filled, including ones far from the brush.
+
+**Files.** `nearmap-review.html` (v1.6.9), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless: Size-14 loop keeps an interior hole; grow on the ring does not fill it; Size-10 erase cutout survives a grow elsewhere on the same region; zigzag scribble seams still close (0 holes). 0 page errors.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.8: gap-close ×0.5
 
 **What.** `GAP_CLOSE_BRUSH` 2 → 1. Close radius is now 1× brush radius instead of 2×.

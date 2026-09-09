@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.8, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.9, 2026-09-09)
+  Gap-close applies only under this stroke. Existing holes the brush did not
+  paint over stay empty. Closed-loop interiors are not flood-filled.
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -223,7 +225,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.8';
+  var BUILD = 'v1.6.9';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -1499,6 +1501,38 @@
     }
   }
 
+  // Keep a hole that already existed unless this stroke's stamps actually
+  // painted it. Close must not refill a cutout the reviewer left open.
+  function restoreUnpaintedHoles(grid, nx, ny, cell, west, south, fr, holes, stamps, brushR) {
+    if (!holes || !holes.length) return;
+    var r2 = (brushR + cell * 0.5) * (brushR + cell * 0.5);
+    var stampXY = (stamps || []).map(function (s) {
+      return { x: fr.x(s.lng), y: fr.y(s.lat) };
+    });
+    var x, y, h, i;
+    for (y = 0; y < ny; y++) {
+      for (x = 0; x < nx; x++) {
+        var idx = y * nx + x;
+        if (!grid[idx]) continue;
+        var lng = fr.lng(west + (x + 0.5) * cell);
+        var lat = fr.lat(south + (y + 0.5) * cell);
+        var inHole = false;
+        for (h = 0; h < holes.length && !inHole; h++) {
+          if (pointInRing(lng, lat, holes[h])) inHole = true;
+        }
+        if (!inHole) continue;
+        var cx = west + (x + 0.5) * cell;
+        var cy = south + (y + 0.5) * cell;
+        var painted = false;
+        for (i = 0; i < stampXY.length && !painted; i++) {
+          var dx = cx - stampXY[i].x, dy = cy - stampXY[i].y;
+          if (dx * dx + dy * dy <= r2) painted = true;
+        }
+        if (!painted) grid[idx] = 0;
+      }
+    }
+  }
+
   function unionPaintedGeometry(seedFeat, extraFeats, stamps, brushR, erase) {
     var feats = [];
     if (seedFeat) feats.push(seedFeat);
@@ -1594,12 +1628,28 @@
         }
       }
     } else {
-      // Close leftover seams between almost-overlapping paint (gaps between
-      // islands, thin triangles the brush didn't quite cover). A courtyard
-      // wider than ~2× the close radius is unchanged — connecting a loop
-      // does not flood-fill the inside.
+      // Close leftover seams in THIS stroke only (dilate/erode near the stamps).
+      // Whole-region close was filling distant cutouts and courtyards the
+      // reviewer never painted. Existing holes the brush did not cover stay.
       var ck = Math.max(1, Math.round(gapM / cell));
-      grid = closeMask(grid, nx, ny, ck);
+      var closed = closeMask(grid, nx, ny, ck);
+      var creach = brushR + gapM + cell;
+      var creach2 = creach * creach;
+      for (i = 0; i < carve.pts.length; i++) {
+        var pcx = carve.pts[i].x, pcy = carve.pts[i].y;
+        var gx0 = Math.max(0, Math.floor((pcx - west - creach) / cell));
+        var gx1 = Math.min(nx - 1, Math.ceil((pcx - west + creach) / cell));
+        var gy0 = Math.max(0, Math.floor((pcy - south - creach) / cell));
+        var gy1 = Math.min(ny - 1, Math.ceil((pcy - south + creach) / cell));
+        for (iy = gy0; iy <= gy1; iy++) {
+          for (ix = gx0; ix <= gx1; ix++) {
+            dx = west + (ix + 0.5) * cell - pcx;
+            dy = south + (iy + 0.5) * cell - pcy;
+            if (dx * dx + dy * dy <= creach2) grid[iy * nx + ix] = closed[iy * nx + ix];
+          }
+        }
+      }
+      restoreUnpaintedHoles(grid, nx, ny, cell, west, south, fr, existingHolesFrom(feats), stamps, brushR);
       punchLockedHoles(grid, nx, ny, cell, west, south, fr, lockedHolesFrom(feats));
     }
     var filled = 0;
@@ -1835,6 +1885,14 @@
     var out = [];
     featurePolys(feat).forEach(function (poly) {
       for (var h = 1; h < poly.length; h++) out.push(poly[h]);
+    });
+    return out;
+  }
+
+  function existingHolesFrom(feats) {
+    var out = [];
+    (feats || []).forEach(function (f) {
+      currentHolesOf(f).forEach(function (ring) { out.push(ring); });
     });
     return out;
   }
