@@ -2,6 +2,21 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.4.0: sheet mode on the original/edits folder format
+
+**What.**
+- `nearmap-review.html` v1.4.0. `SHEET_MODE` = `site_no=` or `property=`. In sheet mode the page waits for the `nearmap-elements` row, loads original from `regions_original_url` (CloudFront `ai/original/regions.json`) and edits from `regions_edits_url` (GitHub `data/nearmap/edits/{id}.json`, a diff), rebuilds `original − removed + features`, and does **not** reset anything on reload. Save posts pins plus `regionsDiff()` (features whose geometry/properties differ from original or are new; ids missing from the working set as `removed`). Revert regions → original; status asks for a Save, which publishes an empty diff. Testing mode (fresh open) now applies only to plain `delivery=` opens (`?fresh=1` forces it, `?fresh=0` resumes local edits). Sidebar note updated.
+- `apps scripts/nearmap.gs`: `nmRegionsOriginalUrl_` (AI URL → original), `nmEditsPath_/nmEditsUrl_` (`data/nearmap/edits/{id}.json`), `nmParseW_/nmWriteW_` (column W = `{drawn, edits:{url,changed,removed,saved}}`; old bare FeatureCollection still parses), `nmValidateRegionsDiff_` (Polygon/MultiPolygon Features with ids, 8 MB cap), `nmSavePins_` publishes the diff via `pushAllToGitHub` when `payload.regions` is present, `nmGetElements_` returns `property_id`, `regions_original_url`, `regions_edits_url`, `regions_edits`, `nmBuildRecord_` adds `regions: {original, edits, edits_saved}`. Header contract block updated.
+- `tools/nearmap/promote.py`: seeds S3 `ai/edits/regions.json` from original when absent (`--reset-edits` to reseed); still never uploads the local working edits file.
+
+**Why.** Jonah: implement the reviewer into the Nearmap sheet following the original/edits folder format, with Revert going to original. A regions file (350 KB–3.4 MB) cannot live in a 50 000-character sheet cell and the browser cannot write S3, so edits are published as a diff to GitHub by Apps Script (the only GitHub writer), original stays on CloudFront (promote is the only S3 writer). Lambda untouched.
+
+**Files.** `nearmap-review.html`, `apps scripts/nearmap.gs`, `tools/nearmap/promote.py`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `data/nearmap/edits/.gitkeep`
+
+**How it was checked.** Reviewer: `node --check`, missing ids / onclick / dup funcs, BUILD v1.4.0. `nearmap.gs`: brace/paren/bracket 0, no duplicate functions, `node --check` on a copy. `promote.py`: `py_compile`, `--help`. Headless Chromium with `script.google.com` and the edits URL stubbed (scratch copy of Columbia St): row with a stub diff (remove r14, r17; replace r143; add d9) → status "Loaded edits: 2 changed, 2 removed", Driveway 16 → 15, r14/r17 gone, d9 present, r143 replaced, sheet pin 1/20; Save → posted diff removed [r14, r17], features [d9, r143]; Revert → 16, status asks for Save; Save → empty diff. Plain `delivery=` open still "Fresh open". Paint/erase regression suite 8/8. **Not verified:** the live Apps Script deployment (paste + new version needed), a real GitHub push of `data/nearmap/edits/{id}.json`, `promote.py --reset-edits` against S3.
+
+**Status.** Committed to `main`. Paste `nearmap.gs`, save, new deployment; re-promote deliveries once to seed CloudFront `ai/edits/`.
+
 ## 2026-09-09 — One erase stroke cuts every region it crosses
 
 **What.** `eraseTargets` returns every visible same-class region the sweep touches (the picked one included); only if none fall back to any visible region. Before, touching the picked region short-circuited to `[seed]` and every other piece under the stroke was ignored. Status: "Removed from Driveway" when only the picked region was hit, otherwise "Removed from N Driveway regions · split into M".

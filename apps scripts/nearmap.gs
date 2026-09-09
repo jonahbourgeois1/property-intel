@@ -18,8 +18,13 @@
 //   AI           Pass 1 pins copy centroids from ai/hints.json (lon/lat
 //                → JPEG % via sheet bounds). Class names never enter
 //                pins-catalog.json. Unmapped catalog ids are omitted.
-//   Publish      data/nearmap/{id}.json only. Index views.nearmap is
-//                promotion-time, onto the EXISTING hub, not this id.
+//   Regions      original = CloudFront ai/original/regions.json (immutable).
+//                edits = GitHub data/nearmap/edits/{id}.json, a diff against
+//                original written by nmSavePins_ on reviewer Save. Column W
+//                holds only a summary. Revert regions = original.
+//   Publish      data/nearmap/{id}.json (+ data/nearmap/edits/{id}.json on
+//                Save). Index views.nearmap is promotion-time, onto the
+//                EXISTING hub, not this id.
 //   Out of scope Mesh→GLB, VIEW_ORDER, satellite Pass 1/2.
 //
 // Menu: Set Up Nearmap Sheet, Import from CloudFront registry,
@@ -103,6 +108,58 @@ Return ONLY a single JSON object. No markdown, no code fences, no commentary.
 // Trial: never mint a hub. Flip only when Jonah names the existing hub
 // (Jones = 6de88883bfd4a8349a901c54611ed9d7) and promotion is explicit.
 const NM_UPSERT_INDEX = false;
+
+// ── Regions: original / edits folder format ─────────────────────────────────
+// original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable;
+//            promote.py writes it; nobody else does).
+// edits    = GitHub data/nearmap/edits/{id}.json, written ONLY here on reviewer
+//            Save. Stored as a diff against original ({removed:[ids],
+//            features:[changed|new]}) so a 3 MB vendor file is not re-pushed
+//            per save. The reviewer rebuilds original − removed + features.
+//            Revert regions = original; the reviewer then saves an empty diff.
+// Column W (Drawn Features) holds a small JSON summary of the last edits save,
+// never the regions themselves (a cell is capped at 50 000 characters).
+const NM_EDITS_DIR = 'data/nearmap/edits';
+const NM_EDITS_BASE = 'https://responder-intel.vyanet.com/' + NM_EDITS_DIR + '/';
+const NM_EDITS_MAX_BYTES = 8 * 1024 * 1024;
+
+function nmRegionsOriginalUrl_(aiUrl) {
+  const s = String(aiUrl || '').trim();
+  if (!s) return '';
+  if (/\/ai\/original\/regions\.json(\?|$)/i.test(s)) return s;
+  return s.replace(/\/ai\/features\.json(\?|$)/i, '/ai/original/regions.json$1');
+}
+
+function nmEditsPath_(id) {
+  return NM_EDITS_DIR + '/' + id + '.json';
+}
+
+function nmEditsUrl_(id) {
+  return id ? (NM_EDITS_BASE + id + '.json') : '';
+}
+
+// Column W: { drawn: FeatureCollection, edits: {url, changed, removed, saved} }.
+// Older rows hold a bare FeatureCollection; both shapes parse.
+function nmParseW_(raw) {
+  const out = { drawn: { type: 'FeatureCollection', features: [] }, edits: null };
+  if (!raw) return out;
+  let o = raw;
+  if (typeof raw !== 'object') {
+    try { o = JSON.parse(String(raw)); } catch (e) { return out; }
+  }
+  if (!o || typeof o !== 'object') return out;
+  if (Array.isArray(o.features)) { out.drawn = o; return out; }
+  if (o.drawn && Array.isArray(o.drawn.features)) out.drawn = o.drawn;
+  if (o.edits && typeof o.edits === 'object') out.edits = o.edits;
+  return out;
+}
+
+function nmWriteW_(sheet, row, drawn, edits) {
+  writePlainCell(sheet, row, NM_COL_DRAWN, JSON.stringify({
+    drawn: drawn || { type: 'FeatureCollection', features: [] },
+    edits: edits || null
+  }));
+}
 
 function nmValidSiteNo_(raw) {
   return String(raw || '').trim();
@@ -710,13 +767,7 @@ function nmParsePins_(raw) {
 }
 
 function nmParseDrawn_(raw) {
-  if (!raw) return { type: 'FeatureCollection', features: [] };
-  if (typeof raw === 'object' && Array.isArray(raw.features)) return raw;
-  try {
-    const o = JSON.parse(String(raw));
-    if (o && Array.isArray(o.features)) return o;
-  } catch (e) {}
-  return { type: 'FeatureCollection', features: [] };
+  return nmParseW_(raw).drawn;
 }
 
 function nmBuildRecord_(sheet, row, id) {
@@ -749,7 +800,15 @@ function nmBuildRecord_(sheet, row, id) {
     },
     ai_url: String(sheet.getRange(row, NM_COL_AI_URL).getValue() || '').trim(),
     elements: nmParsePins_(sheet.getRange(row, NM_COL_ELEMENTS).getValue()),
-    drawn: nmParseDrawn_(sheet.getRange(row, NM_COL_DRAWN).getValue())
+    drawn: null,
+    regions: null
+  };
+  const w = nmParseW_(sheet.getRange(row, NM_COL_DRAWN).getValue());
+  rec.drawn = w.drawn;
+  rec.regions = {
+    original: nmRegionsOriginalUrl_(rec.ai_url),
+    edits: w.edits ? nmEditsUrl_(id) : '',
+    edits_saved: w.edits ? (w.edits.saved || '') : ''
   };
   if (!isNaN(lat) && !isNaN(lng)) { rec.lat = lat; rec.lng = lng; }
   rec.id = id;
@@ -858,20 +917,28 @@ function nmGetElements_(p) {
   const last = sheet.getLastRow();
   if (last < 2) throw new Error('Nearmap sheet empty');
   const vals = sheet.getRange(2, 1, last - 1, NM_HEADERS.length).getValues();
+  const creds = getCredentials();
   for (let i = 0; i < vals.length; i++) {
     if (nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]) !== siteNo) continue;
     const bounds = nmParseBounds_(vals[i][NM_COL_NADIR_BOUNDS - 1]);
+    const aiUrl = String(vals[i][NM_COL_AI_URL - 1] || '').trim();
+    const w = nmParseW_(vals[i][NM_COL_DRAWN - 1]);
+    const id = nmPropertyId_(siteNo, creds.hashSalt);
     return {
       ok: true,
       route: 'nearmap-elements',
       site_no: siteNo,
+      property_id: id,
       delivery_id: String(vals[i][NM_COL_DELIVERY - 1] || '').trim(),
       address: String(vals[i][NM_COL_ADDRESS - 1] || '').trim(),
       nadir_url: String(vals[i][NM_COL_NADIR_URL - 1] || '').trim(),
       bounds: bounds,
-      ai_url: String(vals[i][NM_COL_AI_URL - 1] || '').trim(),
+      ai_url: aiUrl,
+      regions_original_url: nmRegionsOriginalUrl_(aiUrl),
+      regions_edits_url: w.edits ? nmEditsUrl_(id) : '',
+      regions_edits: w.edits,
       pins: nmParsePins_(vals[i][NM_COL_ELEMENTS - 1]),
-      drawn: nmParseDrawn_(vals[i][NM_COL_DRAWN - 1]),
+      drawn: w.drawn,
       north_url: String(vals[i][NM_COL_NORTH_URL - 1] || '').trim(),
       east_url: String(vals[i][NM_COL_EAST_URL - 1] || '').trim(),
       south_url: String(vals[i][NM_COL_SOUTH_URL - 1] || '').trim(),
@@ -879,6 +946,38 @@ function nmGetElements_(p) {
     };
   }
   throw new Error('no Nearmap row for site_no ' + siteNo);
+}
+
+// Reviewer regions diff → validated document for data/nearmap/edits/{id}.json.
+// Shape: { type:'nearmap-regions-edits', version:1, delivery_id, base, removed:[ids],
+//          features:[GeoJSON Feature] }. Geometry is not re-validated beyond type.
+function nmValidateRegionsDiff_(regions, deliveryId, baseUrl) {
+  if (!regions || typeof regions !== 'object') throw new Error('regions must be an object');
+  const removed = Array.isArray(regions.removed) ? regions.removed.map(String) : [];
+  const features = Array.isArray(regions.features) ? regions.features : [];
+  features.forEach(function (f, i) {
+    if (!f || f.type !== 'Feature' || !f.geometry ||
+        (f.geometry.type !== 'Polygon' && f.geometry.type !== 'MultiPolygon')) {
+      throw new Error('regions.features[' + i + '] is not a Polygon/MultiPolygon Feature');
+    }
+    if (f.id === undefined || f.id === null || String(f.id) === '') {
+      throw new Error('regions.features[' + i + '] has no id');
+    }
+  });
+  const doc = {
+    type: 'nearmap-regions-edits',
+    version: 1,
+    delivery_id: deliveryId || String(regions.delivery_id || ''),
+    base: baseUrl || String(regions.base || ''),
+    saved: new Date().toISOString(),
+    removed: removed,
+    features: features
+  };
+  const text = JSON.stringify(doc);
+  if (text.length > NM_EDITS_MAX_BYTES) {
+    throw new Error('regions diff too large (' + text.length + ' bytes)');
+  }
+  return { doc: doc, text: text };
 }
 
 function nmSavePins_(payload) {
@@ -894,17 +993,39 @@ function nmSavePins_(payload) {
   const sheet = nmSheet_();
   const last = sheet.getLastRow();
   if (last < 2) throw new Error('Nearmap sheet empty');
-  const vals = sheet.getRange(2, NM_COL_SITE_NO, last - 1, 1).getValues();
+  const width = Math.max(sheet.getLastColumn(), NM_COL_DRAWN);
+  const vals = sheet.getRange(2, 1, last - 1, width).getValues();
   for (let i = 0; i < vals.length; i++) {
-    if (nmValidSiteNo_(vals[i][0]) !== siteNo) continue;
+    if (nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]) !== siteNo) continue;
     const row = i + 2;
     writePlainCell(sheet, row, NM_COL_ELEMENTS, pins.length ? JSON.stringify(pins) : '');
-    if (typeof NM_COL_DRAWN === 'number') {
-      const drawn = nmParseDrawn_(payload.drawn);
-      writePlainCell(sheet, row, NM_COL_DRAWN, JSON.stringify(drawn));
+    const prevW = nmParseW_(vals[i][NM_COL_DRAWN - 1]);
+    const drawn = payload.drawn ? nmParseDrawn_(payload.drawn) : prevW.drawn;
+    let edits = prevW.edits;
+    let regionsOut = null;
+    if (payload.regions) {
+      // Publish the regions diff to GitHub (Apps Script is the only GitHub
+      // writer). The sheet keeps a summary; the diff itself lives in the repo.
+      const creds = getCredentials();
+      const id = nmPropertyId_(siteNo, creds.hashSalt);
+      const deliveryId = String(vals[i][NM_COL_DELIVERY - 1] || '').trim();
+      const baseUrl = nmRegionsOriginalUrl_(vals[i][NM_COL_AI_URL - 1]);
+      const v = nmValidateRegionsDiff_(payload.regions, deliveryId, baseUrl);
+      const ok = pushAllToGitHub([{ path: nmEditsPath_(id), content: v.text }],
+        'Nearmap regions — site ' + siteNo);
+      if (!ok) throw new Error('GitHub push of regions edits failed (see Executions log)');
+      edits = {
+        url: nmEditsUrl_(id),
+        changed: v.doc.features.length,
+        removed: v.doc.removed.length,
+        saved: v.doc.saved
+      };
+      regionsOut = { changed: edits.changed, removed: edits.removed, url: edits.url };
     }
-    writePlainCell(sheet, row, NM_COL_STATUS, 'saved ' + pins.length + ' pin(s)');
-    return { ok: true, route: 'nearmap-save', site_no: siteNo, saved: pins.length };
+    nmWriteW_(sheet, row, drawn, edits);
+    writePlainCell(sheet, row, NM_COL_STATUS, 'saved ' + pins.length + ' pin(s)' +
+      (regionsOut ? (' · regions ' + regionsOut.changed + ' changed / ' + regionsOut.removed + ' removed') : ''));
+    return { ok: true, route: 'nearmap-save', site_no: siteNo, saved: pins.length, regions: regionsOut };
   }
   throw new Error('no Nearmap row for site_no ' + siteNo);
 }

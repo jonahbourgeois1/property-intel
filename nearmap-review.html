@@ -5,9 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.3.29-local, 2026-09-09)
-  TESTING MODE: every open starts from ai/original/ (edits + browser backups ignored,
-  edits/regions.json reset to original). ?fresh=0 resumes the edits file instead.
+  nearmap-review.html — isolated Nearmap trial QA (v1.4.0, 2026-09-09)
+  Regions follow the original/edits folder format:
+    original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable)
+    edits    = sheet mode (site_no= / property=): GitHub data/nearmap/edits/{id}.json,
+               a diff vs original published by Apps Script on Save;
+               local delivery= mode: ai/edits/regions.json via review_server.
+    Revert regions = original. Save after Revert publishes an empty diff.
+  TESTING MODE applies only to plain delivery= opens: each open starts from original
+    (?fresh=0 resumes local edits; ?fresh=1 forces a fresh start in sheet mode).
   Reviewer-first: Pan / Draw. Draw: + picks a centroid, left-click adds, right-click removes;
   Clear brush drops the pick. (Accept button removed; onAcceptFeature is unreachable.)
   Paint that does not touch the selected region becomes a new same-class region;
@@ -15,7 +21,7 @@
   extra piece as its own region (origin split); slivers left behind are dropped, and
   a region that is all slivers is removed. Size slider under Draw; back/forward arrows under Size
   step through paint edits (memory only). Selected pin is not enlarged. Scroll-zoom stays on.
-  Published to Pages 2026-09-09 with the testing-mode default; flip FRESH_ON_OPEN before real review.
+  Published to Pages 2026-09-09.
   Sibling of golf-review / element-review. Not on VIEW_ORDER.
   Query: property= and/or delivery=. Optional tiles=. site_no= enables sheet save.
 -->
@@ -172,7 +178,7 @@
     <h2>Delivery</h2>
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
-      <p class="meta">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Merge and remove write <code>ai/edits/regions.json</code>. Revert copies original over edits.</p>
+      <p class="meta" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Edits are saved as a diff to <code>data/nearmap/edits/</code> when opened from the sheet, or to local <code>ai/edits/regions.json</code>. Revert regions returns to original.</p>
       <label class="toggle"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
         <button type="button" class="btn" id="aiAll">All</button>
@@ -201,7 +207,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.3.29-local';
+  var BUILD = 'v1.4.0';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -259,10 +265,17 @@
   var delivery = String(qp('delivery') || '').trim();
   var siteNo = String(qp('site_no') || qp('site') || '').trim();
   var tilesBase = String(qp('tiles') || CF_TILES);
-  // Testing mode (default): every open starts from ai/original/ — the edits file
-  // and the browser backups (regions + pins) are ignored, and edits/regions.json
-  // is reset to the original so disk matches the screen. ?fresh=0 resumes edits.
-  var FRESH_ON_OPEN = qp('fresh') !== '0';
+  // Sheet-driven opens (site_no= from the Nearmap sheet, or property= from a
+  // published record) load original from CloudFront and edits from GitHub
+  // data/nearmap/edits/{id}.json, and Save publishes the diff through Apps Script.
+  var SHEET_MODE = !!(siteNo || propertyId);
+  // Testing mode: a plain delivery= open (no sheet identity) starts from
+  // ai/original/ every time — edits file and browser backups ignored, local
+  // edits/regions.json reset to original. ?fresh=0 resumes local edits;
+  // ?fresh=1 forces a fresh start even for sheet-driven opens.
+  var FRESH_ON_OPEN = qp('fresh') === '1' || (qp('fresh') !== '0' && !SHEET_MODE);
+  // Remote regions for sheet mode: { original: url, edits: url|'' }.
+  var regionsRemote = { original: '', edits: '' };
   var dataRoot = String(qp('dataRoot') || '');
   var record = null;
   var catalogById = {};
@@ -279,6 +292,7 @@
   var layerOn = {};
   var aiPack = null;
   var featuresPromise = null;
+  var sheetPromise = null;
   var mapsBooted = false;
   var toolMode = 'pan';
   var activeClass = '';
@@ -331,6 +345,7 @@
   }
 
   function regionsOriginalUrl() {
+    if (regionsRemote.original) return regionsRemote.original;
     if (!delivery) return '';
     return joinUrl(tilesBase, delivery + '/ai/original/regions.json');
   }
@@ -532,6 +547,10 @@
     document.getElementById('survey').textContent =
       (did || '') + (survey ? ' · ' + survey : '');
     if (!delivery && did) delivery = did;
+    if (rec.regions && typeof rec.regions === 'object') {
+      if (rec.regions.original && !regionsRemote.original) regionsRemote.original = String(rec.regions.original);
+      if (rec.regions.edits && !regionsRemote.edits) regionsRemote.edits = String(rec.regions.edits);
+    }
   }
 
   function loadFromGithub() {
@@ -566,9 +585,59 @@
           record.nadir = { url: row.nadir_url, bounds: row.bounds };
         }
         if (row.ai_url && !record.ai_url) record.ai_url = row.ai_url;
+        if (row.regions_original_url) regionsRemote.original = String(row.regions_original_url);
+        regionsRemote.edits = row.regions_edits_url ? String(row.regions_edits_url) : '';
         applyRecord(record);
         return record;
       }).catch(function () { return null; });
+  }
+
+  // ── Regions edits diff (sheet mode) ─────────────────────────────────────────
+  // data/nearmap/edits/{id}.json = { removed:[ids], features:[changed|new] }
+  // against ai/original/regions.json. Rebuild: original − removed + features.
+  function applyRegionsDiff(orig, diff) {
+    var out = JSON.parse(JSON.stringify(orig));
+    if (!diff || typeof diff !== 'object') return out;
+    var drop = {};
+    (diff.removed || []).forEach(function (id) { drop[String(id)] = true; });
+    var byId = {};
+    (diff.features || []).forEach(function (f) { if (f && f.id != null) byId[String(f.id)] = f; });
+    var next = [];
+    (out.features || []).forEach(function (f) {
+      var rid = String(f.id);
+      if (drop[rid]) return;
+      if (byId[rid]) { next.push(byId[rid]); delete byId[rid]; return; }
+      next.push(f);
+    });
+    Object.keys(byId).forEach(function (rid) { if (!drop[rid]) next.push(byId[rid]); });
+    out.features = next;
+    return out;
+  }
+
+  function featureSig(f) {
+    return JSON.stringify({ g: f.geometry, p: f.properties || {} });
+  }
+
+  // Working regions vs vendor original → the diff that Save publishes.
+  function regionsDiff() {
+    var removed = [];
+    var features = [];
+    var seen = {};
+    ((aiPack && aiPack.features) || []).forEach(function (f) {
+      var rid = String(f.id);
+      seen[rid] = true;
+      var o = originalById[rid];
+      if (!o || featureSig(o) !== featureSig(f)) features.push(f);
+    });
+    Object.keys(originalById).forEach(function (rid) { if (!seen[rid]) removed.push(rid); });
+    return {
+      type: 'nearmap-regions-edits',
+      version: 1,
+      delivery_id: delivery || '',
+      base: regionsOriginalUrl(),
+      removed: removed,
+      features: features
+    };
   }
 
   function loadFromTiles() {
@@ -2530,7 +2599,8 @@
       updateBrushLabel();
       redrawAi();
       syncBrushChrome();
-      setStatus(how === 'file'
+      if (SHEET_MODE) setStatus('Reverted to original — click Save to publish the reset');
+      else setStatus(how === 'file'
         ? 'Reverted edits/regions.json from original'
         : 'Reverted in memory — start review_server to write the file');
     });
@@ -2793,10 +2863,15 @@
   function ensureFeatures() {
     if (aiPack && Array.isArray(aiPack.features)) return Promise.resolve(aiPack);
     if (featuresPromise) return featuresPromise;
-    featuresPromise = Promise.all([
-      fetchJsonOptional(regionsOriginalUrl()),
-      fetchJsonOptional(regionsEditsUrl())
-    ]).then(function (pair) {
+    // Sheet mode: the row tells us where original and edits live, so wait for it.
+    featuresPromise = Promise.resolve(SHEET_MODE ? sheetPromise : null).then(function () {
+      return Promise.all([
+        fetchJsonOptional(regionsOriginalUrl()),
+        SHEET_MODE
+          ? (regionsRemote.edits ? fetchJsonOptional(regionsRemote.edits) : Promise.resolve(null))
+          : fetchJsonOptional(regionsEditsUrl())
+      ]);
+    }).then(function (pair) {
       var orig = pair[0];
       var edits = pair[1];
       if (orig) return { orig: orig, edits: edits };
@@ -2808,15 +2883,24 @@
       return { orig: null, edits: edits };
     }).then(function (o) {
       if (o.orig) indexOriginal(o.orig);
-      var localEdits = null;
-      try {
-        var raw = localStorage.getItem(regionsStorageKey());
-        if (raw) localEdits = JSON.parse(raw);
-      } catch (e) {}
       var workingDoc;
-      if (FRESH_ON_OPEN && o.orig) {
+      if (SHEET_MODE && o.orig && !FRESH_ON_OPEN) {
+        // original from CloudFront; edits = GitHub diff (may be absent → original).
+        var isDiff = o.edits && o.edits.type === 'nearmap-regions-edits';
+        workingDoc = isDiff ? applyRegionsDiff(o.orig, o.edits) : JSON.parse(JSON.stringify(o.orig));
+        try { localStorage.setItem(regionsStorageKey(), JSON.stringify(workingDoc)); } catch (e3) {}
+        if (isDiff) {
+          setStatus('Loaded edits: ' + (o.edits.features || []).length + ' changed, ' +
+            (o.edits.removed || []).length + ' removed (saved ' + (o.edits.saved || '?') + ')');
+        }
+      } else if (FRESH_ON_OPEN && o.orig) {
         workingDoc = JSON.parse(JSON.stringify(o.orig));
       } else {
+        var localEdits = null;
+        try {
+          var raw = localStorage.getItem(regionsStorageKey());
+          if (raw) localEdits = JSON.parse(raw);
+        } catch (e) {}
         workingDoc = o.edits || localEdits || o.orig;
         if (o.edits) {
           // The file is authoritative; refresh the browser backup so a stale one
@@ -2826,9 +2910,9 @@
       }
       if (!workingDoc || !workingDoc.features) throw new Error('no regions');
       applyWorkingFc(workingDoc);
-      if (FRESH_ON_OPEN && o.orig) {
-        // Reset edits/regions.json (and the browser backup) to the original so
-        // what is on disk is exactly what this session started from.
+      if (FRESH_ON_OPEN && o.orig && !SHEET_MODE) {
+        // Reset local edits/regions.json (and the browser backup) to the original
+        // so what is on disk is exactly what this session started from.
         persistRegions().then(function (how) {
           if (how === 'file') setStatus('Fresh open — edits/regions.json reset to original');
         });
@@ -2987,13 +3071,24 @@
       pins: (record && record.elements) || [],
       drawn: (record && record.drawn) || emptyDrawn()
     };
+    // Regions go along as a diff against the vendor original; Apps Script
+    // publishes it to GitHub data/nearmap/edits/{id}.json. After Revert the diff
+    // is empty, which clears the published edits.
+    if (aiPack && Array.isArray(aiPack.features) && originalFc) body.regions = regionsDiff();
+    setStatus('Saving…');
     fetch(NM_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (j) {
-      if (j && j.ok) setStatus('Saved ' + (j.saved || 0) + ' pin(s) to sheet');
-      else setStatus((j && j.error) || 'Save failed', 'err');
+      if (j && j.ok) {
+        var rg = j.regions;
+        if (rg && rg.url) regionsRemote.edits = String(rg.url);
+        setStatus('Saved ' + (j.saved || 0) + ' pin(s) to sheet' +
+          (rg ? (' · regions ' + rg.changed + ' changed / ' + rg.removed + ' removed → edits/' ) : ''));
+      } else {
+        setStatus((j && j.error) || 'Save failed', 'err');
+      }
     }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
   });
 
@@ -3013,17 +3108,19 @@
       record.elements = [];
       record.drawn = emptyDrawn();
       try { localStorage.removeItem(storageKey()); } catch (e) {}
-    } else {
+    } else if (!SHEET_MODE) {
       mergeLocal();
     }
     rebuildConsumed();
-    bootMaps();
-    loadCatalog().then(function () { if (map) drawPins(); });
-    loadFromSheet().then(function () {
+    // Sheet row first: it carries pins and the original/edits region URLs that
+    // ensureFeatures waits on in sheet mode.
+    sheetPromise = loadFromSheet().then(function () {
       rebuildConsumed();
       if (map) redrawAi();
       else drawPins();
     });
+    bootMaps();
+    loadCatalog().then(function () { if (map) drawPins(); });
   }).catch(function (e) { fail(String(e.message || e)); });
 })();
 </script>

@@ -4,6 +4,10 @@
 Existence checks use s3.head_object (never CloudFront HEAD).
 Invalidates CloudFront after stills + registry write.
 Does not call GitHub.
+
+Folder format on CloudFront: ai/original/regions.json (vendor, immutable) and
+ai/edits/regions.json (seeded from original here; reviewer edits themselves are
+published by Apps Script to GitHub data/nearmap/edits/{id}.json, not to S3).
 """
 from __future__ import annotations
 
@@ -92,12 +96,41 @@ def iter_serve_files(folder: Path):
             continue
         rel = p.relative_to(folder).as_posix()
         if rel.startswith("ai/edits/") or "/ai/edits/" in rel:
-            print(f"  skip reviewer edits {rel}")
+            print(f"  skip local reviewer edits {rel}")
             continue
         yield p
 
 
-def promote_one(s3, cf, folder: Path) -> str:
+def key_exists(s3, key: str) -> bool:
+    try:
+        s3.head_object(Bucket=BUCKET, Key=key)
+        return True
+    except Exception as e:  # head_object only; never a CloudFront HEAD
+        code = getattr(e, "response", {}).get("Error", {}).get("Code", "")
+        if code in ("404", "NotFound", "NoSuchKey"):
+            return False
+        raise
+
+
+def seed_edits(s3, folder: Path, did: str, reset: bool) -> None:
+    """Serving follows the original/edits folder format. ai/edits/regions.json on
+    S3 is seeded from ai/original/regions.json so both folders exist; the local
+    working edits file is never uploaded. An existing S3 edits object is left
+    alone unless --reset-edits (reviewer edits are published via the sheet, not
+    by promote)."""
+    orig = folder / "ai" / "original" / "regions.json"
+    if not orig.is_file():
+        print("  no ai/original/regions.json — edits not seeded")
+        return
+    key = f"{PREFIX}/{did}/ai/edits/regions.json"
+    if key_exists(s3, key) and not reset:
+        print(f"  keep existing s3://{BUCKET}/{key} (use --reset-edits to reseed)")
+        return
+    put_and_head(s3, orig, key)
+    print("  seeded ai/edits/regions.json from original")
+
+
+def promote_one(s3, cf, folder: Path, reset_edits: bool = False) -> str:
     man_path = folder / "manifest.json"
     if not man_path.is_file():
         raise SystemExit(f"missing {man_path}")
@@ -108,6 +141,7 @@ def promote_one(s3, cf, folder: Path) -> str:
         rel = p.relative_to(folder).as_posix()
         key = f"{PREFIX}/{did}/{rel}"
         put_and_head(s3, p, key)
+    seed_edits(s3, folder, did, reset_edits)
     reg = load_registry(s3)
     merged = merge_delivery(reg, manifest)
     tmp = folder / "_registry_upload.json"
@@ -122,6 +156,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Promote Nearmap serving subset to tiles + CloudFront")
     ap.add_argument("--serve-dir", required=True)
     ap.add_argument("--delivery", default="", help="One delivery_id folder; default = all")
+    ap.add_argument("--reset-edits", action="store_true",
+                    help="Reseed s3 ai/edits/regions.json from original even if it exists")
     args = ap.parse_args()
 
     import boto3
@@ -145,7 +181,7 @@ def main() -> int:
             raise SystemExit(f"no delivery folders with manifest.json under {root}")
 
     for folder in folders:
-        promote_one(s3, cf, folder)
+        promote_one(s3, cf, folder, reset_edits=args.reset_edits)
     print("Done.")
     return 0
 
