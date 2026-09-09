@@ -154,6 +154,46 @@ function nmParseW_(raw) {
   return out;
 }
 
+// Write one file to GitHub through the Contents API (create or update), and
+// say exactly what went wrong when it fails. pushAllToGitHub (Git Data API,
+// five calls) only returns false, which left "push failed" undiagnosable from
+// the reviewer. Retries once on 409/422 (ref moved between read and write).
+function nmPushFileToGitHub_(path, content, message) {
+  const creds = getCredentials();
+  if (!creds.githubToken) throw new Error('GITHUB_TOKEN is not set in Script Properties');
+  const headers = {
+    'Authorization': 'token ' + creds.githubToken,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json'
+  };
+  const url = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + path;
+  const b64 = Utilities.base64Encode(Utilities.newBlob(content, 'application/json').getBytes());
+  let lastErr = '';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let sha = null;
+    const getRes = UrlFetchApp.fetch(url + '?ref=' + encodeURIComponent(GITHUB_BRANCH),
+      { method: 'GET', headers, muteHttpExceptions: true });
+    const getCode = getRes.getResponseCode();
+    if (getCode === 200) {
+      try { sha = JSON.parse(getRes.getContentText()).sha || null; } catch (e) { sha = null; }
+    } else if (getCode !== 404) {
+      throw new Error('GitHub read ' + path + ' → HTTP ' + getCode + ': ' + getRes.getContentText().substring(0, 200));
+    }
+    const body = { message: message, content: b64, branch: GITHUB_BRANCH };
+    if (sha) body.sha = sha;
+    const putRes = UrlFetchApp.fetch(url, { method: 'PUT', headers, payload: JSON.stringify(body), muteHttpExceptions: true });
+    const code = putRes.getResponseCode();
+    if (code === 200 || code === 201) {
+      const out = JSON.parse(putRes.getContentText());
+      return { sha: out.content && out.content.sha, commit: out.commit && out.commit.sha, created: code === 201 };
+    }
+    lastErr = 'GitHub write ' + path + ' → HTTP ' + code + ': ' + putRes.getContentText().substring(0, 300);
+    if (code !== 409 && code !== 422) break;
+    Utilities.sleep(800);
+  }
+  throw new Error(lastErr || ('GitHub write ' + path + ' failed'));
+}
+
 function nmWriteW_(sheet, row, drawn, edits) {
   writePlainCell(sheet, row, NM_COL_DRAWN, JSON.stringify({
     drawn: drawn || { type: 'FeatureCollection', features: [] },
@@ -1023,9 +1063,11 @@ function nmSavePins_(payload) {
       const deliveryId = String(vals[i][NM_COL_DELIVERY - 1] || '').trim();
       const baseUrl = nmRegionsOriginalUrl_(vals[i][NM_COL_AI_URL - 1]);
       const v = nmValidateRegionsDiff_(payload.regions, deliveryId, baseUrl);
-      const ok = pushAllToGitHub([{ path: nmEditsPath_(id), content: v.text }],
-        'Nearmap regions — site ' + siteNo);
-      if (!ok) throw new Error('GitHub push of regions edits failed (see Executions log)');
+      // Throws with the HTTP status + GitHub message on failure; the reviewer
+      // shows it in the status line.
+      nmPushFileToGitHub_(nmEditsPath_(id), v.text,
+        'Nearmap regions — site ' + siteNo + ' (' + v.doc.features.length + ' changed, ' +
+        v.doc.removed.length + ' removed)');
       edits = {
         url: nmEditsUrl_(id),
         changed: v.doc.features.length,

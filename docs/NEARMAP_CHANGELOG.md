@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.5.1: edits push reports the real GitHub error; single-flight Save
+
+**What.** `nmPushFileToGitHub_(path, content, message)` — Contents API GET (sha) then PUT, `branch: GITHUB_BRANCH`, one retry after 800 ms on 409/422 — replaces `pushAllToGitHub` for `data/nearmap/edits/{id}.json`. It throws `GitHub write <path> → HTTP <code>: <message>` (or `GITHUB_TOKEN is not set`), which the reviewer prints in the status line. `pushAllToGitHub` is unchanged and still used by the row sync. Reviewer: Save button disabled while a save is in flight.
+
+**Why.** First live Save from the deployed web app reported "GitHub push of regions edits failed (see Executions log)" — `pushAllToGitHub` only returns false, so the cause (token scope, non-fast-forward race, payload) was invisible from the page. Nothing reached `data/nearmap/edits/` on origin.
+
+**Files.** `apps scripts/nearmap.gs`, `nearmap-review.html` (v1.5.1)
+
+**How it was checked.** `node --check` on both; brace/paren 0; missing ids / onclick / dup funcs clean. **Not verified:** a live push (needs paste + new deployment, then Save from the regions editor — the status line will now say why if it fails again).
+
+**Status.** Committed to `main`. Paste `nearmap.gs`, save, new deployment, retry Save.
+
 ## 2026-09-09 — v1.5.0: two editors on one page — Regions and Pins
 
 **What.**

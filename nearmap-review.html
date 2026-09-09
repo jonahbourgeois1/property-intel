@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.5.0, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.5.1, 2026-09-09)
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions diff.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
@@ -221,7 +221,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.5.0';
+  var BUILD = 'v1.5.1';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -3327,6 +3327,11 @@
       }
       body.regions = regionsDiff();
     }
+    // One save at a time: a second click mid-flight would race the first one's
+    // GitHub write and fail as a non-fast-forward.
+    var saveBtn = document.getElementById('saveBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     setStatus('Saving…');
     fetch(NM_API_URL, {
       method: 'POST',
@@ -3343,7 +3348,8 @@
       } else {
         setStatus((j && j.error) || 'Save failed', 'err');
       }
-    }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
+    }).catch(function (e) { setStatus(String(e.message || e), 'err'); })
+      .then(function () { saveBtn.disabled = false; });
   });
 
   loadFromGithub().then(function () {
