@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.6.1: pin at the deepest interior point (pole of inaccessibility)
+
+**What.** `interiorPoint` no longer returns the area centroid just because it is inside. All candidates — the area centroid plus interior span midpoints on 19 horizontal and 19 vertical scan lines — are scored by clearance (distance to the nearest edge); the winner is refined with four rounds of a shrinking 5×5 grid walk. Result: the point farthest from any edge, i.e. the middle of the thickest part of the region.
+
+**Why.** Jonah: the centroid was still against the edge of the merged C-shaped driveway. The area centroid of a C with a thick upper arm lands inside that arm a few centimetres from the inner edge, and v1.4.1 accepted any inside point.
+
+**Files.** `nearmap-review.html` (v1.6.1)
+
+**How it was checked.** `node --check`; missing ids / onclick / dup funcs. Node unit test on the extracted functions: C with thick upper arm (area centroid inside, hugging the inner edge) → (6.0, 25.0), clearance 5.00 m of a 10 m arm; symmetric C → clearance 5.81 m; L → 4.00 m of an 8 m arm; thin bent strip → 1.50 m of a 3 m strip. All inside. Not exercised in the browser this pass.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — v1.6.0: regions edits go Apps Script → S3; GitHub out of the regions path
 
 **What.**
