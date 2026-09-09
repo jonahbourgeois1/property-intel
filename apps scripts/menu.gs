@@ -93,6 +93,7 @@ function onOpen() {
       .addItem('Import from CloudFront registry', 'importNearmapRegistry')
       .addItem('Open Nearmap Regions Editor (This Row)', 'openNearmapReviewForActiveRow')
       .addItem('Open Nearmap Pins Editor (This Row)', 'openNearmapPinsForActiveRow')
+      .addItem('Open Nearmap Viewer (This Row)', 'openNearmapViewerForActiveRow')
       .addItem('Sync This Row to GitHub', 'processNearmapForActiveRow')
       .addItem('Sync Nearmap to GitHub', 'processNearmapSheet'))
   .addSeparator()

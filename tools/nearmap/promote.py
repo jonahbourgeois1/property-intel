@@ -29,6 +29,8 @@ def content_type(path: Path) -> str:
         return "image/jpeg"
     if path.suffix.lower() == ".json":
         return "application/json"
+    if path.suffix.lower() == ".glb":
+        return "model/gltf-binary"
     guess, _ = mimetypes.guess_type(path.name)
     return guess or "application/octet-stream"
 

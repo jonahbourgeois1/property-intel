@@ -1017,6 +1017,26 @@ function nmOpenEditor_(mode, label) {
 function openNearmapReviewForActiveRow() { nmOpenEditor_('regions', 'Regions'); }
 function openNearmapPinsForActiveRow() { nmOpenEditor_('pins', 'Pins'); }
 
+// Read-only Nearmap viewer (2D / 3D / obliques) fed by this row + CloudFront only.
+const NEARMAP_VIEWER_URL = 'https://responder-intel.vyanet.com/nearmap-viewer.html';
+
+function openNearmapViewerForActiveRow() {
+  const sheet = nmSheet_();
+  const row = nmActiveRow_();
+  if (!row) return;
+  const siteNo = nmValidSiteNo_(sheet.getRange(row, NM_COL_SITE_NO).getValue());
+  const delivery = String(sheet.getRange(row, NM_COL_DELIVERY).getValue() || '').trim();
+  if (!siteNo && !delivery) {
+    SpreadsheetApp.getUi().alert('Nearmap Viewer', 'Row needs a Site No and/or Delivery Id.', SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  const parts = [];
+  if (siteNo) parts.push('site_no=' + encodeURIComponent(siteNo));
+  if (delivery) parts.push('delivery=' + encodeURIComponent(delivery));
+  const address = String(sheet.getRange(row, NM_COL_ADDRESS).getValue() || '').trim();
+  reviewOpenDialog_((address || 'Nearmap') + ' — Viewer', NEARMAP_VIEWER_URL + '?' + parts.join('&'));
+}
+
 function nmGetElements_(p) {
   const siteNo = nmValidSiteNo_(p && p.site_no);
   if (!siteNo) throw new Error('site_no required');

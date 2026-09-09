@@ -46,11 +46,23 @@ If serve-out already exists from an earlier normalize, seed the two region folde
 python tools/nearmap/seed_regions.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702
 ```
 
+### 2b. Mesh → GLB (deliveries with a MapBrowser 3D export)
+
+```
+python tools/nearmap/mesh_to_glb.py --zip "C:/Users/Jonah Bourgeois/Downloads/Ahartsi.zip" ^
+  --member "Ahartsi/MapBrowser_3D/18775 MACALPINE LOOP.zip" ^
+  --serve-dir tmp/nearmap-serve/18775-macalpine-loop-bend-or-97702
+```
+
+Reads `Mesh/Mesh.obj` + `.mtl` + textures + `.ofs` + `Tiles.prj` from the delivery zip (or `--folder` for an extracted copy), writes `mesh/model.glb` (Draco, textures ≤ 4096 px) and `mesh/mesh.json`, and adds `urls.mesh` / `urls.mesh_meta` / `mesh{}` to `manifest.json`. Macalpine: 612 k vertices / 938 k triangles → 32 MB raw → **9.8 MB** Draco in ~14 s. Needs `pyproj`, `pygltflib`, `Pillow`, `numpy`; Draco needs `npx gltf-pipeline` (falls back to uncompressed with `--no-draco` or if npx is unavailable). Columbia has no MapBrowser export — skip; the viewer disables its 3D tab.
+
 ### 3. Promote to tiles
 
 ```
 python tools/nearmap/promote.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702
 ```
+
+`mesh/model.glb` (content type `model/gltf-binary`, 24 h cache) and `mesh/mesh.json` upload with everything else; `ai/edits/regions.json` is seeded from original if absent.
 
 Omitting `--delivery` promotes every folder under `--serve-dir`.
 
@@ -115,6 +127,10 @@ GitHub: the two Apps Script commits under `data/nearmap/edits/` from the 2026-09
 Local v1.4.0 (`delivery=` only, no `site_no`): Pan / Draw (Accept removed). One erase stroke cuts every same-class region it crosses. Wheel zoom works in Draw before and after a pick. Erase on painted additions keeps clean edges and never deletes the vendor scrap the addition was grown from. **Testing mode:** every open starts from `ai/original/regions.json` with no pins and resets `ai/edits/regions.json` to the original; add `&fresh=0` to resume edits instead. Sidebar counts reflect the working regions from load (hints.json counts are only a placeholder for the first second). Clear brush next to `◀ ▶` drops the picked region. Paint absorbs any same-class scrap the result covers; Pan or hiding the layer drops the pick. Regions files are fetched with no-store; the edits file on disk always wins over the browser backup. To reset a delivery to the vendor original, copy `ai/original/regions.json` over `ai/edits/regions.json` (or click Revert regions). The active layer (last checked, or click a checked layer's name) highlights every border of that class; Driveway is pink. The stroke preview is as wide as the cursor and matches the area painted or erased. Paint that does not touch the selected region creates a new same-class region and the class count updates. Right-click erase acts on whatever visible region is under the brush (the picked one first, then same class, then any); over bare ground it says "Nothing to remove". An erase that cuts a region in two leaves two regions (the picked one keeps the largest piece, the rest become `dN` with `origin: split`); slivers left by an erase are dropped, and erasing essentially the whole region removes it and its pin (`◀` brings it back). Size slider under Draw; `◀ ▶` under Size step back/forward through paint strokes (memory only, Revert clears them; Ctrl+Z / Ctrl+Shift+Z while Draw is on). The selected pin and polygon are not highlighted. Scroll-zoom stays on while drawing. Published to Pages 2026-09-09.
 
 After sync: `nearmap-review.html?property={hashId(site_no)}`
+
+### 5b. Viewer (`nearmap-viewer.html`)
+
+**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`. Local: `http://localhost:8899/nearmap-viewer.html?delivery=18775-macalpine-loop-bend-or-97702&tiles=http://localhost:8899/tmp/nearmap-serve/` (no pins without `site_no`). Tabs 2D / 3D / Obliques; the AI-layer panel on the right toggles the same classes in 2D and 3D; the pin list focuses a pin in whichever view is open. 3D needs `urls.mesh` in the manifest (step 2b + promote), otherwise the tab is disabled. Paste `nearmap.gs` + `menu.gs` (save, new deployment) for the menu item.
 
 ### 6. Sync to GitHub
 

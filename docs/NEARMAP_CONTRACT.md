@@ -50,7 +50,7 @@ nearmap/{delivery}/canonical/
   elevation/dtm.tif
   ai/raw/*.geojson       vendor files, ingest-only
   ai/features.json       reduced, serving
-  mesh/                  optional MapBrowser OBJ/LAS inventory; do not serve as the 3D camera
+  mesh/                  optional MapBrowser OBJ/LAS inventory; mesh_to_glb.py derives serve/mesh/model.glb for nearmap-viewer (not for the render camera)
 ```
 
 `manifest.json` is the join object: `delivery_id`, `source` (`api` | `mapbrowser` | `both`), `survey_date`, `crs`, `aoi` / `bounds`, file list, `site_no` once the operator joins it.
@@ -136,15 +136,21 @@ When the prompt and the validator disagree, the validator wins (`nmValidatePass1
 - **Do not** add `nearmap` to production `VIEW_ORDER` / `viewer.html` / vyanet Private tabs until promotion.
 - **Do not** add Nearmap to `syncNow()`, top-level Sync This Row, or Satellite Pipeline.
 
-Mesh / LAS from MapBrowser: ingest and inventory only. Do not convert to GLB. Do not point `viewer360` at an OBJ. The headless camera and model-viewer stay on parcel-clipped plane/drone GLBs.
+## Nearmap viewer (`nearmap-viewer.html`, 2026-09-09)
+
+Read-only sibling of `vyanet-viewer.html`, fed **only** by the Nearmap row and CloudFront: `?site_no=` → `nearmap-elements` (address, delivery, bounds, imagery URLs, pins) then `{delivery}/manifest.json`; `?delivery=` alone works without pins. It never reads `data/index/` or `data/nearmap/` (client data stays off GitHub). Tabs: **2D** (Google Maps satellite + nadir GroundOverlay + region polygons + numbered pins), **3D** (Three.js r128 GLB, regions draped by a vertex heightmap, pins as sprites; tab disabled when `urls.mesh` is absent), **Obliques** (N/E/S/W + nadir, lightbox). One AI-layer panel drives both views; vegetation layers start off, Lawn Grass on. Regions come from `ai/edits/regions.json` (fallback original). Opened from the sheet via **Open Nearmap Viewer (This Row)**.
+
+**Mesh (supersedes the 2026-09-07 "inventory only" clause).** `tools/nearmap/mesh_to_glb.py` converts the MapBrowser `MeshTiledOBJ` (OBJ + MTL + JPEG textures + `.ofs` origin + `Tiles.prj`) into `{serve}/mesh/model.glb` (textures ≤ 4096 px, Draco via `gltf-pipeline`) and `mesh/mesh.json`, and stamps `urls.mesh` / `urls.mesh_meta` / `mesh{}` into the manifest. Frame: X east, Y north, Z up, metres; origin at the nadir-bounds centre projected through the delivery's own `Tiles.prj` (NAD83 Oregon North, intl ft); `mesh.local` holds the nadir corners in that frame (same bilinear convention as `model-viewer`'s `nadir.local`). Z0 = 2nd percentile of z. `promote.py` uploads `mesh/*` with the serve dir (`model/gltf-binary`). Still true: do not point `viewer360` / the headless render camera at Nearmap meshes; plane/drone GLBs stay the render source.
+
+**Licence note.** The GLB is a *derived* vendor binary served from the public CloudFront tiles bucket. That is acceptable for the trial only if the Nearmap licence allows derived-mesh distribution; confirm before any customer-facing use (open question in CLAUDE.md: analyze/cache/derive/resell rights).
 
 ## Out of scope until promotion
 
 - Editing satellite Pass 1/2, `SAT_PASS1_EMIT_IDS`, or the pin catalog
 - Putting Nearmap on `viewer.html` or vyanet Private
-- Mesh → GLB / render Lambda
+- Render Lambda / headless camera on Nearmap meshes (mesh → GLB for the Nearmap viewer is in scope as of 2026-09-09)
 - Clipping Vert to taxlot (trial serves Nearmap’s AOI with bounds)
-- License / resell of vendor rasters — keep trial binaries in **ingest**; tiles hold derived stills + compact JSON only
+- License / resell of vendor rasters — keep trial binaries in **ingest**; tiles hold derived stills, the derived mesh GLB, and compact JSON only
 
 ## Promotion checklist (only when Jonah says the workflow is established)
 

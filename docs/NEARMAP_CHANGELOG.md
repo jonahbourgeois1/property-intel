@@ -2,6 +2,23 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-viewer.html v1.0.0 + mesh_to_glb.py
+
+**What.**
+- `nearmap-viewer.html` (new, v1.0.0): Vyanet-viewer-style bar with **2D / 3D / Obliques** tabs and a right-hand AI-layer panel. Data only from the Nearmap row (`?site_no=` → `nearmap-elements`) and CloudFront (`manifest.json`, `vert.jpg`, obliques, `ai/edits/regions.json` → original fallback, `mesh/model.glb`, `mesh/mesh.json`); `?delivery=` alone works without pins; `&tiles=` overrides the base for local serve trees. No `data/index` / `data/nearmap` reads. 2D: Google Maps satellite + nadir GroundOverlay + one polygon per ring per class + numbered pin markers with InfoWindow. 3D: Three.js r128 (same CDN/import map as `model-viewer`), GLTFLoader + DRACOLoader, Z-up OrbitControls; a 0.5 m vertex heightmap (max z per cell) built once from the loaded mesh drapes every region outline (densified to 1 m) and translucent fill, and places pin sprites with hover labels; `focusPin3d` from the pin list. Layer toggles / All / None / Catalog pins apply to both views; vegetation classes start off, Lawn Grass on. 3D tab disabled when `urls.mesh` is absent.
+- `tools/nearmap/mesh_to_glb.py` (new): MapBrowser `MeshTiledOBJ` → GLB in a local metre frame (X east, Y north, Z up; origin = nadir-bounds centre projected through the delivery's `Tiles.prj`, `.ofs` applied, Z0 = 2nd percentile), textures re-encoded ≤ 4096 px, Draco via `npx gltf-pipeline`, `mesh/mesh.json` with `local` corners (nw/ne/sw/se) + bbox + stats, manifest `urls.mesh` / `urls.mesh_meta` / `mesh{}`.
+- `tools/nearmap/promote.py`: `.glb` → `model/gltf-binary`.
+- `apps scripts/nearmap.gs`: `NEARMAP_VIEWER_URL`, `openNearmapViewerForActiveRow`. `apps scripts/menu.gs`: "Open Nearmap Viewer (This Row)".
+- Contract: mesh "inventory only / do not convert" clause superseded for the viewer; licence note on serving a derived vendor mesh from public CloudFront.
+
+**Why.** Jonah: a Nearmap viewer for GitHub Pages similar to the Vyanet viewer, using only Nearmap data, both properties working (Macalpine has the MapBrowser 3D export, Columbia does not), with AI layers toggleable in 2D and 3D.
+
+**Files.** `nearmap-viewer.html`, `tools/nearmap/mesh_to_glb.py`, `tools/nearmap/promote.py`, `apps scripts/nearmap.gs`, `apps scripts/menu.gs`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`
+
+**How it was checked.** Mesh: Macalpine OBJ 612,361 vertices / 937,956 triangles, 3 materials, `NAD83 / Oregon North (ft)`, origin E 7970906.881 N 137873.380 ft → `model.glb` 9.8 MB Draco (32.1 MB raw), corners show the ~0.6° grid-north rotation as expected. Viewer: `node --check`, ids, onclick, dup funcs clean. Headless Chromium (SwiftShader) with the sheet stubbed, local serve tree: Macalpine → 1555 regions (edits), 20 layers (14 on by default), 2 pins listed, 5 oblique cards, 3D tab enabled, mesh loaded and rendered (1200×836 canvas) with draped regions and pins, layer toggles / None / All in 3D; Columbia → 142 regions, 17 layers, 3D tab disabled, 2D + obliques fine. 0 page errors, 0 console errors. **Not verified:** the live CloudFront path (`promote.py` for Macalpine mesh not run — S3 write), the Apps Script menu item (paste + new deployment), alignment tolerance of the bilinear local frame vs the mesh at the AOI edges (looked right at the house), performance on low-end GPUs.
+
+**Status.** Committed to `main`. Run `promote.py --delivery 18775-macalpine-loop-bend-or-97702`, paste `nearmap.gs` + `menu.gs`, new deployment.
+
 ## 2026-09-09 — v1.6.1: pin at the deepest interior point (pole of inaccessibility)
 
 **What.** `interiorPoint` no longer returns the area centroid just because it is inside. All candidates — the area centroid plus interior span midpoints on 19 horizontal and 19 vertical scan lines — are scored by clearance (distance to the nearest edge); the winner is refined with four rounds of a shrinking 5×5 grid walk. Result: the point farthest from any edge, i.e. the middle of the thickest part of the region.
