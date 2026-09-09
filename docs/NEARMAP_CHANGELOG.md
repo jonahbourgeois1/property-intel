@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.10: more close under the stroke; keep real cutouts
+
+**What.** `GAP_CLOSE_BRUSH` 1 → 2 (stroke-local only, same as v1.6.7 strength but not whole-region). `restoreUnpaintedHoles` now restores only substantial cutouts (`HOLE_KEEP_M2 = 20 m²` or mean width ≥ 3 m). Leftover triangles near the stroke may close; a 66 m² loop interior and the driveway hole Jonah left open stay unless painted over.
+
+**Why.** Jonah: v1.6.9 "is not doing enough". Restoring every existing hole treated leftover seams from the previous pass as cutouts, so the north-drive stroke no longer filled the gaps he was drawing over. Distant-hole protection is kept for real cutouts.
+
+**Files.** `nearmap-review.html` (v1.6.10), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless hole suite: Size-14 loop keeps a ~66 m² hole; grow on the ring keeps it; Size-10 erase cutout (locked, 3 m²) survives a grow elsewhere; zigzag scribble seams close (0 holes). 0 page errors.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.9: close only under this stroke; leave other holes
 
 **What.** Gap-close no longer runs on the whole region. Dilate/erode is copied onto the mask only within `brushR + gapM` of this stroke's stamps. Holes that already existed (`existingHolesFrom`) are restored unless a stamp actually covers them. Locked erase cutouts still punched.

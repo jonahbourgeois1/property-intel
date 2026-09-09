@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.9, 2026-09-09)
-  Gap-close applies only under this stroke. Existing holes the brush did not
-  paint over stay empty. Closed-loop interiors are not flood-filled.
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.10, 2026-09-09)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -225,7 +223,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.9';
+  var BUILD = 'v1.6.10';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -244,7 +242,12 @@
   // multiple of the brush radius fills leftover seams between almost-overlapping
   // passes — the add-side of dropping slivers on erase. It does NOT flood-fill
   // an enclosed courtyard: a hole wider than ~2× this radius stays empty.
-  var GAP_CLOSE_BRUSH = 1;
+  var GAP_CLOSE_BRUSH = 2;
+  // Existing holes this large (or this wide) are cutouts: restore them unless
+  // the brush painted over them. Smaller leftover triangles near the stroke
+  // are allowed to close.
+  var HOLE_KEEP_M2 = 20;
+  var HOLE_KEEP_WIDTH_M = 3;
 
   var CLASS_MAP = [
     { id: 61, name: 'Roof', classes: ['Roof'] },
@@ -1501,10 +1504,17 @@
     }
   }
 
-  // Keep a hole that already existed unless this stroke's stamps actually
-  // painted it. Close must not refill a cutout the reviewer left open.
+  // Keep a substantial existing cutout unless this stroke painted it. Leftover
+  // crumbs/triangles (under HOLE_KEEP_*) are allowed to close near the stroke.
   function restoreUnpaintedHoles(grid, nx, ny, cell, west, south, fr, holes, stamps, brushR) {
     if (!holes || !holes.length) return;
+    var keep = [];
+    holes.forEach(function (ring) {
+      var m = ringMetricsXY(ring, fr);
+      var meanWidth = m.perimeter > 0 ? (2 * m.area / m.perimeter) : 0;
+      if (m.area >= HOLE_KEEP_M2 || meanWidth >= HOLE_KEEP_WIDTH_M) keep.push(ring);
+    });
+    if (!keep.length) return;
     var r2 = (brushR + cell * 0.5) * (brushR + cell * 0.5);
     var stampXY = (stamps || []).map(function (s) {
       return { x: fr.x(s.lng), y: fr.y(s.lat) };
@@ -1517,8 +1527,8 @@
         var lng = fr.lng(west + (x + 0.5) * cell);
         var lat = fr.lat(south + (y + 0.5) * cell);
         var inHole = false;
-        for (h = 0; h < holes.length && !inHole; h++) {
-          if (pointInRing(lng, lat, holes[h])) inHole = true;
+        for (h = 0; h < keep.length && !inHole; h++) {
+          if (pointInRing(lng, lat, keep[h])) inHole = true;
         }
         if (!inHole) continue;
         var cx = west + (x + 0.5) * cell;
