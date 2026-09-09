@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.4, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.5, 2026-09-09)
   Holes are real: drawn as cutouts, respected by every inside test, kept across strokes.
   Grow strokes fill the crumb/sliver gaps scribbling leaves; deliberate holes stay.
   TWO EDITORS, one page, never both at once:
@@ -223,7 +223,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.4';
+  var BUILD = 'v1.6.5';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -244,8 +244,8 @@
   // between passes. Holes that existed before the stroke (a deliberate erase, a
   // painted loop's inside) are never filled by this rule, whatever their size;
   // only painting over them removes them. Erase strokes never fill anything.
-  var HOLE_FILL_M2 = 24;
-  var HOLE_SLIVER_WIDTH_M = 3.2;
+  var HOLE_FILL_M2 = 240;
+  var HOLE_SLIVER_WIDTH_M = 32;
 
   var CLASS_MAP = [
     { id: 61, name: 'Roof', classes: ['Roof'] },

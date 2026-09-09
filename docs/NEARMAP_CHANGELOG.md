@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.5: hole-fill range ×10
+
+**What.** `HOLE_FILL_M2` 24 → 240 m², `HOLE_SLIVER_WIDTH_M` 3.2 → 32 m. Grow strokes only; pre-existing holes still never filled.
+
+**Why.** Jonah: "still not nearly enough. 10x it".
+
+**Files.** `nearmap-review.html` (v1.6.5), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless hole suite: a Size-14 loop's 68 m² inside now fills on the closing stroke (expected at this threshold; the suite's loop-hole assertion was updated to assert the fill); a 3 m² erased cutout still survives later grow strokes (pre-existing protection); 0.6 m scribble gaps fill. 0 page errors.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.4: hole-fill range ×4
 
 **What.** `HOLE_FILL_M2` 6 → 24 m², `HOLE_SLIVER_WIDTH_M` 0.8 → 3.2 m. Same rule otherwise: grow strokes only, pre-existing holes never filled.
