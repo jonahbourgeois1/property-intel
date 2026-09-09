@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.4: hole-fill range ×4
+
+**What.** `HOLE_FILL_M2` 6 → 24 m², `HOLE_SLIVER_WIDTH_M` 0.8 → 3.2 m. Same rule otherwise: grow strokes only, pre-existing holes never filled.
+
+**Why.** Jonah: "quadruple the range for autofill" — the v1.6.3 thresholds left larger scribble gaps standing.
+
+**Files.** `nearmap-review.html` (v1.6.4), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless hole suite re-run: 0.6 m scribble gaps filled; painted-loop hole (68 m², above the new line) and a pre-existing 3 m² erased cutout (below it, protected as pre-existing) both survive later grow strokes. Note the protection now matters more: a fresh loop with an inside under 24 m² (about a 5.5 m diameter) fills on the stroke that closes it — erase it afterwards if the cutout was intended.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.3: scribble gaps auto-fill, deliberate holes stay
 
 **What.** `fillSmallHoles(geom, before, fr)` runs on the mask result of every grow / new-region stroke (never on erase). A hole is filled when it is a crumb (`HOLE_FILL_M2 = 6 m²`) or a sliver (mean width `< HOLE_SLIVER_WIDTH_M = 0.8 m`), unless it shares ground with a hole that already existed on one of the input features (`ringsShareGround`) — those are deliberate and survive at any size.
