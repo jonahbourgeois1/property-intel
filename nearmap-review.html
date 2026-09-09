@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.10, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.11, 2026-09-09)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -18,7 +18,7 @@
     edits    = CloudFront {delivery}/ai/edits/regions.json (working FeatureCollection).
                sheet mode (site_no= / property=): Save posts the FC to Apps Script,
                which PUTs it to S3 with SigV4; local delivery= mode: review_server PUT.
-    Revert regions = original. Save after Revert writes original back into edits.
+    Revert to original = vendor original. Revert changes = last Save / session start.
   TESTING MODE applies only to plain delivery= opens: each open starts from original
     (?fresh=0 resumes local edits; ?fresh=1 forces a fresh start in sheet mode).
   Reviewer-first: Pan / Draw. Draw: + picks a centroid, left-click adds, right-click removes;
@@ -128,7 +128,8 @@
   #pinList li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--line); }
   #pinList li span.grow { flex: 1; min-width: 0; }
   .src { font-size: 10px; color: var(--hot); }
-  .submit-bar { padding: 10px 12px; border-top: 1px solid var(--line); }
+  .submit-bar { padding: 10px 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .submit-bar .status { flex: 1 0 100%; margin-top: 4px; }
   .btn { background: #2b333e; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer; }
   .btn.primary { background: #1f6feb; border-color: #1f6feb; }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -191,7 +192,7 @@
     <h2>Delivery</h2>
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
-      <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> (S3 via the sheet, or the local file). Revert regions returns to original.</p>
+      <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> (S3 via the sheet, or the local file). <strong>Revert changes</strong> discards paint since the last Save (or since you opened). <strong>Revert to original</strong> puts the vendor file back.</p>
       <p class="meta pins-only" id="pinsNote">Pins editor. Regions are shown read-only (finish them in the Regions editor). Seed makes one pin per region at its interior point — no vegetation, Lawn Grass excepted. Place pin adds one by hand. Save writes the Nearmap sheet only.</p>
       <label class="toggle regions-only"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
@@ -206,7 +207,8 @@
     </div>
     <div class="submit-bar">
       <button type="button" class="btn primary" id="saveBtn">Save</button>
-      <button type="button" class="btn regions-only" id="revertRegions">Revert regions</button>
+      <button type="button" class="btn regions-only" id="revertChanges">Revert changes</button>
+      <button type="button" class="btn regions-only" id="revertRegions">Revert to original</button>
       <button type="button" class="btn" id="copyBtn">Copy JSON</button>
       <div class="status" id="status"></div>
     </div>
@@ -223,7 +225,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.10';
+  var BUILD = 'v1.6.11';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -352,6 +354,7 @@
   var consumed = {};
   var originalById = {};
   var originalFc = null;
+  var checkpointFc = null;
   var working = { ids: [], stamps: [] };
   var brushing = false;
   var brushPainting = false;
@@ -455,6 +458,31 @@
     if (!aiPack) aiPack = { counts: {}, hints: [], features: [] };
     aiPack.features = ensureFeatureIds((fc && fc.features) || []);
     refreshLayerCounts();
+  }
+
+  function captureCheckpoint() {
+    checkpointFc = {
+      type: 'FeatureCollection',
+      features: JSON.parse(JSON.stringify((aiPack && aiPack.features) || []))
+    };
+  }
+
+  function applyRegionSnapshot(fc, statusMsg, howFile, howMem) {
+    if (!fc) {
+      setStatus('Nothing to restore', 'err');
+      return;
+    }
+    applyWorkingFc(JSON.parse(JSON.stringify(fc)));
+    clearPaintHistory();
+    working = { ids: [], stamps: [] };
+    brushTarget = null;
+    persistRegions().then(function (how) {
+      updateBrushLabel();
+      redrawAi();
+      syncBrushChrome();
+      if (SHEET_MODE && statusMsg) setStatus(statusMsg);
+      else setStatus(how === 'file' ? howFile : howMem);
+    });
   }
 
   function refreshLayerCounts() {
@@ -3003,24 +3031,30 @@
     });
   }
 
+  function revertChanges() {
+    if (!checkpointFc) {
+      setStatus('No saved starting point yet — Save first, or reopen the page', 'err');
+      return;
+    }
+    applyRegionSnapshot(
+      checkpointFc,
+      'Reverted changes — back to last Save / when you opened (Save to publish)',
+      'Reverted changes — edits/regions.json restored to last Save / open',
+      'Reverted changes in memory — start review_server to write the file'
+    );
+  }
+
   function revertRegions() {
     if (!originalFc) {
       setStatus('Original regions.json is not loaded yet', 'err');
       return;
     }
-    applyWorkingFc(JSON.parse(JSON.stringify(originalFc)));
-    clearPaintHistory();
-    working = { ids: [], stamps: [] };
-    brushTarget = null;
-    persistRegions().then(function (how) {
-      updateBrushLabel();
-      redrawAi();
-      syncBrushChrome();
-      if (SHEET_MODE) setStatus('Reverted to original — click Save to publish the reset');
-      else setStatus(how === 'file'
-        ? 'Reverted edits/regions.json from original'
-        : 'Reverted in memory — start review_server to write the file');
-    });
+    applyRegionSnapshot(
+      originalFc,
+      'Reverted to original — click Save to publish the reset',
+      'Reverted edits/regions.json from original',
+      'Reverted in memory — start review_server to write the file'
+    );
   }
 
   function eventToLl(ev) {
@@ -3354,6 +3388,7 @@
       }
       if (!workingDoc || !workingDoc.features) throw new Error('no regions');
       applyWorkingFc(workingDoc);
+      captureCheckpoint();
       if (FRESH_ON_OPEN && o.orig && !SHEET_MODE) {
         // Reset local edits/regions.json (and the browser backup) to the original
         // so what is on disk is exactly what this session started from.
@@ -3477,6 +3512,7 @@
     if (k === 'z' && !ev.shiftKey) { ev.preventDefault(); stepPaintHistory(-1); }
     else if ((k === 'z' && ev.shiftKey) || k === 'y') { ev.preventDefault(); stepPaintHistory(1); }
   });
+  document.getElementById('revertChanges').addEventListener('click', function () { revertChanges(); });
   document.getElementById('revertRegions').addEventListener('click', function () { revertRegions(); });
   document.getElementById('pinList').addEventListener('click', function (ev) {
     var pick = ev.target.closest('[data-pick-pin]');
@@ -3525,6 +3561,7 @@
   document.getElementById('saveBtn').addEventListener('click', function () {
     persistLocal();
     if (!siteNo) {
+      captureCheckpoint();
       setStatus('Saved locally (add site_no= to write the Nearmap sheet)');
       return;
     }
@@ -3592,6 +3629,7 @@
         if (rg) {
           bits.push('regions saved to S3 edits/ (' + rg.features + ' regions' +
             (regionsSummary ? (', ' + regionsSummary.changed + ' changed / ' + regionsSummary.removed + ' removed vs original') : '') + ')');
+          captureCheckpoint();
         }
         setStatus(bits.join(' · ') || 'Saved');
       } else {

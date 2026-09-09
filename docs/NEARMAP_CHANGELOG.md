@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.11: Revert changes vs Revert to original
+
+**What.** Two region-editor buttons: **Revert changes** restores the working copy to the last Save (or the regions this session opened with); **Revert to original** restores vendor `ai/original/regions.json`. Checkpoint is captured on load and on Save (sheet Save, or local Save when there is no `site_no`). Paint undo/redo arrows are unchanged.
+
+**Why.** Jonah: a button to revert to original and a button to revert current changes.
+
+**Files.** `nearmap-review.html` (v1.6.11), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids (`revertChanges`, `revertRegions`), onclick, dup funcs. Not verified in the browser: clicking both buttons on Macalpine.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.10: more close under the stroke; keep real cutouts
 
 **What.** `GAP_CLOSE_BRUSH` 1 → 2 (stroke-local only, same as v1.6.7 strength but not whole-region). `restoreUnpaintedHoles` now restores only substantial cutouts (`HOLE_KEEP_M2 = 20 m²` or mean width ≥ 3 m). Leftover triangles near the stroke may close; a 66 m² loop interior and the driveway hole Jonah left open stay unless painted over.
