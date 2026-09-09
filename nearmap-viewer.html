@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
 <!--
-  nearmap-viewer.html — Nearmap property viewer (v1.0.1, 2026-09-09)
+  nearmap-viewer.html — Nearmap property viewer (v1.0.2, 2026-09-09)
+  Regions re-read on tab focus / Reload so an open viewer follows editor saves; status shows the save time.
   3D camera/controls mirror model-viewer.html exactly (left pan, middle rotate, right dolly,
   wheel zoom, 0..90° polar lock, 45° opening from the south, Reset View fly-back).
   Sibling of vyanet-viewer.html, but fed ONLY by Nearmap data:
@@ -95,7 +96,7 @@
 <aside id="panel">
   <h2>AI layers</h2>
   <div class="scroll">
-    <div class="layer-btns"><button type="button" id="aiAll">All</button><button type="button" id="aiNone">None</button></div>
+    <div class="layer-btns"><button type="button" id="aiAll">All</button><button type="button" id="aiNone">None</button><button type="button" id="reloadRegions" title="Re-read ai/edits/regions.json (picks up editor saves)" style="margin-left:auto">Reload</button></div>
     <div id="aiLayers"></div>
     <label class="layer-row pins"><input type="checkbox" id="pinsToggle" checked><span class="swatch" style="background:#a855f7"></span>Catalog pins<span class="n" id="pinCount">0</span></label>
     <ol id="pinList"></ol>
@@ -109,7 +110,7 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-const BUILD = 'v1.0.1';
+const BUILD = 'v1.0.2';
 const NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 const MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -229,7 +230,10 @@ async function loadRegions() {
   let fc = await fetchJsonOptional(state.regionsEditsUrl);
   let src = 'edits';
   if (!fc || !Array.isArray(fc.features)) { fc = await fetchJsonOptional(state.regionsOriginalUrl); src = 'original'; }
-  if (!fc || !Array.isArray(fc.features)) { state.regions = { features: [] }; return; }
+  if (!fc || !Array.isArray(fc.features)) { state.regions = { features: [] }; return false; }
+  const sig = (fc.saved || '') + ':' + fc.features.length;
+  const changed = sig !== state.regionsSig;
+  state.regionsSig = sig;
   state.regions = fc;
   state.regionsSource = src;
   const counts = {};
@@ -237,7 +241,27 @@ async function loadRegions() {
   state.classes = Object.keys(counts).sort();
   state.counts = counts;
   state.classes.forEach((c) => { if (state.layerOn[c] === undefined) state.layerOn[c] = !VEGETATION_RE.test(c) || c === 'Lawn Grass'; });
+  return changed;
 }
+// Re-read the regions file (the editor may have saved since this tab loaded) and
+// redraw both views when it changed. Runs on focus/visibility and on Reload.
+let reloading = false;
+async function reloadRegions(reason) {
+  if (reloading || !state.bounds) return;
+  reloading = true;
+  try {
+    const changed = await loadRegions();
+    if (changed) {
+      renderPanel();
+      if (mapReady) draw2dRegions();
+      if (three) draw3dRegions();
+      applyLayers();
+      setStatus(statusText() + (reason ? ' · reloaded (' + reason + ')' : ''));
+    }
+  } finally { reloading = false; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reloadRegions('tab focus'); });
+window.addEventListener('focus', () => reloadRegions('focus'));
 async function loadCatalog() {
   try {
     const cat = await fetchJson('data/pin-catalog/pins-catalog.json');
@@ -647,6 +671,12 @@ $('aiLayers').addEventListener('change', (ev) => {
 $('aiAll').addEventListener('click', () => { state.classes.forEach((c) => { state.layerOn[c] = true; }); renderPanel(); applyLayers(); });
 $('aiNone').addEventListener('click', () => { state.classes.forEach((c) => { state.layerOn[c] = false; }); renderPanel(); applyLayers(); });
 $('pinsToggle').addEventListener('change', (ev) => { state.pinsOn = ev.target.checked; applyLayers(); });
+$('reloadRegions').addEventListener('click', async () => {
+  setStatus('Reloading regions…');
+  const before = state.regionsSig;
+  await reloadRegions('manual');
+  if (state.regionsSig === before) setStatus(statusText() + ' · no change');
+});
 $('pinList').addEventListener('click', (ev) => {
   const li = ev.target.closest('li');
   if (!li) return;
@@ -659,7 +689,12 @@ $('pinList').addEventListener('click', (ev) => {
 });
 function statusText() {
   const n = (state.regions && state.regions.features || []).length;
-  return delivery + ' · ' + n + ' regions (' + (state.regionsSource || 'none') + ') · ' + state.pins.length + ' pins' +
+  let saved = '';
+  if (state.regions && state.regions.saved) {
+    const d = new Date(state.regions.saved);
+    if (!isNaN(d)) saved = ' saved ' + d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  }
+  return delivery + ' · ' + n + ' regions (' + (state.regionsSource || 'none') + saved + ') · ' + state.pins.length + ' pins' +
     (state.meshUrl ? ' · 3D mesh' + (state.meshMeta && state.meshMeta.triangles ? ' ' + Math.round(state.meshMeta.triangles / 1000) + 'k tris' : '') : ' · no 3D mesh');
 }
 

@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-viewer v1.0.2: follows editor saves
+
+**What.** `reloadRegions()` re-reads `ai/edits/regions.json` on tab focus / visibility and on a new **Reload** button; when `saved` or the feature count changed it redraws 2D polygons, 3D draped groups and the layer panel. Status shows the file's save time ("edits saved Sep 9, 3:39 PM").
+
+**Why.** Jonah saw the viewer disagree with the editor. Diagnosis: not a cache issue — CloudFront serves the file with `no-cache` (policy min TTL 1 s; live fetch was a `RefreshHit` with S3's ETag) and the S3 object matched the editor exactly (r47, 1092 m², 4 holes, saved 20:39:24 UTC). The viewer tab had loaded before that Save and never re-fetched.
+
+**Files.** `nearmap-viewer.html` (v1.0.2)
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless: scratch delivery loads 148 regions; edits file rewritten to 135 with `saved` set; Reload → status "135 regions (edits saved Sep 9, 4:00 PM) · reloaded (manual)", Driveway 16 → 3 in the panel. Live viewer fetch of Macalpine edits compared to `s3.head_object`: same ETag.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-viewer v1.0.1: 3D controls identical to model-viewer
 
 **What.** Camera `PerspectiveCamera(60, …, 0.1, 100000)`, Z-up set before `OrbitControls`; `enableDamping` 0.08, `screenSpacePanning` true, `minDistance` 10, `maxDistance` 5000, mouse **left = pan, middle = rotate, right = dolly**, `zoomSpeed` 1, polar locked 0…π/2 (never underneath). Opening view = model-viewer's: `camDist = 1.4 × max(span x, y)`, camera at `(cx, cy − 0.8·camDist, cz + 0.8·camDist)` looking at the centre. Bottom-left **↑ Reset View** flies back (700 ms ease); the pin list flies to a pin (45 m south, 45 m up).
