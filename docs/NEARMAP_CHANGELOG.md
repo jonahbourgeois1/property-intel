@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.5.3: Copy JSON is mode-aware
+
+**What.** Copy JSON copies what Save would send: in the regions editor the regions diff (`nearmap-regions-edits` doc: removed ids + changed/new features), in the pins editor `{elements, drawn}`. Status reports the counts.
+
+**Why.** Jonah asked; in regions mode the button was still copying the Pass-1 pins from column R.
+
+**Files.** `nearmap-review.html` (v1.5.3)
+
+**How it was checked.** `node --check`; missing ids / onclick / dup funcs. Live note: the first real Save now reports `GitHub read data/nearmap/edits/<id>.json → HTTP 401 Bad credentials` — the `GITHUB_TOKEN` Script Property is expired/revoked (last successful sheet sync commit 2026-08-28 09:03). Rotate the token; no code change.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — v1.5.2: Save tolerates Apps Script's HTML error page
 
 **What.** Save reads the web-app reply as text; if it starts with `<` it is treated as transient (Google's "unable to open the file" page or a sign-in page), Save waits 2.5 s and retries once, and on a second failure prints "Apps Script returned a web page instead of JSON (“<title>”)" instead of `Unexpected token '<'`.

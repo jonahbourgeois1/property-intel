@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.5.2, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.5.3, 2026-09-09)
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions diff.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
@@ -221,7 +221,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.5.2';
+  var BUILD = 'v1.5.3';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -3290,12 +3290,26 @@
     pickCatalog(parseInt(t.getAttribute('data-id'), 10));
   });
   document.getElementById('pickerCancel').addEventListener('click', closePicker);
+  // Copy JSON copies what Save would send for this editor: the regions diff in
+  // the regions editor, the pins in the pins editor.
   document.getElementById('copyBtn').addEventListener('click', function () {
-    var text = JSON.stringify({
-      elements: (record && record.elements) || [],
-      drawn: (record && record.drawn) || emptyDrawn()
-    }, null, 2);
-    navigator.clipboard.writeText(text).then(function () { setStatus('Copied pins + drawn JSON'); },
+    var text, label;
+    if (MODE === 'pins') {
+      text = JSON.stringify({
+        elements: (record && record.elements) || [],
+        drawn: (record && record.drawn) || emptyDrawn()
+      }, null, 2);
+      label = 'Copied ' + (((record && record.elements) || []).length) + ' pin(s) JSON';
+    } else {
+      if (!(aiPack && Array.isArray(aiPack.features) && originalFc)) {
+        setStatus('Regions are not loaded yet', 'err');
+        return;
+      }
+      var diff = regionsDiff();
+      text = JSON.stringify(diff, null, 2);
+      label = 'Copied regions diff JSON · ' + diff.features.length + ' changed / ' + diff.removed.length + ' removed';
+    }
+    navigator.clipboard.writeText(text).then(function () { setStatus(label); },
       function () { setStatus('Clipboard failed', 'err'); });
   });
   document.getElementById('saveBtn').addEventListener('click', function () {
