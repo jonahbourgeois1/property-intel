@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.4.1: pin sits inside irregular shapes
+
+**What.** `interiorPoint(f)` replaces the vertex-average for pin placement and hint dots: area (shoelace) centroid of the largest polygon when it lies inside that polygon; otherwise the midpoint of the interior span — on horizontal and vertical scan lines through the bbox, centre outward — with the greatest clearance from any edge (span width breaks ties). `largestRingCentroid` now delegates to it; `drawHints` uses it. All math in the local metre frame.
+
+**Why.** Jonah: "ensure that when a shape is irregular, the pin is still in the middle of the shape." A vertex average lands outside C/L shapes and drifts toward densely-vertexed edges.
+
+**Files.** `nearmap-review.html` (v1.4.1)
+
+**How it was checked.** `node --check`; missing ids / onclick / dup funcs; BUILD v1.4.1. Node unit test on the extracted functions: C-shape vertex-avg (17.5, 15) outside → interiorPoint (15, 5) inside, centred in the thick arm; L-shape (12.7, 12.7) outside → (15, 4) inside; bent driveway with dense vertices on one arm → (20, 1.5) inside. Paint/erase suite 8/8 and sheet-mode suite unchanged. **Deployed web app (probe 2026-09-09 12:45):** `?route=nearmap-elements&site_no=VY-IN-002` returns `{"ok":false,"error":"NM_COL_DRAWN is not defined"}` — the deployed `config.gs` predates column W; paste `config.gs` + `nearmap.gs` (+ `critique-api.gs`), save, new deployment.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — v1.4.0: sheet mode on the original/edits folder format
 
 **What.**

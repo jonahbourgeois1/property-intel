@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.4.0, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.4.1, 2026-09-09)
   Regions follow the original/edits folder format:
     original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable)
     edits    = sheet mode (site_no= / property=): GitHub data/nearmap/edits/{id}.json,
@@ -207,7 +207,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.4.0';
+  var BUILD = 'v1.4.1';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -1591,16 +1591,93 @@
     cv.classList.add('on');
   }
 
-  function largestRingCentroid(f) {
-    var rings = featureRings(f);
-    var best = null, bestN = -1;
-    rings.forEach(function (ring) {
-      if (ring.length > bestN) {
-        bestN = ring.length;
-        best = ring;
+  // Pin point for a region: the area centroid of the largest polygon when it lies
+  // inside that polygon; otherwise (C-shapes, L-shapes, rings) the midpoint of the
+  // widest interior span found on horizontal and vertical scan lines, scanned
+  // from the middle outward. Vertex averages drift toward dense edges and can
+  // land outside an irregular shape.
+  function interiorPoint(f) {
+    var polys = geometryPolys(f && f.geometry);
+    if (!polys.length) return featureCentroid(f);
+    var c0 = featureCentroid(f);
+    var fr = meterFrame(c0.lat, c0.lng);
+    var best = null, bestA = -1;
+    polys.forEach(function (poly) {
+      var m = polyMetricsXY(poly, fr);
+      if (m.area > bestA) { bestA = m.area; best = poly; }
+    });
+    if (!best || !best[0] || best[0].length < 4) return c0;
+    var probe = { geometry: { type: 'Polygon', coordinates: best } };
+    var ring = best[0];
+    // Shoelace area centroid in the local frame.
+    var A = 0, cx = 0, cy = 0, i;
+    for (i = 0; i < ring.length - 1; i++) {
+      var x0 = fr.x(ring[i][0]), y0 = fr.y(ring[i][1]);
+      var x1 = fr.x(ring[i + 1][0]), y1 = fr.y(ring[i + 1][1]);
+      var cr = x0 * y1 - x1 * y0;
+      A += cr; cx += (x0 + x1) * cr; cy += (y0 + y1) * cr;
+    }
+    if (Math.abs(A) > 1e-9) {
+      var cen = { lng: fr.lng(cx / (3 * A)), lat: fr.lat(cy / (3 * A)) };
+      if (pointInFeature(cen, probe)) return cen;
+    }
+    // Scan lines through the bbox, centre first.
+    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (i = 0; i < ring.length; i++) {
+      var px_ = fr.x(ring[i][0]), py_ = fr.y(ring[i][1]);
+      if (px_ < minX) minX = px_; if (px_ > maxX) maxX = px_;
+      if (py_ < minY) minY = py_; if (py_ > maxY) maxY = py_;
+    }
+    var fracs = [0.5, 0.45, 0.55, 0.4, 0.6, 0.35, 0.65, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8, 0.15, 0.85, 0.1, 0.9];
+    var bestSpan = null;
+    var edges = [];
+    best.forEach(function (rg) {
+      for (var e = 0; e < rg.length - 1; e++) {
+        edges.push({ a: { x: fr.x(rg[e][0]), y: fr.y(rg[e][1]) }, b: { x: fr.x(rg[e + 1][0]), y: fr.y(rg[e + 1][1]) } });
       }
     });
-    return best ? ringCentroidLonLat(best) : featureCentroid(f);
+    function clearance(p) {
+      var d = Infinity;
+      for (var e = 0; e < edges.length; e++) {
+        var q = distPointToSegXY(p, edges[e].a, edges[e].b).d;
+        if (q < d) d = q;
+      }
+      return d;
+    }
+    function spansAlong(horizontal, v) {
+      var xs = [];
+      best.forEach(function (rg) {
+        for (var k = 0; k < rg.length - 1; k++) {
+          var ax = fr.x(rg[k][0]), ay = fr.y(rg[k][1]);
+          var bx = fr.x(rg[k + 1][0]), by = fr.y(rg[k + 1][1]);
+          var a = horizontal ? ay : ax, b = horizontal ? by : bx;
+          if ((a <= v && v < b) || (b <= v && v < a)) {
+            var t = (v - a) / (b - a);
+            xs.push(horizontal ? ax + (bx - ax) * t : ay + (by - ay) * t);
+          }
+        }
+      });
+      xs.sort(function (p, q) { return p - q; });
+      for (var s = 0; s + 1 < xs.length; s += 2) {
+        var w = xs[s + 1] - xs[s];
+        var mid = (xs[s] + xs[s + 1]) / 2;
+        var ll = horizontal ? { lng: fr.lng(mid), lat: fr.lat(v) } : { lng: fr.lng(v), lat: fr.lat(mid) };
+        if (!pointInFeature(ll, probe)) continue;
+        // The best pin point is the candidate farthest from any edge (deepest
+        // inside the shape); span width only breaks ties.
+        var score = clearance(horizontal ? { x: mid, y: v } : { x: v, y: mid }) * 1000 + w;
+        if (!bestSpan || score > bestSpan.score) bestSpan = { score: score, ll: ll };
+      }
+    }
+    fracs.forEach(function (fr_) {
+      spansAlong(true, minY + (maxY - minY) * fr_);
+      spansAlong(false, minX + (maxX - minX) * fr_);
+    });
+    return bestSpan ? bestSpan.ll : c0;
+  }
+
+  function largestRingCentroid(f) {
+    return interiorPoint(f);
   }
 
   // Polygon math in the local metre frame only (never absolute projected metres).
@@ -1797,7 +1874,7 @@
       var cls = featureClass(f);
       if (!cls || layerOn[cls] === false) return;
       if (consumed[String(f.id)]) return;
-      var c = featureCentroid(f);
+      var c = interiorPoint(f);
       if (!c) return;
       var color = colorForClass(cls);
       var mk = new google.maps.Marker({
