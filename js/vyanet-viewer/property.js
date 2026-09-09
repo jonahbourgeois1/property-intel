@@ -7,6 +7,22 @@ export const MODEL_PAGE = 'model-viewer.html';
 export const SAT_PAGE = 'viewer.html';
 export const LIVE_PAGE = 'live-viewer.html';
 export const HOA_PAGE = 'hoa-viewer.html';
+export const NEARMAP_PAGE = 'nearmap-viewer.html';
+export const CF_NEARMAP = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
+// Trial join: Nearmap delivery_id → existing index hub. Do not hash site_no
+// (Jones is name-keyed 6de88883, not hash(14725)). Promotion later writes
+// views.nearmap onto that same hub; this table is the trial stand-in.
+export const NEARMAP_DELIVERY_HUB = {
+  '18775-macalpine-loop-bend-or-97702': '6de88883bfd4a8349a901c54611ed9d7',
+  '410-sw-columbia-st-bend-or-97702': '744a3639be95ce309192dc69b5a8e9f6'
+};
+export const NEARMAP_HUB_DELIVERY = (function () {
+  const out = {};
+  Object.keys(NEARMAP_DELIVERY_HUB).forEach(function (d) {
+    out[NEARMAP_DELIVERY_HUB[d]] = d;
+  });
+  return out;
+})();
 export const MODEL_VIEWS = ['drone-test', 'plane', 'drone'];
 export const SAT_VIEWS = ['drone-test', 'security', 'wildfire', 'plane', 'drone'];
 export const ROLES = ['customer', 'tech', 'responder'];
@@ -43,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.14';
+export const HUB_BUILD = '1.8.15';
 
 // Same default as model-viewer.html; ?gw= overrides, ?gw=0 disables.
 export const GW_DEFAULT = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
@@ -174,11 +190,17 @@ function childQuery(extra) {
   return out.toString();
 }
 
-export function framesFromIndex(idx) {
+export function framesFromIndex(idx, nm) {
   const views = (idx && idx.views) || {};
   const modelView = MODEL_VIEWS.find(function (v) { return views[v]; });
   const satView = SAT_VIEWS.find(function (v) { return views[v]; });
   const hoa = String((idx && idx.hoa) || '').trim();
+  const hubId = String((idx && idx.id) || (nm && nm.propertyId) || '').trim();
+  let delivery = String((nm && nm.delivery) || '').trim();
+  if (!delivery) delivery = NEARMAP_HUB_DELIVERY[hubId] || '';
+  const siteNo = String((nm && nm.siteNo) || '').trim();
+  const tiles = String((nm && nm.tiles) || '').trim();
+  const hasNearmap = !!(delivery || views.nearmap);
   return {
     name: (idx && idx.name) || '',
     address: (idx && idx.address) || '',
@@ -186,19 +208,27 @@ export function framesFromIndex(idx) {
     modelView: modelView || '',
     hasModel: !!modelView,
     hasSatellite: !!satView,
-    hasPrivate: !!(modelView || satView),
+    hasNearmap: hasNearmap,
+    hasPrivate: !!(modelView || satView || hasNearmap),
     hasHoa: !!hoa,
     // hasLive is filled by the hub after detectCameras (cameras file / any
     // view-record cameras array) OR when hasModel is true — Jones has live
     // via the CHEKT gateway with no cameras file yet.
     hasLive: false,
-    privateDefault: modelView ? '3d' : (satView ? 'satellite' : ''),
+    delivery: delivery,
+    privateDefault: modelView ? '3d' : (satView ? 'satellite' : (hasNearmap ? 'nearmap' : '')),
     // embed=1 tells the child pages the hub owns the always-on chrome
     // (live/weather/hazard buttons), so they don't reveal their own copies.
     modelHref: modelView ? (MODEL_PAGE + '?' + childQuery({ view: modelView, embed: '1' })) : '',
     satHref: satView ? (SAT_PAGE + '?' + childQuery({ tab: satView, embed: '1' })) : '',
     liveHref: LIVE_PAGE + '?' + childQuery({ embed: '1' }),
-    hoaHref: hoa ? (HOA_PAGE + '?' + childQuery({ hoa: hoa, embed: '1' })) : ''
+    hoaHref: hoa ? (HOA_PAGE + '?' + childQuery({ hoa: hoa, embed: '1' })) : '',
+    nmHref: hasNearmap ? (NEARMAP_PAGE + '?' + childQuery({
+      embed: '1',
+      delivery: delivery,
+      site_no: siteNo,
+      tiles: tiles
+    })) : ''
   };
 }
 
@@ -206,7 +236,13 @@ export function framesFromIndex(idx) {
 // Walks the model views first (drone-test/plane/drone renders are the
 // highest-caliber imagery), then the satellite views. Stops at the first
 // record carrying nadir.url; returns '' when none do.
-export async function findNadir(root, idx) {
+export async function findNadir(root, idx, nm) {
+  const hubId = String((idx && idx.id) || (nm && nm.propertyId) || '').trim();
+  const delivery = String((nm && nm.delivery) || '').trim() || NEARMAP_HUB_DELIVERY[hubId] || '';
+  if (delivery) {
+    const tiles = String((nm && nm.tiles) || CF_NEARMAP).replace(/\/?$/, '/');
+    return tiles + delivery + '/vert.jpg';
+  }
   const views = (idx && idx.views) || {};
   const seen = [];
   const order = MODEL_VIEWS.concat(SAT_VIEWS);

@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — hub 1.8.15 + nearmap-viewer v1.1.0: same Vyanet shell, draped 3D fills
+
+**What.** Nearmap is no longer a separate chrome. `nearmap-viewer.html?delivery=` on a known trial property redirects into `vyanet-viewer.html` (gate, HOME, PRIVATE, COMMUNITY). Private nested bar is **3D · 2D · Nearmap · Live · Plugins**. Nearmap iframe is `embed=1` (2D / 3D / Obliques + AI layers). Property Facts load `data/gis/{id}.json`; lot line uses `data/parcels/` like Private 2D. 3D fills drape the mesh (no floating max-height cap). Join table: Macalpine → Jones `6de88883…`, Columbia → `744a3639…`.
+
+**Why.** Jonah: still on v1.0.3 on the live URL; overlays should sit on the mesh; the Nearmap viewer should look exactly like the Vyanet viewer (home page, GIS) plus Nearmap layers.
+
+**Files.** `nearmap-viewer.html` (v1.1.0), `vyanet-viewer.html` (hub 1.8.15), `js/vyanet-viewer/property.js`, `docs/NEARMAP_CONTRACT.md`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on both extracted scripts; ids / onclick / dup funcs. Browser: Macalpine delivery opens hub home (hub 1.8.15), Private → Nearmap, GIS facts + lot line, 3D drape. GitHub Pages stays on the previous build until this is pushed.
+
+**Status.** Local; ready to commit.
+
 ## 2026-09-09 — nearmap-viewer v1.0.3: 3D fills cover the whole footprint
 
 **What.** 3D region fills are a flat cap at the **max mesh height** inside each polygon (sampled on the ring and a coarse interior grid), 0.85 m above that, opacity 0.48. A second outline is drawn at that cap height; the draped outline remains. Building (and every other class) now tints the whole footprint the way 2D does, instead of a ring around the walls.

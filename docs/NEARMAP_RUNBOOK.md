@@ -130,7 +130,7 @@ After sync: `nearmap-review.html?property={hashId(site_no)}`
 
 ### 5b. Viewer (`nearmap-viewer.html`)
 
-**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`. Local: `http://localhost:8899/nearmap-viewer.html?delivery=18775-macalpine-loop-bend-or-97702&tiles=http://localhost:8899/tmp/nearmap-serve/` (no pins without `site_no`). Tabs 2D / 3D / Obliques; the AI-layer panel on the right toggles the same classes in 2D and 3D; the pin list focuses a pin in whichever view is open. 3D needs `urls.mesh` in the manifest (step 2b + promote), otherwise the tab is disabled. Paste `nearmap.gs` + `menu.gs` (save, new deployment) for the menu item.
+**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`, which **redirects** into `vyanet-viewer.html?property={hub}&delivery=…&stage=home` for trial deliveries in `NEARMAP_DELIVERY_HUB` (Macalpine → Jones). Same gate / HOME / PRIVATE / COMMUNITY as every other property. Private nested **Nearmap** is the vendor 2D / 3D / Obliques plus AI layers, GIS facts, and lot line. Local: `http://localhost:8899/nearmap-viewer.html?delivery=18775-macalpine-loop-bend-or-97702` (or `&tiles=http://localhost:8899/tmp/nearmap-serve/` for a local serve tree). Direct hub: `vyanet-viewer.html?property=6de88883bfd4a8349a901c54611ed9d7&role=tech`. 3D needs `urls.mesh` in the manifest (step 2b + promote). Paste `nearmap.gs` + `menu.gs` (save, new deployment) is only needed for the menu item itself.
 
 ### 6. Sync to GitHub
 

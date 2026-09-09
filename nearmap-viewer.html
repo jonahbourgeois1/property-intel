@@ -5,20 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
 <!--
-  nearmap-viewer.html — Nearmap property viewer (v1.0.3, 2026-09-09)
-  3D region fills sit as a cap at the max mesh height in each polygon (building
-  covers the whole footprint like 2D) and are more opaque. Outlines still drape.
-  3D camera/controls mirror model-viewer.html exactly (left pan, middle rotate, right dolly,
-  wheel zoom, 0..90° polar lock, 45° opening from the south, Reset View fly-back).
-  Sibling of vyanet-viewer.html, but fed ONLY by Nearmap data:
-    ?site_no=   -> Apps Script nearmap-elements (address, delivery, bounds, imagery, pins)
-    ?delivery=  -> CloudFront manifest.json alone (no pins)
-    &tiles=     -> override the CloudFront base (local serve tree)
-  Never reads data/index or data/nearmap on GitHub (client data stays off the repo).
-  Tabs: 2D (Google Maps + nadir + AI regions + pins) · 3D (Three.js GLB from
-  mesh_to_glb.py, AI regions draped by heightmap, pins as sprites) · Obliques.
-  One layer panel drives both views. Regions = ai/edits/regions.json (fallback original).
-  3D tab is disabled when the delivery has no mesh (urls.mesh absent).
+  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.0, 2026-09-09)
+  Standalone ?delivery= on a known trial property redirects into vyanet-viewer
+  (same HOME / PRIVATE / COMMUNITY). embed=1 is the hub iframe.
+  3D fills drape on the mesh. GIS facts = data/gis/{id}.json (same file as Private 2D/3D).
+  Lot line = data/parcels/ (same grid as viewer.html).
 -->
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -56,6 +47,7 @@
   .swatch { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; border: 1px solid rgba(255,255,255,0.35); }
   .layer-row .n { margin-left: auto; color: #555f6e; }
   .layer-row.pins { border-top: 1px solid #2a3040; margin-top: 8px; padding-top: 10px; }
+  #panel h2.sub { padding-top: 16px; border-top: 1px solid #2a3040; margin-top: 8px; }
   #pinList { list-style: none; margin: 6px 0 0; }
   #pinList li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid #1a1f27; font-size: 12px; color: #c9d1dc; cursor: pointer; }
   #pinList li:hover { color: #f0f2f5; }
@@ -72,6 +64,22 @@
   #resetView:hover { color: #fff; background: #1a1f27; }
   #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; color: #ef4444; font-size: 13px; text-align: center; z-index: 70; background: #111318; }
   #err.on { display: flex; }
+  body.embed #bar .src, body.embed #bar .name, body.embed #bar .addr, body.embed #bar .build { display: none; }
+  body.embed #bar { justify-content: flex-start; }
+  .rd-card { margin: 8px 0 12px; border: 1px solid rgba(255,255,255,0.14); border-radius: 10px; background: #1a1f27; overflow: hidden; }
+  .rd-head { padding: 12px 14px; display: flex; align-items: flex-start; gap: 10px; }
+  .rd-num { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .rd-titles { flex: 1; min-width: 0; }
+  .rd-name { font-size: 12px; font-weight: 600; color: #f0f2f5; line-height: 1.35; }
+  .rd-meta { font-size: 10px; color: #555f6e; margin-top: 4px; line-height: 1.45; }
+  .rd-body { padding: 0 14px 14px; }
+  .gis-group { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; margin: 10px 0 4px; }
+  .gis-group:first-child { margin-top: 0; }
+  .gis-row { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .gis-k { flex: 0 0 42%; font-size: 10px; color: #8a93a2; line-height: 1.45; }
+  .gis-v { flex: 1; font-size: 11px; color: #f0f2f5; line-height: 1.45; overflow-wrap: anywhere; }
+  .gis-sub { font-size: 10px; color: #8a93a2; margin-top: 2px; }
+  .gis-empty { font-size: 11px; color: #555f6e; padding: 4px 0 10px; }
   @media (max-width: 760px) {
     :root { --panel-w: 0px; }
     #panel { display: none; }
@@ -95,8 +103,11 @@
   <div class="view" id="viewObl"><div id="obl"></div></div>
 </div>
 <aside id="panel">
-  <h2>AI layers</h2>
+  <h2>Property Facts</h2>
   <div class="scroll">
+    <label class="layer-row"><input type="checkbox" id="lotToggle" checked><span class="swatch" style="background:#cd3333"></span>Lot line</label>
+    <div id="gisBox"><div class="gis-empty">Loading GIS…</div></div>
+    <h2 class="sub">AI layers</h2>
     <div class="layer-btns"><button type="button" id="aiAll">All</button><button type="button" id="aiNone">None</button><button type="button" id="reloadRegions" title="Re-read ai/edits/regions.json (picks up editor saves)" style="margin-left:auto">Reload</button></div>
     <div id="aiLayers"></div>
     <label class="layer-row pins"><input type="checkbox" id="pinsToggle" checked><span class="swatch" style="background:#a855f7"></span>Catalog pins<span class="n" id="pinCount">0</span></label>
@@ -111,13 +122,19 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-const BUILD = 'v1.0.3';
+import { dataRoot, NEARMAP_DELIVERY_HUB } from './js/vyanet-viewer/property.js?v=1.8.15';
+import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.15';
+const BUILD = 'v1.1.0';
 const NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 const MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
 const THREE_JSM = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/';
 const VEGETATION_RE = /vegetation|tree overhang|natural/i;
+const PARCEL_COUNTIES = [
+  { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
+  { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 }
+];
 
 document.getElementById('build').textContent = 'nearmap ' + BUILD;
 
@@ -125,6 +142,23 @@ const qp = new URLSearchParams(location.search);
 const siteNo = (qp.get('site_no') || qp.get('site') || '').trim();
 let delivery = (qp.get('delivery') || '').trim();
 const tilesBase = (qp.get('tiles') || CF_TILES).replace(/\/?$/, '/');
+const EMBED = qp.get('embed') === '1';
+const propertyId = (qp.get('property') || '').trim() || NEARMAP_DELIVERY_HUB[delivery] || '';
+if (EMBED) document.body.classList.add('embed');
+const HUB_REDIRECT = !EMBED && propertyId;
+if (HUB_REDIRECT) {
+  const u = new URL('vyanet-viewer.html', location.href);
+  u.searchParams.set('property', propertyId);
+  if (delivery) u.searchParams.set('delivery', delivery);
+  if (siteNo) u.searchParams.set('site_no', siteNo);
+  const tilesQ = qp.get('tiles');
+  if (tilesQ) u.searchParams.set('tiles', tilesQ);
+  ['gw', 'chekt', 'debug', 'dataRoot', 'role'].forEach((k) => {
+    const v = qp.get(k); if (v) u.searchParams.set(k, v);
+  });
+  u.searchParams.set('stage', 'home');
+  location.replace(u.href);
+}
 
 const state = {
   address: '', bounds: null, nadirUrl: '', obliques: {}, manifest: null,
@@ -135,6 +169,7 @@ let map = null, mapReady = false, groundOverlay = null;
 const shapes2d = {};   // class -> [google.maps.Polygon]
 let markers2d = [];
 let three = null;      // { renderer, scene, camera, controls, mesh, groups: {cls: Group}, pinGroup, heightmap }
+let parcelPoly = null, parcelShown = true;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -296,9 +331,118 @@ function applyLayers() {
   Object.keys(shapes2d).forEach((cls) => shapes2d[cls].forEach((s) => s.setVisible(!!state.layerOn[cls])));
   markers2d.forEach((m) => m.setVisible(state.pinsOn));
   if (three) {
-    Object.keys(three.groups).forEach((cls) => { three.groups[cls].visible = !!state.layerOn[cls]; });
+    const missing = state.classes.some((c) => state.layerOn[c] && !three.groups[c]);
+    if (missing) draw3dRegions();
+    else Object.keys(three.groups).forEach((cls) => { three.groups[cls].visible = !!state.layerOn[cls]; });
     if (three.pinGroup) three.pinGroup.visible = state.pinsOn;
   }
+}
+
+async function loadGisFacts() {
+  const box = $('gisBox');
+  if (!box) return;
+  if (!propertyId) {
+    box.innerHTML = '<div class="gis-empty">No property hub for this delivery — GIS facts live on data/gis/{id}.json.</div>';
+    return;
+  }
+  try {
+    const rec = await fetchPropertyGis(dataRoot(), propertyId);
+    const html = gisFactsHtml(rec, function (s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    });
+    box.innerHTML = html || '<div class="gis-empty">No GIS facts published for this property.</div>';
+  } catch (e) {
+    box.innerHTML = '<div class="gis-empty">GIS facts failed to load.</div>';
+  }
+}
+function pointInLngLatRing(lat, lng, ring) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) && (lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function polyContainsLngLat(poly, lat, lng) {
+  if (!poly || !poly[0] || poly[0].length < 4 || !pointInLngLatRing(lat, lng, poly[0])) return false;
+  for (let h = 1; h < poly.length; h++) {
+    if (poly[h] && poly[h].length >= 4 && pointInLngLatRing(lat, lng, poly[h])) return false;
+  }
+  return true;
+}
+function isUnaccountedParcel(props) {
+  props = props || {};
+  if (String(props.ACCTNO || '') === '000None') return true;
+  const raw = String(props.TAXLOT || '');
+  if (!/^\d+$/.test(raw)) return false;
+  const n = Number(raw);
+  return n === 77 || n === 88 || n === 99;
+}
+function parcelFileFor(lat, lng, county) {
+  const latCell = Math.floor((lat - county.lat0) / county.step) * county.step + county.lat0;
+  const lngCell = Math.floor((lng - county.lng0) / county.step) * county.step + county.lng0;
+  return county.name + '_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
+}
+function featArea(feat) {
+  const acres = Number((feat.properties || {}).MAPACRES);
+  if (isFinite(acres) && acres > 0) return acres;
+  const g = feat.geometry;
+  const polys = !g ? [] : g.type === 'Polygon' ? [g.coordinates]
+              : g.type === 'MultiPolygon' ? g.coordinates : [];
+  let sum = 0;
+  for (let i = 0; i < polys.length; i++) {
+    const ring = polys[i] && polys[i][0];
+    if (!ring) continue;
+    let a = 0;
+    for (let j = 0, k = ring.length - 1; j < ring.length; k = j++) {
+      a += ring[k][0] * ring[j][1] - ring[j][0] * ring[k][1];
+    }
+    sum += Math.abs(a) / 2;
+  }
+  return sum;
+}
+function parcelMatch(geojson, lat, lng) {
+  if (!geojson || !geojson.features) return null;
+  let best = null, bestArea = Infinity;
+  for (let i = 0; i < geojson.features.length; i++) {
+    const f = geojson.features[i], g = f.geometry;
+    if (!g || isUnaccountedParcel(f.properties)) continue;
+    const polys = g.type === 'Polygon' ? [g.coordinates]
+                : g.type === 'MultiPolygon' ? g.coordinates : [];
+    let hit = false;
+    for (let p = 0; p < polys.length; p++) {
+      if (polyContainsLngLat(polys[p], lat, lng)) { hit = true; break; }
+    }
+    if (!hit) continue;
+    const area = featArea(f);
+    if (area < bestArea) { best = f; bestArea = area; }
+  }
+  return best;
+}
+function loadParcelOverlay() {
+  if (!map || !state.bounds) return;
+  const lat = (state.bounds.north + state.bounds.south) / 2;
+  const lng = (state.bounds.east + state.bounds.west) / 2;
+  const base = dataRoot() + 'parcels/';
+  const files = PARCEL_COUNTIES.map((c) => parcelFileFor(lat, lng, c));
+  files.reduce(function (chain, name) {
+    return chain.then(function (found) {
+      if (found) return found;
+      return fetch(base + name).then((r) => r.ok ? r.json() : null)
+        .then((geojson) => parcelMatch(geojson, lat, lng));
+    });
+  }, Promise.resolve(null)).then(function (matched) {
+    if (!matched || !matched.geometry) return;
+    const g = matched.geometry;
+    const polys = g.type === 'Polygon' ? [g.coordinates]
+                : g.type === 'MultiPolygon' ? g.coordinates : [];
+    const paths = polys.map((poly) => poly[0].map((pt) => ({ lat: pt[1], lng: pt[0] })));
+    if (parcelPoly) parcelPoly.setMap(null);
+    parcelPoly = new google.maps.Polygon({
+      paths: paths, strokeColor: '#cd3333', strokeOpacity: 1, strokeWeight: 4,
+      fillOpacity: 0, map: parcelShown ? map : null, clickable: false, zIndex: 4
+    });
+  }).catch(function () { /* tile 404s are normal */ });
 }
 
 // ── 2D (Google Maps) ─────────────────────────────────────────────────────────
@@ -326,6 +470,7 @@ function init2d() {
   map.fitBounds(b);
   draw2dRegions();
   draw2dPins();
+  loadParcelOverlay();
   mapReady = true;
 }
 function draw2dRegions() {
@@ -553,91 +698,93 @@ function pointInXYPoly(x, y, rings) {
   for (let h = 1; h < rings.length; h++) if (pointInXYRing(x, y, rings[h])) return false;
   return true;
 }
-// Highest mesh sample inside the polygon — fills sit on this plane so a
-// Building covers the whole footprint like the 2D overlay, not just the
-// draped edge (which hid under the walls).
-function maxHeightInPoly(rings, heightAt) {
-  let maxH = -Infinity;
-  const hit = (p) => {
-    const h = heightAt(p.x, p.y);
-    if (h !== null && h > maxH) maxH = h;
-  };
-  rings.forEach((ring) => densify(ring, 1.2).forEach(hit));
-  const outer = rings[0];
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  outer.forEach((p) => {
-    if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
-  });
-  const span = Math.max(maxX - minX, maxY - minY, 1);
-  const step = Math.max(0.8, Math.min(2.5, span / 14));
-  for (let x = minX; x <= maxX; x += step) {
-    for (let y = minY; y <= maxY; y += step) {
-      if (pointInXYPoly(x, y, rings)) hit({ x, y });
-    }
-  }
-  return isFinite(maxH) ? maxH : 0;
-}
 function draw3dRegions() {
   const { THREE, scene, heightAt } = three;
   Object.keys(three.groups).forEach((c) => scene.remove(three.groups[c]));
   three.groups = {};
-  const LIFT_LINE = 0.45, LIFT_FILL = 0.85;
-  ((state.regions && state.regions.features) || []).forEach((f) => {
-    const cls = featureClass(f);
-    const color = new THREE.Color(colorForClass(cls));
+  const LIFT_LINE = 0.15, LIFT_FILL = 0.08;
+  const fillBuf = {};
+  function groupFor(cls) {
     let group = three.groups[cls];
     if (!group) {
       group = new THREE.Group();
-      group.visible = !!state.layerOn[cls];
+      group.visible = true;
       group.renderOrder = 2;
       scene.add(group);
       three.groups[cls] = group;
+      fillBuf[cls] = { pos: [], idx: [], nv: 0, color: new THREE.Color(colorForClass(cls)) };
     }
+    return group;
+  }
+  function sampleH(x, y) {
+    const h = heightAt(x, y);
+    return h === null ? null : { x, y, z: h + LIFT_FILL };
+  }
+  function addTri(buf, p, q, r) {
+    buf.pos.push(p.x, p.y, p.z, q.x, q.y, q.z, r.x, r.y, r.z);
+    buf.idx.push(buf.nv, buf.nv + 1, buf.nv + 2);
+    buf.nv += 3;
+  }
+  ((state.regions && state.regions.features) || []).forEach((f) => {
+    const cls = featureClass(f);
+    if (!state.layerOn[cls]) return;
+    const color = new THREE.Color(colorForClass(cls));
+    const group = groupFor(cls);
+    const buf = fillBuf[cls];
+    const veg = VEGETATION_RE.test(cls) && cls !== 'Lawn Grass';
     featureRings(f).forEach((poly) => {
       const rings = poly.map((ring) => ring.map((p) => localFromLatLng(p[1], p[0])).filter(Boolean));
       if (!rings.length || rings[0].length < 4) return;
-      const capZ = maxHeightInPoly(rings, heightAt) + LIFT_FILL;
-      // outline: drape the walls/ground AND a cap-edge at fill height so the
-      // whole area reads from above the way 2D fill does.
       rings.forEach((ring) => {
-        const pts = densify(ring, 1.0);
-        const draped = [], cap = [];
+        const pts = densify(ring, veg ? 2.0 : 1.0);
+        const arr = [];
         pts.forEach((p) => {
           const h = heightAt(p.x, p.y);
-          if (h !== null) draped.push(p.x, p.y, h + LIFT_LINE);
-          cap.push(p.x, p.y, capZ);
+          if (h !== null) arr.push(p.x, p.y, h + LIFT_LINE);
         });
-        function addLine(arr) {
-          if (arr.length < 6) return;
+        if (arr.length >= 6) {
           arr.push(arr[0], arr[1], arr[2]);
           const g = new THREE.BufferGeometry();
           g.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3));
-          group.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color, linewidth: 2 })));
+          group.add(new THREE.Line(g, new THREE.LineBasicMaterial({ color })));
         }
-        addLine(draped);
-        addLine(cap);
       });
-      const outer = rings[0].slice(0, -1).map((p) => new THREE.Vector2(p.x, p.y));
-      const holes = rings.slice(1).map((r) => r.slice(0, -1).map((p) => new THREE.Vector2(p.x, p.y)));
-      let tris;
-      try { tris = THREE.ShapeUtils.triangulateShape(outer, holes); } catch (e) { tris = []; }
-      if (tris.length) {
-        const verts = outer.concat(...holes);
-        const pos = [];
-        verts.forEach((v) => pos.push(v.x, v.y, capZ));
-        const idx = [];
-        tris.forEach((t) => idx.push(t[0], t[1], t[2]));
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-        g.setIndex(idx);
-        g.computeVertexNormals();
-        group.add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({
-          color, transparent: true, opacity: 0.48, side: THREE.DoubleSide,
-          depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4
-        })));
+      // Fill: a grid of triangles whose z comes from the mesh heightmap, so
+      // the tint sits on the roof/ground instead of a floating max-height cap.
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      rings[0].forEach((p) => {
+        if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+      });
+      const span = Math.max(maxX - minX, maxY - minY, 1);
+      const step = veg
+        ? Math.max(1.8, Math.min(3.2, span / 18))
+        : Math.max(0.6, Math.min(1.15, span / 32));
+      for (let x = minX; x < maxX; x += step) {
+        for (let y = minY; y < maxY; y += step) {
+          if (!pointInXYPoly(x + step * 0.5, y + step * 0.5, rings)) continue;
+          const a = sampleH(x, y), b = sampleH(x + step, y);
+          const c = sampleH(x + step, y + step), d = sampleH(x, y + step);
+          if (a && b && c && d) { addTri(buf, a, b, c); addTri(buf, a, c, d); }
+          else {
+            const pts = [a, b, c, d].filter(Boolean);
+            if (pts.length === 3) addTri(buf, pts[0], pts[1], pts[2]);
+          }
+        }
       }
     });
+  });
+  Object.keys(fillBuf).forEach((cls) => {
+    const buf = fillBuf[cls];
+    if (!buf.idx.length) return;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(buf.pos, 3));
+    g.setIndex(buf.idx);
+    g.computeVertexNormals();
+    three.groups[cls].add(new THREE.Mesh(g, new THREE.MeshBasicMaterial({
+      color: buf.color, transparent: true, opacity: 0.48, side: THREE.DoubleSide,
+      depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
+    })));
   });
 }
 function draw3dPins() {
@@ -727,6 +874,10 @@ $('aiLayers').addEventListener('change', (ev) => {
 $('aiAll').addEventListener('click', () => { state.classes.forEach((c) => { state.layerOn[c] = true; }); renderPanel(); applyLayers(); });
 $('aiNone').addEventListener('click', () => { state.classes.forEach((c) => { state.layerOn[c] = false; }); renderPanel(); applyLayers(); });
 $('pinsToggle').addEventListener('change', (ev) => { state.pinsOn = ev.target.checked; applyLayers(); });
+$('lotToggle').addEventListener('change', (ev) => {
+  parcelShown = ev.target.checked;
+  if (parcelPoly) parcelPoly.setMap(parcelShown ? map : null);
+});
 $('reloadRegions').addEventListener('click', async () => {
   setStatus('Reloading regions…');
   const before = state.regionsSig;
@@ -756,6 +907,7 @@ function statusText() {
 
 // ── boot ─────────────────────────────────────────────────────────────────────
 (async function boot() {
+  if (HUB_REDIRECT) return;
   try {
     if (!siteNo && !delivery) { fail('Need ?site_no= (from the Nearmap sheet) or ?delivery='); return; }
     setStatus('Loading Nearmap row…');
@@ -767,7 +919,7 @@ function statusText() {
     $('addr').textContent = delivery + (state.manifest && state.manifest.survey_date ? ' · flown ' + state.manifest.survey_date : '');
     document.title = 'Nearmap — ' + (state.address || delivery);
     if (state.meshUrl) { $('tab3d').disabled = false; $('tab3d').title = '3D mesh'; }
-    await Promise.all([loadRegions(), loadCatalog()]);
+    await Promise.all([loadRegions(), loadCatalog(), loadGisFacts()]);
     renderPanel();
     renderObliques();
     setStatus('Loading map…');

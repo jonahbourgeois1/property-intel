@@ -461,7 +461,7 @@
   <div class="bar-inner">
     <span class="name" id="nm">Vyanet</span>
     <span class="addr" id="addr"></span>
-    <span class="build" id="build">hub 1.8.14</span>
+    <span class="build" id="build">hub 1.8.15</span>
     <button id="btn-home" disabled onclick="showHome()">HOME</button>
     <button id="btn-private" disabled onclick="showPrivate()" aria-label="PRIVATE">PRIV<span class="bar-full">ATE</span></button>
     <button id="btn-public" disabled onclick="showPublic()" aria-label="COMMUNITY">COMM<span class="bar-full">UNITY</span></button>
@@ -471,6 +471,7 @@
   <div class="bar-inner">
     <button id="btn-pv-3d" disabled onclick="setPrivateSub('3d')">3D</button>
     <button id="btn-pv-sat" disabled onclick="setPrivateSub('satellite')">2D</button>
+    <button id="btn-pv-nm" disabled onclick="setPrivateSub('nearmap')">Nearmap</button>
     <button id="btn-pv-live" disabled onclick="openLive()">Live</button>
     <button id="btn-pv-ahart" onclick="setPrivateSub('ahart')">Plugins</button>
   </div>
@@ -514,7 +515,7 @@
         </article>
         <article class="hm-guide-card">
           <h3>PRIVATE</h3>
-          <p>The mapping workspace. <strong style="color:#f0f2f5">3D</strong> is the interactive model with pins, cameras, analysis, and response routes. <strong style="color:#f0f2f5">2D</strong> is the same intelligence on the aerial map. <strong style="color:#f0f2f5">Live</strong> is this property&rsquo;s CHEKT cameras and clips. <strong style="color:#f0f2f5">Plugins</strong> are property-level add-ons as they ship.</p>
+          <p>The mapping workspace. <strong style="color:#f0f2f5">3D</strong> is the interactive model with pins, cameras, analysis, and response routes. <strong style="color:#f0f2f5">2D</strong> is the same intelligence on the aerial map. <strong style="color:#f0f2f5">Nearmap</strong> is the vendor mesh, nadir, and AI region layers when this property has a delivery. <strong style="color:#f0f2f5">Live</strong> is this property&rsquo;s CHEKT cameras and clips. <strong style="color:#f0f2f5">Plugins</strong> are property-level add-ons as they ship.</p>
         </article>
         <article class="hm-guide-card">
           <h3>COMMUNITY</h3>
@@ -587,9 +588,9 @@
 // ?v= matches BUILD so a cached property.js from hub 1.3 cannot drop liveHref.
 import { fetchJson, dataRoot, framesFromIndex, validateViewerKey,
          liveAliasIds, gwConfig, findNadir, detectCameras, ROLES, HUB_BUILD,
-         PLUGINS
-       } from './js/vyanet-viewer/property.js?v=1.8.14';
-import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.14';
+         PLUGINS, NEARMAP_DELIVERY_HUB
+       } from './js/vyanet-viewer/property.js?v=1.8.15';
+import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.15';
 
 const BUILD = HUB_BUILD;
 const params = new URLSearchParams(window.location.search);
@@ -612,6 +613,18 @@ function ssDel(k) { try { sessionStorage.removeItem(k); } catch (e) {} }
 function esc(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function nmQuery() {
+  return {
+    delivery: (params.get('delivery') || '').trim(),
+    siteNo: (params.get('site_no') || params.get('site') || '').trim(),
+    tiles: params.get('tiles') || '',
+    propertyId: propertyId
+  };
+}
+function specFromIndex(idx) {
+  return framesFromIndex(idx, nmQuery());
 }
 
 function showErr(msg) {
@@ -662,6 +675,7 @@ function syncBar(mode) {
 function syncPrivateBar(sub) {
   document.getElementById('btn-pv-3d').classList.toggle('on', sub === '3d');
   document.getElementById('btn-pv-sat').classList.toggle('on', sub === 'satellite');
+  document.getElementById('btn-pv-nm').classList.toggle('on', sub === 'nearmap');
   document.getElementById('btn-pv-live').classList.toggle('on', sub === 'live');
   document.getElementById('btn-pv-ahart').classList.toggle('on', sub === 'ahart');
 }
@@ -712,19 +726,21 @@ window.setStage = function (stage) {
     state.privateSub = 'live';
     stage = 'private';
   }
-  if (stage === '3d' || stage === 'satellite' || stage === 'ahart') {
+  if (stage === '3d' || stage === 'satellite' || stage === 'ahart' || stage === 'nearmap') {
     if (!spec.hasPrivate) return;
     state.privateSub = stage;
     stage = 'private';
   }
   const f3 = spec.hasModel ? ensureFrame('frame-3d', spec.modelHref) : null;
   const fs = spec.hasSatellite ? ensureFrame('frame-sat', spec.satHref) : null;
+  const fn = spec.hasNearmap ? ensureFrame('frame-nm', spec.nmHref) : null;
   const fl = spec.hasLive ? ensureFrame('frame-live', spec.liveHref) : null;
   const fh = spec.hasHoa ? ensureFrame('frame-hoa', spec.hoaHref) : null;
   const sub = stage === 'private' ? (state.privateSub || spec.privateDefault) : '';
   const csub = stage === 'public' ? (state.communitySub || 'map') : '';
   if (f3) f3.classList.toggle('on', stage === 'private' && sub === '3d');
   if (fs) fs.classList.toggle('on', stage === 'private' && sub === 'satellite');
+  if (fn) fn.classList.toggle('on', stage === 'private' && sub === 'nearmap');
   if (fl) fl.classList.toggle('on', stage === 'private' && sub === 'live');
   hoaFrameOn(stage === 'public' && csub === 'map' && spec.hasHoa);
   hideHubLayers();
@@ -788,6 +804,7 @@ window.showPrivate = function () {
   if (!state.privateSub) state.privateSub = spec.privateDefault;
   if (state.privateSub === '3d' && !spec.hasModel) state.privateSub = spec.privateDefault;
   if (state.privateSub === 'satellite' && !spec.hasSatellite) state.privateSub = spec.privateDefault;
+  if (state.privateSub === 'nearmap' && !spec.hasNearmap) state.privateSub = spec.privateDefault;
   if (state.privateSub === 'live' && !spec.hasLive) state.privateSub = spec.privateDefault;
   setStage('private');
 };
@@ -797,6 +814,7 @@ window.setPrivateSub = function (sub) {
   if (!spec || !state.entered || !spec.hasPrivate) return;
   if (sub === '3d' && !spec.hasModel) return;
   if (sub === 'satellite' && !spec.hasSatellite) return;
+  if (sub === 'nearmap' && !spec.hasNearmap) return;
   if (sub === 'live') { window.openLive(); return; }
   state.privateSub = sub;
   setStage('private');
@@ -1058,7 +1076,7 @@ function paintAhart() {
 function enterApp() {
   state.entered = true;
   document.getElementById('gate').classList.remove('visible');
-  state.spec = framesFromIndex(state.idx);
+  state.spec = specFromIndex(state.idx);
   state.spec.hasLive = !!(state.hasCams || state.spec.hasModel);
   const spec = state.spec;
   paintAhart();
@@ -1068,6 +1086,7 @@ function enterApp() {
   // paused until the 3D substrate posts the matching message.
   if (spec.hasModel) ensureFrame('frame-3d', spec.modelHref);
   if (spec.hasSatellite) ensureFrame('frame-sat', spec.satHref);
+  if (spec.hasNearmap) ensureFrame('frame-nm', spec.nmHref);
   if (spec.hasLive) ensureFrame('frame-live', spec.liveHref);
   if (spec.hasHoa) ensureFrame('frame-hoa', spec.hoaHref);
   const raw = wantStage;
@@ -1078,13 +1097,14 @@ function enterApp() {
     start = 'private';
     sub = 'live';
   } else if (raw === 'private' && spec.hasPrivate) start = 'private';
-  else if ((raw === '3d' || raw === 'satellite' || raw === 'ahart') && spec.hasPrivate) {
+  else if ((raw === '3d' || raw === 'satellite' || raw === 'ahart' || raw === 'nearmap') && spec.hasPrivate) {
     start = 'private';
     sub = raw;
   }
   if (start === 'private') {
     if (sub === '3d' && !spec.hasModel) sub = spec.privateDefault;
     if (sub === 'satellite' && !spec.hasSatellite) sub = spec.privateDefault;
+    if (sub === 'nearmap' && !spec.hasNearmap) sub = spec.privateDefault;
     if (sub === 'live' && !spec.hasLive) sub = spec.privateDefault;
     state.privateSub = sub;
   }
@@ -1102,6 +1122,13 @@ function enterApp() {
 }
 
 async function boot() {
+  const deliveryIn = (params.get('delivery') || '').trim();
+  if (!propertyId && deliveryIn && NEARMAP_DELIVERY_HUB[deliveryIn]) {
+    const u = new URL(location.href);
+    u.searchParams.set('property', NEARMAP_DELIVERY_HUB[deliveryIn]);
+    location.replace(u.href);
+    return;
+  }
   if (!propertyId) {
     showErr('Pass ?property=<id> from data/index/.');
     return;
@@ -1118,7 +1145,7 @@ async function boot() {
     return;
   }
   state.idx = idx;
-  state.spec = framesFromIndex(idx);
+  state.spec = specFromIndex(idx);
   document.getElementById('nm').textContent = state.spec.name || 'Vyanet';
   document.getElementById('addr').textContent = state.spec.address || '';
   document.getElementById('gt-name').textContent = state.spec.name || 'Vyanet';
@@ -1132,11 +1159,12 @@ async function boot() {
   document.getElementById('btn-public').disabled = false;
   document.getElementById('btn-pv-3d').disabled = !state.spec.hasModel;
   document.getElementById('btn-pv-sat').disabled = !state.spec.hasSatellite;
+  document.getElementById('btn-pv-nm').disabled = !state.spec.hasNearmap;
   document.getElementById('btn-pv-live').disabled = true;
   // Hero nadir: the highest-caliber render available, as visual context.
   // Wire onload BEFORE src so a cached image still reveals the hero.
   state.heroStage = state.spec.hasPrivate ? 'private' : '';
-  findNadir(root, idx).then(function (url) {
+  findNadir(root, idx, nmQuery()).then(function (url) {
     if (!url) return;
     const img = document.getElementById('hm-hero-img');
     const hero = document.getElementById('hm-hero');
@@ -1155,7 +1183,7 @@ async function boot() {
   state.spec.hasLive = !!(cams || state.spec.hasModel);
   document.getElementById('btn-pv-live').disabled = !state.spec.hasLive;
   document.getElementById('hm-none').classList.toggle('visible',
-    !state.spec.hasModel && !state.spec.hasSatellite && !state.spec.hasLive);
+    !state.spec.hasModel && !state.spec.hasSatellite && !state.spec.hasLive && !state.spec.hasNearmap);
   state.camsSettled = true;
   state.needsKey = !!(state.spec.hasLive && !ss('vyViewerKey'));
   // A known role skips the gate: session restore on refresh, or &role= as a
