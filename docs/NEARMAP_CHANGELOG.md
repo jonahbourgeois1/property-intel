@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.2: holes are real (no auto-fill)
+
+**What.** Cutouts persist. New `featurePolys` / `featureAllRings` helpers; `pointInFeature` returns false inside a hole; the editor draws each polygon with all rings (`paths: [outer, …holes]`); snap edges and the source segment length include hole rings; `geometryFromMask` classifies rings by nesting depth (even = outer, odd = hole of the innermost outer) instead of "first enclosing outer only".
+
+**Why.** Jonah: a loop's inside auto-filled and erasing inside a region always refilled. Reproduced: the mask *did* produce the hole (201 m² outer, 68 m² hole) but the editor drew outer rings only, so it looked filled, and because `pointInFeature` ignored holes the next stroke re-rasterised the region as solid and refilled the cutout. The viewer rendered holes correctly — that was the editor/viewer disagreement.
+
+**Files.** `nearmap-review.html` (v1.6.2), `docs/NEARMAP_CONTRACT.md` (hole rule).
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless on the scratch Columbia copy, Driveway, z20: loop paint → `Polygon` 201 m² with one 68 m² hole and the editor's Maps polygon has 2 paths; grow stroke on the ring → 220 m², hole still 68 m²; Size-48 solid blob 303 m² → Size-10 right-click inside → 303 m² with a 3 m² hole; another grow → 331 m², hole intact. 0 page errors. Not verified: the live Columbia file (r47 with 4 holes) in a browser by hand — those holes will now show as cutouts in the editor exactly as the viewer shows them.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-viewer v1.0.2: follows editor saves
 
 **What.** `reloadRegions()` re-reads `ai/edits/regions.json` on tab focus / visibility and on a new **Reload** button; when `saved` or the feature count changed it redraws 2D polygons, 3D draped groups and the layer panel. Status shows the file's save time ("edits saved Sep 9, 3:39 PM").
