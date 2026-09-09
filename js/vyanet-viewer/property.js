@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.15';
+export const HUB_BUILD = '1.8.16';
 
 // Same default as model-viewer.html; ?gw= overrides, ?gw=0 disables.
 export const GW_DEFAULT = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
@@ -216,7 +216,7 @@ export function framesFromIndex(idx, nm) {
     // via the CHEKT gateway with no cameras file yet.
     hasLive: false,
     delivery: delivery,
-    privateDefault: modelView ? '3d' : (satView ? 'satellite' : (hasNearmap ? 'nearmap' : '')),
+    privateDefault: modelView ? '3d' : (satView ? 'satellite' : ''),
     // embed=1 tells the child pages the hub owns the always-on chrome
     // (live/weather/hazard buttons), so they don't reveal their own copies.
     modelHref: modelView ? (MODEL_PAGE + '?' + childQuery({ view: modelView, embed: '1' })) : '',
@@ -224,7 +224,7 @@ export function framesFromIndex(idx, nm) {
     liveHref: LIVE_PAGE + '?' + childQuery({ embed: '1' }),
     hoaHref: hoa ? (HOA_PAGE + '?' + childQuery({ hoa: hoa, embed: '1' })) : '',
     nmHref: hasNearmap ? (NEARMAP_PAGE + '?' + childQuery({
-      embed: '1',
+      full: '1',
       delivery: delivery,
       site_no: siteNo,
       tiles: tiles

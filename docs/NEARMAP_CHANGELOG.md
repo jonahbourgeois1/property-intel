@@ -2,6 +2,30 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-viewer v1.1.2: drop Property Facts from the Nearmap page
+
+**What.** The Nearmap full-page rail is AI layers + lot line + catalog pins only. Property Facts (GIS known facts) stay on hub Private 2D and 3D.
+
+**Why.** Jonah: those facts already live on the standard 2D/3D pages.
+
+**Files.** `nearmap-viewer.html` (v1.1.2), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check`. Browser: Nearmap `?full=1` has no Property Facts heading / GIS table; AI layers and lot line remain.
+
+**Status.** Shipped (this commit).
+
+## 2026-09-09 — hub 1.8.16 + nearmap-viewer v1.1.1: Nearmap is a full-page leave/return
+
+**What.** Private **Nearmap** leaves the hub and opens `nearmap-viewer.html?full=1` on the entire page (2D / 3D / Obliques + GIS + AI layers). Top-right **Standard viewer** returns to `vyanet-viewer.html?stage=private`. Delivery-only URLs still land on hub home first. No Nearmap iframe.
+
+**Why.** Jonah: for now the Nearmap button should take the whole page, with a way back to the standard viewer.
+
+**Files.** `nearmap-viewer.html` (v1.1.1), `vyanet-viewer.html` (hub 1.8.16), `js/vyanet-viewer/property.js`, `docs/NEARMAP_CONTRACT.md`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`.
+
+**How it was checked.** `node --check`. Browser: hub Nearmap → full page + Standard viewer back to Private 3D.
+
+**Status.** Shipped (this commit).
+
 ## 2026-09-09 — hub 1.8.15 + nearmap-viewer v1.1.0: same Vyanet shell, draped 3D fills
 
 **What.** Nearmap is no longer a separate chrome. `nearmap-viewer.html?delivery=` on a known trial property redirects into `vyanet-viewer.html` (gate, HOME, PRIVATE, COMMUNITY). Private nested bar is **3D · 2D · Nearmap · Live · Plugins**. Nearmap iframe is `embed=1` (2D / 3D / Obliques + AI layers). Property Facts load `data/gis/{id}.json`; lot line uses `data/parcels/` like Private 2D. 3D fills drape the mesh (no floating max-height cap). Join table: Macalpine → Jones `6de88883…`, Columbia → `744a3639…`.

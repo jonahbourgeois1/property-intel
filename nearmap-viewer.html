@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
 <!--
-  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.0, 2026-09-09)
+  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.2, 2026-09-09)
   Standalone ?delivery= on a known trial property redirects into vyanet-viewer
-  (same HOME / PRIVATE / COMMUNITY). embed=1 is the hub iframe.
-  3D fills drape on the mesh. GIS facts = data/gis/{id}.json (same file as Private 2D/3D).
-  Lot line = data/parcels/ (same grid as viewer.html).
+  (same HOME / PRIVATE / COMMUNITY). Private → Nearmap opens this page full-bleed
+  (?full=1) with Standard viewer (top right) back to the hub. embed=1 is unused
+  for now. 3D fills drape on the mesh. Property Facts stay on hub 2D/3D.
 -->
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -23,6 +23,12 @@
   #bar button { font-family: monospace; font-size: 12px; letter-spacing: 0.06em; padding: 11px 14px; border-radius: 8px; cursor: pointer; background: rgba(0,0,0,0.35); color: #8a93a2; border: 1px solid #2a3040; flex-shrink: 0; }
   #bar button.on { color: #f0f2f5; border-color: #a855f7; background: rgba(168,85,247,0.16); }
   #bar button:disabled { opacity: 0.35; cursor: not-allowed; }
+  #leaveHub {
+    display: none; margin-left: auto; color: #f0f2f5;
+    border-color: #a855f7; background: rgba(168,85,247,0.16);
+  }
+  body.full #leaveHub { display: inline-block; }
+  #leaveHub:hover { color: #fff; }
   #stage { position: fixed; top: var(--bar-h); left: 0; right: var(--panel-w); bottom: 0; }
   .view { position: absolute; inset: 0; display: none; }
   .view.on { display: block; }
@@ -47,7 +53,6 @@
   .swatch { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 12px; border: 1px solid rgba(255,255,255,0.35); }
   .layer-row .n { margin-left: auto; color: #555f6e; }
   .layer-row.pins { border-top: 1px solid #2a3040; margin-top: 8px; padding-top: 10px; }
-  #panel h2.sub { padding-top: 16px; border-top: 1px solid #2a3040; margin-top: 8px; }
   #pinList { list-style: none; margin: 6px 0 0; }
   #pinList li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; border-bottom: 1px solid #1a1f27; font-size: 12px; color: #c9d1dc; cursor: pointer; }
   #pinList li:hover { color: #f0f2f5; }
@@ -73,13 +78,6 @@
   .rd-name { font-size: 12px; font-weight: 600; color: #f0f2f5; line-height: 1.35; }
   .rd-meta { font-size: 10px; color: #555f6e; margin-top: 4px; line-height: 1.45; }
   .rd-body { padding: 0 14px 14px; }
-  .gis-group { font-size: 10px; font-weight: 600; color: #555f6e; letter-spacing: 0.08em; text-transform: uppercase; margin: 10px 0 4px; }
-  .gis-group:first-child { margin-top: 0; }
-  .gis-row { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
-  .gis-k { flex: 0 0 42%; font-size: 10px; color: #8a93a2; line-height: 1.45; }
-  .gis-v { flex: 1; font-size: 11px; color: #f0f2f5; line-height: 1.45; overflow-wrap: anywhere; }
-  .gis-sub { font-size: 10px; color: #8a93a2; margin-top: 2px; }
-  .gis-empty { font-size: 11px; color: #555f6e; padding: 4px 0 10px; }
   @media (max-width: 760px) {
     :root { --panel-w: 0px; }
     #panel { display: none; }
@@ -96,6 +94,7 @@
   <button type="button" id="tab2d" class="on">2D</button>
   <button type="button" id="tab3d" disabled title="No 3D mesh for this delivery">3D</button>
   <button type="button" id="tabObl">Obliques</button>
+  <button type="button" id="leaveHub">Standard viewer</button>
 </div>
 <div id="stage">
   <div class="view on" id="view2d"><div id="map2d"></div></div>
@@ -103,11 +102,9 @@
   <div class="view" id="viewObl"><div id="obl"></div></div>
 </div>
 <aside id="panel">
-  <h2>Property Facts</h2>
+  <h2>AI layers</h2>
   <div class="scroll">
     <label class="layer-row"><input type="checkbox" id="lotToggle" checked><span class="swatch" style="background:#cd3333"></span>Lot line</label>
-    <div id="gisBox"><div class="gis-empty">Loading GIS…</div></div>
-    <h2 class="sub">AI layers</h2>
     <div class="layer-btns"><button type="button" id="aiAll">All</button><button type="button" id="aiNone">None</button><button type="button" id="reloadRegions" title="Re-read ai/edits/regions.json (picks up editor saves)" style="margin-left:auto">Reload</button></div>
     <div id="aiLayers"></div>
     <label class="layer-row pins"><input type="checkbox" id="pinsToggle" checked><span class="swatch" style="background:#a855f7"></span>Catalog pins<span class="n" id="pinCount">0</span></label>
@@ -122,9 +119,8 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-import { dataRoot, NEARMAP_DELIVERY_HUB } from './js/vyanet-viewer/property.js?v=1.8.15';
-import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.15';
-const BUILD = 'v1.1.0';
+import { dataRoot, NEARMAP_DELIVERY_HUB } from './js/vyanet-viewer/property.js?v=1.8.16';
+const BUILD = 'v1.1.2';
 const NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 const MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -143,9 +139,11 @@ const siteNo = (qp.get('site_no') || qp.get('site') || '').trim();
 let delivery = (qp.get('delivery') || '').trim();
 const tilesBase = (qp.get('tiles') || CF_TILES).replace(/\/?$/, '/');
 const EMBED = qp.get('embed') === '1';
+const FULL = qp.get('full') === '1';
 const propertyId = (qp.get('property') || '').trim() || NEARMAP_DELIVERY_HUB[delivery] || '';
 if (EMBED) document.body.classList.add('embed');
-const HUB_REDIRECT = !EMBED && propertyId;
+if (FULL) document.body.classList.add('full');
+const HUB_REDIRECT = !EMBED && !FULL && propertyId;
 if (HUB_REDIRECT) {
   const u = new URL('vyanet-viewer.html', location.href);
   u.searchParams.set('property', propertyId);
@@ -338,23 +336,6 @@ function applyLayers() {
   }
 }
 
-async function loadGisFacts() {
-  const box = $('gisBox');
-  if (!box) return;
-  if (!propertyId) {
-    box.innerHTML = '<div class="gis-empty">No property hub for this delivery — GIS facts live on data/gis/{id}.json.</div>';
-    return;
-  }
-  try {
-    const rec = await fetchPropertyGis(dataRoot(), propertyId);
-    const html = gisFactsHtml(rec, function (s) {
-      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    });
-    box.innerHTML = html || '<div class="gis-empty">No GIS facts published for this property.</div>';
-  } catch (e) {
-    box.innerHTML = '<div class="gis-empty">GIS facts failed to load.</div>';
-  }
-}
 function pointInLngLatRing(lat, lng, ring) {
   let inside = false;
   for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
@@ -865,6 +846,20 @@ function showTab(t) {
 $('tab2d').addEventListener('click', () => showTab('2d'));
 $('tab3d').addEventListener('click', () => showTab('3d'));
 $('tabObl').addEventListener('click', () => showTab('Obl'));
+$('leaveHub').addEventListener('click', () => {
+  if (!propertyId) return;
+  const u = new URL('vyanet-viewer.html', location.href);
+  u.searchParams.set('property', propertyId);
+  u.searchParams.set('stage', 'private');
+  if (delivery) u.searchParams.set('delivery', delivery);
+  if (siteNo) u.searchParams.set('site_no', siteNo);
+  const tilesQ = qp.get('tiles');
+  if (tilesQ) u.searchParams.set('tiles', tilesQ);
+  ['gw', 'chekt', 'debug', 'dataRoot', 'role'].forEach((k) => {
+    const v = qp.get(k); if (v) u.searchParams.set(k, v);
+  });
+  location.href = u.href;
+});
 $('aiLayers').addEventListener('change', (ev) => {
   const t = ev.target;
   if (!t || t.type !== 'checkbox') return;
@@ -919,7 +914,7 @@ function statusText() {
     $('addr').textContent = delivery + (state.manifest && state.manifest.survey_date ? ' · flown ' + state.manifest.survey_date : '');
     document.title = 'Nearmap — ' + (state.address || delivery);
     if (state.meshUrl) { $('tab3d').disabled = false; $('tab3d').title = '3D mesh'; }
-    await Promise.all([loadRegions(), loadCatalog(), loadGisFacts()]);
+    await Promise.all([loadRegions(), loadCatalog()]);
     renderPanel();
     renderObliques();
     setStatus('Loading map…');
