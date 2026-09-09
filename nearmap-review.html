@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.5, 2026-09-09)
-  Holes are real: drawn as cutouts, respected by every inside test, kept across strokes.
-  Grow strokes fill the crumb/sliver gaps scribbling leaves; deliberate holes stay.
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.6, 2026-09-09)
+  Holes are real cutouts. Closed-loop interiors are not autofilled. Leftover
+  crumbs/slivers from adding paint fill the same way leftover pieces delete on erase.
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions FC.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
@@ -223,7 +223,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.5';
+  var BUILD = 'v1.6.6';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -238,14 +238,14 @@
   // whole regions when a small addition was trimmed.
   var ERASE_MIN_FRAG_M2 = 3;
   var ERASE_SLIVER_WIDTH_M = 0.8;
-  // Hole clean-up after a grow stroke, the mirror of the erase rule. A hole the
-  // stroke just created is filled when it is a crumb (under HOLE_FILL_M2) or a
-  // sliver (mean width under HOLE_SLIVER_WIDTH_M) — the gaps scribbling leaves
-  // between passes. Holes that existed before the stroke (a deliberate erase, a
-  // painted loop's inside) are never filled by this rule, whatever their size;
-  // only painting over them removes them. Erase strokes never fill anything.
-  var HOLE_FILL_M2 = 240;
-  var HOLE_SLIVER_WIDTH_M = 32;
+  // Leftover-gap clean-up after a grow stroke — the add-side mirror of the erase
+  // fragment rule, NOT "autofill anything enclosed". A hole fills when it is a
+  // crumb, a sliver, or a small leftover of its outer ring (HOLE_REL_FRAC of
+  // outer area), the same way a leftover piece deletes when you erase enough.
+  // Painting a closed loop does not fill the inside: that interior is a large
+  // share of the outer, not a leftover. Erase cutouts are locked and never filled
+  // by a later grow; only painting over them removes them. Erase never fills.
+  var HOLE_REL_FRAC = 0.08;
 
   var CLASS_MAP = [
     { id: 61, name: 'Roof', classes: ['Roof'] },
@@ -1577,7 +1577,7 @@
     for (i = 0; i < grid.length; i++) if (grid[i]) filled++;
     if (!filled) return null;
     var masked = geometryFromMask(grid, nx, ny, cell, west, south, fr);
-    if (!erase) masked = fillSmallHoles(masked, feats, fr);
+    if (!erase) masked = fillSmallHoles(masked, lockedHolesFrom(feats), fr);
     return conformGeometry(
       masked,
       feats,
@@ -1795,28 +1795,78 @@
     return false;
   }
 
-  // Grow-stroke hole rule (see HOLE_* constants). `before` are the features that
-  // went into the union; a hole of theirs that survives in the result is kept.
-  function fillSmallHoles(geom, before, fr) {
-    if (!geom) return geom;
-    var priorHoles = [];
-    (before || []).forEach(function (f) {
-      featurePolys(f).forEach(function (poly) {
-        for (var h = 1; h < poly.length; h++) priorHoles.push(poly[h]);
+  function lockedHolesFrom(feats) {
+    var out = [];
+    (feats || []).forEach(function (f) {
+      var rings = (f && f.properties && f.properties.locked_holes) || [];
+      rings.forEach(function (ring) { out.push(ring); });
+    });
+    return out;
+  }
+
+  function currentHolesOf(feat) {
+    var out = [];
+    featurePolys(feat).forEach(function (poly) {
+      for (var h = 1; h < poly.length; h++) out.push(poly[h]);
+    });
+    return out;
+  }
+
+  // Erase cutouts stay until the reviewer paints over them. Scribble leftovers
+  // are not locked, so a later grow can still close them.
+  function lockCurrentHoles(feat) {
+    if (!feat) return;
+    feat.properties = feat.properties || {};
+    var holes = currentHolesOf(feat);
+    if (holes.length) feat.properties.locked_holes = holes;
+    else delete feat.properties.locked_holes;
+  }
+
+  function pruneLockedHoles(feat) {
+    if (!feat || !feat.properties || !feat.properties.locked_holes) return;
+    var live = currentHolesOf(feat);
+    var kept = feat.properties.locked_holes.filter(function (locked) {
+      return live.some(function (ring) { return ringsShareGround(ring, locked); });
+    });
+    if (kept.length) feat.properties.locked_holes = kept;
+    else delete feat.properties.locked_holes;
+  }
+
+  function mergeLockedHoles(dest, extras) {
+    dest.properties = dest.properties || {};
+    var rings = (dest.properties.locked_holes || []).slice();
+    (extras || []).forEach(function (f) {
+      ((f && f.properties && f.properties.locked_holes) || []).forEach(function (ring) {
+        rings.push(ring);
       });
     });
+    if (rings.length) dest.properties.locked_holes = rings;
+    pruneLockedHoles(dest);
+  }
+
+  // Grow-stroke leftover-gap rule. Locked (erase) holes are never filled.
+  // Everything else uses the same crumb / sliver / "small leftover of the
+  // outer" test as erase-fragment drop — a closed loop's interior is a large
+  // share of the outer, so it stays a cutout.
+  function fillSmallHoles(geom, lockedRings, fr) {
+    if (!geom) return geom;
+    var locked = lockedRings || [];
     var polys = geometryPolys(geom).map(function (poly) {
+      if (!poly[0]) return poly;
+      var outerM = ringMetricsXY(poly[0], fr);
       var kept = [poly[0]];
       for (var h = 1; h < poly.length; h++) {
         var ring = poly[h];
         var m = ringMetricsXY(ring, fr);
         var meanWidth = m.perimeter > 0 ? (2 * m.area / m.perimeter) : 0;
-        var small = m.area < HOLE_FILL_M2 || meanWidth < HOLE_SLIVER_WIDTH_M;
-        var deliberate = false;
-        for (var k = 0; k < priorHoles.length && !deliberate; k++) {
-          if (ringsShareGround(ring, priorHoles[k])) deliberate = true;
+        var leftover = m.area < ERASE_MIN_FRAG_M2 ||
+          meanWidth < ERASE_SLIVER_WIDTH_M ||
+          (outerM.area > 0 && m.area < HOLE_REL_FRAC * outerM.area);
+        var cutout = false;
+        for (var k = 0; k < locked.length && !cutout; k++) {
+          if (ringsShareGround(ring, locked[k])) cutout = true;
         }
-        if (!small || deliberate) kept.push(ring);
+        if (!leftover || cutout) kept.push(ring);
       }
       return kept;
     });
@@ -2542,12 +2592,14 @@
     if (detached) {
       var newId = nextRegionId('d');
       pushPaintHistory();
-      aiPack.features.push({
+      var newFeat = {
         type: 'Feature',
         id: newId,
         geometry: newGeom,
         properties: { 'class': cls, name: cls, origin: 'drawn' }
-      });
+      };
+      mergeLockedHoles(newFeat, extraFeats);
+      aiPack.features.push(newFeat);
       if (extra.length) removeRegionIds(extra);
       else refreshLayerCounts();
       working = { ids: [String(seedId)], stamps: [] };
@@ -2579,6 +2631,7 @@
     seed.feature.geometry = geom;
     seed.feature.properties = seed.feature.properties || {};
     seed.feature.properties.origin = seed.feature.properties.origin || 'merged';
+    mergeLockedHoles(seed.feature, extraFeats);
     if (extra.length) removeRegionIds(extra);
     if (brushTarget.pinIndex >= 0) {
       var pin = ((record && record.elements) || [])[brushTarget.pinIndex];
@@ -2648,16 +2701,19 @@
     feat.geometry = polysToGeometry([pieces.keep[0]]);
     feat.properties = feat.properties || {};
     feat.properties.origin = feat.properties.origin || 'merged';
+    lockCurrentHoles(feat);
     for (var k = 1; k < pieces.keep.length; k++) {
       var props = JSON.parse(JSON.stringify(feat.properties || {}));
       props['class'] = props['class'] || cls;
       props.origin = 'split';
-      aiPack.features.push({
+      var splitFeat = {
         type: 'Feature',
         id: nextRegionId('d'),
         geometry: polysToGeometry([pieces.keep[k]]),
         properties: props
-      });
+      };
+      lockCurrentHoles(splitFeat);
+      aiPack.features.push(splitFeat);
     }
     if (pinIdx >= 0) {
       var pin = record.elements[pinIdx];

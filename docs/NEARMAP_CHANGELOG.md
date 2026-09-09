@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.6: no loop autofill; leftover crumbs fill like erase
+
+**What.** Removed the 240 m² / 32 m "fill anything enclosed" thresholds. A grow stroke now fills a hole only when it is a leftover the same way erase drops a leftover piece: crumb (`ERASE_MIN_FRAG_M2`), sliver (`ERASE_SLIVER_WIDTH_M`), or under `HOLE_REL_FRAC = 0.08` of its outer ring. Erase cutouts are stored as `properties.locked_holes` and survive later grow strokes; scribble leftovers are not locked, so a later grow can still close them. Painting a closed loop does not fill the inside.
+
+**Why.** Jonah: autofill (closing a loop fills the interior) is not wanted. Small leftover gaps from adding paint should fill the same way leftover region pieces delete when enough is erased. The 4×/10× raises were the wrong knob — they turned leftover-gap fill back into loop autofill, and prior-hole protection also kept scribble triangles around after the next stroke.
+
+**Files.** `nearmap-review.html` (v1.6.6), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless hole suite: Size-14 loop → 201 m² outer with 68 m² hole (34% of outer, kept); grow on the ring keeps the hole; Size-10 erase inside a solid → locked cutout survives a later grow; three Size-14 passes with 0.6 m gaps → 0 holes; a second grow on that scribbled region still has 0 leftover holes. 0 page errors.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.5: hole-fill range ×10
 
 **What.** `HOLE_FILL_M2` 24 → 240 m², `HOLE_SLIVER_WIDTH_M` 3.2 → 32 m. Grow strokes only; pre-existing holes still never filled.
