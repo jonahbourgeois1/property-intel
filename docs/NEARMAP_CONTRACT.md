@@ -1,0 +1,155 @@
+# Nearmap contract (Segment 6 clause)
+
+**Status:** trial / isolated until Jonah promotes it.  
+**Date:** 2026-09-07  
+**No numbered segment contract covers this.** Segment 6 (integrations) is still owed. This file is the Nearmap clause.
+
+**Writer of GitHub `data/**`:** Apps Script sync only. Do not hand-edit `data/nearmap/` or index `views.nearmap`; the next sync overwrites them.
+
+## What this is
+
+Nearmap trial imagery + AI polygons enter Property Intel through an **isolated environment**: own S3 prefixes, own mothership tab `Nearmap`, own Apps Script file, own review page, own published JSON folder. Satellite, Plane, Drone, Golf, `SAT_COL_*`, `SAT_PASS1_EMIT_IDS`, production `VIEW_ORDER`, `syncNow()`, and `pins-catalog.json` are untouched. Set Up Nearmap Sheet creates or updates **only** that tab (appended at the end) and restores the sheet you were on.
+
+The vendor export shape observed in `Ahartsi.zip` (Transactional Content API folder **and/or** MapBrowser 3D zips) is the long-term ingest input. A future API pull must write the **same canonical tree** so sheet, Bedrock, sync, and the review page never care how the bytes arrived.
+
+## Identity
+
+| Surface | Key | Rule |
+|---|---|---|
+| Nearmap sheet col A | `site_no` | Same as satellite. Lookups key on this, never address. Never fall through to the Satellite tab. |
+| Published file `data/nearmap/{id}.json` | `hashId(slug(site_no))` | File key. Jones production hub is `hashId("jones")` = `6de88883…` — **not** this id. |
+| CloudFront serving prefix | `delivery_id` (address slug) | Stable before `site_no` is known. Jones has three site numbers — do not guess. |
+| Index hub | trial: **do not write** | `NM_UPSERT_INDEX = false`. Promotion merges `views.nearmap` onto the **existing** hub (Jones `6de88883…`), never `upsertIndexEntry_(hashId(site_no))` (Tracy fork). Must not write `security` / `wildfire`. |
+
+Blank `site_no` is refused for GitHub publish (`hashId('')` would collide). Trial review may load CloudFront by `delivery_id` before a site_no exists.
+
+## Writers
+
+| Place | What | Who writes |
+|---|---|---|
+| `s3://property-intel-ingest/nearmap/{delivery}/raw/` | Vendor zip or unpacked dump | Operator now; API job later |
+| `s3://property-intel-ingest/nearmap/{delivery}/canonical/` | Normalized tree | `tools/nearmap/normalize.py` |
+| `s3://property-intel-tiles/nearmap/{delivery_id}/` | Derived stills + compact AI + serving manifest | `tools/nearmap/promote.py` |
+| `s3://property-intel-tiles/reference/nearmap.json` | Delivery registry | promote.py (merge by `delivery_id`) |
+| Google Sheet tab `Nearmap` | Operational state | `nearmap.gs` |
+| `data/nearmap/{id}.json` | Published record | Apps Script `processNearmapSheet` / `processNearmapForActiveRow` |
+| `data/index/{hub}.json` `views.nearmap` | Promotion only | Same Apps Script, after `NM_UPSERT_INDEX` is flipped **and** the hub id is the existing one |
+
+Lambda / normalize / promote **never** call GitHub. GitHub Actions **never** call AWS.
+
+Do **not** append Nearmap deliveries to `reference/captures.json`. That file feeds plane/drone clip/render.
+
+## Canonical tree (ingest)
+
+```
+nearmap/{delivery}/canonical/
+  manifest.json
+  imagery/vert/          JPEG tiles + VRT (no uncompressed merged_Vert in serving)
+  imagery/{north,east,south,west}/
+  elevation/dsm.tif
+  elevation/dtm.tif
+  ai/raw/*.geojson       vendor files, ingest-only
+  ai/features.json       reduced, serving
+  mesh/                  optional MapBrowser OBJ/LAS inventory; do not serve as the 3D camera
+```
+
+`manifest.json` is the join object: `delivery_id`, `source` (`api` | `mapbrowser` | `both`), `survey_date`, `crs`, `aoi` / `bounds`, file list, `site_no` once the operator joins it.
+
+## Serving keys (CloudFront)
+
+Base: `https://d3fg47bqswi0rr.cloudfront.net/nearmap/{delivery_id}/`
+
+- `vert.jpg` — derived JPEG (long edge capped), not the uncompressed mosaic
+- `vert-p1.jpg` — smaller JPEG for Bedrock Pass 1 (5 MB payload cap). Same crop; x,y percent still match `vert.jpg`.
+- `north.jpg` `east.jpg` `south.jpg` `west.jpg` — compass looks, not alpha/bravo
+- `ai/features.json` — full Feature Collection, one feature per vendor polygon
+- `ai/hints.json` — counts + all feature centroids for Bedrock Pass 1 (no polygons)
+- `manifest.json` — serving subset (URLs + bounds)
+
+Existence checks: `s3.head_object` only. Invalidate CloudFront after still uploads (`/nearmap/{delivery_id}/*` and `/reference/nearmap.json`).
+
+## Published record
+
+```json
+{
+  "view": "nearmap",
+  "source": "nearmap",
+  "survey_date": "2026-07-02",
+  "delivery_id": "18775-macalpine-loop-bend-or-97702",
+  "nadir": {
+    "url": "https://d3fg47bqswi0rr.cloudfront.net/nearmap/{delivery_id}/vert.jpg",
+    "bounds": { "north": 0, "south": 0, "east": 0, "west": 0 }
+  },
+  "obliques": {
+    "north": { "url": "..." },
+    "east": { "url": "..." },
+    "south": { "url": "..." },
+    "west": { "url": "..." }
+  },
+  "ai_url": "https://d3fg47bqswi0rr.cloudfront.net/nearmap/{delivery_id}/ai/features.json",
+  "elements": [{ "id": 57, "x": 56.5, "y": 51, "source": "ai" }],
+  "drawn": { "type": "FeatureCollection", "features": [] },
+  "lat": 0,
+  "lng": 0
+}
+```
+
+Pins are catalog integer ids as **percent of the Nearmap nadir JPEG** (0,0 = top-left). Viewers unproject with `nadir.bounds`. Refuse non-finite coords; never clamp into the frame. Reviewer groups also live in `drawn` (sheet column W). **Do not** write reviewer edits into CloudFront `ai/features.json` or `ai/original/regions.json`.
+
+## Reviewer-first elements (local until complete)
+
+**Testing mode (current default).** `FRESH_ON_OPEN` makes every page open start from `ai/original/regions.json` with no pins; the edits file and browser backups are ignored and `ai/edits/regions.json` is reset to the original on open. `?fresh=0` resumes the edits file. This default must be flipped before real review sessions, otherwise reviewer work is discarded on reload.
+
+First-round pins come from the reviewer, not Bedrock. Vendor polygons start as read-only overlays. The toolbar is Pan / Draw (Accept was removed 2026-09-09). The reviewer **draws** on a picked region (left-click adds area, right-click removes); **Clear brush** next to the history arrows drops the pick and returns to the `+` pick cursor. A size slider under Draw sets one brush radius in pixels (4–48). The cursor fill, the live stroke preview (own canvas, not a Maps polyline — Maps caps polyline width), and the paint/erase mask all use that radius; the selected pin, hint marker, and polygon are **not** singled out; instead the **active class** (last layer checked, or the class of the picked region; click a checked layer's name to switch) draws every polygon of that class with a class-colored border over a white halo. Driveway is pink (`#f72585`). Under Size, back/forward arrows (`◀ ▶`) step through an in-memory history of paint strokes (grow, erase, new region), capped at 30; Revert regions clears that history; nothing about it is written to localStorage or the file. Scroll-wheel zoom stays available while drawing; the map does not pan until you click Pan. The painted area is the exact brush sweep. If that sweep **touches** the selected region, it unions into that polygon. If it does **not** touch, the stroke becomes a **new** same-class region (nearby same-class scraps still join within **1 m** of the paint only). In both cases, un-pinned same-class regions that the result **covers or overlaps** are absorbed into it (no duplicate scraps left inside a merged region) — except the picked region itself: if a "detached" stroke ends up reaching the picked region, it is treated as a grow of that region, so the pick never points at a deleted id. A stroke made with a pick whose region no longer exists drops the pick and asks for a new one. No convex hull. Leaving Draw, or hiding the picked region's layer, drops the pick; hidden layers are never force-drawn. The class count in the layer list is recounted after every paint, merge, delete, and revert. Surviving original edges keep their vertices; only the painted extension is smoothed to the same segment length as the source polygon. **Erase target rule:** a right-click erase acts on **every** visible same-class region the brush sweep touches (the picked region included); only if it touches none does it fall back to any visible region under it. A sweep over bare ground changes nothing and reports "Nothing to remove under the brush". The picked region stays armed unless it was the one removed. **Erase split rule:** an erase that leaves N ≥ 2 outer polygons on a target keeps the **largest** on that feature (same id, same properties, single `Polygon`; holes stay with their outer ring) and writes each other piece as a **new** same-class feature `dN` with `origin: split`; no pins are created for split pieces, the picked pin (if any) re-centres on the largest piece and still refuses out-of-bounds. **Erase edge rule:** contour points inside the brush sweep are new boundary and never snap back to a pre-stroke edge; on erase the mask is opened (erode/dilate by half the sliver width) within reach of the stroke so thin crescents do not become spikes. **Erase fragment rule:** each piece is measured in the local metre frame (area and outer perimeter — never absolute projected metres). Rules are absolute: a **crumb** is under `ERASE_MIN_FRAG_M2 = 3 m²`, a **sliver** has mean width `2·area/perimeter < ERASE_SLIVER_WIDTH_M = 0.8 m`. When the erase leaves several pieces, crumbs and slivers are dropped; when it leaves one piece, that piece is kept unless it is both a crumb and a sliver (or under 0.3 m²). A piece that still covers part of the feature's vendor original is never dropped — erasing an addition always leaves the scrap it was grown from. If nothing survives (or the erase mask is empty), that region is removed and its pin deleted; vendor originals are **not** restored (the erase is intentional). Every erase outcome is one paint-history snapshot, so `◀` restores it. Left-click grow and detached new-region paint do not split or drop. Each committed group is a catalog pin at the centroid. Sheet column W (`NM_COL_DRAWN`) holds reviewer GeoJSON for publish. `NM_MAX_PINS` is 20.
+
+## Regions (original vs edits)
+
+`regions.json` is the reviewer FeatureCollection of polygons (vendor scraps + merged/drawn groups). It is stored in **two folders**:
+
+| Path | Writer | Rule |
+|---|---|---|
+| `ai/original/regions.json` | `normalize.py` / `seed_regions.py` only | Vendor snapshot. Reviewer **never** writes here. Revert reads this file. |
+| `ai/edits/regions.json` | Reviewer (local PUT) | Merge, accept-remove, draw, and delete restore. Seeded as a copy of original the first time. |
+
+Canonical ingest and local serve both get this pair. Re-normalize **overwrites original** and **does not** overwrite an existing edits file unless `--reset-edits`. `promote.py` uploads original and **skips** `ai/edits/` so working copies stay off CloudFront until Jonah says otherwise.
+
+Local save: `python tools/nearmap/review_server.py 8899` (PUT only `**/ai/edits/regions.json`). Plain `python -m http.server` cannot write the file; the reviewer then keeps a localStorage backup.
+
+## AI layers (viewer vs Bedrock)
+
+`ai/features.json` is the **full** vendor Feature Collection: every class, every polygon, including overlapping vegetation and landscaping. The review page treats each class as a checkable overlay. Do not drop, cap, or centroid-replace viewer geometries.
+
+Bedrock still must not receive that dump. Promote also writes `ai/hints.json` (`counts` + **all** feature centroids, no geometry). Pass 1 fetches hints, converts lon/lat to JPEG percent with the sheet nadir bounds, and may pin **only** at those centroids. Catalog ids with no Nearmap class mapping (Front door, Vehicle Entrance, Fence, Sidewalk, Garage, yards, …) are omitted. Nearmap class names never enter `pins-catalog.json`. Pins remain catalog ids. Condition attributes stay on features; they are not pins.
+
+When the prompt and the validator disagree, the validator wins (`nmValidatePass1Pins_` copies the AI feature’s x,y or drops the pin).
+
+## Isolated product surface
+
+- Sheet: `Nearmap` (`NM_COL_*` in `config.gs`). Not a mode of Satellite or Satellite Sandbox. Menu **Property Intel → Nearmap Pipeline → Set Up Nearmap Sheet**.
+- Apps Script: `apps scripts/nearmap.gs`.
+- Review: `nearmap-review.html` (not `viewer.html`). Trial URL: `nearmap-review.html?property={hash}` or `?delivery={delivery_id}`.
+- **Do not** add `nearmap` to production `VIEW_ORDER` / `viewer.html` / vyanet Private tabs until promotion.
+- **Do not** add Nearmap to `syncNow()`, top-level Sync This Row, or Satellite Pipeline.
+
+Mesh / LAS from MapBrowser: ingest and inventory only. Do not convert to GLB. Do not point `viewer360` at an OBJ. The headless camera and model-viewer stay on parcel-clipped plane/drone GLBs.
+
+## Out of scope until promotion
+
+- Editing satellite Pass 1/2, `SAT_PASS1_EMIT_IDS`, or the pin catalog
+- Putting Nearmap on `viewer.html` or vyanet Private
+- Mesh → GLB / render Lambda
+- Clipping Vert to taxlot (trial serves Nearmap’s AOI with bounds)
+- License / resell of vendor rasters — keep trial binaries in **ingest**; tiles hold derived stills + compact JSON only
+
+## Promotion checklist (only when Jonah says the workflow is established)
+
+1. Nearmap `vert.jpg` + `bounds` may replace `prepareSatNadir_` Static Maps.
+2. Reduced AI may inject into `runSatElementPinsCall_` the same way KB context does.
+3. `nearmap` may join `VIEW_ORDER`.
+4. Pins remain catalog ids. Do **not** auto-promote vendor polygons into `elements`.
+5. Compass obliques → frontage-relative alpha/bravo is a separate decision.
+6. Merge `views.nearmap` onto the **existing** property hub (Jones = `6de88883bfd4a8349a901c54611ed9d7`). Do not call `upsertIndexEntry_` with `hashId(site_no)` as the hub id.
+
+## Changelog
+
+- **2026-09-07** — First clause. Isolated mothership tab `Nearmap` / S3 prefixes / `data/nearmap/` / review page. Canonical tree matches Ahartsi.zip API + MapBrowser shapes. Trial sync skips `data/index/` so Jones is not forked. Satellite / Plane / `syncNow` unchanged.

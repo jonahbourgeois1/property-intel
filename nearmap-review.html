@@ -5,11 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.2.1, 2026-09-08)
+  nearmap-review.html — isolated Nearmap trial QA (v1.3.29-local, 2026-09-09)
+  TESTING MODE: every open starts from ai/original/ (edits + browser backups ignored,
+  edits/regions.json reset to original). ?fresh=0 resumes the edits file instead.
+  Reviewer-first: Pan / Draw. Draw: + picks a centroid, left-click adds, right-click removes;
+  Clear brush drops the pick. (Accept button removed; onAcceptFeature is unreachable.)
+  Paint that does not touch the selected region becomes a new same-class region;
+  the class counter updates. Right-click erase that cuts a region in two writes each
+  extra piece as its own region (origin split); slivers left behind are dropped, and
+  a region that is all slivers is removed. Size slider under Draw; back/forward arrows under Size
+  step through paint edits (memory only). Selected pin is not enlarged. Scroll-zoom stays on.
+  Published to Pages 2026-09-09 with the testing-mode default; flip FRESH_ON_OPEN before real review.
   Sibling of golf-review / element-review. Not on VIEW_ORDER.
-  Nadir is a CloudFront JPEG with explicit bounds (GroundOverlay).
-  Query: property= (data/nearmap/{id}.json) and/or delivery= (CloudFront/local tiles).
-  Optional tiles= overrides the CloudFront prefix. site_no= enables sheet save.
+  Query: property= and/or delivery=. Optional tiles=. site_no= enables sheet save.
 -->
 <style>
   :root {
@@ -22,29 +30,112 @@
   header h1 { font-size: 14px; font-weight: 600; margin: 0; }
   #build { color: var(--ink-dim); font-size: 11px; }
   #addr { color: var(--ink-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  main { display: grid; grid-template-columns: 1fr 300px; height: calc(100% - 42px); }
+  main { display: grid; grid-template-columns: 1fr 320px; height: calc(100% - 42px); }
   #stage { position: relative; min-width: 0; }
   #map { position: absolute; inset: 0; }
+  #brushHit {
+    position: absolute; inset: 0 48px 0 0; z-index: 3; display: none;
+    cursor: none; touch-action: none;
+  }
+  #brushHit.on { display: block; }
+  #brushStroke {
+    position: absolute; inset: 0; z-index: 4;
+    pointer-events: none; display: none;
+  }
+  #brushStroke.on { display: block; }
+  #brushCursor {
+    position: absolute; left: 0; top: 0; z-index: 4;
+    pointer-events: none; display: none;
+    transform: translate(-50%, -50%);
+  }
+  #brushCursor.pick, #brushCursor.paint, #brushCursor.erase { display: block; }
+  #brushCursor.pick { width: 20px; height: 20px; }
+  #brushCursor.pick::before, #brushCursor.pick::after {
+    content: ''; position: absolute; background: #fff;
+    box-shadow: 0 0 0 1px #1b2027;
+  }
+  #brushCursor.pick::before { left: 9px; top: 0; width: 2px; height: 20px; }
+  #brushCursor.pick::after { left: 0; top: 9px; width: 20px; height: 2px; }
+  #brushCursor.paint, #brushCursor.erase {
+    box-sizing: content-box;
+    border: 0;
+    border-radius: 50%;
+  }
+  #brushCursor.paint {
+    background: color-mix(in srgb, var(--brush, #4fd1c5) 32%, transparent);
+    box-shadow: 0 0 0 2px var(--brush, #4fd1c5), 0 0 0 3px rgba(0,0,0,0.45);
+  }
+  #brushCursor.erase {
+    background: color-mix(in srgb, #f97066 28%, transparent);
+    box-shadow: 0 0 0 2px #f97066, 0 0 0 3px rgba(0,0,0,0.45);
+  }
+  #stage.brush-on .gm-style,
+  #stage.brush-on .gm-style > div { cursor: none !important; }
+  #stage.brush-on .gmnoprint,
+  #stage.brush-on .gmnoprint * { cursor: pointer !important; }
+  #tools {
+    position: absolute; top: 10px; left: 10px; z-index: 5;
+    display: flex; flex-direction: column; gap: 6px; align-items: stretch;
+    max-width: calc(100% - 20px);
+    background: rgba(27,32,39,0.92); padding: 6px 8px; border-radius: 6px;
+    border: 1px solid var(--line);
+  }
+  #tools .tool-row {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  }
+  #tools .btn.on { background: #1f6feb; border-color: #1f6feb; }
+  #brushClass { color: var(--hot); font-size: 11px; }
+  #brushSizeRow {
+    display: flex; align-items: center; gap: 8px;
+    min-width: 180px;
+  }
+  #brushSizeRow[hidden] { display: none; }
+  #brushSizeRow span { color: var(--ink-dim); font-size: 11px; white-space: nowrap; }
+  #brushSize {
+    flex: 1; min-width: 120px; height: 16px; cursor: pointer;
+    accent-color: #4fd1c5;
+  }
+  #brushHistRow { display: flex; align-items: center; gap: 6px; }
+  #brushHistRow[hidden] { display: none; }
+  #brushHistRow .btn { padding: 2px 10px; line-height: 1.2; }
   .panel { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-width: 0; }
   .panel h2 { margin: 0; padding: 10px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); }
   .panel-scroll { flex: 1; overflow: auto; padding: 10px 12px; }
   .meta { color: var(--ink-dim); font-size: 11px; margin: 0 0 8px; }
-  .ai-list { margin: 0; padding: 0; list-style: none; }
-  .ai-list li { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
   .swatch { width: 12px; height: 12px; border-radius: 2px; flex: 0 0 12px; border: 1px solid rgba(255,255,255,0.45); }
   .layer-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px; }
+  .layer-row.is-active { background: rgba(79,209,197,0.12); border-radius: 3px; }
   .layer-row span.name { flex: 1; min-width: 0; }
   .layer-row span.n { color: var(--ink-dim); }
   .layer-btns { display: flex; gap: 6px; margin: 6px 0 8px; }
   #pinList { margin: 8px 0 0; padding: 0; list-style: none; }
-  #pinList li { display: flex; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  #pinList li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--line); }
+  #pinList li span.grow { flex: 1; min-width: 0; }
+  .src { font-size: 10px; color: var(--hot); }
   .submit-bar { padding: 10px 12px; border-top: 1px solid var(--line); }
   .btn { background: #2b333e; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer; }
   .btn.primary { background: #1f6feb; border-color: #1f6feb; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
   .status { margin-top: 8px; min-height: 1.2em; color: var(--ink-dim); }
   .status.err { color: var(--err); }
   .error { padding: 24px; color: var(--err); }
   label.toggle { display: flex; align-items: center; gap: 6px; margin: 8px 0; font-size: 12px; }
+  #picker {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: center; justify-content: center; z-index: 30;
+  }
+  #picker[hidden] { display: none; }
+  .picker-card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    width: 380px; max-width: calc(100% - 24px); max-height: 80vh;
+    display: flex; flex-direction: column; padding: 14px;
+  }
+  .picker-card h2 { margin: 0 0 6px; font-size: 14px; }
+  #pickerQ { width: 100%; margin: 8px 0; padding: 8px; border-radius: 4px; border: 1px solid var(--line); background: #1b2027; color: var(--ink); }
+  #pickerHits { margin: 0; padding: 0; list-style: none; overflow: auto; max-height: 280px; }
+  #pickerHits li button { display: block; width: 100%; text-align: left; background: transparent; color: var(--ink); border: 0; border-bottom: 1px solid var(--line); padding: 8px 4px; cursor: pointer; }
+  #pickerHits li button:hover { background: #2b333e; }
+  #pickerHits li button.suggest { color: var(--hot); }
 </style>
 </head>
 <body>
@@ -54,12 +145,34 @@
   <span id="addr"></span>
 </header>
 <main>
-  <div id="stage"><div id="map"></div></div>
+  <div id="stage">
+    <div id="map"></div>
+    <div id="brushHit"></div>
+    <canvas id="brushStroke"></canvas>
+    <div id="brushCursor"></div>
+    <div id="tools">
+      <div class="tool-row">
+        <button type="button" class="btn tool on" data-tool="pan" id="toolPan">Pan</button>
+        <button type="button" class="btn tool" data-tool="draw" id="toolDraw">Draw</button>
+        <span id="brushClass"></span>
+      </div>
+      <label id="brushSizeRow" hidden>
+        <span>Size</span>
+        <input type="range" id="brushSize" min="4" max="48" value="12" step="1">
+        <span id="brushSizeVal">12</span>
+      </label>
+      <div id="brushHistRow" hidden>
+        <button type="button" class="btn" id="brushUndo" title="Undo last paint" disabled>&#9664;</button>
+        <button type="button" class="btn" id="brushRedo" title="Redo" disabled>&#9654;</button>
+        <button type="button" class="btn" id="brushClear" title="Drop the picked region and go back to + pick" disabled>Clear brush</button>
+      </div>
+    </div>
+  </div>
   <aside class="panel">
     <h2>Delivery</h2>
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
-      <p class="meta">AI layers (one class each). Polygons + centroids share the same checkbox.</p>
+      <p class="meta">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Merge and remove write <code>ai/edits/regions.json</code>. Revert copies original over edits.</p>
       <label class="toggle"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
         <button type="button" class="btn" id="aiAll">All</button>
@@ -70,19 +183,58 @@
       <ol id="pinList"></ol>
     </div>
     <div class="submit-bar">
-      <button type="button" class="btn primary" id="saveBtn">Save pins to sheet</button>
+      <button type="button" class="btn primary" id="saveBtn">Save</button>
+      <button type="button" class="btn" id="revertRegions">Revert regions</button>
       <button type="button" class="btn" id="copyBtn">Copy JSON</button>
       <div class="status" id="status"></div>
     </div>
   </aside>
 </main>
+<div id="picker" hidden>
+  <div class="picker-card">
+    <h2>Catalog pin</h2>
+    <p class="meta" id="pickerHint"></p>
+    <input id="pickerQ" type="search" placeholder="Type a name or id" autocomplete="off">
+    <ul id="pickerHits"></ul>
+    <button type="button" class="btn" id="pickerCancel">Cancel</button>
+  </div>
+</div>
 <script>
 (function () {
-  var BUILD = 'v1.2.1';
+  var BUILD = 'v1.3.29-local';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
-  var PIN_HARD_LIMIT = 12;
+  var PIN_HARD_LIMIT = 20;
+  var BRUSH_PX = 12;
+  var JOIN_M = 1;
+  // Erase clean-up (metres, local frame). A piece left after right-click erase is a
+  // fragment when its area is under ERASE_MIN_FRAG_M2 (a crumb) or its mean width
+  // (2 x area / perimeter) is under ERASE_SLIVER_WIDTH_M (a thin remnant). Fragments
+  // are dropped. Pieces that still cover part of the vendor's original polygon are
+  // never dropped. Rules are absolute on purpose: relative-to-before rules deleted
+  // whole regions when a small addition was trimmed.
+  var ERASE_MIN_FRAG_M2 = 3;
+  var ERASE_SLIVER_WIDTH_M = 0.8;
+
+  var CLASS_MAP = [
+    { id: 61, name: 'Roof', classes: ['Roof'] },
+    { id: 57, name: 'Residence', classes: ['Building', 'Building (Deprecated)'] },
+    { id: 19, name: 'Commercial Building', classes: ['Building', 'Building (Deprecated)'] },
+    { id: 26, name: 'Detached structure', classes: ['Building', 'Building (Deprecated)'] },
+    { id: 80, name: 'Warehouse', classes: ['Building', 'Building (Deprecated)'] },
+    { id: 186, name: 'Driveway', classes: ['Driveway', 'Asphalt'] },
+    { id: 206, name: 'Parking lot', classes: ['Asphalt', 'Road (Driveable Surface)'] },
+    { id: 69, name: 'Solar panels', classes: ['Solar Panel'] },
+    { id: 130, name: 'Pool', classes: ['Swimming Pool'] },
+    { id: 114, name: 'Lawn', classes: ['Lawn Grass'] },
+    { id: 52, name: 'Patio', classes: ['Concrete Slab'] },
+    { id: 144, name: 'Tennis court', classes: [] },
+    { id: 113, name: 'Landscaping', classes: ['Low Vegetation (0.5m-2m)', 'Very Low Vegetation (<0.5m)', 'Natural (soft)'] },
+    { id: 135, name: 'Scattered Vegetation', classes: ['Low Vegetation (0.5m-2m)', 'Very Low Vegetation (<0.5m)', 'Natural (soft)'] },
+    { id: 150, name: 'Trees', classes: ['Woody Vegetation', 'Medium and High Vegetation (>2m)', 'Medium and High Vegetation with Woody Vegetation'] },
+    { id: 148, name: 'Tree cluster', classes: ['Woody Vegetation', 'Medium and High Vegetation (>2m)', 'Medium and High Vegetation with Woody Vegetation'] }
+  ];
 
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
@@ -99,22 +251,52 @@
     return base + path.replace(/^\//, '');
   }
 
+  function emptyDrawn() {
+    return { type: 'FeatureCollection', features: [] };
+  }
+
   var propertyId = String(qp('property') || '').trim();
   var delivery = String(qp('delivery') || '').trim();
   var siteNo = String(qp('site_no') || qp('site') || '').trim();
   var tilesBase = String(qp('tiles') || CF_TILES);
+  // Testing mode (default): every open starts from ai/original/ — the edits file
+  // and the browser backups (regions + pins) are ignored, and edits/regions.json
+  // is reset to the original so disk matches the screen. ?fresh=0 resumes edits.
+  var FRESH_ON_OPEN = qp('fresh') !== '0';
   var dataRoot = String(qp('dataRoot') || '');
   var record = null;
   var catalogById = {};
+  var catalogList = [];
   var map = null;
   var overlay = null;
   var aiShapes = [];
   var hintMarkers = [];
   var pinMarkers = [];
+  var drawnShapes = [];
+  var workShape = null;
+  var brushLine = null;
+  var pixOverlay = null;
   var layerOn = {};
   var aiPack = null;
   var featuresPromise = null;
   var mapsBooted = false;
+  var toolMode = 'pan';
+  var activeClass = '';
+  var consumed = {};
+  var originalById = {};
+  var originalFc = null;
+  var working = { ids: [], stamps: [] };
+  var brushing = false;
+  var brushPainting = false;
+  var paintErase = false;
+  var brushTarget = null;
+  var paintHistory = [];
+  var paintFuture = [];
+  var PAINT_HISTORY_MAX = 30;
+  var pickerCb = null;
+  var pickerSuggested = [];
+  var drawVerts = [];
+  var drawPreview = null;
 
   document.getElementById('build').textContent = BUILD;
 
@@ -129,10 +311,172 @@
     setStatus(msg, 'err');
   }
 
+  function storageKey() {
+    return 'nm-review:' + (siteNo || delivery || propertyId || 'anon');
+  }
+
+  function persistLocal() {
+    if (!record) return;
+    try {
+      localStorage.setItem(storageKey(), JSON.stringify({
+        elements: record.elements || [],
+        drawn: record.drawn || emptyDrawn()
+      }));
+    } catch (e) {}
+  }
+
+  function regionsEditsUrl() {
+    if (!delivery) return '';
+    return joinUrl(tilesBase, delivery + '/ai/edits/regions.json');
+  }
+
+  function regionsOriginalUrl() {
+    if (!delivery) return '';
+    return joinUrl(tilesBase, delivery + '/ai/original/regions.json');
+  }
+
+  function regionsStorageKey() {
+    return 'nm-regions:' + (delivery || siteNo || propertyId || 'anon');
+  }
+
+  function recountFeatures(features) {
+    var counts = {};
+    (features || []).forEach(function (f) {
+      var c = featureClass(f);
+      counts[c] = (counts[c] || 0) + 1;
+    });
+    return counts;
+  }
+
+  function ensureFeatureIds(features) {
+    (features || []).forEach(function (f, i) {
+      if (!f.id) f.id = 'r' + (i + 1);
+      if (!f.properties) f.properties = {};
+      if (!f.properties.origin) f.properties.origin = 'vendor';
+    });
+    return features || [];
+  }
+
+  function indexOriginal(fc) {
+    originalById = {};
+    originalFc = fc;
+    ((fc && fc.features) || []).forEach(function (f, i) {
+      if (!f.id) f.id = 'r' + (i + 1);
+      originalById[String(f.id)] = f;
+    });
+  }
+
+  function featureById(id) {
+    var fs = (aiPack && aiPack.features) || [];
+    for (var i = 0; i < fs.length; i++) {
+      if (String(fs[i].id) === String(id)) return { feature: fs[i], index: i };
+    }
+    return null;
+  }
+
+  function nextRegionId(prefix) {
+    var n = 1;
+    ((aiPack && aiPack.features) || []).forEach(function (f) {
+      var m = String(f.id || '').match(new RegExp('^' + prefix + '(\\d+)$'));
+      if (m) n = Math.max(n, parseInt(m[1], 10) + 1);
+    });
+    return prefix + n;
+  }
+
+  function applyWorkingFc(fc) {
+    if (!aiPack) aiPack = { counts: {}, hints: [], features: [] };
+    aiPack.features = ensureFeatureIds((fc && fc.features) || []);
+    refreshLayerCounts();
+  }
+
+  function refreshLayerCounts() {
+    if (!aiPack) return;
+    aiPack.counts = recountFeatures(aiPack.features);
+    renderLayers(aiPack);
+  }
+
+  function persistRegions() {
+    if (!aiPack) return Promise.resolve();
+    var doc = {
+      type: 'FeatureCollection',
+      name: 'nearmap-regions',
+      source: 'edits',
+      counts: recountFeatures(aiPack.features),
+      features: aiPack.features
+    };
+    try { localStorage.setItem(regionsStorageKey(), JSON.stringify(doc)); } catch (e) {}
+    var url = regionsEditsUrl();
+    var localOnly = !url || (url.indexOf('http://localhost') !== 0 && url.indexOf('http://127.0.0.1') !== 0);
+    if (localOnly) return Promise.resolve('local');
+    return fetch(url, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(doc)
+    }).then(function (r) {
+      if (!r.ok) throw new Error('PUT ' + r.status);
+      return 'file';
+    }).catch(function () { return 'local'; });
+  }
+
+  function removeRegionIds(ids) {
+    var drop = {};
+    ids.forEach(function (id) { drop[String(id)] = true; });
+    aiPack.features = (aiPack.features || []).filter(function (f) { return !drop[String(f.id)]; });
+    refreshLayerCounts();
+  }
+
+  function restoreRegionIds(ids) {
+    ids.forEach(function (id) {
+      if (featureById(id)) return;
+      var orig = originalById[String(id)];
+      if (orig) aiPack.features.push(JSON.parse(JSON.stringify(orig)));
+    });
+    refreshLayerCounts();
+  }
+
+  function mergeLocal() {
+    if (!record) return;
+    try {
+      var raw = localStorage.getItem(storageKey());
+      if (!raw) return;
+      var o = JSON.parse(raw);
+      var havePins = record.elements && record.elements.length;
+      var haveDrawn = record.drawn && record.drawn.features && record.drawn.features.length;
+      if (!havePins && o.elements) record.elements = o.elements;
+      if (!haveDrawn && o.drawn) record.drawn = o.drawn;
+    } catch (e) {}
+  }
+
+  function ensureDrawn() {
+    if (!record.drawn || !Array.isArray(record.drawn.features)) record.drawn = emptyDrawn();
+    return record.drawn;
+  }
+
+  function nextDrawnId() {
+    var n = 1;
+    ensureDrawn().features.forEach(function (f) {
+      var m = String(f.id || '').match(/^d(\d+)$/);
+      if (m) n = Math.max(n, parseInt(m[1], 10) + 1);
+    });
+    return 'd' + n;
+  }
+
   function pctToLatLng(x, y, b) {
     var lng = b.west + (Number(x) / 100) * (b.east - b.west);
     var lat = b.north - (Number(y) / 100) * (b.north - b.south);
     return { lat: lat, lng: lng };
+  }
+
+  function latLngToPct(lat, lng, b) {
+    if (!b) return null;
+    var dw = b.east - b.west;
+    var dh = b.north - b.south;
+    if (!dw || !dh) return null;
+    var x = (lng - b.west) / dw * 100;
+    var y = (b.north - lat) / dh * 100;
+    if (!isFinite(x) || !isFinite(y)) return null;
+    if (Math.abs(x) > 500 || Math.abs(y) > 500) return null;
+    return { x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
   }
 
   function fetchJson(url, opt) {
@@ -140,7 +484,10 @@
     var ctrl = ms ? new AbortController() : null;
     var timer = null;
     if (ctrl) timer = setTimeout(function () { ctrl.abort(); }, ms);
-    return fetch(url, ctrl ? { signal: ctrl.signal } : undefined).then(function (r) {
+    var init = {};
+    if (ctrl) init.signal = ctrl.signal;
+    if (opt && opt.noStore) init.cache = 'no-store';
+    return fetch(url, init).then(function (r) {
       if (timer) clearTimeout(timer);
       if (!r.ok) throw new Error(r.status + ' ' + url);
       return r.json();
@@ -167,12 +514,18 @@
   function loadCatalog() {
     var url = (dataRoot || '.') + '/data/pin-catalog/pins-catalog.json';
     return fetchJson(url).then(function (cat) {
-      (cat.pins || []).forEach(function (p) { catalogById[p.id] = p; });
+      catalogList = [];
+      (cat.pins || []).forEach(function (p) {
+        catalogById[p.id] = p;
+        catalogList.push({ id: p.id, name: p.name || ('#' + p.id) });
+      });
     }).catch(function () {});
   }
 
   function applyRecord(rec) {
     record = rec;
+    if (!record.drawn) record.drawn = emptyDrawn();
+    if (!record.elements) record.elements = [];
     if (rec.address) document.getElementById('addr').textContent = rec.address;
     var survey = rec.survey_date || '';
     var did = rec.delivery_id || delivery;
@@ -203,9 +556,10 @@
           return null;
         }
         if (!record) {
-          record = { view: 'nearmap', source: 'nearmap', elements: [] };
+          record = { view: 'nearmap', source: 'nearmap', elements: [], drawn: emptyDrawn() };
         }
-        if (row.pins) record.elements = row.pins;
+        if (row.pins && row.pins.length) record.elements = row.pins;
+        if (row.drawn && row.drawn.features && row.drawn.features.length) record.drawn = row.drawn;
         if (row.delivery_id && !delivery) delivery = String(row.delivery_id);
         if (row.address) record.address = row.address;
         if (row.nadir_url && row.bounds && !(record.nadir && record.nadir.url)) {
@@ -227,10 +581,11 @@
         address: man.address,
         survey_date: man.survey_date,
         delivery_id: man.delivery_id,
-        nadir: { url: (man.urls && man.urls.vert) || joinUrl(tilesBase, delivery + '/vert.jpg'), bounds: man.bounds },
+        nadir: { url: (qp('tiles') ? joinUrl(tilesBase, delivery + '/vert.jpg') : ((man.urls && man.urls.vert) || joinUrl(tilesBase, delivery + '/vert.jpg'))), bounds: man.bounds },
         obliques: {},
-        ai_url: (man.urls && man.urls.ai) || joinUrl(tilesBase, delivery + '/ai/features.json'),
-        elements: (record && record.elements) || []
+        ai_url: qp('tiles') ? joinUrl(tilesBase, delivery + '/ai/features.json') : ((man.urls && man.urls.ai) || joinUrl(tilesBase, delivery + '/ai/features.json')),
+        elements: (record && record.elements) || [],
+        drawn: (record && record.drawn) || emptyDrawn()
       };
       applyRecord(rec);
       return rec;
@@ -243,7 +598,7 @@
       'Building (Deprecated)': '#9d0208',
       Roof: '#dc2f02',
       'Translucent Roofing': '#f48c06',
-      Driveway: '#6c757d',
+      Driveway: '#f72585',
       Asphalt: '#495057',
       'Road (Driveable Surface)': '#343a40',
       'Concrete Slab': '#adb5bd',
@@ -270,6 +625,14 @@
     return (f && f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown';
   }
 
+  function suggestIds(cls) {
+    var out = [];
+    CLASS_MAP.forEach(function (row) {
+      if (row.classes.indexOf(cls) !== -1) out.push(row.id);
+    });
+    return out;
+  }
+
   function renderLayers(ai) {
     var host = document.getElementById('aiLayers');
     host.innerHTML = '';
@@ -286,7 +649,7 @@
     names.forEach(function (name) {
       if (layerOn[name] === undefined) layerOn[name] = false;
       var row = document.createElement('label');
-      row.className = 'layer-row';
+      row.className = 'layer-row' + (activeClass === name ? ' is-active' : '');
       row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
         (layerOn[name] ? 'checked' : '') + '>' +
         '<span class="swatch" style="background:' + colorForClass(name) + '"></span>' +
@@ -294,12 +657,131 @@
         '<span class="n">' + counts[name] + '</span>';
       host.appendChild(row);
     });
+    updateBrushLabel();
+  }
+
+  function setBrushSizePx(px) {
+    BRUSH_PX = Math.max(4, Math.min(48, Math.round(Number(px) || 12)));
+    var slider = document.getElementById('brushSize');
+    var label = document.getElementById('brushSizeVal');
+    if (slider && String(slider.value) !== String(BRUSH_PX)) slider.value = String(BRUSH_PX);
+    if (label) label.textContent = String(BRUSH_PX);
+    if (isEditTool() && brushTarget) restyleBrushSize();
+  }
+
+  function brushDiameterPx() {
+    return BRUSH_PX * 2;
+  }
+
+  function restyleBrushSize() {
+    styleBrushCursor();
+    showBrushStroke();
+  }
+
+  function paintSnapshot() {
+    return {
+      features: JSON.parse(JSON.stringify((aiPack && aiPack.features) || [])),
+      elements: JSON.parse(JSON.stringify((record && record.elements) || []))
+    };
+  }
+
+  function pushPaintHistory() {
+    if (!aiPack) return;
+    paintHistory.push(paintSnapshot());
+    if (paintHistory.length > PAINT_HISTORY_MAX) paintHistory.shift();
+    paintFuture = [];
+    syncPaintHistoryButtons();
+  }
+
+  function clearPaintHistory() {
+    paintHistory = [];
+    paintFuture = [];
+    syncPaintHistoryButtons();
+  }
+
+  function syncPaintHistoryButtons() {
+    var back = document.getElementById('brushUndo');
+    var fwd = document.getElementById('brushRedo');
+    var clr = document.getElementById('brushClear');
+    if (back) back.disabled = !paintHistory.length;
+    if (fwd) fwd.disabled = !paintFuture.length;
+    if (clr) clr.disabled = !(isEditTool() && brushTarget);
+  }
+
+  // Drop the picked region: back to the + pick cursor without leaving Draw.
+  // Nothing about the regions changes, so no history snapshot.
+  function clearBrushPick() {
+    if (!brushTarget) return;
+    brushTarget = null;
+    working = { ids: [], stamps: [] };
+    brushing = false;
+    brushPainting = false;
+    paintErase = false;
+    clearBrushStroke();
+    updateBrushLabel();
+    syncBrushChrome();
+    redrawAi();
+    setStatus('Brush cleared — + click a centroid to pick another region');
+  }
+
+  function stepPaintHistory(dir) {
+    var from = dir < 0 ? paintHistory : paintFuture;
+    var to = dir < 0 ? paintFuture : paintHistory;
+    if (!from.length || !aiPack || !record) return;
+    to.push(paintSnapshot());
+    var snap = from.pop();
+    aiPack.features = snap.features;
+    record.elements = snap.elements;
+    working.stamps = [];
+    clearBrushStroke();
+    if (brushTarget && !featureById(brushTarget.regionId)) {
+      brushTarget = null;
+      working = { ids: [], stamps: [] };
+    } else if (brushTarget) {
+      working = { ids: [String(brushTarget.regionId)], stamps: [] };
+    }
+    rebuildConsumed();
+    refreshLayerCounts();
+    persistLocal();
+    persistRegions();
+    redrawAi();
+    syncBrushChrome();
+    updateBrushLabel();
+    setStatus(dir < 0 ? 'Stepped back one paint edit' : 'Stepped forward one paint edit');
+  }
+
+  function isEditTool() {
+    return toolMode === 'draw';
+  }
+
+  function updateBrushLabel() {
+    var el = document.getElementById('brushClass');
+    if (!brushTarget) {
+      el.textContent = isEditTool() ? '+ click a centroid' : '';
+      el.style.color = '';
+      return;
+    }
+    var n = working.ids.length;
+    var name = brushTarget.label || brushTarget.className;
+    el.textContent = name + ' — left add · right remove';
+    el.style.color = brushTarget.color || '';
   }
 
   function setAllLayers(on) {
     Object.keys(layerOn).forEach(function (k) { layerOn[k] = on; });
     var boxes = document.querySelectorAll('#aiLayers input[type=checkbox]');
     for (var i = 0; i < boxes.length; i++) boxes[i].checked = on;
+    if (!on) {
+      activeClass = '';
+      if (brushTarget) {
+        brushTarget = null;
+        working = { ids: [], stamps: [] };
+        clearBrushStroke();
+        updateBrushLabel();
+        syncBrushChrome();
+      }
+      renderLayers(aiPack);
+    }
     if (on) {
       setStatus('Loading AI polygons…');
       ensureFeatures().then(function () {
@@ -311,29 +793,864 @@
     }
   }
 
+  function sourceLabel(p) {
+    return p.source || '';
+  }
+
   function renderPinList() {
     var host = document.getElementById('pinList');
     host.innerHTML = '';
     var pins = (record && record.elements) || [];
     document.getElementById('pinHeading').textContent =
-      'Catalog pins (' + pins.length + ')';
+      'Catalog pins (' + pins.length + ' / ' + PIN_HARD_LIMIT + ')';
     if (!pins.length) {
       var empty = document.createElement('li');
-      empty.innerHTML = '<span class="meta">None yet. Run Nearmap Pass 1, then open with site_no= or sync to GitHub.</span>';
+      empty.innerHTML = '<span class="meta">None yet. Draw: click a centroid, then left-click to add / right-click to remove.</span>';
       host.appendChild(empty);
       return;
     }
     pins.forEach(function (p, i) {
       var name = (catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id);
       var li = document.createElement('li');
-      li.innerHTML = '<span>' + (i + 1) + '</span><span>' + escapeHtml(name) +
-        ' <span class="meta">#' + p.id + ' · ' + p.x + ',' + p.y + '</span></span>';
+      var src = sourceLabel(p);
+      li.innerHTML = '<span>' + (i + 1) + '</span><span class="grow" data-pick-pin="' + i + '">' + escapeHtml(name) +
+        ' <span class="meta">#' + p.id + ' · ' + p.x + ',' + p.y +
+        (src ? ' <span class="src">' + escapeHtml(src) + '</span>' : '') +
+        '</span></span>' +
+        '<button type="button" class="btn" data-del="' + i + '">x</button>';
       host.appendChild(li);
     });
   }
 
   function ringToPath(ring) {
     return ring.map(function (p) { return { lat: p[1], lng: p[0] }; });
+  }
+
+  function featureRings(f) {
+    var g = (f && f.geometry) || {};
+    var t = g.type;
+    if (t === 'Polygon') return [g.coordinates[0]];
+    if (t === 'MultiPolygon') return (g.coordinates || []).map(function (p) { return p[0]; });
+    return [];
+  }
+
+  function featurePoints(f) {
+    var out = [];
+    featureRings(f).forEach(function (ring) {
+      var n = ring.length;
+      ring.forEach(function (p, i) {
+        if (i === n - 1 && n > 1 && p[0] === ring[0][0] && p[1] === ring[0][1]) return;
+        out.push({ lat: p[1], lng: p[0] });
+      });
+    });
+    return out;
+  }
+
+  function featureCentroid(f) {
+    var pts = featurePoints(f);
+    if (!pts.length) return null;
+    var lat = 0, lng = 0;
+    pts.forEach(function (p) { lat += p.lat; lng += p.lng; });
+    return { lat: lat / pts.length, lng: lng / pts.length };
+  }
+
+  function featureOuterRing(f) {
+    var rings = featureRings(f);
+    return rings.length ? rings[0] : null;
+  }
+
+  function ringCentroidLonLat(ring) {
+    var lat = 0, lng = 0, n = 0;
+    for (var i = 0; i < ring.length; i++) {
+      if (i === ring.length - 1 && ring[i][0] === ring[0][0] && ring[i][1] === ring[0][1]) continue;
+      lng += ring[i][0];
+      lat += ring[i][1];
+      n++;
+    }
+    return n ? { lat: lat / n, lng: lng / n } : null;
+  }
+
+  function distM(a, b) {
+    if (window.google && google.maps.geometry && google.maps.geometry.spherical) {
+      return google.maps.geometry.spherical.computeDistanceBetween(
+        new google.maps.LatLng(a.lat, a.lng),
+        new google.maps.LatLng(b.lat, b.lng)
+      );
+    }
+    var R = 6371000;
+    var toRad = Math.PI / 180;
+    var dLat = (b.lat - a.lat) * toRad;
+    var dLng = (b.lng - a.lng) * toRad;
+    var s = Math.sin(dLat / 2);
+    var t = Math.sin(dLng / 2);
+    var h = s * s + Math.cos(a.lat * toRad) * Math.cos(b.lat * toRad) * t * t;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+
+  function brushRadiusM() {
+    if (!map) return 1.5;
+    var lat = map.getCenter() ? map.getCenter().lat() : 44;
+    var z = map.getZoom() || 19;
+    var mPerPx = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, z);
+    return Math.max(0.6, BRUSH_PX * mPerPx);
+  }
+
+  function pinHitM() {
+    return Math.max(10, pxToMeters(28));
+  }
+
+  function pxToMeters(px) {
+    if (!map) return 8;
+    var lat = map.getCenter() ? map.getCenter().lat() : 44;
+    var z = map.getZoom() || 19;
+    var mPerPx = 156543.03392 * Math.cos(lat * Math.PI / 180) / Math.pow(2, z);
+    return px * mPerPx;
+  }
+
+  function pointInRing(lng, lat, ring) {
+    var inside = false;
+    var n = ring.length;
+    for (var i = 0, j = n - 1; i < n; j = i++) {
+      var xi = ring[i][0], yi = ring[i][1];
+      var xj = ring[j][0], yj = ring[j][1];
+      var hit = ((yi > lat) !== (yj > lat)) &&
+        (lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi);
+      if (hit) inside = !inside;
+    }
+    return inside;
+  }
+
+  function pointInFeature(ll, f) {
+    var rings = featureRings(f);
+    for (var i = 0; i < rings.length; i++) {
+      if (pointInRing(ll.lng, ll.lat, rings[i])) return true;
+    }
+    return false;
+  }
+
+  function distPointToSegM(p, a, b) {
+    var dx = b.lng - a.lng;
+    var dy = b.lat - a.lat;
+    if (!dx && !dy) return distM(p, a);
+    var t = ((p.lng - a.lng) * dx + (p.lat - a.lat) * dy) / (dx * dx + dy * dy);
+    t = Math.max(0, Math.min(1, t));
+    return distM(p, { lat: a.lat + t * dy, lng: a.lng + t * dx });
+  }
+
+  function featureHitsStamp(f, stamp, r) {
+    if (pointInFeature(stamp, f)) return true;
+    var rings = featureRings(f);
+    for (var i = 0; i < rings.length; i++) {
+      var ring = rings[i];
+      for (var j = 0; j < ring.length; j++) {
+        var a = { lng: ring[j][0], lat: ring[j][1] };
+        if (distM(stamp, a) <= r) return true;
+        var k = (j + 1) % ring.length;
+        var b = { lng: ring[k][0], lat: ring[k][1] };
+        if (distPointToSegM(stamp, a, b) <= r) return true;
+      }
+    }
+    return false;
+  }
+
+  function densifyStamps(stamps, stepM) {
+    if (!stamps || !stamps.length) return [];
+    var out = [{ lat: stamps[0].lat, lng: stamps[0].lng }];
+    var i, k, n, t, d, a, b;
+    for (i = 1; i < stamps.length; i++) {
+      a = stamps[i - 1];
+      b = stamps[i];
+      d = distM(a, b);
+      n = Math.max(1, Math.ceil(d / Math.max(0.2, stepM)));
+      for (k = 1; k <= n; k++) {
+        t = k / n;
+        out.push({ lat: a.lat + (b.lat - a.lat) * t, lng: a.lng + (b.lng - a.lng) * t });
+      }
+    }
+    return out;
+  }
+
+  function meterFrame(lat0, lng0) {
+    var mLat = 111320;
+    var mLng = 111320 * Math.cos(lat0 * Math.PI / 180);
+    return {
+      x: function (lng) { return (lng - lng0) * mLng; },
+      y: function (lat) { return (lat - lat0) * mLat; },
+      lng: function (x) { return lng0 + x / mLng; },
+      lat: function (y) { return lat0 + y / mLat; }
+    };
+  }
+
+  function maskRings(grid, nx, ny) {
+    var start = {};
+    function add(x0, y0, x1, y1) {
+      var k = x0 + ',' + y0;
+      if (!start[k]) start[k] = [];
+      start[k].push([x1, y1]);
+    }
+    var x, y;
+    for (y = 0; y < ny; y++) {
+      for (x = 0; x < nx; x++) {
+        if (!grid[y * nx + x]) continue;
+        if (x === 0 || !grid[y * nx + (x - 1)]) add(x, y, x, y + 1);
+        if (x === nx - 1 || !grid[y * nx + (x + 1)]) add(x + 1, y + 1, x + 1, y);
+        if (y === 0 || !grid[(y - 1) * nx + x]) add(x + 1, y, x, y);
+        if (y === ny - 1 || !grid[(y + 1) * nx + x]) add(x, y + 1, x + 1, y + 1);
+      }
+    }
+    var rings = [];
+    function take(k) {
+      var arr = start[k];
+      if (!arr || !arr.length) return null;
+      return arr.pop();
+    }
+    while (true) {
+      var k0 = null;
+      for (var kk in start) {
+        if (start[kk] && start[kk].length) { k0 = kk; break; }
+      }
+      if (!k0) break;
+      var p0 = k0.split(',');
+      var x0 = +p0[0], y0 = +p0[1];
+      var ring = [[x0, y0]];
+      var cx = x0, cy = y0;
+      var guard = nx * ny * 8;
+      while (guard--) {
+        var n = take(cx + ',' + cy);
+        if (!n) break;
+        cx = n[0];
+        cy = n[1];
+        ring.push([cx, cy]);
+        if (cx === x0 && cy === y0) break;
+      }
+      if (ring.length >= 4) rings.push(ring);
+    }
+    return rings;
+  }
+
+  function signedAreaLonLat(ring) {
+    var a = 0;
+    var i, n = ring.length;
+    for (i = 0; i < n - 1; i++) a += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1];
+    return a / 2;
+  }
+
+  function simplifyGridRing(ring) {
+    if (ring.length < 4) return ring;
+    var out = [ring[0]];
+    var i, a, b, c;
+    for (i = 1; i < ring.length; i++) {
+      c = ring[i];
+      b = out[out.length - 1];
+      a = out.length > 1 ? out[out.length - 2] : null;
+      if (a && (b[0] - a[0]) * (c[1] - b[1]) === (b[1] - a[1]) * (c[0] - b[0])) out.pop();
+      out.push(c);
+    }
+    return out;
+  }
+
+  function origEdgesXY(feats, fr) {
+    var edges = [];
+    var verts = [];
+    (feats || []).forEach(function (f) {
+      featureRings(f).forEach(function (ring) {
+        var i, n = ring.length;
+        for (i = 0; i < n; i++) {
+          if (i === n - 1 && n > 1 && ring[i][0] === ring[0][0] && ring[i][1] === ring[0][1]) continue;
+          verts.push({ x: fr.x(ring[i][0]), y: fr.y(ring[i][1]) });
+        }
+        for (i = 0; i < n - 1; i++) {
+          var a = { x: fr.x(ring[i][0]), y: fr.y(ring[i][1]) };
+          var b = { x: fr.x(ring[i + 1][0]), y: fr.y(ring[i + 1][1]) };
+          edges.push({ a: a, b: b });
+        }
+      });
+    });
+    return { edges: edges, verts: verts };
+  }
+
+  function distPointToSegXY(p, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y;
+    if (!dx && !dy) {
+      return { d: Math.hypot(p.x - a.x, p.y - a.y), q: a };
+    }
+    var t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy);
+    t = Math.max(0, Math.min(1, t));
+    var q = { x: a.x + t * dx, y: a.y + t * dy };
+    return { d: Math.hypot(p.x - q.x, p.y - q.y), q: q };
+  }
+
+  function medianOrigSegM(feats, fr) {
+    var ds = [];
+    (feats || []).forEach(function (f) {
+      featureRings(f).forEach(function (ring) {
+        var i;
+        for (i = 0; i < ring.length - 1; i++) {
+          var a = { x: fr.x(ring[i][0]), y: fr.y(ring[i][1]) };
+          var b = { x: fr.x(ring[i + 1][0]), y: fr.y(ring[i + 1][1]) };
+          var d = Math.hypot(b.x - a.x, b.y - a.y);
+          if (d > 0.05) ds.push(d);
+        }
+      });
+    });
+    if (!ds.length) return 0.45;
+    ds.sort(function (a, b) { return a - b; });
+    return Math.max(0.25, Math.min(0.85, ds[Math.floor(ds.length / 2)]));
+  }
+
+  function snapPointToOrig(p, orig, snapM) {
+    var i, d, bestV = Infinity, bv = null, bestE = Infinity, eq = null;
+    for (i = 0; i < orig.verts.length; i++) {
+      d = Math.hypot(p.x - orig.verts[i].x, p.y - orig.verts[i].y);
+      if (d < bestV) { bestV = d; bv = orig.verts[i]; }
+    }
+    if (bv && bestV <= snapM) return { x: bv.x, y: bv.y, kind: 'orig' };
+    for (i = 0; i < orig.edges.length; i++) {
+      var hit = distPointToSegXY(p, orig.edges[i].a, orig.edges[i].b);
+      if (hit.d < bestE) { bestE = hit.d; eq = hit.q; }
+    }
+    if (eq && bestE <= snapM) return { x: eq.x, y: eq.y, kind: 'orig' };
+    return { x: p.x, y: p.y, kind: 'paint' };
+  }
+
+  function collapseColinearXY(pts, eps) {
+    if (pts.length < 3) return pts;
+    var out = [pts[0]];
+    var i;
+    for (i = 1; i < pts.length; i++) {
+      var c = pts[i];
+      var b = out[out.length - 1];
+      var a = out.length > 1 ? out[out.length - 2] : null;
+      if (a && distPointToSegXY(b, a, c).d <= eps) out.pop();
+      if (!out.length || Math.hypot(c.x - out[out.length - 1].x, c.y - out[out.length - 1].y) > 0.02) {
+        out.push(c);
+      }
+    }
+    return out.length ? out : pts;
+  }
+
+  function douglasPeuckerXY(pts, eps) {
+    if (pts.length <= 2) return pts;
+    var a = pts[0], b = pts[pts.length - 1];
+    var maxD = -1, idx = -1, i, d;
+    for (i = 1; i < pts.length - 1; i++) {
+      d = distPointToSegXY(pts[i], a, b).d;
+      if (d > maxD) { maxD = d; idx = i; }
+    }
+    if (maxD > eps && idx > 0) {
+      var left = douglasPeuckerXY(pts.slice(0, idx + 1), eps);
+      var right = douglasPeuckerXY(pts.slice(idx), eps);
+      return left.slice(0, left.length - 1).concat(right);
+    }
+    return [a, b];
+  }
+
+  function chaikinPinned(pts, iters) {
+    if (pts.length < 3) return pts;
+    var cur = pts, n, i, k, next;
+    for (k = 0; k < iters; k++) {
+      next = [cur[0]];
+      n = cur.length;
+      for (i = 0; i < n - 1; i++) {
+        next.push({
+          x: 0.75 * cur[i].x + 0.25 * cur[i + 1].x,
+          y: 0.75 * cur[i].y + 0.25 * cur[i + 1].y
+        });
+        next.push({
+          x: 0.25 * cur[i].x + 0.75 * cur[i + 1].x,
+          y: 0.25 * cur[i].y + 0.75 * cur[i + 1].y
+        });
+      }
+      next[next.length - 1] = cur[n - 1];
+      next[0] = cur[0];
+      cur = next;
+    }
+    return cur;
+  }
+
+  function smoothPaintRun(pts, eps) {
+    if (pts.length <= 2) return pts;
+    return douglasPeuckerXY(chaikinPinned(pts, 2), eps);
+  }
+
+  // True when p (frame metres) lies within the brush sweep: inside any stamp disk.
+  function inCarve(p, carve) {
+    if (!carve || !carve.pts.length) return false;
+    var r2 = carve.r2;
+    for (var i = 0; i < carve.pts.length; i++) {
+      var dx = p.x - carve.pts[i].x, dy = p.y - carve.pts[i].y;
+      if (dx * dx + dy * dy <= r2) return true;
+    }
+    return false;
+  }
+
+  function conformRing(ring, orig, fr, snapM, paintEps, carve) {
+    if (!ring || ring.length < 4) return ring;
+    var pts = ring.slice();
+    if (pts.length > 1 && pts[0][0] === pts[pts.length - 1][0] && pts[0][1] === pts[pts.length - 1][1]) {
+      pts = pts.slice(0, pts.length - 1);
+    }
+    var xy = pts.map(function (p) { return { x: fr.x(p[0]), y: fr.y(p[1]) }; });
+    // Contour points inside the brush sweep are new boundary (the carve or the
+    // paint edge) and must never snap back to a pre-stroke edge — otherwise an
+    // erase along an existing edge alternates snapped/unsnapped and saw-tooths.
+    var snapped = orig.edges.length
+      ? xy.map(function (p) {
+          if (inCarve(p, carve)) return { x: p.x, y: p.y, kind: 'paint' };
+          return snapPointToOrig(p, orig, snapM);
+        })
+      : xy.map(function (p) { return { x: p.x, y: p.y, kind: 'paint' }; });
+    var start = 0, i;
+    for (i = 0; i < snapped.length; i++) {
+      if (snapped[i].kind === 'orig') { start = i; break; }
+    }
+    if (start) snapped = snapped.slice(start).concat(snapped.slice(0, start));
+    var out = [];
+    i = 0;
+    while (i < snapped.length) {
+      var kind = snapped[i].kind;
+      var j = i + 1;
+      while (j < snapped.length && snapped[j].kind === kind) j++;
+      var run = snapped.slice(i, j).map(function (p) { return { x: p.x, y: p.y }; });
+      if (kind === 'orig') {
+        collapseColinearXY(run, 0.08).forEach(function (p) { out.push(p); });
+      } else {
+        var pinned = run.slice();
+        if (out.length) pinned.unshift(out[out.length - 1]);
+        if (j < snapped.length) pinned.push({ x: snapped[j].x, y: snapped[j].y });
+        var sm = smoothPaintRun(pinned, paintEps);
+        var k0 = out.length ? 1 : 0;
+        var k1 = (j < snapped.length) ? sm.length - 1 : sm.length;
+        var k;
+        for (k = k0; k < k1; k++) out.push(sm[k]);
+      }
+      i = j;
+    }
+    out = collapseColinearXY(out, 0.06);
+    if (out.length < 3) return ring;
+    var ll = out.map(function (p) { return [fr.lng(p.x), fr.lat(p.y)]; });
+    ll.push([ll[0][0], ll[0][1]]);
+    return ll;
+  }
+
+  function conformGeometry(geom, feats, fr, snapM, carve) {
+    if (!geom) return geom;
+    var orig = origEdgesXY(feats, fr);
+    var paintEps = medianOrigSegM(feats, fr);
+    function fixRing(ring) { return conformRing(ring, orig, fr, snapM, paintEps, carve); }
+    if (geom.type === 'Polygon') {
+      return { type: 'Polygon', coordinates: (geom.coordinates || []).map(fixRing) };
+    }
+    if (geom.type === 'MultiPolygon') {
+      return {
+        type: 'MultiPolygon',
+        coordinates: (geom.coordinates || []).map(function (poly) {
+          return (poly || []).map(fixRing);
+        })
+      };
+    }
+    return geom;
+  }
+
+  function reverseRing(ring) {
+    var out = ring.slice().reverse();
+    return out;
+  }
+
+  function geometryFromMask(grid, nx, ny, cell, west, south, fr) {
+    var raw = maskRings(grid, nx, ny);
+    var rings = [];
+    raw.forEach(function (g) {
+      var s = simplifyGridRing(g);
+      if (s.length < 4) return;
+      var ring = s.map(function (p) {
+        return [fr.lng(west + p[0] * cell), fr.lat(south + p[1] * cell)];
+      });
+      if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) {
+        ring.push([ring[0][0], ring[0][1]]);
+      }
+      if (Math.abs(signedAreaLonLat(ring)) < 1e-14) return;
+      rings.push(ring);
+    });
+    if (!rings.length) return null;
+    rings.sort(function (a, b) {
+      return Math.abs(signedAreaLonLat(b)) - Math.abs(signedAreaLonLat(a));
+    });
+    var used = [];
+    var polys = [];
+    rings.forEach(function (ring, i) {
+      var interior = { lng: ring[0][0], lat: ring[0][1] };
+      if (ring.length > 2) {
+        interior = { lng: (ring[0][0] + ring[1][0]) / 2, lat: (ring[0][1] + ring[1][1]) / 2 };
+      }
+      var parent = -1;
+      var j;
+      for (j = 0; j < i; j++) {
+        if (used[j] !== 'outer') continue;
+        if (pointInRing(interior.lng, interior.lat, rings[j])) parent = j;
+      }
+      if (parent === -1) {
+        used[i] = 'outer';
+        var outer = signedAreaLonLat(ring) > 0 ? ring : reverseRing(ring);
+        polys.push({ outer: outer, holes: [], idx: i });
+      } else {
+        used[i] = 'hole';
+        var hole = signedAreaLonLat(ring) < 0 ? ring : reverseRing(ring);
+        polys.forEach(function (p) {
+          if (p.idx === parent) p.holes.push(hole);
+        });
+      }
+    });
+    if (!polys.length) return null;
+    if (polys.length === 1) {
+      return { type: 'Polygon', coordinates: [polys[0].outer].concat(polys[0].holes) };
+    }
+    return {
+      type: 'MultiPolygon',
+      coordinates: polys.map(function (p) { return [p.outer].concat(p.holes); })
+    };
+  }
+
+  // Binary morphology on the mask grid with a (2k+1)^2 square kernel, separable.
+  function minMaxFilter(src, nx, ny, k, wantMin) {
+    var tmp = new Uint8Array(nx * ny);
+    var out = new Uint8Array(nx * ny);
+    var x, y, d, v, idx;
+    for (y = 0; y < ny; y++) {
+      for (x = 0; x < nx; x++) {
+        v = wantMin ? 1 : 0;
+        for (d = -k; d <= k; d++) {
+          var xx = x + d;
+          var s = (xx < 0 || xx >= nx) ? 0 : src[y * nx + xx];
+          if (wantMin) { if (!s) { v = 0; break; } }
+          else if (s) { v = 1; break; }
+        }
+        tmp[y * nx + x] = v;
+      }
+    }
+    for (y = 0; y < ny; y++) {
+      for (x = 0; x < nx; x++) {
+        v = wantMin ? 1 : 0;
+        for (d = -k; d <= k; d++) {
+          var yy = y + d;
+          var t = (yy < 0 || yy >= ny) ? 0 : tmp[yy * nx + x];
+          if (wantMin) { if (!t) { v = 0; break; } }
+          else if (t) { v = 1; break; }
+        }
+        idx = y * nx + x;
+        out[idx] = v;
+      }
+    }
+    return out;
+  }
+
+  function openMask(grid, nx, ny, k) {
+    return minMaxFilter(minMaxFilter(grid, nx, ny, k, true), nx, ny, k, false);
+  }
+
+  function unionPaintedGeometry(seedFeat, extraFeats, stamps, brushR, erase) {
+    var feats = [];
+    if (seedFeat) feats.push(seedFeat);
+    (extraFeats || []).forEach(function (f) { if (f) feats.push(f); });
+    var pts = [];
+    feats.forEach(function (f) {
+      featurePoints(f).forEach(function (p) { pts.push(p); });
+    });
+    (stamps || []).forEach(function (st) { pts.push({ lat: st.lat, lng: st.lng }); });
+    if (!pts.length) return null;
+    var lat0 = 0, lng0 = 0;
+    pts.forEach(function (p) { lat0 += p.lat; lng0 += p.lng; });
+    lat0 /= pts.length;
+    lng0 /= pts.length;
+    var fr = meterFrame(lat0, lng0);
+    var pad = brushR + JOIN_M + 1;
+    var west = Infinity, east = -Infinity, south = Infinity, north = -Infinity;
+    pts.forEach(function (p) {
+      var x = fr.x(p.lng), y = fr.y(p.lat);
+      if (x < west) west = x;
+      if (x > east) east = x;
+      if (y < south) south = y;
+      if (y > north) north = y;
+    });
+    west -= pad;
+    south -= pad;
+    east += pad;
+    north += pad;
+    var cell = 0.25;
+    var maxCells = 420;
+    if ((east - west) / cell > maxCells) cell = (east - west) / maxCells;
+    if ((north - south) / cell > maxCells) cell = Math.max(cell, (north - south) / maxCells);
+    var nx = Math.max(4, Math.ceil((east - west) / cell));
+    var ny = Math.max(4, Math.ceil((north - south) / cell));
+    var grid = new Uint8Array(nx * ny);
+    var x, y, i, st, dx, dy, ix, iy, r2;
+    var rasterFeats = erase ? (seedFeat ? [seedFeat] : []) : feats;
+    for (y = 0; y < ny; y++) {
+      for (x = 0; x < nx; x++) {
+        var lng = fr.lng(west + (x + 0.5) * cell);
+        var lat = fr.lat(south + (y + 0.5) * cell);
+        for (i = 0; i < rasterFeats.length; i++) {
+          if (pointInFeature({ lat: lat, lng: lng }, rasterFeats[i])) {
+            grid[y * nx + x] = 1;
+            break;
+          }
+        }
+      }
+    }
+    r2 = (brushR + cell * 0.5) * (brushR + cell * 0.5);
+    for (i = 0; i < stamps.length; i++) {
+      st = stamps[i];
+      var sx = fr.x(st.lng);
+      var sy = fr.y(st.lat);
+      var x0 = Math.max(0, Math.floor((sx - west - brushR) / cell) - 1);
+      var x1 = Math.min(nx - 1, Math.ceil((sx - west + brushR) / cell) + 1);
+      var y0 = Math.max(0, Math.floor((sy - south - brushR) / cell) - 1);
+      var y1 = Math.min(ny - 1, Math.ceil((sy - south + brushR) / cell) + 1);
+      for (iy = y0; iy <= y1; iy++) {
+        for (ix = x0; ix <= x1; ix++) {
+          dx = west + (ix + 0.5) * cell - sx;
+          dy = south + (iy + 0.5) * cell - sy;
+          if (dx * dx + dy * dy <= r2) grid[iy * nx + ix] = erase ? 0 : 1;
+        }
+      }
+    }
+    var carveR = brushR + cell;
+    var carve = {
+      r2: carveR * carveR,
+      pts: stamps.map(function (s) { return { x: fr.x(s.lng), y: fr.y(s.lat) }; })
+    };
+    if (erase) {
+      // Thin remnants (crescents where the erase ran along a painted edge) would
+      // simplify into spikes. Open the mask (erode then dilate) by half the sliver
+      // width, but only within reach of the stroke so untouched edges stay put.
+      var k = Math.max(1, Math.floor(ERASE_SLIVER_WIDTH_M / (2 * cell)));
+      var opened = openMask(grid, nx, ny, k);
+      var reach = brushR + ERASE_SLIVER_WIDTH_M * 2 + cell;
+      var reach2 = reach * reach;
+      for (i = 0; i < carve.pts.length; i++) {
+        var cx = carve.pts[i].x, cy = carve.pts[i].y;
+        var rx0 = Math.max(0, Math.floor((cx - west - reach) / cell));
+        var rx1 = Math.min(nx - 1, Math.ceil((cx - west + reach) / cell));
+        var ry0 = Math.max(0, Math.floor((cy - south - reach) / cell));
+        var ry1 = Math.min(ny - 1, Math.ceil((cy - south + reach) / cell));
+        for (iy = ry0; iy <= ry1; iy++) {
+          for (ix = rx0; ix <= rx1; ix++) {
+            dx = west + (ix + 0.5) * cell - cx;
+            dy = south + (iy + 0.5) * cell - cy;
+            if (dx * dx + dy * dy <= reach2) grid[iy * nx + ix] = opened[iy * nx + ix];
+          }
+        }
+      }
+    }
+    var filled = 0;
+    for (i = 0; i < grid.length; i++) if (grid[i]) filled++;
+    if (!filled) return null;
+    return conformGeometry(
+      geometryFromMask(grid, nx, ny, cell, west, south, fr),
+      feats,
+      fr,
+      Math.max(0.55, cell * 2.4),
+      carve
+    );
+  }
+
+  // The stroke preview is drawn on our own canvas, not a Maps Polyline: Maps caps
+  // polyline strokeWeight, so at large sizes the polyline rendered about half the
+  // cursor width while the erase/paint mask still used the full brush radius.
+  function clearBrushStroke() {
+    if (brushLine) { brushLine.setMap(null); brushLine = null; }
+    var cv = document.getElementById('brushStroke');
+    if (!cv) return;
+    cv.classList.remove('on');
+    var ctx = cv.getContext('2d');
+    if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
+  }
+
+  function strokeScreenPoints(stamps) {
+    if (!map || !pixOverlay) return [];
+    var proj = pixOverlay.getProjection();
+    if (!proj) return [];
+    var out = [];
+    for (var i = 0; i < stamps.length; i++) {
+      var p = proj.fromLatLngToContainerPixel(new google.maps.LatLng(stamps[i].lat, stamps[i].lng));
+      if (p) out.push({ x: p.x, y: p.y });
+    }
+    return out;
+  }
+
+  function showBrushStroke() {
+    var cv = document.getElementById('brushStroke');
+    if (!cv) return;
+    if (!map || !brushTarget || !working.stamps.length) {
+      clearBrushStroke();
+      return;
+    }
+    var stage = document.getElementById('stage');
+    var w = stage.clientWidth, h = stage.clientHeight;
+    var dpr = window.devicePixelRatio || 1;
+    if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) {
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+    }
+    cv.style.width = w + 'px';
+    cv.style.height = h + 'px';
+    var ctx = cv.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    var pts = strokeScreenPoints(working.stamps);
+    if (!pts.length) return;
+    var color = paintErase ? '#f97066' : (brushTarget.color || '#ffffff');
+    var d = Math.max(3, brushDiameterPx());
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = d;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    if (pts.length === 1) {
+      ctx.beginPath();
+      ctx.arc(pts[0].x, pts[0].y, d / 2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (var i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    cv.classList.add('on');
+  }
+
+  function largestRingCentroid(f) {
+    var rings = featureRings(f);
+    var best = null, bestN = -1;
+    rings.forEach(function (ring) {
+      if (ring.length > bestN) {
+        bestN = ring.length;
+        best = ring;
+      }
+    });
+    return best ? ringCentroidLonLat(best) : featureCentroid(f);
+  }
+
+  // Polygon math in the local metre frame only (never absolute projected metres).
+  function ringMetricsXY(ring, fr) {
+    var a = 0, per = 0;
+    var i, n = ring.length;
+    for (i = 0; i < n - 1; i++) {
+      var x0 = fr.x(ring[i][0]), y0 = fr.y(ring[i][1]);
+      var x1 = fr.x(ring[i + 1][0]), y1 = fr.y(ring[i + 1][1]);
+      a += x0 * y1 - x1 * y0;
+      per += Math.hypot(x1 - x0, y1 - y0);
+    }
+    return { area: Math.abs(a) / 2, perimeter: per };
+  }
+
+  function geometryPolys(geom) {
+    if (!geom) return [];
+    if (geom.type === 'Polygon') return [geom.coordinates || []];
+    if (geom.type === 'MultiPolygon') return (geom.coordinates || []).slice();
+    return [];
+  }
+
+  function polysToGeometry(polys) {
+    if (!polys.length) return null;
+    if (polys.length === 1) return { type: 'Polygon', coordinates: polys[0] };
+    return { type: 'MultiPolygon', coordinates: polys };
+  }
+
+  // Net area (outer minus holes) and outer-ring perimeter of one polygon, in m².
+  function polyMetricsXY(poly, fr) {
+    if (!poly || !poly.length || !poly[0] || poly[0].length < 4) return { area: 0, perimeter: 0 };
+    var outer = ringMetricsXY(poly[0], fr);
+    var area = outer.area;
+    for (var i = 1; i < poly.length; i++) area -= ringMetricsXY(poly[i], fr).area;
+    return { area: Math.max(0, area), perimeter: outer.perimeter };
+  }
+
+  function geometryAreaM2(geom, fr) {
+    var sum = 0;
+    geometryPolys(geom).forEach(function (poly) { sum += polyMetricsXY(poly, fr).area; });
+    return sum;
+  }
+
+  // Does this polygon (frame-free lon/lat rings) overlap the feature? Any vertex
+  // of one inside the other.
+  function polyOverlapsFeature(poly, f) {
+    if (!poly || !poly[0] || !f) return false;
+    var outer = poly[0], i;
+    for (i = 0; i < outer.length; i++) {
+      if (pointInFeature({ lng: outer[i][0], lat: outer[i][1] }, f)) return true;
+    }
+    var fp = featurePoints(f);
+    var probe = { geometry: { type: 'Polygon', coordinates: poly } };
+    for (i = 0; i < fp.length; i++) {
+      if (pointInFeature(fp[i], probe)) return true;
+    }
+    return false;
+  }
+
+  // Erase result → { keep: [poly, ...] largest first, dropped: n }.
+  // Fragments (tiny or sliver pieces, per the ERASE_* constants) are dropped —
+  // except pieces that still cover part of the vendor's original polygon for this
+  // feature. Erasing a painted addition must leave the vendor scrap it was grown
+  // from, however small that scrap is relative to what was just removed.
+  function classifyErasePieces(seedFeat, geom) {
+    var c = featureCentroid(seedFeat);
+    if (!c) c = { lat: 0, lng: 0 };
+    var fr = meterFrame(c.lat, c.lng);
+    var before = geometryAreaM2(seedFeat.geometry, fr);
+    var vendor = originalById[String(seedFeat.id)] || null;
+    var polysIn = geometryPolys(geom);
+    var scattered = polysIn.length > 1;
+    var pieces = polysIn.map(function (poly) {
+      var m = polyMetricsXY(poly, fr);
+      var meanWidth = m.perimeter > 0 ? (2 * m.area / m.perimeter) : 0;
+      var crumb = m.area < ERASE_MIN_FRAG_M2;
+      var sliver = meanWidth < ERASE_SLIVER_WIDTH_M;
+      // Scattered result: drop crumbs and slivers. Single surviving piece: it is
+      // what the reviewer trimmed down to — keep it unless it is essentially
+      // nothing (a crumb that is also a sliver).
+      var frag = scattered ? (crumb || sliver) : (crumb && sliver);
+      if (m.area < 0.3) frag = true;
+      if (frag && vendor && m.area >= 0.3 && polyOverlapsFeature(poly, vendor)) frag = false;
+      return { poly: poly, area: m.area, frag: frag };
+    });
+    pieces.sort(function (a, b) { return b.area - a.area; });
+    var keep = [];
+    var dropped = 0;
+    pieces.forEach(function (p) {
+      if (p.frag) dropped++;
+      else keep.push(p.poly);
+    });
+    return { keep: keep, dropped: dropped, before: before };
+  }
+
+  // Region-owning pin for an erase that removes the whole region.
+  function pinIndexForRegion(rid, preferIdx) {
+    var pins = (record && record.elements) || [];
+    if (preferIdx >= 0 && pins[preferIdx] && String(pins[preferIdx].region_id || '') === String(rid)) return preferIdx;
+    for (var i = 0; i < pins.length; i++) {
+      if (String(pins[i].region_id || '') === String(rid)) return i;
+    }
+    return preferIdx >= 0 && pins[preferIdx] ? preferIdx : -1;
+  }
+
+  function rebuildConsumed() {
+    consumed = {};
+    ((record && record.elements) || []).forEach(function (p) {
+      if (p.region_id) consumed[String(p.region_id)] = true;
+      else if (p.source === 'ai' && p.ai_index != null) consumed[p.ai_index] = true;
+    });
+  }
+
+  function pinOwnsRegion(rid) {
+    var pins = (record && record.elements) || [];
+    for (var i = 0; i < pins.length; i++) {
+      if (String(pins[i].region_id || '') === String(rid)) return true;
+    }
+    return false;
   }
 
   function clearAiShapes() {
@@ -345,26 +1662,54 @@
 
   function drawPolygons(ai) {
     if (!map || !ai) return;
-    (ai.features || []).forEach(function (f) {
+    var accept = toolMode === 'accept';
+    var seedId = brushTarget && brushTarget.regionId;
+    (ai.features || []).forEach(function (f, i) {
+      var rid = String(f.id || i);
+      if (consumed[rid] && rid !== seedId && !pinOwnsRegion(rid)) return;
       var cls = featureClass(f);
       if (layerOn[cls] === false) return;
       var color = colorForClass(cls);
-      var g = f.geometry || {};
-      var t = g.type;
-      if (t !== 'Polygon' && t !== 'MultiPolygon') return;
-      var rings = t === 'Polygon' ? [g.coordinates[0]] : g.coordinates.map(function (p) { return p[0]; });
-      rings.forEach(function (ring) {
+      var hot = !!activeClass && cls === activeClass;
+      featureRings(f).forEach(function (ring) {
+        var path = ringToPath(ring);
+        if (hot) {
+          // White halo under the class-colored border so every outline of the
+          // active class reads on asphalt, roof, and vegetation alike.
+          aiShapes.push(new google.maps.Polygon({
+            paths: path,
+            strokeColor: '#ffffff',
+            strokeOpacity: 0.9,
+            strokeWeight: 5,
+            fillOpacity: 0,
+            map: map,
+            clickable: false,
+            zIndex: 2
+          }));
+        }
         var poly = new google.maps.Polygon({
-          paths: ringToPath(ring),
+          paths: path,
           strokeColor: color,
-          strokeOpacity: 0.95,
-          strokeWeight: 1.5,
+          strokeOpacity: hot ? 1 : 0.95,
+          strokeWeight: hot ? 2.5 : 1.5,
           fillColor: color,
           fillOpacity: 0.32,
           map: map,
-          clickable: false,
-          zIndex: 2
+          clickable: accept || (isEditTool() && !brushTarget),
+          zIndex: hot ? 3 : 2
         });
+        poly.__nmIdx = i;
+        if (accept) {
+          poly.addListener('click', function () { onAcceptFeature(i); });
+        }
+        if (isEditTool() && !brushTarget) {
+          (function (idx) {
+            poly.addListener('click', function (ev) {
+              if (ev && ev.stop) ev.stop();
+              selectBrushRegion(idx);
+            });
+          })(i);
+        }
         aiShapes.push(poly);
       });
     });
@@ -378,37 +1723,79 @@
   function drawHints(ai) {
     if (!map || !ai) return;
     if (!document.getElementById('hintToggle').checked) return;
-    hintRows(ai).forEach(function (h) {
-      var cls = String((h && h['class']) || '');
+    var picking = isEditTool() && !brushTarget;
+    (ai.features || []).forEach(function (f, i) {
+      var cls = featureClass(f);
       if (!cls || layerOn[cls] === false) return;
-      var lat = Number(h.lat), lon = Number(h.lon);
-      if (!isFinite(lat) || !isFinite(lon)) return;
+      if (consumed[String(f.id)]) return;
+      var c = featureCentroid(f);
+      if (!c) return;
       var color = colorForClass(cls);
       var mk = new google.maps.Marker({
-        position: { lat: lat, lng: lon },
+        position: c,
         map: map,
-        clickable: false,
-        optimized: true,
-        zIndex: 4,
+        clickable: picking,
+        optimized: false,
+        zIndex: picking ? 10 : 4,
         icon: {
           path: google.maps.SymbolPath.CIRCLE,
-          scale: 4.5,
+          scale: picking ? 8 : 4.5,
           fillColor: color,
           fillOpacity: 1,
           strokeColor: '#ffffff',
-          strokeWeight: 1
+          strokeWeight: picking ? 2 : 1
         },
         title: cls
       });
+      if (picking) {
+        (function (idx) {
+          mk.addListener('click', function (ev) {
+            if (ev && ev.stop) ev.stop();
+            selectBrushRegion(idx);
+          });
+        })(i);
+      }
       hintMarkers.push(mk);
+    });
+  }
+
+  function clearDrawnShapes() {
+    drawnShapes.forEach(function (s) { s.setMap(null); });
+    drawnShapes = [];
+    if (workShape) { workShape.setMap(null); workShape = null; }
+  }
+
+  function drawDrawn() {
+    clearDrawnShapes();
+    if (!map) return;
+    ((record && record.drawn && record.drawn.features) || []).forEach(function (f) {
+      var g = f.geometry || {};
+      if (g.type !== 'Polygon' || !g.coordinates || !g.coordinates[0]) return;
+      var poly = new google.maps.Polygon({
+        paths: ringToPath(g.coordinates[0]),
+        strokeColor: '#4fd1c5',
+        strokeOpacity: 1,
+        strokeWeight: 2,
+        fillColor: '#4fd1c5',
+        fillOpacity: 0.22,
+        map: map,
+        clickable: false,
+        zIndex: 8
+      });
+      drawnShapes.push(poly);
     });
   }
 
   function redrawAi() {
     clearAiShapes();
-    if (!aiPack) return;
+    if (!aiPack) {
+      drawDrawn();
+      drawPins();
+      return;
+    }
     drawPolygons(aiPack);
     drawHints(aiPack);
+    drawDrawn();
     drawPins();
   }
 
@@ -426,13 +1813,844 @@
         position: ll,
         map: map,
         optimized: false,
+        clickable: isEditTool() && !brushTarget,
         zIndex: 20,
         label: { text: String(i + 1), color: '#1b2027', fontSize: '11px', fontWeight: '700' },
         title: ((catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id)) + ' ' + p.x + ',' + p.y
       });
+      if (isEditTool() && !brushTarget) {
+        (function (idx) {
+          mk.addListener('click', function (ev) {
+            if (ev && ev.stop) ev.stop();
+            selectBrushPin(idx);
+          });
+        })(i);
+      }
       pinMarkers.push(mk);
     });
     renderPinList();
+  }
+
+  function canAddPin() {
+    var n = ((record && record.elements) || []).length;
+    if (n >= PIN_HARD_LIMIT) {
+      setStatus('Pin cap is ' + PIN_HARD_LIMIT, 'err');
+      return false;
+    }
+    return true;
+  }
+
+  function addPinAt(ll, catalogId, meta) {
+    var b = record && record.nadir && record.nadir.bounds;
+    var xy = latLngToPct(ll.lat, ll.lng, b);
+    if (!xy) {
+      setStatus('Pin is outside the allowed bounds — not placed', 'err');
+      return null;
+    }
+    if (!canAddPin()) return null;
+    var pin = { id: catalogId, x: xy.x, y: xy.y };
+    if (meta.source) pin.source = meta.source;
+    if (meta.ai_class) pin.ai_class = meta.ai_class;
+    if (meta.drawn_id) pin.drawn_id = meta.drawn_id;
+    if (meta.ai_index != null) pin.ai_index = meta.ai_index;
+    if (meta.region_id) pin.region_id = String(meta.region_id);
+    if (meta.merged_from) pin.merged_from = meta.merged_from;
+    record.elements = (record.elements || []).concat([pin]);
+    persistLocal();
+    return pin;
+  }
+
+  function addDrawnFeature(ring, catalogId, meta) {
+    var name = (catalogById[catalogId] && catalogById[catalogId].name) || ('#' + catalogId);
+    var id = nextDrawnId();
+    var feat = {
+      id: id,
+      geometry: { type: 'Polygon', coordinates: [ring] },
+      properties: {
+        catalog_id: catalogId,
+        name: name,
+        source: meta.source || 'drawn'
+      }
+    };
+    if (meta.merged_indexes) feat.properties.merged_indexes = meta.merged_indexes;
+    if (meta.ai_class) feat.properties.ai_class = meta.ai_class;
+    ensureDrawn().features.push(feat);
+    return id;
+  }
+
+  function openPicker(hint, suggested, onPick) {
+    pickerCb = onPick;
+    pickerSuggested = suggested || [];
+    document.getElementById('pickerHint').textContent = hint || '';
+    document.getElementById('pickerQ').value = '';
+    renderPickerHits('', pickerSuggested);
+    document.getElementById('picker').hidden = false;
+    document.getElementById('pickerQ').focus();
+  }
+
+  function closePicker() {
+    document.getElementById('picker').hidden = true;
+    pickerCb = null;
+    pickerSuggested = [];
+    if (!pickerCb) clearDrawPreview();
+  }
+
+  function renderPickerHits(q, suggested) {
+    var host = document.getElementById('pickerHits');
+    host.innerHTML = '';
+    q = String(q || '').toLowerCase().trim();
+    var sug = suggested || [];
+    var rows = [];
+    sug.forEach(function (id) {
+      var p = catalogById[id];
+      var name = p && p.name;
+      if (!name) {
+        CLASS_MAP.forEach(function (row) { if (row.id === id) name = row.name; });
+      }
+      if (name) rows.push({ id: id, name: name, suggest: true });
+    });
+    catalogList.forEach(function (p) {
+      if (sug.indexOf(p.id) !== -1) return;
+      if (!q) return;
+      if (String(p.id).indexOf(q) !== -1 || p.name.toLowerCase().indexOf(q) !== -1) {
+        rows.push({ id: p.id, name: p.name, suggest: false });
+      }
+    });
+    if (!q && !rows.length) {
+      catalogList.slice(0, 30).forEach(function (p) {
+        rows.push({ id: p.id, name: p.name, suggest: false });
+      });
+    }
+    rows.slice(0, 80).forEach(function (p) {
+      var li = document.createElement('li');
+      li.innerHTML = '<button type="button" data-id="' + p.id + '" class="' +
+        (p.suggest ? 'suggest' : '') + '">' + escapeHtml(p.name) + ' <span class="meta">#' + p.id + '</span></button>';
+      host.appendChild(li);
+    });
+  }
+
+  function pickCatalog(id) {
+    var cb = pickerCb;
+    document.getElementById('picker').hidden = true;
+    pickerCb = null;
+    pickerSuggested = [];
+    if (cb) cb(id);
+  }
+
+  function selectBrushPin(idx) {
+    var pins = (record && record.elements) || [];
+    var p = pins[idx];
+    if (!p) return;
+    ensureFeatures().then(function () {
+      var rid = p.region_id ? String(p.region_id) : '';
+      if (!rid) {
+        setStatus('That pin has no region to expand — click a polygon, or Accept a shape first', 'err');
+        return;
+      }
+      if (rid && !featureById(rid) && originalById[rid]) restoreRegionIds([rid]);
+      var hit = rid ? featureById(rid) : null;
+      var cls = (hit && featureClass(hit.feature)) || p.ai_class ||
+        ((catalogById[p.id] && catalogById[p.id].name) || 'region');
+      if (hit && layerOn[cls] === false) layerOn[cls] = true;
+      var name = (catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id);
+      brushTarget = {
+        pinIndex: idx,
+        regionId: rid || (hit && String(hit.feature.id)) || '',
+        className: cls,
+        color: colorForClass(cls),
+        label: name
+      };
+      working = { ids: brushTarget.regionId ? [brushTarget.regionId] : [], stamps: [] };
+      activeClass = cls;
+      renderLayers(aiPack);
+      updateBrushLabel();
+      redrawAi();
+      syncBrushChrome();
+      setStatus('Draw is ' + name + ' — left-click adds, right-click removes');
+    }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
+  }
+
+  function selectBrushRegion(idx) {
+    if (!aiPack || !aiPack.features || !aiPack.features[idx]) return;
+    var f = aiPack.features[idx];
+    var rid = String(f.id || idx);
+    var cls = featureClass(f);
+    var pins = (record && record.elements) || [];
+    var pinIndex = -1;
+    for (var i = 0; i < pins.length; i++) {
+      if (String(pins[i].region_id || '') === rid) pinIndex = i;
+    }
+    if (pinIndex !== -1) {
+      selectBrushPin(pinIndex);
+      return;
+    }
+    if (layerOn[cls] === false) layerOn[cls] = true;
+    brushTarget = {
+      pinIndex: -1,
+      regionId: rid,
+      className: cls,
+      color: colorForClass(cls),
+      label: cls
+    };
+    working = { ids: [rid], stamps: [] };
+    activeClass = cls;
+    renderLayers(aiPack);
+    updateBrushLabel();
+    redrawAi();
+    syncBrushChrome();
+    setStatus('Draw is ' + cls + ' — left-click adds, right-click removes');
+  }
+
+  function selectBrushAt(ll) {
+    var pins = (record && record.elements) || [];
+    var b = record && record.nadir && record.nadir.bounds;
+    var best = -1, bestD = pinHitM();
+    if (b) {
+      for (var i = 0; i < pins.length; i++) {
+        var pll = pctToLatLng(pins[i].x, pins[i].y, b);
+        var d = distM(ll, pll);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+    }
+    if (best !== -1) {
+      selectBrushPin(best);
+      return true;
+    }
+    if (!aiPack || !aiPack.features) return false;
+    var near = -1;
+    var nearD = pinHitM();
+    for (var j = 0; j < aiPack.features.length; j++) {
+      var f = aiPack.features[j];
+      var rid = String(f.id || j);
+      if (consumed[rid]) continue;
+      var cls = featureClass(f);
+      if (layerOn[cls] === false) continue;
+      if (pointInFeature(ll, f) || featureHitsStamp(f, ll, brushRadiusM())) {
+        selectBrushRegion(j);
+        return true;
+      }
+      var c = featureCentroid(f);
+      if (!c) continue;
+      var d = distM(ll, c);
+      if (d < nearD) { nearD = d; near = j; }
+    }
+    if (near !== -1) {
+      selectBrushRegion(near);
+      return true;
+    }
+    return false;
+  }
+
+  // Same-class regions that the painted result now covers or overlaps (any vertex
+  // of theirs inside the result, or any result vertex inside them). These are
+  // redundant duplicates once the paint is applied, so they are absorbed too.
+  function overlappedSameClass(geom, cls, excludeIds) {
+    if (!geom) return [];
+    var probe = { geometry: geom };
+    var gPts = featurePoints(probe);
+    var out = [];
+    (aiPack.features || []).forEach(function (f) {
+      var rid = String(f.id);
+      if (excludeIds[rid]) return;
+      if (featureClass(f) !== cls) return;
+      if (consumed[rid]) return;
+      var pts = featurePoints(f);
+      var i, hit = false;
+      for (i = 0; i < pts.length && !hit; i++) {
+        if (pointInFeature(pts[i], probe)) hit = true;
+      }
+      for (i = 0; i < gPts.length && !hit; i++) {
+        if (pointInFeature(gPts[i], f)) hit = true;
+      }
+      if (hit) out.push(rid);
+    });
+    return out;
+  }
+
+  // Union seed + extras + stamps, then keep absorbing same-class regions the result
+  // overlaps until nothing new is picked up (bounded). Mutates extra/extraFeats.
+  function unionWithAbsorb(seedFeat, extra, extraFeats, stamps, r, cls, seedId) {
+    var geom = unionPaintedGeometry(seedFeat, extraFeats, stamps, r, false);
+    var pass;
+    for (pass = 0; pass < 4 && geom; pass++) {
+      var exclude = {};
+      if (seedId) exclude[String(seedId)] = true;
+      extra.forEach(function (id) { exclude[id] = true; });
+      var more = overlappedSameClass(geom, cls, exclude);
+      if (!more.length) break;
+      more.forEach(function (id) {
+        var hit = featureById(id);
+        if (!hit) return;
+        extra.push(id);
+        extraFeats.push(hit.feature);
+      });
+      geom = unionPaintedGeometry(seedFeat, extraFeats, stamps, r, false);
+    }
+    return geom;
+  }
+
+  function strokeTouchesFeature(stamps, f, r) {
+    if (!f || !stamps || !stamps.length) return false;
+    var i;
+    for (i = 0; i < stamps.length; i++) {
+      if (featureHitsStamp(f, stamps[i], r)) return true;
+    }
+    return false;
+  }
+
+  function hitIdsForStroke(stamps, r, cls, seedId) {
+    var ids = {};
+    if (seedId) ids[String(seedId)] = true;
+    (aiPack.features || []).forEach(function (f) {
+      var rid = String(f.id);
+      if (consumed[rid] && rid !== String(seedId)) return;
+      if (featureClass(f) !== cls) return;
+      for (var i = 0; i < stamps.length; i++) {
+        if (featureHitsStamp(f, stamps[i], r)) {
+          ids[rid] = true;
+          return;
+        }
+      }
+    });
+    return Object.keys(ids);
+  }
+
+  function applyPaintStroke(erase) {
+    var minStamps = 1;
+    if (!brushTarget || !brushTarget.regionId || working.stamps.length < minStamps) {
+      working.stamps = [];
+      clearBrushStroke();
+      return;
+    }
+    var r = brushRadiusM();
+    var cls = brushTarget.className;
+    var seedId = brushTarget.regionId;
+    var dense = densifyStamps(working.stamps, Math.min(0.45, Math.max(0.2, r * 0.4)));
+    var seed = featureById(seedId);
+    if (!seed) {
+      // The picked region is gone (absorbed, split away, or undone). Drop the
+      // pick so the reviewer sees the + cursor instead of a dead brush.
+      working = { ids: [], stamps: [] };
+      clearBrushStroke();
+      brushTarget = null;
+      updateBrushLabel();
+      syncBrushChrome();
+      redrawAi();
+      setStatus('That region no longer exists — + click a centroid to pick again', 'err');
+      return;
+    }
+    var extraFeats = [];
+    var extra = [];
+    var ids = [String(seedId)];
+    if (erase) {
+      applyEraseStroke(seed, dense, r, cls);
+      return;
+    }
+    var detached = !strokeTouchesFeature(dense, seed.feature, r);
+
+    function collectExtras(idList) {
+      extraFeats = [];
+      extra = [];
+      idList.forEach(function (id) {
+        if (id === String(seedId)) return;
+        var hit = featureById(id);
+        if (hit) {
+          extra.push(id);
+          extraFeats.push(hit.feature);
+        }
+      });
+    }
+
+    if (detached) {
+      ids = hitIdsForStroke(dense, r + JOIN_M, cls, null);
+      collectExtras(ids);
+      // Keep the picked region out of the absorb pass: if the new paint reaches
+      // it (directly or via scraps), the stroke is a grow, not a new region.
+      var newGeom = unionWithAbsorb(null, extra, extraFeats, dense, r, cls, seedId);
+      if (!newGeom) {
+        working.stamps = [];
+        clearBrushStroke();
+        setStatus('Paint did not produce a region', 'err');
+        return;
+      }
+      var reachesSeed = strokeTouchesFeature(dense, seed.feature, r + JOIN_M);
+      if (!reachesSeed) {
+        var newPolys = geometryPolys(newGeom);
+        for (var q = 0; q < newPolys.length && !reachesSeed; q++) {
+          if (polyOverlapsFeature(newPolys[q], seed.feature)) reachesSeed = true;
+        }
+      }
+      if (reachesSeed) detached = false;
+    }
+
+    if (detached) {
+      var newId = nextRegionId('d');
+      pushPaintHistory();
+      aiPack.features.push({
+        type: 'Feature',
+        id: newId,
+        geometry: newGeom,
+        properties: { 'class': cls, name: cls, origin: 'drawn' }
+      });
+      if (extra.length) removeRegionIds(extra);
+      else refreshLayerCounts();
+      working = { ids: [String(seedId)], stamps: [] };
+      clearBrushStroke();
+      persistLocal();
+      persistRegions().then(function (how) {
+        refreshLayerCounts();
+        updateBrushLabel();
+        redrawAi();
+        syncBrushChrome();
+        var n = (aiPack.counts && aiPack.counts[cls]) || 0;
+        setStatus('New ' + cls + ' region · ' + cls + ' ' + n +
+          (how === 'file' ? ' — wrote edits/regions.json' : ''));
+      });
+      return;
+    }
+
+    ids = hitIdsForStroke(dense, r + JOIN_M, cls, seedId);
+    collectExtras(ids);
+    var geom = unionWithAbsorb(seed.feature, extra, extraFeats, dense, r, cls, seedId);
+    if (!geom) {
+      working.stamps = [];
+      clearBrushStroke();
+      setStatus('Paint did not produce a region', 'err');
+      return;
+    }
+    ids = [String(seedId)].concat(extra);
+    pushPaintHistory();
+    seed.feature.geometry = geom;
+    seed.feature.properties = seed.feature.properties || {};
+    seed.feature.properties.origin = seed.feature.properties.origin || 'merged';
+    if (extra.length) removeRegionIds(extra);
+    if (brushTarget.pinIndex >= 0) {
+      var pin = ((record && record.elements) || [])[brushTarget.pinIndex];
+      if (pin) {
+        var c = largestRingCentroid(seed.feature);
+        var xy = c && latLngToPct(c.lat, c.lng, record.nadir.bounds);
+        if (!xy) {
+          setStatus('Expanded region centroid is outside the allowed bounds — not moved', 'err');
+        } else {
+          pin.x = xy.x;
+          pin.y = xy.y;
+          pin.source = pin.source || 'merged';
+          pin.merged_from = (pin.merged_from || []).concat(extra);
+        }
+      }
+    }
+    if (brushTarget.pinIndex >= 0) consumed[seedId] = true;
+    working = { ids: [seedId], stamps: [] };
+    clearBrushStroke();
+    persistLocal();
+    persistRegions().then(function (how) {
+      refreshLayerCounts();
+      updateBrushLabel();
+      redrawAi();
+      syncBrushChrome();
+      setStatus('Added to ' + (brushTarget.label || cls) +
+        (ids.length > 1 ? (' · merged ' + ids.length + ' regions') : '') +
+        (how === 'file' ? ' — wrote edits/regions.json' : ''));
+    });
+  }
+
+  // Regions the erase stroke actually touches: every visible same-class region
+  // under the brush (the picked one included); if none, any visible region under
+  // it. One stroke across five pieces must cut all five, not just the picked one.
+  function eraseTargets(stamps, r, seed, cls) {
+    var same = [], any = [];
+    (aiPack.features || []).forEach(function (f) {
+      var rid = String(f.id);
+      var c = featureClass(f);
+      if (layerOn[c] === false) return;
+      if (consumed[rid] && !pinOwnsRegion(rid)) return;
+      if (!strokeTouchesFeature(stamps, f, r)) return;
+      (c === cls ? same : any).push(f);
+    });
+    return same.length ? same : any;
+  }
+
+  // Erase the brush sweep from one feature in place. Returns
+  // { removed: bool, split: n, dropped: n }. Caller pushes history and persists.
+  function eraseFromFeature(feat, stamps, r) {
+    var rid = String(feat.id);
+    var cls = featureClass(feat);
+    var geom = unionPaintedGeometry(feat, [], stamps, r, true);
+    var pieces = geom ? classifyErasePieces(feat, geom) : { keep: [], dropped: 0 };
+    var preferIdx = (brushTarget && String(brushTarget.regionId) === rid) ? brushTarget.pinIndex : -1;
+    var pinIdx = pinIndexForRegion(rid, preferIdx);
+    if (!pieces.keep.length) {
+      if (pinIdx >= 0) {
+        var gonePin = record.elements.splice(pinIdx, 1)[0];
+        if (gonePin && gonePin.drawn_id) {
+          ensureDrawn().features = ensureDrawn().features.filter(function (f) { return f.id !== gonePin.drawn_id; });
+        }
+      }
+      removeRegionIds([rid]);
+      return { removed: true, split: 0, dropped: pieces.dropped, cls: cls };
+    }
+    feat.geometry = polysToGeometry([pieces.keep[0]]);
+    feat.properties = feat.properties || {};
+    feat.properties.origin = feat.properties.origin || 'merged';
+    for (var k = 1; k < pieces.keep.length; k++) {
+      var props = JSON.parse(JSON.stringify(feat.properties || {}));
+      props['class'] = props['class'] || cls;
+      props.origin = 'split';
+      aiPack.features.push({
+        type: 'Feature',
+        id: nextRegionId('d'),
+        geometry: polysToGeometry([pieces.keep[k]]),
+        properties: props
+      });
+    }
+    if (pinIdx >= 0) {
+      var pin = record.elements[pinIdx];
+      var c = largestRingCentroid(feat);
+      var xy = c && latLngToPct(c.lat, c.lng, record.nadir.bounds);
+      if (xy) {
+        pin.x = xy.x;
+        pin.y = xy.y;
+      } else {
+        setStatus('Region centroid is outside the allowed bounds — pin not moved', 'err');
+      }
+    }
+    return { removed: false, split: pieces.keep.length - 1, dropped: pieces.dropped, cls: cls };
+  }
+
+  function applyEraseStroke(seed, dense, r, cls) {
+    var seedId = String(seed.feature.id);
+    var targets = eraseTargets(dense, r, seed, cls);
+    if (!targets.length) {
+      working.stamps = [];
+      clearBrushStroke();
+      setStatus('Nothing to remove under the brush — right-drag across a visible region', 'err');
+      return;
+    }
+    pushPaintHistory();
+    var removed = [], split = 0, dropped = 0, seedGone = false;
+    var onlySeed = targets.length === 1 && String(targets[0].id) === seedId;
+    targets.forEach(function (f) {
+      var rid = String(f.id);
+      var out = eraseFromFeature(f, dense, r);
+      if (out.removed) {
+        removed.push(out.cls);
+        if (rid === seedId) seedGone = true;
+      }
+      split += out.split;
+      dropped += out.dropped;
+    });
+    var label = brushTarget.label || cls;
+    if (seedGone) {
+      brushTarget = null;
+      working = { ids: [], stamps: [] };
+    } else {
+      working = { ids: [seedId], stamps: [] };
+    }
+    clearBrushStroke();
+    rebuildConsumed();
+    if (brushTarget && brushTarget.pinIndex >= 0) consumed[seedId] = true;
+    persistLocal();
+    persistRegions().then(function (how) {
+      refreshLayerCounts();
+      updateBrushLabel();
+      redrawAi();
+      syncBrushChrome();
+      var msg;
+      if (seedGone) msg = 'Removed ' + label + ' region';
+      else if (removed.length) msg = 'Removed ' + removed.length + ' ' + removed[0] + (removed.length > 1 ? ' regions' : ' region');
+      else msg = 'Removed from ' + (onlySeed ? label : (targets.length + ' ' + featureClass(targets[0]) + (targets.length > 1 ? ' regions' : ' region')));
+      if (split) msg += ' · split into ' + (split + targets.length - removed.length);
+      if (dropped) msg += ' · dropped ' + dropped + (dropped === 1 ? ' sliver' : ' slivers');
+      setStatus(msg + (how === 'file' ? ' — wrote edits/regions.json' : ''));
+    });
+  }
+
+  function applyBrushStroke() {
+    applyPaintStroke(false);
+  }
+
+  function brushAt(ll) {
+    if (!brushTarget || !aiPack || !Array.isArray(aiPack.features)) return;
+    working.stamps.push(ll);
+    var r = brushRadiusM();
+    working.ids = hitIdsForStroke(working.stamps, r + JOIN_M, brushTarget.className, brushTarget.regionId);
+    updateBrushLabel();
+    showBrushStroke();
+  }
+
+  function onAcceptFeature(idx) {
+    if (!aiPack || !aiPack.features || !aiPack.features[idx]) return;
+    var f = aiPack.features[idx];
+    var rid = String(f.id || idx);
+    if (consumed[rid]) return;
+    if (!canAddPin()) return;
+    var cls = featureClass(f);
+    var c = featureCentroid(f);
+    if (!c) { setStatus('Could not read that polygon', 'err'); return; }
+    openPicker('Accept ' + cls + ' as…', suggestIds(cls), function (catalogId) {
+      var pin = addPinAt(c, catalogId, { source: 'ai', ai_class: cls, region_id: rid });
+      if (!pin) return;
+      consumed[rid] = true;
+      persistLocal();
+      persistRegions().then(function (how) {
+        redrawAi();
+        setStatus('Accepted ' + ((catalogById[catalogId] && catalogById[catalogId].name) || catalogId) +
+          (how === 'file' ? ' — wrote edits/regions.json' : ' — edits saved locally until review_server is running'));
+      });
+    });
+  }
+
+  function updateFinishDraw() {
+  }
+
+  function clearDrawPreview() {
+    drawVerts = [];
+    if (drawPreview) { drawPreview.setMap(null); drawPreview = null; }
+    updateFinishDraw();
+  }
+
+  function refreshDrawPreview() {
+    if (drawPreview) { drawPreview.setMap(null); drawPreview = null; }
+    if (!map || drawVerts.length < 2) {
+      updateFinishDraw();
+      return;
+    }
+    var opts = {
+      map: map,
+      strokeColor: '#4fd1c5',
+      strokeOpacity: 1,
+      strokeWeight: 2,
+      clickable: false,
+      zIndex: 9
+    };
+    if (drawVerts.length >= 3) {
+      drawPreview = new google.maps.Polygon({
+        paths: drawVerts,
+        fillColor: '#4fd1c5',
+        fillOpacity: 0.28,
+        strokeColor: opts.strokeColor,
+        strokeOpacity: 1,
+        strokeWeight: 2,
+        clickable: false,
+        zIndex: 9
+      });
+    } else {
+      drawPreview = new google.maps.Polyline({
+        path: drawVerts,
+        strokeColor: '#4fd1c5',
+        strokeOpacity: 1,
+        strokeWeight: 2,
+        clickable: false,
+        zIndex: 9
+      });
+    }
+    updateFinishDraw();
+  }
+
+  function addDrawVertex(ll) {
+    drawVerts.push({ lat: ll.lat, lng: ll.lng });
+    refreshDrawPreview();
+    setStatus(drawVerts.length < 3
+      ? ('Draw: ' + drawVerts.length + ' point' + (drawVerts.length === 1 ? '' : 's') + ' — need 3, then Close shape')
+      : 'Draw: ' + drawVerts.length + ' points — Close shape or double-click');
+  }
+
+  function finishDraw() {
+    if (drawVerts.length < 3) {
+      setStatus('Draw a closed polygon (3+ clicks)', 'err');
+      return;
+    }
+    if (!canAddPin()) return;
+    var ring = drawVerts.map(function (p) { return [p.lng, p.lat]; });
+    ring.push(ring[0]);
+    var c = ringCentroidLonLat(ring);
+    if (!c) { setStatus('Could not place a centroid', 'err'); return; }
+    openPicker('Drawn shape as…', [144, 186, 206, 61, 130, 69], function (catalogId) {
+      var name = (catalogById[catalogId] && catalogById[catalogId].name) || ('#' + catalogId);
+      var rid = nextRegionId('d');
+      var drawnId = addDrawnFeature(ring, catalogId, { source: 'drawn' });
+      var pin = addPinAt(c, catalogId, { source: 'drawn', drawn_id: drawnId, region_id: rid });
+      if (!pin) {
+        ensureDrawn().features = ensureDrawn().features.filter(function (f) { return f.id !== drawnId; });
+        return;
+      }
+      if (!aiPack.features) aiPack.features = [];
+      aiPack.features.push({
+        type: 'Feature',
+        id: rid,
+        geometry: { type: 'Polygon', coordinates: [ring] },
+        properties: { class: name, catalog_id: catalogId, name: name, origin: 'drawn' }
+      });
+      clearDrawPreview();
+      persistLocal();
+      persistRegions().then(function (how) {
+        redrawAi();
+        setStatus('Drew ' + name + (how === 'file' ? ' — wrote edits/regions.json' : ' — edits saved locally until review_server is running'));
+      });
+    });
+  }
+
+  function deletePin(i) {
+    var pins = (record && record.elements) || [];
+    var p = pins[i];
+    if (!p) return;
+    pins.splice(i, 1);
+    if (p.drawn_id) {
+      ensureDrawn().features = ensureDrawn().features.filter(function (f) { return f.id !== p.drawn_id; });
+    }
+    if (p.source === 'ai' && p.region_id) restoreRegionIds([p.region_id]);
+    if (p.source === 'merged') {
+      if (p.region_id) removeRegionIds([p.region_id]);
+      if (p.merged_from && p.merged_from.length) restoreRegionIds(p.merged_from);
+    }
+    if (p.source === 'drawn' && p.region_id) removeRegionIds([p.region_id]);
+    brushTarget = null;
+    rebuildConsumed();
+    persistLocal();
+    working = { ids: [], stamps: [] };
+    persistRegions().then(function () {
+      refreshLayerCounts();
+      updateBrushLabel();
+      redrawAi();
+      syncBrushChrome();
+      setStatus('Removed pin');
+    });
+  }
+
+  function revertRegions() {
+    if (!originalFc) {
+      setStatus('Original regions.json is not loaded yet', 'err');
+      return;
+    }
+    applyWorkingFc(JSON.parse(JSON.stringify(originalFc)));
+    clearPaintHistory();
+    working = { ids: [], stamps: [] };
+    brushTarget = null;
+    persistRegions().then(function (how) {
+      updateBrushLabel();
+      redrawAi();
+      syncBrushChrome();
+      setStatus(how === 'file'
+        ? 'Reverted edits/regions.json from original'
+        : 'Reverted in memory — start review_server to write the file');
+    });
+  }
+
+  function eventToLl(ev) {
+    if (!map || !pixOverlay) return null;
+    var proj = pixOverlay.getProjection();
+    if (!proj) return null;
+    var rect = document.getElementById('map').getBoundingClientRect();
+    var ll = proj.fromContainerPixelToLatLng(
+      new google.maps.Point(ev.clientX - rect.left, ev.clientY - rect.top)
+    );
+    if (!ll) return null;
+    return { lat: ll.lat(), lng: ll.lng() };
+  }
+
+  function pointerOverTools(ev) {
+    var tools = document.getElementById('tools');
+    var r = tools.getBoundingClientRect();
+    return ev.clientX >= r.left && ev.clientX <= r.right &&
+      ev.clientY >= r.top && ev.clientY <= r.bottom;
+  }
+
+  function moveBrushCursor(clientX, clientY) {
+    var el = document.getElementById('brushCursor');
+    if (!isEditTool()) {
+      el.className = '';
+      return;
+    }
+    var stage = document.getElementById('stage').getBoundingClientRect();
+    el.style.left = (clientX - stage.left) + 'px';
+    el.style.top = (clientY - stage.top) + 'px';
+    styleBrushCursor();
+  }
+
+  function hideBrushCursor() {
+    document.getElementById('brushCursor').className = '';
+  }
+
+  function styleBrushCursor() {
+    var el = document.getElementById('brushCursor');
+    if (!isEditTool()) {
+      el.className = '';
+      return;
+    }
+    if (brushTarget) {
+      el.className = paintErase ? 'erase' : 'paint';
+      el.style.width = brushDiameterPx() + 'px';
+      el.style.height = brushDiameterPx() + 'px';
+      el.style.setProperty('--brush', paintErase ? '#f97066' : (brushTarget.color || '#4fd1c5'));
+    } else {
+      el.className = 'pick';
+      el.style.width = '';
+      el.style.height = '';
+    }
+  }
+
+  function syncBrushChrome() {
+    var stage = document.getElementById('stage');
+    var hit = document.getElementById('brushHit');
+    var edit = isEditTool();
+    var armed = edit && !!brushTarget;
+    stage.classList.toggle('brush-on', edit);
+    hit.classList.toggle('on', armed);
+    if (map) {
+      map.setOptions({
+        draggable: !edit,
+        gestureHandling: 'greedy',
+        scrollwheel: true,
+        draggableCursor: edit ? 'none' : (toolMode === 'draw' ? 'crosshair' : null),
+        draggingCursor: edit ? 'none' : null,
+        disableDoubleClickZoom: false
+      });
+    }
+    var sizeRow = document.getElementById('brushSizeRow');
+    if (sizeRow) sizeRow.hidden = !edit;
+    var histRow = document.getElementById('brushHistRow');
+    if (histRow) histRow.hidden = !edit;
+    syncPaintHistoryButtons();
+    if (!edit) hideBrushCursor();
+    else if (document.getElementById('brushCursor').style.left) styleBrushCursor();
+  }
+
+  function setTool(mode) {
+    var leavingEdit = isEditTool() && mode !== 'draw';
+    var enteringDraw = mode === 'draw';
+    toolMode = mode;
+    var btns = document.querySelectorAll('#tools .tool');
+    for (var i = 0; i < btns.length; i++) {
+      btns[i].classList.toggle('on', btns[i].getAttribute('data-tool') === mode);
+    }
+    if (mode !== 'draw') clearDrawPreview();
+    if (leavingEdit || enteringDraw) {
+      working.stamps = [];
+      brushing = false;
+      brushPainting = false;
+      paintErase = false;
+      clearBrushStroke();
+    }
+    if (enteringDraw || leavingEdit) {
+      // Leaving Draw drops the pick too, so the picked region stops being
+      // force-drawn once its layer is off or the tool is Pan/Accept.
+      brushTarget = null;
+      working = { ids: [], stamps: [] };
+    }
+    if (!isEditTool()) hideBrushCursor();
+    syncBrushChrome();
+    updateBrushLabel();
+    if (mode === 'accept' || isEditTool()) {
+      ensureFeatures().then(function () { redrawAi(); syncBrushChrome(); }).catch(function () {});
+    } else {
+      redrawAi();
+    }
+    if (mode === 'accept') setStatus('Click a visible AI polygon');
+    else if (mode === 'draw') {
+      updateBrushLabel();
+      setStatus('Draw: + click a centroid, then left-click adds and right-click removes. Scroll to zoom.');
+    }
+    else setStatus('');
   }
 
   function initMap() {
@@ -458,17 +2676,91 @@
     });
     overlay = new google.maps.GroundOverlay(url, b, { opacity: 1, clickable: false });
     overlay.setMap(map);
+    pixOverlay = new google.maps.OverlayView();
+    pixOverlay.onAdd = function () {};
+    pixOverlay.draw = function () {};
+    pixOverlay.onRemove = function () {};
+    pixOverlay.setMap(map);
+    map.addListener('bounds_changed', function () {
+      if (working.stamps.length) showBrushStroke();
+    });
     map.fitBounds(b);
+    map.addListener('click', function (e) {
+      if (isEditTool() && !brushTarget && e && e.latLng) {
+        selectBrushAt({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      }
+    });
+    map.addListener('rightclick', function (e) {
+      if (isEditTool() && e && e.stop) e.stop();
+    });
+    var hit = document.getElementById('brushHit');
+    // Maps ignores the wheel while draggable is false (Draw), so zoom is ours for
+    // the whole stage in Draw — before a pick (map underneath) and after (hit
+    // overlay). The tool panel stops wheel propagation itself.
+    function zoomByWheel(ev) {
+      if (!isEditTool() || !map) return;
+      if (pointerOverTools(ev)) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      var z = map.getZoom() || 19;
+      var next = ev.deltaY > 0 ? z - 1 : z + 1;
+      map.setZoom(Math.max(14, Math.min(22, next)));
+    }
+    document.getElementById('stage').addEventListener('wheel', zoomByWheel, { passive: false, capture: true });
+    hit.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+    document.getElementById('stage').addEventListener('contextmenu', function (ev) {
+      if (isEditTool()) ev.preventDefault();
+    });
+    hit.addEventListener('pointerdown', function (ev) {
+      if (!isEditTool() || !brushTarget) return;
+      if (pointerOverTools(ev)) return;
+      if (ev.button !== 0 && !(toolMode === 'draw' && ev.button === 2)) return;
+      ev.preventDefault();
+      try { hit.setPointerCapture(ev.pointerId); } catch (err) {}
+      var ll = eventToLl(ev);
+      if (!ll) return;
+      paintErase = toolMode === 'draw' && ev.button === 2;
+      brushing = true;
+      brushPainting = true;
+      working.stamps = [];
+      styleBrushCursor();
+      brushAt(ll);
+    });
+    hit.addEventListener('pointermove', function (ev) {
+      if (pointerOverTools(ev)) {
+        hideBrushCursor();
+        return;
+      }
+      moveBrushCursor(ev.clientX, ev.clientY);
+      if (!brushing || !brushPainting) return;
+      var ll = eventToLl(ev);
+      if (ll) brushAt(ll);
+    });
+    function endBrushPointer() {
+      if (brushing && brushPainting) applyPaintStroke(paintErase);
+      brushing = false;
+      brushPainting = false;
+      paintErase = false;
+      styleBrushCursor();
+    }
+    hit.addEventListener('pointerup', endBrushPointer);
+    hit.addEventListener('pointercancel', endBrushPointer);
+    document.addEventListener('pointermove', function (ev) {
+      if (!isEditTool()) return;
+      var stage = document.getElementById('stage').getBoundingClientRect();
+      if (ev.clientX < stage.left || ev.clientX > stage.right ||
+          ev.clientY < stage.top || ev.clientY > stage.bottom) {
+        if (!brushing) hideBrushCursor();
+        return;
+      }
+      if (pointerOverTools(ev)) {
+        hideBrushCursor();
+        return;
+      }
+      moveBrushCursor(ev.clientX, ev.clientY);
+    });
     drawPins();
     loadAiIndex();
-  }
-
-  function anyLayerOn() {
-    var names = Object.keys(layerOn);
-    for (var i = 0; i < names.length; i++) {
-      if (layerOn[names[i]]) return true;
-    }
-    return false;
   }
 
   function loadAiIndex() {
@@ -481,22 +2773,66 @@
         features: null
       };
       renderLayers(aiPack);
-      if (anyLayerOn()) {
-        ensureFeatures().then(function () { redrawAi(); });
-      } else {
-        redrawAi();
-      }
+      redrawAi();
+      // hints.json carries the vendor counts. The sidebar must show the working
+      // regions (edits) from the start, otherwise a merged delivery reads e.g.
+      // Driveway 16 until the first layer is checked and then drops to 2. Load
+      // regions right away; counts are recounted from the working file on arrival.
+      ensureFeatures().then(function () { redrawAi(); }).catch(function () {});
     }).catch(function (e) { setStatus('AI hints: ' + e.message, 'err'); });
+  }
+
+  // Regions files are mutable working copies (edits is rewritten by every paint and
+  // by Revert), so never let the browser answer from its HTTP cache. Before this a
+  // stale cached edits/regions.json could resurface after a disk revert.
+  function fetchJsonOptional(url) {
+    if (!url) return Promise.resolve(null);
+    return fetchJson(url, { noStore: true }).catch(function () { return null; });
   }
 
   function ensureFeatures() {
     if (aiPack && Array.isArray(aiPack.features)) return Promise.resolve(aiPack);
     if (featuresPromise) return featuresPromise;
-    if (!record || !record.ai_url) return Promise.resolve(aiPack);
-    featuresPromise = fetchJson(record.ai_url).then(function (fc) {
-      if (!aiPack) aiPack = { counts: {}, hints: [], features: [] };
-      aiPack.features = fc.features || [];
-      if (fc.counts) aiPack.counts = fc.counts;
+    featuresPromise = Promise.all([
+      fetchJsonOptional(regionsOriginalUrl()),
+      fetchJsonOptional(regionsEditsUrl())
+    ]).then(function (pair) {
+      var orig = pair[0];
+      var edits = pair[1];
+      if (orig) return { orig: orig, edits: edits };
+      if (record && record.ai_url) {
+        return fetchJson(record.ai_url).then(function (fc) {
+          return { orig: fc, edits: edits };
+        });
+      }
+      return { orig: null, edits: edits };
+    }).then(function (o) {
+      if (o.orig) indexOriginal(o.orig);
+      var localEdits = null;
+      try {
+        var raw = localStorage.getItem(regionsStorageKey());
+        if (raw) localEdits = JSON.parse(raw);
+      } catch (e) {}
+      var workingDoc;
+      if (FRESH_ON_OPEN && o.orig) {
+        workingDoc = JSON.parse(JSON.stringify(o.orig));
+      } else {
+        workingDoc = o.edits || localEdits || o.orig;
+        if (o.edits) {
+          // The file is authoritative; refresh the browser backup so a stale one
+          // cannot come back if the server is unreachable later.
+          try { localStorage.setItem(regionsStorageKey(), JSON.stringify(o.edits)); } catch (e2) {}
+        }
+      }
+      if (!workingDoc || !workingDoc.features) throw new Error('no regions');
+      applyWorkingFc(workingDoc);
+      if (FRESH_ON_OPEN && o.orig) {
+        // Reset edits/regions.json (and the browser backup) to the original so
+        // what is on disk is exactly what this session started from.
+        persistRegions().then(function (how) {
+          if (how === 'file') setStatus('Fresh open — edits/regions.json reset to original');
+        });
+      }
       return aiPack;
     }).catch(function (e) {
       featuresPromise = null;
@@ -514,7 +2850,8 @@
       return;
     }
     var s = document.createElement('script');
-    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY + '&callback=nmMapsReady';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
+      '&libraries=geometry&callback=nmMapsReady';
     s.async = true;
     s.onerror = function () { fail('Maps JS failed to load'); };
     document.head.appendChild(s);
@@ -528,36 +2865,134 @@
     var name = t.getAttribute('data-layer');
     if (!name) return;
     layerOn[name] = t.checked;
+    if (t.checked) activeClass = name;
+    else if (activeClass === name) activeClass = '';
+    if (!t.checked && brushTarget && brushTarget.className === name) {
+      // Hiding the picked region's layer drops the pick; painting an invisible
+      // region would be confusing.
+      brushTarget = null;
+      working = { ids: [], stamps: [] };
+      clearBrushStroke();
+      updateBrushLabel();
+      syncBrushChrome();
+    }
+    renderLayers(aiPack);
     if (t.checked) {
       ensureFeatures().then(function () { redrawAi(); }).catch(function () {});
     } else {
       redrawAi();
     }
   });
+  // Clicking the name or swatch of an already-checked layer makes it the active
+  // class (highlighted borders) without unchecking it. Unchecked rows still toggle.
+  document.getElementById('aiLayers').addEventListener('click', function (ev) {
+    var hit = ev.target.closest('.name, .swatch');
+    if (!hit) return;
+    var row = hit.closest('.layer-row');
+    var box = row && row.querySelector('input[type=checkbox]');
+    if (!box || !box.checked) return;
+    ev.preventDefault();
+    var name = box.getAttribute('data-layer');
+    if (!name || activeClass === name) return;
+    activeClass = name;
+    renderLayers(aiPack);
+    redrawAi();
+  });
   document.getElementById('aiAll').addEventListener('click', function () { setAllLayers(true); });
   document.getElementById('aiNone').addEventListener('click', function () { setAllLayers(false); });
   document.getElementById('hintToggle').addEventListener('change', function () { redrawAi(); });
+  document.getElementById('tools').addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-tool]');
+    if (!t) return;
+    setTool(t.getAttribute('data-tool'));
+  });
+  document.getElementById('brushSize').addEventListener('input', function (ev) {
+    setBrushSizePx(ev.target.value);
+  });
+  document.getElementById('brushSizeRow').addEventListener('pointerdown', function (ev) {
+    ev.stopPropagation();
+  });
+  document.getElementById('brushSizeRow').addEventListener('wheel', function (ev) {
+    ev.stopPropagation();
+  });
+  document.getElementById('brushHistRow').addEventListener('pointerdown', function (ev) {
+    ev.stopPropagation();
+  });
+  document.getElementById('brushHistRow').addEventListener('wheel', function (ev) {
+    ev.stopPropagation();
+  });
+  document.getElementById('brushUndo').addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    stepPaintHistory(-1);
+  });
+  document.getElementById('brushRedo').addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    stepPaintHistory(1);
+  });
+  document.getElementById('brushClear').addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    clearBrushPick();
+  });
+  document.addEventListener('keydown', function (ev) {
+    if (!isEditTool()) return;
+    if (!(ev.ctrlKey || ev.metaKey)) return;
+    if (!document.getElementById('picker').hidden) return;
+    var tag = (ev.target && ev.target.tagName) || '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    var k = String(ev.key || '').toLowerCase();
+    if (k === 'z' && !ev.shiftKey) { ev.preventDefault(); stepPaintHistory(-1); }
+    else if ((k === 'z' && ev.shiftKey) || k === 'y') { ev.preventDefault(); stepPaintHistory(1); }
+  });
+  document.getElementById('revertRegions').addEventListener('click', function () { revertRegions(); });
+  document.getElementById('pinList').addEventListener('click', function (ev) {
+    var pick = ev.target.closest('[data-pick-pin]');
+    if (pick) {
+      setTool('draw');
+      selectBrushPin(parseInt(pick.getAttribute('data-pick-pin'), 10));
+      return;
+    }
+    var t = ev.target.closest('[data-del]');
+    if (!t) return;
+    deletePin(parseInt(t.getAttribute('data-del'), 10));
+  });
+  document.getElementById('pickerQ').addEventListener('input', function () {
+    renderPickerHits(document.getElementById('pickerQ').value, pickerSuggested);
+  });
+  document.getElementById('pickerHits').addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-id]');
+    if (!t) return;
+    pickCatalog(parseInt(t.getAttribute('data-id'), 10));
+  });
+  document.getElementById('pickerCancel').addEventListener('click', closePicker);
   document.getElementById('copyBtn').addEventListener('click', function () {
-    var text = JSON.stringify((record && record.elements) || [], null, 2);
-    navigator.clipboard.writeText(text).then(function () { setStatus('Copied pins JSON'); },
+    var text = JSON.stringify({
+      elements: (record && record.elements) || [],
+      drawn: (record && record.drawn) || emptyDrawn()
+    }, null, 2);
+    navigator.clipboard.writeText(text).then(function () { setStatus('Copied pins + drawn JSON'); },
       function () { setStatus('Clipboard failed', 'err'); });
   });
   document.getElementById('saveBtn').addEventListener('click', function () {
-    if (!siteNo) { setStatus('No site_no — cannot save to sheet', 'err'); return; }
+    persistLocal();
+    if (!siteNo) {
+      setStatus('Saved locally (add site_no= to write the Nearmap sheet)');
+      return;
+    }
     var body = {
       source: 'nearmap-review',
       version: BUILD,
       view: 'nearmap',
       route: 'nearmap-save',
       site_no: siteNo,
-      pins: (record && record.elements) || []
+      pins: (record && record.elements) || [],
+      drawn: (record && record.drawn) || emptyDrawn()
     };
     fetch(NM_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify(body)
     }).then(function (r) { return r.json(); }).then(function (j) {
-      if (j && j.ok) setStatus('Saved ' + (j.saved || 0) + ' pin(s)');
+      if (j && j.ok) setStatus('Saved ' + (j.saved || 0) + ' pin(s) to sheet');
       else setStatus((j && j.error) || 'Save failed', 'err');
     }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
   });
@@ -573,9 +3008,22 @@
     if (record.nadir.url.indexOf('http') !== 0 && delivery) {
       record.nadir.url = joinUrl(tilesBase, delivery + '/vert.jpg');
     }
+    if (FRESH_ON_OPEN) {
+      // Testing: pins and drawn groups also start empty on every open.
+      record.elements = [];
+      record.drawn = emptyDrawn();
+      try { localStorage.removeItem(storageKey()); } catch (e) {}
+    } else {
+      mergeLocal();
+    }
+    rebuildConsumed();
     bootMaps();
     loadCatalog().then(function () { if (map) drawPins(); });
-    loadFromSheet().then(function () { if (map) drawPins(); });
+    loadFromSheet().then(function () {
+      rebuildConsumed();
+      if (map) redrawAi();
+      else drawPins();
+    });
   }).catch(function (e) { fail(String(e.message || e)); });
 })();
 </script>
