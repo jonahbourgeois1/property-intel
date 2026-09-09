@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-viewer v1.0.3: 3D fills cover the whole footprint
+
+**What.** 3D region fills are a flat cap at the **max mesh height** inside each polygon (sampled on the ring and a coarse interior grid), 0.85 m above that, opacity 0.48. A second outline is drawn at that cap height; the draped outline remains. Building (and every other class) now tints the whole footprint the way 2D does, instead of a ring around the walls.
+
+**Why.** Jonah: 3D layers were not present enough; Building should highlight the entire area like 2D. The old fill used only ring-vertex heights, so it sat at ground under the walls and you only saw the orange edge.
+
+**Files.** `nearmap-viewer.html` (v1.0.3).
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Not verified in the live 3D tab (mesh load).
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.11: Revert changes vs Revert to original
 
 **What.** Two region-editor buttons: **Revert changes** restores the working copy to the last Save (or the regions this session opened with); **Revert to original** restores vendor `ai/original/regions.json`. Checkpoint is captured on load and on Save (sheet Save, or local Save when there is no `site_no`). Paint undo/redo arrows are unchanged.
