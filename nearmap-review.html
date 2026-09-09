@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.2, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.3, 2026-09-09)
   Holes are real: drawn as cutouts, respected by every inside test, kept across strokes.
+  Grow strokes fill the crumb/sliver gaps scribbling leaves; deliberate holes stay.
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions FC.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
@@ -222,7 +223,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.2';
+  var BUILD = 'v1.6.3';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -237,6 +238,14 @@
   // whole regions when a small addition was trimmed.
   var ERASE_MIN_FRAG_M2 = 3;
   var ERASE_SLIVER_WIDTH_M = 0.8;
+  // Hole clean-up after a grow stroke, the mirror of the erase rule. A hole the
+  // stroke just created is filled when it is a crumb (under HOLE_FILL_M2) or a
+  // sliver (mean width under HOLE_SLIVER_WIDTH_M) — the gaps scribbling leaves
+  // between passes. Holes that existed before the stroke (a deliberate erase, a
+  // painted loop's inside) are never filled by this rule, whatever their size;
+  // only painting over them removes them. Erase strokes never fill anything.
+  var HOLE_FILL_M2 = 6;
+  var HOLE_SLIVER_WIDTH_M = 0.8;
 
   var CLASS_MAP = [
     { id: 61, name: 'Roof', classes: ['Roof'] },
@@ -1567,8 +1576,10 @@
     var filled = 0;
     for (i = 0; i < grid.length; i++) if (grid[i]) filled++;
     if (!filled) return null;
+    var masked = geometryFromMask(grid, nx, ny, cell, west, south, fr);
+    if (!erase) masked = fillSmallHoles(masked, feats, fr);
     return conformGeometry(
-      geometryFromMask(grid, nx, ny, cell, west, south, fr),
+      masked,
       feats,
       fr,
       Math.max(0.55, cell * 2.4),
@@ -1774,6 +1785,42 @@
     if (!polys.length) return null;
     if (polys.length === 1) return { type: 'Polygon', coordinates: polys[0] };
     return { type: 'MultiPolygon', coordinates: polys };
+  }
+
+  // Two rings share ground if a vertex of either lies inside the other.
+  function ringsShareGround(a, b) {
+    var i;
+    for (i = 0; i < a.length; i++) if (pointInRing(a[i][0], a[i][1], b)) return true;
+    for (i = 0; i < b.length; i++) if (pointInRing(b[i][0], b[i][1], a)) return true;
+    return false;
+  }
+
+  // Grow-stroke hole rule (see HOLE_* constants). `before` are the features that
+  // went into the union; a hole of theirs that survives in the result is kept.
+  function fillSmallHoles(geom, before, fr) {
+    if (!geom) return geom;
+    var priorHoles = [];
+    (before || []).forEach(function (f) {
+      featurePolys(f).forEach(function (poly) {
+        for (var h = 1; h < poly.length; h++) priorHoles.push(poly[h]);
+      });
+    });
+    var polys = geometryPolys(geom).map(function (poly) {
+      var kept = [poly[0]];
+      for (var h = 1; h < poly.length; h++) {
+        var ring = poly[h];
+        var m = ringMetricsXY(ring, fr);
+        var meanWidth = m.perimeter > 0 ? (2 * m.area / m.perimeter) : 0;
+        var small = m.area < HOLE_FILL_M2 || meanWidth < HOLE_SLIVER_WIDTH_M;
+        var deliberate = false;
+        for (var k = 0; k < priorHoles.length && !deliberate; k++) {
+          if (ringsShareGround(ring, priorHoles[k])) deliberate = true;
+        }
+        if (!small || deliberate) kept.push(ring);
+      }
+      return kept;
+    });
+    return polysToGeometry(polys);
   }
 
   // Net area (outer minus holes) and outer-ring perimeter of one polygon, in m².

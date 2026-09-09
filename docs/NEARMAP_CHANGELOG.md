@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.3: scribble gaps auto-fill, deliberate holes stay
+
+**What.** `fillSmallHoles(geom, before, fr)` runs on the mask result of every grow / new-region stroke (never on erase). A hole is filled when it is a crumb (`HOLE_FILL_M2 = 6 m²`) or a sliver (mean width `< HOLE_SLIVER_WIDTH_M = 0.8 m`), unless it shares ground with a hole that already existed on one of the input features (`ringsShareGround`) — those are deliberate and survive at any size.
+
+**Why.** Jonah, after v1.6.2: scribbling a large blob left dozens of tiny triangles and seams as holes; he still wants those to fill "similar to how we auto-delete when enough is removed at once", while keeping real cutouts.
+
+**Files.** `nearmap-review.html` (v1.6.3), `docs/NEARMAP_CONTRACT.md` (hole-fill rule).
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless (scratch Columbia, Driveway, z20): three Size-14 passes spaced 3.6 m (0.6 m gaps) closed at the ends → `Polygon` 183 m², 0 holes; in the same session the painted loop's 68 m² hole and an erased 3 m² cutout (under the 6 m² crumb line — protected only by the pre-existing rule) both survived later grow strokes. 0 page errors. Not verified: the exact gap sizes in Jonah's screenshot (estimated 1–6 m² from the driveway width).
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.2: holes are real (no auto-fill)
 
 **What.** Cutouts persist. New `featurePolys` / `featureAllRings` helpers; `pointInFeature` returns false inside a hole; the editor draws each polygon with all rings (`paths: [outer, …holes]`); snap edges and the source segment length include hole rings; `geometryFromMask` classifies rings by nesting depth (even = outer, odd = hole of the innermost outer) instead of "first enclosing outer only".
