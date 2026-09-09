@@ -88,9 +88,17 @@ Local:
 
 Use `review_server.py` (not `python -m http.server`) so Draw can PUT local `ai/edits/regions.json`. `ai/original/regions.json` is never written by the page. Revert regions returns to original.
 
+### Two editors (v1.5.0)
+
+**Property Intel → Nearmap Pipeline → Open Nearmap Regions Editor (This Row)** opens `?mode=regions`: merge/erase vendor regions, Revert regions → original, Save publishes the regions diff. Pins are not shown and not touched.
+
+**… → Open Nearmap Pins Editor (This Row)** opens `?mode=pins`: the finished regions are read-only; on first open every non-vegetation region (Lawn Grass included) gets a pin at its interior point; **Seed from regions** re-seeds (confirm replaces the list); **Place pin** click → picker; ✕ deletes a pin without touching regions; Save writes column R only. Do regions first, then pins — reseeding after regions change is one click.
+
+Paste for this build: `config.gs`, `nearmap.gs`, `menu.gs` (and `critique-api.gs` if its Nearmap routes are not deployed), save, **new deployment version**.
+
 ### Sheet mode (v1.4.0) — original/edits folder format
 
-Open from the sheet (**Property Intel → Nearmap Pipeline → Open Nearmap Review**, URL carries `site_no=`), or via the published `?property=` link:
+Open from the sheet (either editor above; URL carries `site_no=`), or via the published `?property=` link:
 
 1. Page asks `?route=nearmap-elements&site_no=` → gets pins, `regions_original_url` (CloudFront `ai/original/regions.json`) and `regions_edits_url` (GitHub `data/nearmap/edits/{id}.json`, empty until the first Save).
 2. Regions shown = original − removed + changed from the edits diff. Status shows "Loaded edits: N changed, M removed".

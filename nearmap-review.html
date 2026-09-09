@@ -5,7 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.4.1, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.5.0, 2026-09-09)
+  TWO EDITORS, one page, never both at once:
+    ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions diff.
+    ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
+                              regions = one pin per non-vegetation region at its interior
+                              point (Lawn Grass kept); Place pin adds by hand. Save = pins.
   Regions follow the original/edits folder format:
     original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable)
     edits    = sheet mode (site_no= / property=): GitHub data/nearmap/edits/{id}.json,
@@ -90,6 +95,9 @@
     display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
   }
   #tools .btn.on { background: #1f6feb; border-color: #1f6feb; }
+  .mode-chip { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--hot); padding-right: 4px; }
+  body.mode-regions .pins-only { display: none !important; }
+  body.mode-pins .regions-only { display: none !important; }
   #brushClass { color: var(--hot); font-size: 11px; }
   #brushSizeRow {
     display: flex; align-items: center; gap: 8px;
@@ -158,8 +166,11 @@
     <div id="brushCursor"></div>
     <div id="tools">
       <div class="tool-row">
+        <span id="modeChip" class="mode-chip"></span>
         <button type="button" class="btn tool on" data-tool="pan" id="toolPan">Pan</button>
-        <button type="button" class="btn tool" data-tool="draw" id="toolDraw">Draw</button>
+        <button type="button" class="btn tool regions-only" data-tool="draw" id="toolDraw">Draw</button>
+        <button type="button" class="btn tool pins-only" data-tool="place" id="toolPlace">Place pin</button>
+        <button type="button" class="btn pins-only" id="seedPins" title="One pin per finished region (no vegetation), at its interior point">Seed from regions</button>
         <span id="brushClass"></span>
       </div>
       <label id="brushSizeRow" hidden>
@@ -178,19 +189,22 @@
     <h2>Delivery</h2>
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
-      <p class="meta" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Edits are saved as a diff to <code>data/nearmap/edits/</code> when opened from the sheet, or to local <code>ai/edits/regions.json</code>. Revert regions returns to original.</p>
-      <label class="toggle"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
+      <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Edits are saved as a diff to <code>data/nearmap/edits/</code> when opened from the sheet, or to local <code>ai/edits/regions.json</code>. Revert regions returns to original.</p>
+      <p class="meta pins-only" id="pinsNote">Pins editor. Regions are shown read-only (finish them in the Regions editor). Seed makes one pin per region at its interior point — no vegetation, Lawn Grass excepted. Place pin adds one by hand. Save writes the Nearmap sheet only.</p>
+      <label class="toggle regions-only"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
         <button type="button" class="btn" id="aiAll">All</button>
         <button type="button" class="btn" id="aiNone">None</button>
       </div>
       <div id="aiLayers"></div>
-      <p class="meta" id="pinHeading">Catalog pins (percent of nadir JPEG)</p>
-      <ol id="pinList"></ol>
+      <div class="pins-only">
+        <p class="meta" id="pinHeading">Catalog pins (percent of nadir JPEG)</p>
+        <ol id="pinList"></ol>
+      </div>
     </div>
     <div class="submit-bar">
       <button type="button" class="btn primary" id="saveBtn">Save</button>
-      <button type="button" class="btn" id="revertRegions">Revert regions</button>
+      <button type="button" class="btn regions-only" id="revertRegions">Revert regions</button>
       <button type="button" class="btn" id="copyBtn">Copy JSON</button>
       <div class="status" id="status"></div>
     </div>
@@ -207,7 +221,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.4.1';
+  var BUILD = 'v1.5.0';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -276,6 +290,33 @@
   var FRESH_ON_OPEN = qp('fresh') === '1' || (qp('fresh') !== '0' && !SHEET_MODE);
   // Remote regions for sheet mode: { original: url, edits: url|'' }.
   var regionsRemote = { original: '', edits: '' };
+  // Two editors on one page, never both at once:
+  //   regions (default) — Draw/erase vendor regions; pins are not shown or saved.
+  //   pins   (?mode=pins) — catalog pins on the finished regions; regions read-only.
+  var MODE = qp('mode') === 'pins' ? 'pins' : 'regions';
+  document.body.className = 'mode-' + MODE;
+  var modeChipEl = document.getElementById('modeChip');
+  if (modeChipEl) modeChipEl.textContent = MODE === 'pins' ? 'Pins' : 'Regions';
+  var accountType = 'residential';
+  // Seed map: vendor class → catalog id [residential, commercial]. Vegetation,
+  // Tree Overhang, Car (no catalog pin) and Building (Deprecated) (duplicates
+  // Building) are deliberately absent. Lawn Grass is the one "green" class kept.
+  var SEED_MAP = {
+    'Building': [57, 19],
+    'Roof': [61, 61],
+    'Translucent Roofing': [61, 61],
+    'Driveway': [186, 186],
+    'Asphalt': [206, 206],
+    'Road (Driveable Surface)': [210, 210],
+    'Concrete Slab': [52, 52],
+    'Solar Panel': [69, 69],
+    'Swimming Pool': [130, 130],
+    'Lawn Grass': [114, 114],
+    'Water Body': [129, 132],
+    'Skylight': [68, 68],
+    'Residential Chimney': [16, 16],
+    'Dumpster': [98, 98]
+  };
   var dataRoot = String(qp('dataRoot') || '');
   var record = null;
   var catalogById = {};
@@ -585,6 +626,7 @@
           record.nadir = { url: row.nadir_url, bounds: row.bounds };
         }
         if (row.ai_url && !record.ai_url) record.ai_url = row.ai_url;
+        if (row.account_type) accountType = String(row.account_type).toLowerCase().indexOf('comm') === 0 ? 'commercial' : 'residential';
         if (row.regions_original_url) regionsRemote.original = String(row.regions_original_url);
         regionsRemote.edits = row.regions_edits_url ? String(row.regions_edits_url) : '';
         applyRecord(record);
@@ -1785,6 +1827,8 @@
 
   function rebuildConsumed() {
     consumed = {};
+    // Regions editor ignores pins entirely (they belong to the pins editor).
+    if (MODE !== 'pins') return;
     ((record && record.elements) || []).forEach(function (p) {
       if (p.region_id) consumed[String(p.region_id)] = true;
       else if (p.source === 'ai' && p.ai_index != null) consumed[p.ai_index] = true;
@@ -1867,7 +1911,7 @@
   }
 
   function drawHints(ai) {
-    if (!map || !ai) return;
+    if (!map || !ai || MODE === 'pins') return;
     if (!document.getElementById('hintToggle').checked) return;
     var picking = isEditTool() && !brushTarget;
     (ai.features || []).forEach(function (f, i) {
@@ -1949,6 +1993,7 @@
     pinMarkers.forEach(function (m) { m.setMap(null); });
     pinMarkers = [];
     var b = record && record.nadir && record.nadir.bounds;
+    if (MODE !== 'pins') return;
     if (!map || !b) {
       renderPinList();
       return;
@@ -1984,6 +2029,95 @@
       return false;
     }
     return true;
+  }
+
+  // ── Pins editor ──────────────────────────────────────────────────────────────
+  var VEGETATION_RE = /vegetation|tree overhang|natural/i;
+
+  function seedIdForClass(cls) {
+    var row = SEED_MAP[cls];
+    if (!row) return null;
+    return accountType === 'commercial' ? row[1] : row[0];
+  }
+
+  // Region the point falls in (visible layers first), for pin suggestions.
+  function regionAt(ll) {
+    var fs = (aiPack && aiPack.features) || [];
+    var hit = null;
+    for (var i = 0; i < fs.length; i++) {
+      var f = fs[i];
+      if (!pointInFeature(ll, f)) continue;
+      var cls = featureClass(f);
+      if (layerOn[cls] === false) { if (!hit) hit = f; continue; }
+      return f;
+    }
+    return hit;
+  }
+
+  // One pin per finished region at its interior point. Vegetation/nature classes
+  // are skipped (Lawn Grass kept); classes with no catalog pin are skipped and
+  // reported. Largest regions first so the cap lands on the small stuff.
+  function seedPinsFromRegions(replace) {
+    if (!aiPack || !Array.isArray(aiPack.features)) {
+      setStatus('Regions are not loaded yet', 'err');
+      return;
+    }
+    var b = record && record.nadir && record.nadir.bounds;
+    if (!b) { setStatus('No nadir bounds', 'err'); return; }
+    if (replace) record.elements = [];
+    var have = {};
+    (record.elements || []).forEach(function (p) { if (p.region_id) have[String(p.region_id)] = true; });
+    var c0 = featureCentroid({ geometry: { type: 'Polygon', coordinates: [[[b.west, b.south], [b.east, b.south], [b.east, b.north], [b.west, b.north], [b.west, b.south]]] } });
+    var fr = meterFrame(c0.lat, c0.lng);
+    var cands = [];
+    var skipped = {};
+    aiPack.features.forEach(function (f) {
+      var rid = String(f.id);
+      var cls = featureClass(f);
+      if (VEGETATION_RE.test(cls) && cls !== 'Lawn Grass') return;
+      if (have[rid]) return;
+      var id = seedIdForClass(cls);
+      if (!id) { skipped[cls] = (skipped[cls] || 0) + 1; return; }
+      var area = geometryAreaM2(f.geometry, fr);
+      cands.push({ f: f, rid: rid, cls: cls, id: id, area: area });
+    });
+    cands.sort(function (p, q) { return q.area - p.area; });
+    var added = 0, oob = 0, capped = 0;
+    cands.forEach(function (cnd) {
+      if (((record && record.elements) || []).length >= PIN_HARD_LIMIT) { capped++; return; }
+      var ll = interiorPoint(cnd.f);
+      var xy = ll && latLngToPct(ll.lat, ll.lng, b);
+      if (!xy) { oob++; return; }
+      var pin = { id: cnd.id, x: xy.x, y: xy.y, source: 'region', region_id: cnd.rid, ai_class: cnd.cls };
+      record.elements = (record.elements || []).concat([pin]);
+      added++;
+    });
+    persistLocal();
+    rebuildConsumed();
+    redrawAi();
+    var notes = [];
+    var skipNames = Object.keys(skipped).sort();
+    if (skipNames.length) notes.push('no catalog pin for ' + skipNames.map(function (k) { return k + ' (' + skipped[k] + ')'; }).join(', '));
+    if (oob) notes.push(oob + ' outside the nadir frame — not placed');
+    if (capped) notes.push(capped + ' over the ' + PIN_HARD_LIMIT + '-pin cap — not placed');
+    setStatus('Seeded ' + added + ' pin(s) from regions' + (notes.length ? ' · ' + notes.join(' · ') : '') + ' — Save to write the sheet', capped || oob ? 'err' : '');
+  }
+
+  function placePinAt(ll) {
+    if (!canAddPin()) return;
+    var f = regionAt(ll);
+    var cls = f ? featureClass(f) : '';
+    var seedId = cls ? seedIdForClass(cls) : null;
+    var suggested = [];
+    if (seedId) suggested.push(seedId);
+    suggestIds(cls).forEach(function (id) { if (suggested.indexOf(id) === -1) suggested.push(id); });
+    openPicker(cls ? ('Pin on ' + cls + ' as…') : 'Pin as…', suggested, function (catalogId) {
+      var pin = addPinAt(ll, catalogId, { source: 'placed', region_id: f ? String(f.id) : '', ai_class: cls });
+      if (!pin) return;
+      rebuildConsumed();
+      redrawAi();
+      setStatus('Placed ' + ((catalogById[catalogId] && catalogById[catalogId].name) || catalogId) + ' — Save to write the sheet');
+    });
   }
 
   function addPinAt(ll, catalogId, meta) {
@@ -2641,6 +2775,13 @@
     var p = pins[i];
     if (!p) return;
     pins.splice(i, 1);
+    if (MODE === 'pins') {
+      // Pins editor: a pin is just a pin. Regions are never touched here.
+      persistLocal();
+      drawPins();
+      setStatus('Removed pin');
+      return;
+    }
     if (p.drawn_id) {
       ensureDrawn().features = ensureDrawn().features.filter(function (f) { return f.id !== p.drawn_id; });
     }
@@ -2792,11 +2933,13 @@
     } else {
       redrawAi();
     }
+    if (map) map.setOptions({ draggableCursor: mode === 'place' ? 'crosshair' : (isEditTool() ? 'none' : null) });
     if (mode === 'accept') setStatus('Click a visible AI polygon');
     else if (mode === 'draw') {
       updateBrushLabel();
       setStatus('Draw: + click a centroid, then left-click adds and right-click removes. Scroll to zoom.');
     }
+    else if (mode === 'place') setStatus('Place pin: click the map where the pin belongs, then choose its catalog entry.');
     else setStatus('');
   }
 
@@ -2833,7 +2976,12 @@
     });
     map.fitBounds(b);
     map.addListener('click', function (e) {
-      if (isEditTool() && !brushTarget && e && e.latLng) {
+      if (!e || !e.latLng) return;
+      if (toolMode === 'place' && MODE === 'pins') {
+        placePinAt({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+        return;
+      }
+      if (isEditTool() && !brushTarget) {
         selectBrushAt({ lat: e.latLng.lat(), lng: e.latLng.lng() });
       }
     });
@@ -2925,7 +3073,18 @@
       // regions (edits) from the start, otherwise a merged delivery reads e.g.
       // Driveway 16 until the first layer is checked and then drops to 2. Load
       // regions right away; counts are recounted from the working file on arrival.
-      ensureFeatures().then(function () { redrawAi(); }).catch(function () {});
+      ensureFeatures().then(function () {
+        redrawAi();
+        if (MODE === 'pins') {
+          // Pins editor shows the finished regions; turn every non-vegetation
+          // layer on so the reviewer sees what the pins sit on, and seed pins
+          // the first time a row has none.
+          Object.keys(layerOn).forEach(function (k) { layerOn[k] = !VEGETATION_RE.test(k) || k === 'Lawn Grass'; });
+          renderLayers(aiPack);
+          redrawAi();
+          if (!((record && record.elements) || []).length) seedPinsFromRegions(false);
+        }
+      }).catch(function () {});
     }).catch(function (e) { setStatus('AI hints: ' + e.message, 'err'); });
   }
 
@@ -3094,6 +3253,12 @@
     ev.stopPropagation();
     clearBrushPick();
   });
+  document.getElementById('seedPins').addEventListener('click', function (ev) {
+    ev.stopPropagation();
+    var n = ((record && record.elements) || []).length;
+    if (n && !window.confirm('Replace the ' + n + ' current pin(s) with one pin per region?')) return;
+    ensureFeatures().then(function () { seedPinsFromRegions(true); }).catch(function () {});
+  });
   document.addEventListener('keydown', function (ev) {
     if (!isEditTool()) return;
     if (!(ev.ctrlKey || ev.metaKey)) return;
@@ -3144,14 +3309,24 @@
       version: BUILD,
       view: 'nearmap',
       route: 'nearmap-save',
-      site_no: siteNo,
-      pins: (record && record.elements) || [],
-      drawn: (record && record.drawn) || emptyDrawn()
+      mode: MODE,
+      site_no: siteNo
     };
-    // Regions go along as a diff against the vendor original; Apps Script
-    // publishes it to GitHub data/nearmap/edits/{id}.json. After Revert the diff
-    // is empty, which clears the published edits.
-    if (aiPack && Array.isArray(aiPack.features) && originalFc) body.regions = regionsDiff();
+    if (MODE === 'pins') {
+      // Pins editor saves pins only; regions (and their GitHub edits file) are
+      // untouched. Absent `pins` key on the other side means "leave column R".
+      body.pins = (record && record.elements) || [];
+      body.drawn = (record && record.drawn) || emptyDrawn();
+    } else {
+      // Regions editor saves the diff against the vendor original; Apps Script
+      // publishes it to GitHub data/nearmap/edits/{id}.json. After Revert the
+      // diff is empty, which clears the published edits. No `pins` key.
+      if (!(aiPack && Array.isArray(aiPack.features) && originalFc)) {
+        setStatus('Regions are not loaded yet', 'err');
+        return;
+      }
+      body.regions = regionsDiff();
+    }
     setStatus('Saving…');
     fetch(NM_API_URL, {
       method: 'POST',
@@ -3161,8 +3336,10 @@
       if (j && j.ok) {
         var rg = j.regions;
         if (rg && rg.url) regionsRemote.edits = String(rg.url);
-        setStatus('Saved ' + (j.saved || 0) + ' pin(s) to sheet' +
-          (rg ? (' · regions ' + rg.changed + ' changed / ' + rg.removed + ' removed → edits/' ) : ''));
+        var bits = [];
+        if (j.saved != null) bits.push('Saved ' + j.saved + ' pin(s) to sheet');
+        if (rg) bits.push('regions ' + rg.changed + ' changed / ' + rg.removed + ' removed → edits/');
+        setStatus(bits.join(' · ') || 'Saved');
       } else {
         setStatus((j && j.error) || 'Save failed', 'err');
       }

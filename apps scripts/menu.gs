@@ -27,6 +27,12 @@
 //
 // v5.31 (2026-09-01): Golf Pipeline — geocode-only Pass 1 + golf-review.html.
 // Independent Golf Pins catalog. No Bedrock, no element-critique, no GitHub.
+//
+// v5.33 (2026-09-07): Nearmap Pipeline — own mothership tab "Nearmap"
+// (setupNearmapSheet). Isolated sheet + CloudFront import + review page +
+// GitHub data/nearmap/. Reviewer-first elements (no Nearmap Pass 1 menu).
+// Does not touch satellite Pass 1/2, VIEW_ORDER, or Sync Now (All).
+// Top-level Sync This Row stays satellite.
 // ============================================================
 
 function onOpen() {
@@ -82,6 +88,14 @@ function onOpen() {
       .addItem('Geocode Address — Pass 1 (All Missing Coords)', 'generateGolfGeocodeBatch')
       .addItem('Open Golf Review (This Row)', 'openGolfReviewForActiveRow'))
   .addSeparator()
+  .addSubMenu(SpreadsheetApp.getUi().createMenu('Nearmap Pipeline')
+      .addItem('Set Up Nearmap Sheet', 'setupNearmapSheet')
+      .addItem('Import from CloudFront registry', 'importNearmapRegistry')
+      .addItem('Open Nearmap Regions Editor (This Row)', 'openNearmapReviewForActiveRow')
+      .addItem('Open Nearmap Pins Editor (This Row)', 'openNearmapPinsForActiveRow')
+      .addItem('Sync This Row to GitHub', 'processNearmapForActiveRow')
+      .addItem('Sync Nearmap to GitHub', 'processNearmapSheet'))
+  .addSeparator()
   .addSubMenu(SpreadsheetApp.getUi().createMenu('Responder Intel (Client)')
     .addItem('Publish This Row', 'publishResponderIntelThisRow')
     .addItem('Publish All Complete Rows', 'publishResponderIntel'))
@@ -121,6 +135,7 @@ function generateForPlane()     { processPlaneSheet(); }
 function generateForDrone()     { processSheet(DRONE_SHEET,    'drone'); }
 function generateForInterior()  { processSheet(INTERIOR_SHEET, 'interior'); }
 function syncNow() {
+  // Nearmap is intentionally omitted. Sync it from Nearmap Pipeline only.
   processSatelliteSheet();
   processPlaneSheet();
   processSheet(DRONE_SHEET,    'drone');

@@ -2,6 +2,21 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.5.0: two editors on one page — Regions and Pins
+
+**What.**
+- `nearmap-review.html` v1.5.0. `MODE` = `?mode=pins` or `regions` (default); `body.mode-*` with `.regions-only` / `.pins-only` visibility. **Regions editor:** Pan / Draw, Size, ◀ ▶, Clear brush, Revert regions; pins are not drawn, `consumed` is empty, Save posts `{mode:'regions', regions: diff}` with **no `pins` key**. **Pins editor:** Pan / Place pin / Seed from regions, pin list with delete (deleting a pin never touches regions), Save posts `{mode:'pins', pins, drawn}` with no `regions`. Regions are read-only context; all non-vegetation layers (plus Lawn Grass) are switched on. `seedPinsFromRegions`: one pin per region at its `interiorPoint`, classes mapped by `SEED_MAP` × account type (Building→57/19, Roof & Translucent Roofing→61, Driveway→186, Asphalt→206, Road→210, Concrete Slab→52, Solar Panel→69, Swimming Pool→130, Lawn Grass→114, Water Body→129/132, Skylight→68, Residential Chimney→16, Dumpster→98); vegetation/Tree Overhang/Natural skipped except Lawn Grass; Car and Building (Deprecated) skipped (no pin / duplicate); largest regions first; stops at the 20-pin cap and reports skips, out-of-bounds and cap. Auto-seeds on first open when the row has no pins; the Seed button re-seeds after a confirm. `placePinAt`: map click → picker (region's mapped id first, then class suggestions) → pin with `source:'placed'`.
+- `apps scripts/nearmap.gs`: `nmSavePins_` writes column R only when `pins` is an array (absent key = leave R alone) and requires pins or regions; response `saved` is null when pins were not sent; `nearmap-elements` returns `account_type`; `buildNearmapReviewUrl_(sheet,row,mode)`, `nmOpenEditor_`, `openNearmapPinsForActiveRow`.
+- `apps scripts/menu.gs`: Nearmap Pipeline → "Open Nearmap Regions Editor (This Row)" and "Open Nearmap Pins Editor (This Row)".
+
+**Why.** Jonah: two separate editors, regions and pins, never at the same time; a pin for every region except vegetation/nature, Lawn Grass being the one that gets a pin.
+
+**Files.** `nearmap-review.html`, `apps scripts/nearmap.gs`, `apps scripts/menu.gs`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`
+
+**How it was checked.** `node --check`; missing ids / onclick / dup funcs; BUILD v1.5.0. `nearmap.gs` + `menu.gs` brace/paren 0, `node --check`. Headless Chromium with the web app stubbed (scratch Columbia): regions mode — Draw/Revert/hints visible, Place/Seed/pin list hidden, a sheet pin stays hidden, Save payload keys `[mode, regions]`; pins mode — Place/Seed/pin list visible, Draw/Revert/hints hidden, auto-seed "Seeded 20 pin(s) … no catalog pin for Building (Deprecated) (3), Car (18) · 12 over the 20-pin cap" on unmerged vendor data, class mix Driveway×7 Building×3 Roof×3 Lawn×2 Patio×2 Parking lot Private road Dumpster, delete → 19/20, Place pin → picker "Pin on Road (Driveable Surface) as…" → "Placed Private road", Save payload keys `[drawn, mode, pins]`, 0 page errors. **Not verified:** live Apps Script (paste config.gs, nearmap.gs, menu.gs; new deployment), real GitHub push of edits.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — v1.4.1: pin sits inside irregular shapes
 
 **What.** `interiorPoint(f)` replaces the vertex-average for pin placement and hint dots: area (shoelace) centroid of the largest polygon when it lies inside that polygon; otherwise the midpoint of the interior span — on horizontal and vertical scan lines through the bbox, centre outward — with the greatest clearance from any edge (span width breaks ties). `largestRingCentroid` now delegates to it; `drawHints` uses it. All math in the local metre frame.

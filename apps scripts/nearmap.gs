@@ -881,7 +881,9 @@ function processNearmapForActiveRow() {
   SpreadsheetApp.getUi().alert('Nearmap sync', 'Published data/nearmap/' + r.id + '.json', SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
-function buildNearmapReviewUrl_(sheet, row) {
+// Two editors on one page: mode=regions (default; Draw/erase vendor regions) and
+// mode=pins (catalog pins seeded from the finished regions). Never both at once.
+function buildNearmapReviewUrl_(sheet, row, mode) {
   const delivery = String(sheet.getRange(row, NM_COL_DELIVERY).getValue() || '').trim();
   const siteNo = nmValidSiteNo_(sheet.getRange(row, NM_COL_SITE_NO).getValue());
   const creds = getCredentials();
@@ -894,21 +896,25 @@ function buildNearmapReviewUrl_(sheet, row) {
   }
   if (delivery) parts.push('delivery=' + encodeURIComponent(delivery));
   if (!parts.length) return null;
+  if (mode === 'pins') parts.push('mode=pins');
   return url + parts.join('&');
 }
 
-function openNearmapReviewForActiveRow() {
+function nmOpenEditor_(mode, label) {
   const sheet = nmSheet_();
   const row = nmActiveRow_();
   if (!row) return;
-  const url = buildNearmapReviewUrl_(sheet, row);
+  const url = buildNearmapReviewUrl_(sheet, row, mode);
   if (!url) {
-    SpreadsheetApp.getUi().alert('Nearmap Review', 'Row needs a Delivery Id (import registry) and/or Site No.', SpreadsheetApp.getUi().ButtonSet.OK);
+    SpreadsheetApp.getUi().alert(label, 'Row needs a Delivery Id (import registry) and/or Site No.', SpreadsheetApp.getUi().ButtonSet.OK);
     return;
   }
   const address = String(sheet.getRange(row, NM_COL_ADDRESS).getValue() || '').trim();
-  reviewOpenDialog_(address || 'Nearmap', url);
+  reviewOpenDialog_((address || 'Nearmap') + ' — ' + label, url);
 }
+
+function openNearmapReviewForActiveRow() { nmOpenEditor_('regions', 'Regions'); }
+function openNearmapPinsForActiveRow() { nmOpenEditor_('pins', 'Pins'); }
 
 function nmGetElements_(p) {
   const siteNo = nmValidSiteNo_(p && p.site_no);
@@ -929,6 +935,7 @@ function nmGetElements_(p) {
       route: 'nearmap-elements',
       site_no: siteNo,
       property_id: id,
+      account_type: normalizeAccountType(vals[i][NM_COL_ACCOUNT_TYPE - 1]),
       delivery_id: String(vals[i][NM_COL_DELIVERY - 1] || '').trim(),
       address: String(vals[i][NM_COL_ADDRESS - 1] || '').trim(),
       nadir_url: String(vals[i][NM_COL_NADIR_URL - 1] || '').trim(),
@@ -980,16 +987,21 @@ function nmValidateRegionsDiff_(regions, deliveryId, baseUrl) {
   return { doc: doc, text: text };
 }
 
+// Save from either editor. The pins editor sends `pins`; the regions editor sends
+// `regions` and NO `pins` key — column R is left alone in that case (an absent
+// key is not an empty list).
 function nmSavePins_(payload) {
   const siteNo = nmValidSiteNo_(payload && payload.site_no);
   if (!siteNo) throw new Error('site_no required');
-  const pins = nmValidateElementPins_(payload.pins || [], (function () {
+  const hasPins = Array.isArray(payload.pins);
+  const pins = hasPins ? nmValidateElementPins_(payload.pins, (function () {
     const cat = nmFetchPinCatalog_(payload.account_type || '');
     return cat.elementIds;
-  })());
-  if ((payload.pins || []).length > NM_MAX_PINS) {
+  })()) : null;
+  if (hasPins && payload.pins.length > NM_MAX_PINS) {
     throw new Error('refusing save over NM_MAX_PINS (' + NM_MAX_PINS + ')');
   }
+  if (!hasPins && !payload.regions) throw new Error('nothing to save (no pins, no regions)');
   const sheet = nmSheet_();
   const last = sheet.getLastRow();
   if (last < 2) throw new Error('Nearmap sheet empty');
@@ -998,7 +1010,7 @@ function nmSavePins_(payload) {
   for (let i = 0; i < vals.length; i++) {
     if (nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]) !== siteNo) continue;
     const row = i + 2;
-    writePlainCell(sheet, row, NM_COL_ELEMENTS, pins.length ? JSON.stringify(pins) : '');
+    if (hasPins) writePlainCell(sheet, row, NM_COL_ELEMENTS, pins.length ? JSON.stringify(pins) : '');
     const prevW = nmParseW_(vals[i][NM_COL_DRAWN - 1]);
     const drawn = payload.drawn ? nmParseDrawn_(payload.drawn) : prevW.drawn;
     let edits = prevW.edits;
@@ -1023,9 +1035,11 @@ function nmSavePins_(payload) {
       regionsOut = { changed: edits.changed, removed: edits.removed, url: edits.url };
     }
     nmWriteW_(sheet, row, drawn, edits);
-    writePlainCell(sheet, row, NM_COL_STATUS, 'saved ' + pins.length + ' pin(s)' +
-      (regionsOut ? (' · regions ' + regionsOut.changed + ' changed / ' + regionsOut.removed + ' removed') : ''));
-    return { ok: true, route: 'nearmap-save', site_no: siteNo, saved: pins.length, regions: regionsOut };
+    const parts = [];
+    if (hasPins) parts.push('saved ' + pins.length + ' pin(s)');
+    if (regionsOut) parts.push('regions ' + regionsOut.changed + ' changed / ' + regionsOut.removed + ' removed');
+    writePlainCell(sheet, row, NM_COL_STATUS, parts.join(' · '));
+    return { ok: true, route: 'nearmap-save', site_no: siteNo, saved: hasPins ? pins.length : null, regions: regionsOut };
   }
   throw new Error('no Nearmap row for site_no ' + siteNo);
 }
