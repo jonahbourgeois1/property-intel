@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.7: close leftover seams; do not flood-fill on connect
+
+**What.** Removed GeoJSON hole-area fill (`HOLE_REL_FRAC` / `fillSmallHoles`). That was still flood-filling enclosed interiors when a stroke connected. Add strokes now **close the paint mask** (dilate then erode by `2 ×` brush radius): leftover seams and gaps between almost-overlapping islands fill; a courtyard wider than ~2× that radius stays empty. Erase cutouts are punched back out via `properties.locked_holes`.
+
+**Why.** Jonah: autofill is still on for connecting/creating new areas, and filling in gaps has no autofill. Diagnosis: the leftover-hole rule only looked at holes *inside* one polygon, so the triangles in a scribble (gaps *between* brush islands) never filled; and filling holes below 8% of the outer still filled enclosed space when a stroke connected.
+
+**Files.** `nearmap-review.html` (v1.6.7), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless: Size-14 loop → 201 m² outer with a 47 m² hole (close nibbles the ring but does not flood-fill); grow on the ring keeps the hole; Size-10 erase cutout survives a later grow; zigzag scribble with 0.6 m gaps → 0 holes. 0 page errors.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.6: no loop autofill; leftover crumbs fill like erase
 
 **What.** Removed the 240 m² / 32 m "fill anything enclosed" thresholds. A grow stroke now fills a hole only when it is a leftover the same way erase drops a leftover piece: crumb (`ERASE_MIN_FRAG_M2`), sliver (`ERASE_SLIVER_WIDTH_M`), or under `HOLE_REL_FRAC = 0.08` of its outer ring. Erase cutouts are stored as `properties.locked_holes` and survive later grow strokes; scribble leftovers are not locked, so a later grow can still close them. Painting a closed loop does not fill the inside.

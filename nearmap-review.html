@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.6, 2026-09-09)
-  Holes are real cutouts. Closed-loop interiors are not autofilled. Leftover
-  crumbs/slivers from adding paint fill the same way leftover pieces delete on erase.
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.7, 2026-09-09)
+  Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
+  between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions FC.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
@@ -223,7 +223,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.6';
+  var BUILD = 'v1.6.7';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -238,14 +238,11 @@
   // whole regions when a small addition was trimmed.
   var ERASE_MIN_FRAG_M2 = 3;
   var ERASE_SLIVER_WIDTH_M = 0.8;
-  // Leftover-gap clean-up after a grow stroke — the add-side mirror of the erase
-  // fragment rule, NOT "autofill anything enclosed". A hole fills when it is a
-  // crumb, a sliver, or a small leftover of its outer ring (HOLE_REL_FRAC of
-  // outer area), the same way a leftover piece deletes when you erase enough.
-  // Painting a closed loop does not fill the inside: that interior is a large
-  // share of the outer, not a leftover. Erase cutouts are locked and never filled
-  // by a later grow; only painting over them removes them. Erase never fills.
-  var HOLE_REL_FRAC = 0.08;
+  // Gap close on add (metres). Dilate-then-erode of the paint mask by this
+  // multiple of the brush radius fills leftover seams between almost-overlapping
+  // passes — the add-side of dropping slivers on erase. It does NOT flood-fill
+  // an enclosed courtyard: a hole wider than ~2× this radius stays empty.
+  var GAP_CLOSE_BRUSH = 2;
 
   var CLASS_MAP = [
     { id: 61, name: 'Roof', classes: ['Roof'] },
@@ -1479,6 +1476,29 @@
     return minMaxFilter(minMaxFilter(grid, nx, ny, k, true), nx, ny, k, false);
   }
 
+  function closeMask(grid, nx, ny, k) {
+    return minMaxFilter(minMaxFilter(grid, nx, ny, k, false), nx, ny, k, true);
+  }
+
+  function punchLockedHoles(grid, nx, ny, cell, west, south, fr, locked) {
+    if (!locked || !locked.length) return;
+    var x, y, h;
+    for (y = 0; y < ny; y++) {
+      for (x = 0; x < nx; x++) {
+        var idx = y * nx + x;
+        if (!grid[idx]) continue;
+        var lng = fr.lng(west + (x + 0.5) * cell);
+        var lat = fr.lat(south + (y + 0.5) * cell);
+        for (h = 0; h < locked.length; h++) {
+          if (pointInRing(lng, lat, locked[h])) {
+            grid[idx] = 0;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   function unionPaintedGeometry(seedFeat, extraFeats, stamps, brushR, erase) {
     var feats = [];
     if (seedFeat) feats.push(seedFeat);
@@ -1494,7 +1514,8 @@
     lat0 /= pts.length;
     lng0 /= pts.length;
     var fr = meterFrame(lat0, lng0);
-    var pad = brushR + JOIN_M + 1;
+    var gapM = erase ? 0 : Math.max(brushR, brushR * GAP_CLOSE_BRUSH);
+    var pad = brushR + JOIN_M + 1 + gapM;
     var west = Infinity, east = -Infinity, south = Infinity, north = -Infinity;
     pts.forEach(function (p) {
       var x = fr.x(p.lng), y = fr.y(p.lat);
@@ -1572,14 +1593,20 @@
           }
         }
       }
+    } else {
+      // Close leftover seams between almost-overlapping paint (gaps between
+      // islands, thin triangles the brush didn't quite cover). A courtyard
+      // wider than ~2× the close radius is unchanged — connecting a loop
+      // does not flood-fill the inside.
+      var ck = Math.max(1, Math.round(gapM / cell));
+      grid = closeMask(grid, nx, ny, ck);
+      punchLockedHoles(grid, nx, ny, cell, west, south, fr, lockedHolesFrom(feats));
     }
     var filled = 0;
     for (i = 0; i < grid.length; i++) if (grid[i]) filled++;
     if (!filled) return null;
-    var masked = geometryFromMask(grid, nx, ny, cell, west, south, fr);
-    if (!erase) masked = fillSmallHoles(masked, lockedHolesFrom(feats), fr);
     return conformGeometry(
-      masked,
+      geometryFromMask(grid, nx, ny, cell, west, south, fr),
       feats,
       fr,
       Math.max(0.55, cell * 2.4),
@@ -1842,35 +1869,6 @@
     });
     if (rings.length) dest.properties.locked_holes = rings;
     pruneLockedHoles(dest);
-  }
-
-  // Grow-stroke leftover-gap rule. Locked (erase) holes are never filled.
-  // Everything else uses the same crumb / sliver / "small leftover of the
-  // outer" test as erase-fragment drop — a closed loop's interior is a large
-  // share of the outer, so it stays a cutout.
-  function fillSmallHoles(geom, lockedRings, fr) {
-    if (!geom) return geom;
-    var locked = lockedRings || [];
-    var polys = geometryPolys(geom).map(function (poly) {
-      if (!poly[0]) return poly;
-      var outerM = ringMetricsXY(poly[0], fr);
-      var kept = [poly[0]];
-      for (var h = 1; h < poly.length; h++) {
-        var ring = poly[h];
-        var m = ringMetricsXY(ring, fr);
-        var meanWidth = m.perimeter > 0 ? (2 * m.area / m.perimeter) : 0;
-        var leftover = m.area < ERASE_MIN_FRAG_M2 ||
-          meanWidth < ERASE_SLIVER_WIDTH_M ||
-          (outerM.area > 0 && m.area < HOLE_REL_FRAC * outerM.area);
-        var cutout = false;
-        for (var k = 0; k < locked.length && !cutout; k++) {
-          if (ringsShareGround(ring, locked[k])) cutout = true;
-        }
-        if (!leftover || cutout) kept.push(ring);
-      }
-      return kept;
-    });
-    return polysToGeometry(polys);
   }
 
   // Net area (outer minus holes) and outer-ring perimeter of one polygon, in m².
@@ -2529,6 +2527,7 @@
       return;
     }
     var r = brushRadiusM();
+    var joinR = r + Math.max(JOIN_M, r * GAP_CLOSE_BRUSH);
     var cls = brushTarget.className;
     var seedId = brushTarget.regionId;
     var dense = densifyStamps(working.stamps, Math.min(0.45, Math.max(0.2, r * 0.4)));
@@ -2552,7 +2551,7 @@
       applyEraseStroke(seed, dense, r, cls);
       return;
     }
-    var detached = !strokeTouchesFeature(dense, seed.feature, r);
+    var detached = !strokeTouchesFeature(dense, seed.feature, joinR);
 
     function collectExtras(idList) {
       extraFeats = [];
@@ -2568,7 +2567,7 @@
     }
 
     if (detached) {
-      ids = hitIdsForStroke(dense, r + JOIN_M, cls, null);
+      ids = hitIdsForStroke(dense, joinR, cls, null);
       collectExtras(ids);
       // Keep the picked region out of the absorb pass: if the new paint reaches
       // it (directly or via scraps), the stroke is a grow, not a new region.
@@ -2579,7 +2578,7 @@
         setStatus('Paint did not produce a region', 'err');
         return;
       }
-      var reachesSeed = strokeTouchesFeature(dense, seed.feature, r + JOIN_M);
+      var reachesSeed = strokeTouchesFeature(dense, seed.feature, joinR);
       if (!reachesSeed) {
         var newPolys = geometryPolys(newGeom);
         for (var q = 0; q < newPolys.length && !reachesSeed; q++) {
@@ -2617,7 +2616,7 @@
       return;
     }
 
-    ids = hitIdsForStroke(dense, r + JOIN_M, cls, seedId);
+    ids = hitIdsForStroke(dense, joinR, cls, seedId);
     collectExtras(ids);
     var geom = unionWithAbsorb(seed.feature, extra, extraFeats, dense, r, cls, seedId);
     if (!geom) {
@@ -2785,7 +2784,7 @@
     if (!brushTarget || !aiPack || !Array.isArray(aiPack.features)) return;
     working.stamps.push(ll);
     var r = brushRadiusM();
-    working.ids = hitIdsForStroke(working.stamps, r + JOIN_M, brushTarget.className, brushTarget.regionId);
+    working.ids = hitIdsForStroke(working.stamps, r + Math.max(JOIN_M, r * GAP_CLOSE_BRUSH), brushTarget.className, brushTarget.regionId);
     updateBrushLabel();
     showBrushStroke();
   }
