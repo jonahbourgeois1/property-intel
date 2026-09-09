@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.7, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.8, 2026-09-09)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -223,7 +223,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.7';
+  var BUILD = 'v1.6.8';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -242,7 +242,7 @@
   // multiple of the brush radius fills leftover seams between almost-overlapping
   // passes — the add-side of dropping slivers on erase. It does NOT flood-fill
   // an enclosed courtyard: a hole wider than ~2× this radius stays empty.
-  var GAP_CLOSE_BRUSH = 2;
+  var GAP_CLOSE_BRUSH = 1;
 
   var CLASS_MAP = [
     { id: 61, name: 'Roof', classes: ['Roof'] },

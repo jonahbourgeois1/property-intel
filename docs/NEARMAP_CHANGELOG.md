@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-review v1.6.8: gap-close ×0.5
+
+**What.** `GAP_CLOSE_BRUSH` 2 → 1. Close radius is now 1× brush radius instead of 2×.
+
+**Why.** Jonah: "much better. cut the auto fill by 0.5".
+
+**Files.** `nearmap-review.html` (v1.6.8), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless hole suite re-run: loop interior still empty; 0.6 m scribble seams still close at Size-14 (gap < 1× brush); erased cutout still survives a later grow. 0 page errors.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-review v1.6.7: close leftover seams; do not flood-fill on connect
 
 **What.** Removed GeoJSON hole-area fill (`HOLE_REL_FRAC` / `fillSmallHoles`). That was still flood-filling enclosed interiors when a stroke connected. Add strokes now **close the paint mask** (dilate then erode by `2 ×` brush radius): leftover seams and gaps between almost-overlapping islands fill; a courtyard wider than ~2× that radius stays empty. Erase cutouts are punched back out via `properties.locked_holes`.
