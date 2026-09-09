@@ -96,17 +96,21 @@ Use `review_server.py` (not `python -m http.server`) so Draw can PUT local `ai/e
 
 Paste for this build: `config.gs`, `nearmap.gs`, `menu.gs` (and `critique-api.gs` if its Nearmap routes are not deployed), save, **new deployment version**.
 
-### Sheet mode (v1.4.0) — original/edits folder format
+### Sheet mode (v1.6.0) — original/edits folder format on S3, no GitHub
 
 Open from the sheet (either editor above; URL carries `site_no=`), or via the published `?property=` link:
 
-1. Page asks `?route=nearmap-elements&site_no=` → gets pins, `regions_original_url` (CloudFront `ai/original/regions.json`) and `regions_edits_url` (GitHub `data/nearmap/edits/{id}.json`, empty until the first Save).
-2. Regions shown = original − removed + changed from the edits diff. Status shows "Loaded edits: N changed, M removed".
-3. **Save** posts pins + a regions diff to the web app; `nmSavePins_` writes pins to R, pushes `data/nearmap/edits/{id}.json` to GitHub, and writes a summary to W. Status: "regions N changed / M removed → edits/".
-4. **Revert regions** → original in memory; status says "click Save to publish the reset"; that Save pushes an empty diff.
+1. Page asks `?route=nearmap-elements&site_no=` → gets pins, `regions_original_url` and `regions_edits_url` (both CloudFront: `…/ai/original/regions.json`, `…/ai/edits/regions.json`).
+2. Regions shown = the edits file (seeded from original by promote, rewritten by Save). Status: "Loaded edits: N regions (saved …)".
+3. **Save** (regions editor) posts the working FeatureCollection to the web app; `nmSavePins_` PUTs it to S3 `nearmap/{delivery}/ai/edits/regions.json` with SigV4 and writes a summary to W. Status: "regions saved to S3 edits/ (N regions, c changed / r removed vs original)". Column R is untouched.
+4. **Revert regions** → original in memory; status says "click Save to publish the reset"; that Save writes original back into edits.
 5. Nothing is reset on reload in sheet mode. `&fresh=1` forces a fresh start if ever needed.
 
-Deploy: paste `nearmap.gs` over the existing file, **save AND create a new web-app deployment version** (saved ≠ deployed). Re-promote deliveries once with `promote.py` so CloudFront gets `ai/edits/regions.json` seeded (`--reset-edits` to reseed). The page's `?route=ping` response is unchanged; check `nearmap-elements` for a `regions_original_url` key to confirm the new deployment is live.
+One-time AWS setup: the IAM user behind `AWS_ACCESS_KEY_ID` in Script Properties needs `s3:PutObject` on `arn:aws:s3:::property-intel-tiles/nearmap/*/ai/edits/regions.json` and `arn:aws:s3:::property-intel-tiles/nearmap/_probe/*`. Verify from the editor: run `checkS3EditsWrite` → "S3 PUT ok". A 403 `AccessDenied` there means the policy is missing.
+
+Deploy: paste `nearmap.gs` over the existing file, **save AND create a new web-app deployment version** (saved ≠ deployed). Re-promote deliveries once with `promote.py` so S3 gets `ai/edits/regions.json` seeded (`--reset-edits` to reseed). Check `nearmap-elements` for a `regions_edits_url` ending in `/ai/edits/regions.json` to confirm the new deployment is live.
+
+GitHub: the two Apps Script commits under `data/nearmap/edits/` from the 2026-09-09 trial were removed; the folder no longer exists in the repo. `GITHUB_TOKEN` is still used by the row sync (`data/nearmap/{id}.json`, URLs only) — `checkGitHubToken` reports its health.
 
 Local v1.4.0 (`delivery=` only, no `site_no`): Pan / Draw (Accept removed). One erase stroke cuts every same-class region it crosses. Wheel zoom works in Draw before and after a pick. Erase on painted additions keeps clean edges and never deletes the vendor scrap the addition was grown from. **Testing mode:** every open starts from `ai/original/regions.json` with no pins and resets `ai/edits/regions.json` to the original; add `&fresh=0` to resume edits instead. Sidebar counts reflect the working regions from load (hints.json counts are only a placeholder for the first second). Clear brush next to `◀ ▶` drops the picked region. Paint absorbs any same-class scrap the result covers; Pan or hiding the layer drops the pick. Regions files are fetched with no-store; the edits file on disk always wins over the browser backup. To reset a delivery to the vendor original, copy `ai/original/regions.json` over `ai/edits/regions.json` (or click Revert regions). The active layer (last checked, or click a checked layer's name) highlights every border of that class; Driveway is pink. The stroke preview is as wide as the cursor and matches the area painted or erased. Paint that does not touch the selected region creates a new same-class region and the class count updates. Right-click erase acts on whatever visible region is under the brush (the picked one first, then same class, then any); over bare ground it says "Nothing to remove". An erase that cuts a region in two leaves two regions (the picked one keeps the largest piece, the rest become `dN` with `origin: split`); slivers left by an erase are dropped, and erasing essentially the whole region removes it and its pin (`◀` brings it back). Size slider under Draw; `◀ ▶` under Size step back/forward through paint strokes (memory only, Revert clears them; Ctrl+Z / Ctrl+Shift+Z while Draw is on). The selected pin and polygon are not highlighted. Scroll-zoom stays on while drawing. Published to Pages 2026-09-09.
 

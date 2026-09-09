@@ -2,6 +2,21 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.6.0: regions edits go Apps Script → S3; GitHub out of the regions path
+
+**What.**
+- `apps scripts/nearmap.gs`: `nmS3PutObject_(key, body, contentType)` — SigV4 PUT to `property-intel-tiles.s3.us-east-1.amazonaws.com` signing `cache-control;content-type;host;x-amz-content-sha256;x-amz-date`, `Cache-Control: no-cache`, throws `S3 PUT <key> → HTTP <code>: <Code> — <Message>`. `nmEditsS3Key_(delivery)` = `nearmap/{delivery}/ai/edits/regions.json` (delivery id validated). `nmValidateRegionsDoc_` accepts the working FeatureCollection (Polygon/MultiPolygon Features with ids; adds `delivery_id`, `saved`, `saved_by`, per-class `counts`; 20 MB cap). `nmSavePins_` writes that document to S3 when `regions` is present; W summary `{url, features, counts, saved, etag}`. `nmRegionsEditsUrl_` derives the CloudFront edits URL from the AI URL; `nearmap-elements` and the record return it always. `checkS3EditsWrite()` editor probe. Removed: `nmPushFileToGitHub_`, `nmValidateRegionsDiff_`, `NM_EDITS_DIR/BASE`, `nmEditsPath_/Url_`. `checkGitHubToken` kept for the row sync.
+- `nearmap-review.html` v1.6.0: sheet mode reads `regions_edits_url` (CloudFront) as a full FeatureCollection — no diff rebuild; `regionsDoc()` replaces `regionsDiff()`/`applyRegionsDiff()`; Save posts the working FC; status "regions saved to S3 edits/ (N regions, c changed / r removed vs original)"; Copy JSON copies the same document. v1.5.4's no-flash load (no hints render in sheet mode) and cache-busting query are included.
+- Repo: `data/nearmap/edits/` (the `.gitkeep` and the one file Apps Script pushed during the trial) removed from `main`.
+
+**Why.** Jonah: "I want the updates from apps script to S3 to have nothing to do with github. We are going to limit client data on github going forward, and nearmap data is a part of that." Apps Script already signs AWS calls for Bedrock, so the edits file can live at its folder-format key on S3, read through CloudFront like everything else.
+
+**Files.** `apps scripts/nearmap.gs`, `nearmap-review.html`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `data/nearmap/edits/*` (deleted)
+
+**How it was checked.** `nearmap.gs` brace/paren 0, `node --check`, no leftover references to the removed helpers. Reviewer `node --check`, missing ids / onclick / dup funcs, BUILD v1.6.0. Headless Chromium, web app + edits URL stubbed (scratch Columbia): edits FC (147 features: r14/r17 removed, r143 replaced, d9 added) → "Loaded edits: 147 regions", Driveway 15, no hints flash; Save posts `FeatureCollection` of 147 with no `pins` key, r14/r17 absent, d9 present; Revert → 16; Save → 148 features equal to the original id set; plain `delivery=` open still fresh. **Not verified:** the SigV4 S3 PUT against the real bucket (needs paste + new deployment + IAM `s3:PutObject` on the edits key; `checkS3EditsWrite` reports the result), and CloudFront returning the new object promptly (no-cache set on PUT).
+
+**Status.** Committed to `main`. Paste `nearmap.gs`, save, new deployment; run `checkS3EditsWrite`; add the IAM statement if it says AccessDenied.
+
 ## 2026-09-09 — v1.5.3: Copy JSON is mode-aware
 
 **What.** Copy JSON copies what Save would send: in the regions editor the regions diff (`nearmap-regions-edits` doc: removed ids + changed/new features), in the pins editor `{elements, drawn}`. Status reports the counts.

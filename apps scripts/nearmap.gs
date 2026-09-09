@@ -18,13 +18,13 @@
 //   AI           Pass 1 pins copy centroids from ai/hints.json (lon/lat
 //                → JPEG % via sheet bounds). Class names never enter
 //                pins-catalog.json. Unmapped catalog ids are omitted.
-//   Regions      original = CloudFront ai/original/regions.json (immutable).
-//                edits = GitHub data/nearmap/edits/{id}.json, a diff against
-//                original written by nmSavePins_ on reviewer Save. Column W
-//                holds only a summary. Revert regions = original.
-//   Publish      data/nearmap/{id}.json (+ data/nearmap/edits/{id}.json on
-//                Save). Index views.nearmap is promotion-time, onto the
-//                EXISTING hub, not this id.
+//   Regions      original = S3/CloudFront ai/original/regions.json (immutable).
+//                edits = S3/CloudFront ai/edits/regions.json, the working
+//                FeatureCollection, written by nmSavePins_ with a SigV4 PUT
+//                on reviewer Save. Never GitHub. Column W holds only a
+//                summary. Revert regions = original.
+//   Publish      data/nearmap/{id}.json only. Index views.nearmap is
+//                promotion-time, onto the EXISTING hub, not this id.
 //   Out of scope Mesh→GLB, VIEW_ORDER, satellite Pass 1/2.
 //
 // Menu: Set Up Nearmap Sheet, Import from CloudFront registry,
@@ -109,19 +109,22 @@ Return ONLY a single JSON object. No markdown, no code fences, no commentary.
 // (Jones = 6de88883bfd4a8349a901c54611ed9d7) and promotion is explicit.
 const NM_UPSERT_INDEX = false;
 
-// ── Regions: original / edits folder format ─────────────────────────────────
-// original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable;
-//            promote.py writes it; nobody else does).
-// edits    = GitHub data/nearmap/edits/{id}.json, written ONLY here on reviewer
-//            Save. Stored as a diff against original ({removed:[ids],
-//            features:[changed|new]}) so a 3 MB vendor file is not re-pushed
-//            per save. The reviewer rebuilds original − removed + features.
-//            Revert regions = original; the reviewer then saves an empty diff.
+// ── Regions: original / edits folder format (S3 only — no GitHub) ───────────
+// original = s3://property-intel-tiles/nearmap/{delivery}/ai/original/regions.json
+//            (vendor, immutable; promote.py writes it; nobody else does).
+// edits    = s3://property-intel-tiles/nearmap/{delivery}/ai/edits/regions.json
+//            the full working FeatureCollection, written by nmSavePins_ on
+//            reviewer Save with a SigV4 PUT (same AWS key that calls Bedrock).
+//            promote.py seeds it from original. Revert regions = original; the
+//            next Save writes original back into edits.
+// Both are read by the reviewer through CloudFront. Nearmap regions never touch
+// GitHub: client data stays off the public repo.
 // Column W (Drawn Features) holds a small JSON summary of the last edits save,
 // never the regions themselves (a cell is capped at 50 000 characters).
-const NM_EDITS_DIR = 'data/nearmap/edits';
-const NM_EDITS_BASE = 'https://responder-intel.vyanet.com/' + NM_EDITS_DIR + '/';
-const NM_EDITS_MAX_BYTES = 8 * 1024 * 1024;
+const NM_S3_BUCKET = 'property-intel-tiles';
+const NM_S3_HOST = NM_S3_BUCKET + '.s3.us-east-1.amazonaws.com';
+const NM_S3_PREFIX = 'nearmap/';
+const NM_EDITS_MAX_BYTES = 20 * 1024 * 1024;
 
 function nmRegionsOriginalUrl_(aiUrl) {
   const s = String(aiUrl || '').trim();
@@ -130,12 +133,83 @@ function nmRegionsOriginalUrl_(aiUrl) {
   return s.replace(/\/ai\/features\.json(\?|$)/i, '/ai/original/regions.json$1');
 }
 
-function nmEditsPath_(id) {
-  return NM_EDITS_DIR + '/' + id + '.json';
+function nmRegionsEditsUrl_(aiUrl) {
+  const s = String(aiUrl || '').trim();
+  if (!s) return '';
+  if (/\/ai\/edits\/regions\.json(\?|$)/i.test(s)) return s;
+  return s.replace(/\/ai\/features\.json(\?|$)/i, '/ai/edits/regions.json$1');
 }
 
-function nmEditsUrl_(id) {
-  return id ? (NM_EDITS_BASE + id + '.json') : '';
+function nmEditsS3Key_(deliveryId) {
+  const d = String(deliveryId || '').trim();
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(d)) throw new Error('bad delivery_id for S3 key: ' + d);
+  return NM_S3_PREFIX + d + '/ai/edits/regions.json';
+}
+
+// SigV4 PUT of one object to property-intel-tiles. Signs content-type, host,
+// x-amz-content-sha256 and x-amz-date (S3 requires the content hash header).
+// Cache-Control: no-cache so CloudFront revalidates and a fresh Save shows up
+// without an invalidation. Throws with the HTTP status + S3 message on failure.
+function nmS3PutObject_(key, body, contentType) {
+  const creds = getCredentials();
+  if (!creds.awsKeyId || !creds.awsSecret) throw new Error('AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY not set in Script Properties');
+  const region = 'us-east-1';
+  const service = 's3';
+  const host = NM_S3_HOST;
+  const path = '/' + key.split('/').map(encodeURIComponent).join('/');
+  const now = new Date();
+  const dateStamp = Utilities.formatDate(now, 'UTC', 'yyyyMMdd');
+  const amzDate = dateStamp + 'T' + Utilities.formatDate(now, 'UTC', 'HHmmss') + 'Z';
+  const payloadHash = sha256Hex(body);
+  const ctype = contentType || 'application/json';
+  const canonicalHeaders =
+    'cache-control:no-cache\n' +
+    'content-type:' + ctype + '\n' +
+    'host:' + host + '\n' +
+    'x-amz-content-sha256:' + payloadHash + '\n' +
+    'x-amz-date:' + amzDate + '\n';
+  const signedHeaders = 'cache-control;content-type;host;x-amz-content-sha256;x-amz-date';
+  const canonicalRequest = ['PUT', path, '', canonicalHeaders, signedHeaders, payloadHash].join('\n');
+  const credentialScope = dateStamp + '/' + region + '/' + service + '/aws4_request';
+  const stringToSign = 'AWS4-HMAC-SHA256\n' + amzDate + '\n' + credentialScope + '\n' + sha256Hex(canonicalRequest);
+  const kDate = hmacSha256Bytes(dateStamp, Utilities.newBlob('AWS4' + creds.awsSecret).getBytes());
+  const kRegion = hmacSha256Bytes(region, kDate);
+  const kService = hmacSha256Bytes(service, kRegion);
+  const kSigning = hmacSha256Bytes('aws4_request', kService);
+  const sig = hmacSha256Bytes(stringToSign, kSigning).map(b => ('0' + (b & 0xFF).toString(16)).slice(-2)).join('');
+  const headers = {
+    'Cache-Control': 'no-cache',
+    'X-Amz-Content-Sha256': payloadHash,
+    'X-Amz-Date': amzDate,
+    'Authorization': 'AWS4-HMAC-SHA256 Credential=' + creds.awsKeyId + '/' + credentialScope +
+      ', SignedHeaders=' + signedHeaders + ', Signature=' + sig
+  };
+  const res = UrlFetchApp.fetch('https://' + host + path, {
+    method: 'put', headers, contentType: ctype, payload: body, muteHttpExceptions: true
+  });
+  const code = res.getResponseCode();
+  if (code !== 200) {
+    const txt = res.getContentText();
+    const m = txt.match(/<Code>([^<]+)<\/Code>[\s\S]*?<Message>([^<]+)<\/Message>/);
+    throw new Error('S3 PUT ' + key + ' → HTTP ' + code + (m ? (': ' + m[1] + ' — ' + m[2]) : (': ' + txt.substring(0, 200))));
+  }
+  return { key: key, etag: res.getHeaders()['ETag'] || res.getHeaders()['Etag'] || '' };
+}
+
+// Run from the editor: can this project's AWS key write the Nearmap edits prefix?
+// Writes a tiny probe object under nearmap/_probe/ and reports the result.
+function checkS3EditsWrite() {
+  let text;
+  try {
+    const r = nmS3PutObject_(NM_S3_PREFIX + '_probe/apps-script-write-check.json',
+      JSON.stringify({ ok: true, at: new Date().toISOString() }), 'application/json');
+    text = 'S3 PUT ok: s3://' + NM_S3_BUCKET + '/' + r.key + ' etag ' + r.etag;
+  } catch (e) {
+    text = 'S3 PUT failed: ' + e.message;
+  }
+  Logger.log(text);
+  try { SpreadsheetApp.getUi().alert('S3 write check', text, SpreadsheetApp.getUi().ButtonSet.OK); } catch (e) {}
+  return text;
 }
 
 // Column W: { drawn: FeatureCollection, edits: {url, changed, removed, saved} }.
@@ -154,44 +228,31 @@ function nmParseW_(raw) {
   return out;
 }
 
-// Write one file to GitHub through the Contents API (create or update), and
-// say exactly what went wrong when it fails. pushAllToGitHub (Git Data API,
-// five calls) only returns false, which left "push failed" undiagnosable from
-// the reviewer. Retries once on 409/422 (ref moved between read and write).
-function nmPushFileToGitHub_(path, content, message) {
+// Run from the editor: does GITHUB_TOKEN in Script Properties still work? Used
+// by the row sync (data/nearmap/{id}.json), not by regions. Reports the HTTP
+// status of GET /user and GET /repos/{repo} and the token's length/prefix
+// (never the token). 200/200 = fine; 401 = expired or revoked.
+function checkGitHubToken() {
   const creds = getCredentials();
-  if (!creds.githubToken) throw new Error('GITHUB_TOKEN is not set in Script Properties');
-  const headers = {
-    'Authorization': 'token ' + creds.githubToken,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json'
-  };
-  const url = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + path;
-  const b64 = Utilities.base64Encode(Utilities.newBlob(content, 'application/json').getBytes());
-  let lastErr = '';
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let sha = null;
-    const getRes = UrlFetchApp.fetch(url + '?ref=' + encodeURIComponent(GITHUB_BRANCH),
-      { method: 'GET', headers, muteHttpExceptions: true });
-    const getCode = getRes.getResponseCode();
-    if (getCode === 200) {
-      try { sha = JSON.parse(getRes.getContentText()).sha || null; } catch (e) { sha = null; }
-    } else if (getCode !== 404) {
-      throw new Error('GitHub read ' + path + ' → HTTP ' + getCode + ': ' + getRes.getContentText().substring(0, 200));
+  const tok = creds.githubToken || '';
+  const headers = { 'Authorization': 'token ' + tok, 'Accept': 'application/vnd.github.v3+json' };
+  const lines = ['GITHUB_TOKEN: ' + (tok ? (tok.length + ' chars, starts "' + tok.substring(0, 4) + '…"') : 'NOT SET')];
+  [['GET /user', 'https://api.github.com/user'],
+   ['GET /repos/' + GITHUB_REPO, 'https://api.github.com/repos/' + GITHUB_REPO]
+  ].forEach(function (pair) {
+    try {
+      const r = UrlFetchApp.fetch(pair[1], { method: 'GET', headers, muteHttpExceptions: true });
+      let note = '';
+      try { const j = JSON.parse(r.getContentText()); note = j.login ? (' (' + j.login + ')') : (j.message ? (' — ' + j.message) : ''); } catch (e) {}
+      lines.push(pair[0] + ' → HTTP ' + r.getResponseCode() + note);
+    } catch (e) {
+      lines.push(pair[0] + ' → fetch error: ' + e.message);
     }
-    const body = { message: message, content: b64, branch: GITHUB_BRANCH };
-    if (sha) body.sha = sha;
-    const putRes = UrlFetchApp.fetch(url, { method: 'PUT', headers, payload: JSON.stringify(body), muteHttpExceptions: true });
-    const code = putRes.getResponseCode();
-    if (code === 200 || code === 201) {
-      const out = JSON.parse(putRes.getContentText());
-      return { sha: out.content && out.content.sha, commit: out.commit && out.commit.sha, created: code === 201 };
-    }
-    lastErr = 'GitHub write ' + path + ' → HTTP ' + code + ': ' + putRes.getContentText().substring(0, 300);
-    if (code !== 409 && code !== 422) break;
-    Utilities.sleep(800);
-  }
-  throw new Error(lastErr || ('GitHub write ' + path + ' failed'));
+  });
+  const text = lines.join('\n');
+  Logger.log(text);
+  try { SpreadsheetApp.getUi().alert('GitHub token check', text, SpreadsheetApp.getUi().ButtonSet.OK); } catch (e) {}
+  return text;
 }
 
 function nmWriteW_(sheet, row, drawn, edits) {
@@ -847,7 +908,7 @@ function nmBuildRecord_(sheet, row, id) {
   rec.drawn = w.drawn;
   rec.regions = {
     original: nmRegionsOriginalUrl_(rec.ai_url),
-    edits: w.edits ? nmEditsUrl_(id) : '',
+    edits: nmRegionsEditsUrl_(rec.ai_url),
     edits_saved: w.edits ? (w.edits.saved || '') : ''
   };
   if (!isNaN(lat) && !isNaN(lng)) { rec.lat = lat; rec.lng = lng; }
@@ -982,7 +1043,7 @@ function nmGetElements_(p) {
       bounds: bounds,
       ai_url: aiUrl,
       regions_original_url: nmRegionsOriginalUrl_(aiUrl),
-      regions_edits_url: w.edits ? nmEditsUrl_(id) : '',
+      regions_edits_url: nmRegionsEditsUrl_(aiUrl),
       regions_edits: w.edits,
       pins: nmParsePins_(vals[i][NM_COL_ELEMENTS - 1]),
       drawn: w.drawn,
@@ -995,14 +1056,15 @@ function nmGetElements_(p) {
   throw new Error('no Nearmap row for site_no ' + siteNo);
 }
 
-// Reviewer regions diff → validated document for data/nearmap/edits/{id}.json.
-// Shape: { type:'nearmap-regions-edits', version:1, delivery_id, base, removed:[ids],
-//          features:[GeoJSON Feature] }. Geometry is not re-validated beyond type.
-function nmValidateRegionsDiff_(regions, deliveryId, baseUrl) {
-  if (!regions || typeof regions !== 'object') throw new Error('regions must be an object');
-  const removed = Array.isArray(regions.removed) ? regions.removed.map(String) : [];
-  const features = Array.isArray(regions.features) ? regions.features : [];
-  features.forEach(function (f, i) {
+// Reviewer working regions → validated ai/edits/regions.json document. Same shape
+// the local review_server writes: a FeatureCollection with per-class counts.
+// Geometry is checked for type and id only.
+function nmValidateRegionsDoc_(regions, deliveryId) {
+  if (!regions || typeof regions !== 'object' || !Array.isArray(regions.features)) {
+    throw new Error('regions must be a FeatureCollection');
+  }
+  const counts = {};
+  regions.features.forEach(function (f, i) {
     if (!f || f.type !== 'Feature' || !f.geometry ||
         (f.geometry.type !== 'Polygon' && f.geometry.type !== 'MultiPolygon')) {
       throw new Error('regions.features[' + i + '] is not a Polygon/MultiPolygon Feature');
@@ -1010,19 +1072,22 @@ function nmValidateRegionsDiff_(regions, deliveryId, baseUrl) {
     if (f.id === undefined || f.id === null || String(f.id) === '') {
       throw new Error('regions.features[' + i + '] has no id');
     }
+    const cls = (f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown';
+    counts[cls] = (counts[cls] || 0) + 1;
   });
   const doc = {
-    type: 'nearmap-regions-edits',
-    version: 1,
+    type: 'FeatureCollection',
+    name: 'nearmap-regions',
+    source: 'edits',
     delivery_id: deliveryId || String(regions.delivery_id || ''),
-    base: baseUrl || String(regions.base || ''),
     saved: new Date().toISOString(),
-    removed: removed,
-    features: features
+    saved_by: 'nearmap-review via Apps Script',
+    counts: counts,
+    features: regions.features
   };
   const text = JSON.stringify(doc);
   if (text.length > NM_EDITS_MAX_BYTES) {
-    throw new Error('regions diff too large (' + text.length + ' bytes)');
+    throw new Error('regions document too large (' + text.length + ' bytes)');
   }
   return { doc: doc, text: text };
 }
@@ -1056,30 +1121,25 @@ function nmSavePins_(payload) {
     let edits = prevW.edits;
     let regionsOut = null;
     if (payload.regions) {
-      // Publish the regions diff to GitHub (Apps Script is the only GitHub
-      // writer). The sheet keeps a summary; the diff itself lives in the repo.
-      const creds = getCredentials();
-      const id = nmPropertyId_(siteNo, creds.hashSalt);
+      // Write the working regions to S3 ai/edits/regions.json (the folder
+      // format). No GitHub: Nearmap client data stays off the public repo.
       const deliveryId = String(vals[i][NM_COL_DELIVERY - 1] || '').trim();
-      const baseUrl = nmRegionsOriginalUrl_(vals[i][NM_COL_AI_URL - 1]);
-      const v = nmValidateRegionsDiff_(payload.regions, deliveryId, baseUrl);
-      // Throws with the HTTP status + GitHub message on failure; the reviewer
-      // shows it in the status line.
-      nmPushFileToGitHub_(nmEditsPath_(id), v.text,
-        'Nearmap regions — site ' + siteNo + ' (' + v.doc.features.length + ' changed, ' +
-        v.doc.removed.length + ' removed)');
+      if (!deliveryId) throw new Error('row has no Delivery Id — import the registry first');
+      const v = nmValidateRegionsDoc_(payload.regions, deliveryId);
+      const put = nmS3PutObject_(nmEditsS3Key_(deliveryId), v.text, 'application/json');
       edits = {
-        url: nmEditsUrl_(id),
-        changed: v.doc.features.length,
-        removed: v.doc.removed.length,
-        saved: v.doc.saved
+        url: nmRegionsEditsUrl_(vals[i][NM_COL_AI_URL - 1]),
+        features: v.doc.features.length,
+        counts: v.doc.counts,
+        saved: v.doc.saved,
+        etag: put.etag
       };
-      regionsOut = { changed: edits.changed, removed: edits.removed, url: edits.url };
+      regionsOut = { features: edits.features, url: edits.url, saved: edits.saved };
     }
     nmWriteW_(sheet, row, drawn, edits);
     const parts = [];
     if (hasPins) parts.push('saved ' + pins.length + ' pin(s)');
-    if (regionsOut) parts.push('regions ' + regionsOut.changed + ' changed / ' + regionsOut.removed + ' removed');
+    if (regionsOut) parts.push('regions ' + regionsOut.features + ' features → S3 edits');
     writePlainCell(sheet, row, NM_COL_STATUS, parts.join(' · '));
     return { ok: true, route: 'nearmap-save', site_no: siteNo, saved: hasPins ? pins.length : null, regions: regionsOut };
   }

@@ -5,18 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.5.3, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.6.0, 2026-09-09)
   TWO EDITORS, one page, never both at once:
-    ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions diff.
+    ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions FC.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
                               regions = one pin per non-vegetation region at its interior
                               point (Lawn Grass kept); Place pin adds by hand. Save = pins.
-  Regions follow the original/edits folder format:
+  Regions follow the original/edits folder format ON S3 — never GitHub:
     original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable)
-    edits    = sheet mode (site_no= / property=): GitHub data/nearmap/edits/{id}.json,
-               a diff vs original published by Apps Script on Save;
-               local delivery= mode: ai/edits/regions.json via review_server.
-    Revert regions = original. Save after Revert publishes an empty diff.
+    edits    = CloudFront {delivery}/ai/edits/regions.json (working FeatureCollection).
+               sheet mode (site_no= / property=): Save posts the FC to Apps Script,
+               which PUTs it to S3 with SigV4; local delivery= mode: review_server PUT.
+    Revert regions = original. Save after Revert writes original back into edits.
   TESTING MODE applies only to plain delivery= opens: each open starts from original
     (?fresh=0 resumes local edits; ?fresh=1 forces a fresh start in sheet mode).
   Reviewer-first: Pan / Draw. Draw: + picks a centroid, left-click adds, right-click removes;
@@ -189,7 +189,7 @@
     <h2>Delivery</h2>
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
-      <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Edits are saved as a diff to <code>data/nearmap/edits/</code> when opened from the sheet, or to local <code>ai/edits/regions.json</code>. Revert regions returns to original.</p>
+      <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> (S3 via the sheet, or the local file). Revert regions returns to original.</p>
       <p class="meta pins-only" id="pinsNote">Pins editor. Regions are shown read-only (finish them in the Regions editor). Seed makes one pin per region at its interior point — no vegetation, Lawn Grass excepted. Place pin adds one by hand. Save writes the Nearmap sheet only.</p>
       <label class="toggle regions-only"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
@@ -221,7 +221,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.5.3';
+  var BUILD = 'v1.6.0';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -280,8 +280,8 @@
   var siteNo = String(qp('site_no') || qp('site') || '').trim();
   var tilesBase = String(qp('tiles') || CF_TILES);
   // Sheet-driven opens (site_no= from the Nearmap sheet, or property= from a
-  // published record) load original from CloudFront and edits from GitHub
-  // data/nearmap/edits/{id}.json, and Save publishes the diff through Apps Script.
+  // published record) load original and edits from CloudFront (S3 folder format)
+  // and Save posts the working regions to Apps Script, which PUTs them to S3.
   var SHEET_MODE = !!(siteNo || propertyId);
   // Testing mode: a plain delivery= open (no sheet identity) starts from
   // ai/original/ every time — edits file and browser backups ignored, local
@@ -634,51 +634,31 @@
       }).catch(function () { return null; });
   }
 
-  // ── Regions edits diff (sheet mode) ─────────────────────────────────────────
-  // data/nearmap/edits/{id}.json = { removed:[ids], features:[changed|new] }
-  // against ai/original/regions.json. Rebuild: original − removed + features.
-  function applyRegionsDiff(orig, diff) {
-    var out = JSON.parse(JSON.stringify(orig));
-    if (!diff || typeof diff !== 'object') return out;
-    var drop = {};
-    (diff.removed || []).forEach(function (id) { drop[String(id)] = true; });
-    var byId = {};
-    (diff.features || []).forEach(function (f) { if (f && f.id != null) byId[String(f.id)] = f; });
-    var next = [];
-    (out.features || []).forEach(function (f) {
-      var rid = String(f.id);
-      if (drop[rid]) return;
-      if (byId[rid]) { next.push(byId[rid]); delete byId[rid]; return; }
-      next.push(f);
-    });
-    Object.keys(byId).forEach(function (rid) { if (!drop[rid]) next.push(byId[rid]); });
-    out.features = next;
-    return out;
-  }
-
-  function featureSig(f) {
-    return JSON.stringify({ g: f.geometry, p: f.properties || {} });
-  }
-
-  // Working regions vs vendor original → the diff that Save publishes.
-  function regionsDiff() {
-    var removed = [];
-    var features = [];
-    var seen = {};
-    ((aiPack && aiPack.features) || []).forEach(function (f) {
+  // ── Regions document (what Save sends in sheet mode) ────────────────────────
+  // The full working FeatureCollection — the same document local mode PUTs to
+  // ai/edits/regions.json. Apps Script writes it to S3 at that key; nothing
+  // about regions goes to GitHub. Also reports how it differs from original so
+  // the status line can say something useful.
+  function regionsDoc() {
+    var feats = (aiPack && aiPack.features) || [];
+    var changed = 0, seen = {};
+    feats.forEach(function (f) {
       var rid = String(f.id);
       seen[rid] = true;
       var o = originalById[rid];
-      if (!o || featureSig(o) !== featureSig(f)) features.push(f);
+      if (!o || JSON.stringify(o.geometry) !== JSON.stringify(f.geometry)) changed++;
     });
-    Object.keys(originalById).forEach(function (rid) { if (!seen[rid]) removed.push(rid); });
+    var removed = 0;
+    Object.keys(originalById).forEach(function (rid) { if (!seen[rid]) removed++; });
     return {
-      type: 'nearmap-regions-edits',
-      version: 1,
+      type: 'FeatureCollection',
+      name: 'nearmap-regions',
+      source: 'edits',
       delivery_id: delivery || '',
-      base: regionsOriginalUrl(),
-      removed: removed,
-      features: features
+      counts: recountFeatures(feats),
+      features: feats,
+      _changed: changed,
+      _removed: removed
     };
   }
 
@@ -3067,12 +3047,16 @@
         hints: (h && h.hints) || [],
         features: null
       };
-      renderLayers(aiPack);
-      redrawAi();
-      // hints.json carries the vendor counts. The sidebar must show the working
-      // regions (edits) from the start, otherwise a merged delivery reads e.g.
-      // Driveway 16 until the first layer is checked and then drops to 2. Load
-      // regions right away; counts are recounted from the working file on arrival.
+      // hints.json carries the VENDOR counts. In sheet mode the edited regions
+      // are the truth, so nothing is drawn from hints — the first render is the
+      // working set (original − removed + changed). Local delivery= opens keep the
+      // instant vendor render since they start from original anyway.
+      if (SHEET_MODE) {
+        setStatus('Loading regions…');
+      } else {
+        renderLayers(aiPack);
+        redrawAi();
+      }
       ensureFeatures().then(function () {
         redrawAi();
         if (MODE === 'pins') {
@@ -3093,7 +3077,10 @@
   // stale cached edits/regions.json could resurface after a disk revert.
   function fetchJsonOptional(url) {
     if (!url) return Promise.resolve(null);
-    return fetchJson(url, { noStore: true }).catch(function () { return null; });
+    // A CDN can hand back a copy from minutes ago even with cache: no-store on
+    // our side; a unique query string defeats that too.
+    var u = url + (url.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
+    return fetchJson(u, { noStore: true }).catch(function () { return null; });
   }
 
   function ensureFeatures() {
@@ -3103,9 +3090,7 @@
     featuresPromise = Promise.resolve(SHEET_MODE ? sheetPromise : null).then(function () {
       return Promise.all([
         fetchJsonOptional(regionsOriginalUrl()),
-        SHEET_MODE
-          ? (regionsRemote.edits ? fetchJsonOptional(regionsRemote.edits) : Promise.resolve(null))
-          : fetchJsonOptional(regionsEditsUrl())
+        fetchJsonOptional(SHEET_MODE ? (regionsRemote.edits || regionsEditsUrl()) : regionsEditsUrl())
       ]);
     }).then(function (pair) {
       var orig = pair[0];
@@ -3121,13 +3106,17 @@
       if (o.orig) indexOriginal(o.orig);
       var workingDoc;
       if (SHEET_MODE && o.orig && !FRESH_ON_OPEN) {
-        // original from CloudFront; edits = GitHub diff (may be absent → original).
-        var isDiff = o.edits && o.edits.type === 'nearmap-regions-edits';
-        workingDoc = isDiff ? applyRegionsDiff(o.orig, o.edits) : JSON.parse(JSON.stringify(o.orig));
+        // original and edits both from CloudFront (S3 folder format). edits is
+        // the working FeatureCollection; promote seeds it from original, Save
+        // rewrites it. Missing/unreadable edits → original.
+        var haveEdits = !!(o.edits && Array.isArray(o.edits.features));
+        workingDoc = haveEdits ? o.edits : JSON.parse(JSON.stringify(o.orig));
         try { localStorage.setItem(regionsStorageKey(), JSON.stringify(workingDoc)); } catch (e3) {}
-        if (isDiff) {
-          setStatus('Loaded edits: ' + (o.edits.features || []).length + ' changed, ' +
-            (o.edits.removed || []).length + ' removed (saved ' + (o.edits.saved || '?') + ')');
+        if (haveEdits) {
+          setStatus('Loaded edits: ' + o.edits.features.length + ' regions' +
+            (o.edits.saved ? (' (saved ' + o.edits.saved + ')') : ' (seeded from original)'));
+        } else {
+          setStatus('Edits file not reachable — showing original');
         }
       } else if (FRESH_ON_OPEN && o.orig) {
         workingDoc = JSON.parse(JSON.stringify(o.orig));
@@ -3305,9 +3294,11 @@
         setStatus('Regions are not loaded yet', 'err');
         return;
       }
-      var diff = regionsDiff();
-      text = JSON.stringify(diff, null, 2);
-      label = 'Copied regions diff JSON · ' + diff.features.length + ' changed / ' + diff.removed.length + ' removed';
+      var doc = regionsDoc();
+      var changed = doc._changed, removed = doc._removed;
+      delete doc._changed; delete doc._removed;
+      text = JSON.stringify(doc, null, 2);
+      label = 'Copied regions JSON · ' + doc.features.length + ' regions (' + changed + ' changed / ' + removed + ' removed vs original)';
     }
     navigator.clipboard.writeText(text).then(function () { setStatus(label); },
       function () { setStatus('Clipboard failed', 'err'); });
@@ -3326,23 +3317,26 @@
       mode: MODE,
       site_no: siteNo
     };
+    var regionsSummary = null;
     if (MODE === 'pins') {
-      // Pins editor saves pins only; regions (and their GitHub edits file) are
-      // untouched. Absent `pins` key on the other side means "leave column R".
+      // Pins editor saves pins only; regions (S3 edits file) are untouched.
+      // Absent `pins` key on the other side means "leave column R".
       body.pins = (record && record.elements) || [];
       body.drawn = (record && record.drawn) || emptyDrawn();
     } else {
-      // Regions editor saves the diff against the vendor original; Apps Script
-      // publishes it to GitHub data/nearmap/edits/{id}.json. After Revert the
-      // diff is empty, which clears the published edits. No `pins` key.
+      // Regions editor saves the working FeatureCollection; Apps Script writes
+      // it to S3 ai/edits/regions.json (the folder format). After Revert that
+      // is the original again. No `pins` key. Nothing goes to GitHub.
       if (!(aiPack && Array.isArray(aiPack.features) && originalFc)) {
         setStatus('Regions are not loaded yet', 'err');
         return;
       }
-      body.regions = regionsDiff();
+      var doc = regionsDoc();
+      regionsSummary = { changed: doc._changed, removed: doc._removed };
+      delete doc._changed; delete doc._removed;
+      body.regions = doc;
     }
-    // One save at a time: a second click mid-flight would race the first one's
-    // GitHub write and fail as a non-fast-forward.
+    // One save at a time.
     var saveBtn = document.getElementById('saveBtn');
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
@@ -3376,7 +3370,10 @@
         if (rg && rg.url) regionsRemote.edits = String(rg.url);
         var bits = [];
         if (j.saved != null) bits.push('Saved ' + j.saved + ' pin(s) to sheet');
-        if (rg) bits.push('regions ' + rg.changed + ' changed / ' + rg.removed + ' removed → edits/');
+        if (rg) {
+          bits.push('regions saved to S3 edits/ (' + rg.features + ' regions' +
+            (regionsSummary ? (', ' + regionsSummary.changed + ' changed / ' + regionsSummary.removed + ' removed vs original') : '') + ')');
+        }
         setStatus(bits.join(' · ') || 'Saved');
       } else {
         setStatus((j && j.error) || 'Save failed', 'err');
