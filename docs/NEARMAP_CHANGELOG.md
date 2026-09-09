@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — v1.5.2: Save tolerates Apps Script's HTML error page
+
+**What.** Save reads the web-app reply as text; if it starts with `<` it is treated as transient (Google's "unable to open the file" page or a sign-in page), Save waits 2.5 s and retries once, and on a second failure prints "Apps Script returned a web page instead of JSON (“<title>”)" instead of `Unexpected token '<'`.
+
+**Why.** Jonah's first live Save after the v1.5 deployment got `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`. Probing the deployment at the same time: `nearmap-elements` returned JSON with the new `account_type` field and a probe POST returned a JSON error, while `ping` timed out — i.e. the deployment is correct and Google served a transient HTML page for that request.
+
+**Files.** `nearmap-review.html` (v1.5.2)
+
+**How it was checked.** `node --check`; missing ids / onclick / dup funcs. Live probes as above. **Not verified:** a successful live regions push (retry Save).
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — v1.5.1: edits push reports the real GitHub error; single-flight Save
 
 **What.** `nmPushFileToGitHub_(path, content, message)` — Contents API GET (sha) then PUT, `branch: GITHUB_BRANCH`, one retry after 800 ms on 409/422 — replaces `pushAllToGitHub` for `data/nearmap/edits/{id}.json`. It throws `GitHub write <path> → HTTP <code>: <message>` (or `GITHUB_TOKEN is not set`), which the reviewer prints in the status line. `pushAllToGitHub` is unchanged and still used by the row sync. Reviewer: Save button disabled while a save is in flight.

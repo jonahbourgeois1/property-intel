@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.5.1, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.5.2, 2026-09-09)
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions diff.
     ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
@@ -221,7 +221,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.5.1';
+  var BUILD = 'v1.5.2';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -3333,11 +3333,30 @@
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
     setStatus('Saving…');
-    fetch(NM_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(body)
-    }).then(function (r) { return r.json(); }).then(function (j) {
+    // Apps Script /exec sometimes answers with Google's HTML "unable to open the
+    // file" page instead of our JSON. Treat that as transient: retry once, then
+    // say what happened in plain words instead of a JSON parse error.
+    function postOnce() {
+      return fetch(NM_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(body)
+      }).then(function (r) { return r.text(); }).then(function (t) {
+        var s = String(t || '').trim();
+        if (s.charAt(0) === '<') {
+          var m = s.match(/<title>([^<]*)<\/title>/i);
+          var err = new Error('Apps Script returned a web page instead of JSON' + (m ? (' (“' + m[1].trim() + '”)') : '') + ' — Google transient error or a sign-in page');
+          err.transient = true;
+          throw err;
+        }
+        return JSON.parse(s);
+      });
+    }
+    postOnce().catch(function (e) {
+      if (!e || !e.transient) throw e;
+      setStatus('Apps Script hiccup — retrying…');
+      return new Promise(function (res) { setTimeout(res, 2500); }).then(postOnce);
+    }).then(function (j) {
       if (j && j.ok) {
         var rg = j.regions;
         if (rg && rg.url) regionsRemote.edits = String(rg.url);
