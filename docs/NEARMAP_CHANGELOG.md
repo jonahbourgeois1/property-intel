@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-09 — nearmap-viewer v1.0.1: 3D controls identical to model-viewer
+
+**What.** Camera `PerspectiveCamera(60, …, 0.1, 100000)`, Z-up set before `OrbitControls`; `enableDamping` 0.08, `screenSpacePanning` true, `minDistance` 10, `maxDistance` 5000, mouse **left = pan, middle = rotate, right = dolly**, `zoomSpeed` 1, polar locked 0…π/2 (never underneath). Opening view = model-viewer's: `camDist = 1.4 × max(span x, y)`, camera at `(cx, cy − 0.8·camDist, cz + 0.8·camDist)` looking at the centre. Bottom-left **↑ Reset View** flies back (700 ms ease); the pin list flies to a pin (45 m south, 45 m up).
+
+**Why.** Jonah: camera controls must work exactly like the other viewers.
+
+**Files.** `nearmap-viewer.html` (v1.0.1)
+
+**How it was checked.** `node --check`, ids, onclick, dup funcs. Headless Chromium on Macalpine: mesh loads, Reset View visible, pin fly-to, Reset fly-back, right-drag and left-drag on the canvas — 0 page errors. Values compared line by line with `model-viewer.html` L1063–1088 and L1124–1150.
+
+**Status.** Committed to `main`.
+
 ## 2026-09-09 — nearmap-viewer.html v1.0.0 + mesh_to_glb.py
 
 **What.**

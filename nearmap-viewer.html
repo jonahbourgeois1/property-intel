@@ -5,7 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
 <!--
-  nearmap-viewer.html — Nearmap property viewer (v1.0.0, 2026-09-09)
+  nearmap-viewer.html — Nearmap property viewer (v1.0.1, 2026-09-09)
+  3D camera/controls mirror model-viewer.html exactly (left pan, middle rotate, right dolly,
+  wheel zoom, 0..90° polar lock, 45° opening from the south, Reset View fly-back).
   Sibling of vyanet-viewer.html, but fed ONLY by Nearmap data:
     ?site_no=   -> Apps Script nearmap-elements (address, delivery, bounds, imagery, pins)
     ?delivery=  -> CloudFront manifest.json alone (no pins)
@@ -63,6 +65,9 @@
   #progress.on { display: block; }
   #pinLabel3d { position: absolute; left: 0; top: 0; transform: translate(-50%, -130%); background: rgba(11,14,18,0.92); border: 1px solid #a855f7; border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #f0f2f5; pointer-events: none; display: none; white-space: nowrap; }
   #pinLabel3d.on { display: block; }
+  #resetView { position: absolute; bottom: 16px; left: 16px; z-index: 6; display: none; background: #12161b; color: #8a93a2; border: 1px solid #2a3040; font-family: monospace; font-size: 11px; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: color 0.2s, background 0.15s; }
+  #resetView.on { display: block; }
+  #resetView:hover { color: #fff; background: #1a1f27; }
   #err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; padding: 24px; color: #ef4444; font-size: 13px; text-align: center; z-index: 70; background: #111318; }
   #err.on { display: flex; }
   @media (max-width: 760px) {
@@ -84,7 +89,7 @@
 </div>
 <div id="stage">
   <div class="view on" id="view2d"><div id="map2d"></div></div>
-  <div class="view" id="view3d"><div id="gl3d"></div><div id="progress"></div><div id="pinLabel3d"></div></div>
+  <div class="view" id="view3d"><div id="gl3d"></div><div id="progress"></div><div id="pinLabel3d"></div><button type="button" id="resetView" title="Back to the opening view">&#8593; Reset View</button></div>
   <div class="view" id="viewObl"><div id="obl"></div></div>
 </div>
 <aside id="panel">
@@ -104,7 +109,7 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-const BUILD = 'v1.0.0';
+const BUILD = 'v1.0.1';
 const NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 const MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -355,7 +360,11 @@ async function init3d() {
   host.appendChild(renderer.domElement);
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x111318);
-  const camera = new THREE.PerspectiveCamera(55, host.clientWidth / host.clientHeight, 0.5, 20000);
+  // Camera + controls: identical to model-viewer.html so the hand feel matches
+  // across viewers. Z-up BEFORE OrbitControls is constructed (it caches the up
+  // frame); left = pan, middle = rotate, right = dolly, wheel = zoom; polar
+  // locked from straight down (0) to the horizon (90°) — never underneath.
+  const camera = new THREE.PerspectiveCamera(60, host.clientWidth / host.clientHeight, 0.1, 100000);
   camera.up.set(0, 0, 1);
   scene.add(new THREE.AmbientLight(0xffffff, 0.85));
   const sun = new THREE.DirectionalLight(0xffffff, 0.55);
@@ -364,8 +373,14 @@ async function init3d() {
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.maxPolarAngle = Math.PI * 0.495;
-  controls.screenSpacePanning = false;
+  controls.screenSpacePanning = true;
+  controls.minDistance = 10;
+  controls.maxDistance = 5000;
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.DOLLY };
+  controls.enableZoom = true;
+  controls.zoomSpeed = 1.0;
+  controls.minPolarAngle = 0;
+  controls.maxPolarAngle = Math.PI / 2;
 
   const loader = new GLTFLoader();
   const draco = new DRACOLoader();
@@ -426,11 +441,27 @@ async function init3d() {
   draw3dRegions();
   draw3dPins();
 
+  // Opening view = model-viewer's: pull back and up at ~45°, offset south (-Y)
+  // and up (+Z) by 0.8 × (1.4 × the larger horizontal span).
   const center = box.getCenter(new THREE.Vector3());
-  const span = Math.max(box.max.x - box.min.x, box.max.y - box.min.y);
-  camera.position.set(center.x + span * 0.55, center.y - span * 0.75, box.max.z + span * 0.45);
+  const size = box.getSize(new THREE.Vector3());
+  const camDist = Math.max(size.x, size.y) * 1.4;
+  camera.position.set(center.x, center.y - camDist * 0.8, center.z + camDist * 0.8);
+  camera.up.set(0, 0, 1);
+  camera.lookAt(center);
+  camera.updateProjectionMatrix();
   controls.target.copy(center);
   controls.update();
+  const initPos = camera.position.clone();
+  const initTarget = controls.target.clone();
+  let fly = null;
+  function flyTo(pos, target, ms) {
+    fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos.clone(), t1: target.clone(), start: performance.now(), ms: ms || 700 };
+  }
+  renderer.domElement.addEventListener('pointerdown', () => { fly = null; });
+  three = Object.assign(three, { flyTo, initPos, initTarget });
+  $('resetView').classList.add('on');
+  $('resetView').onclick = () => flyTo(initPos, initTarget);
 
   const label = $('pinLabel3d');
   const ray = new THREE.Raycaster();
@@ -458,7 +489,18 @@ async function init3d() {
     camera.updateProjectionMatrix();
   }
   window.addEventListener('resize', onResize);
-  (function tick() { requestAnimationFrame(tick); controls.update(); renderer.render(scene, camera); })();
+  (function tick() {
+    requestAnimationFrame(tick);
+    if (fly) {
+      const k = Math.min(1, (performance.now() - fly.start) / fly.ms);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      camera.position.lerpVectors(fly.p0, fly.p1, e);
+      controls.target.lerpVectors(fly.t0, fly.t1, e);
+      if (k >= 1) fly = null;
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  })();
   prog.classList.remove('on');
   setStatus(statusText());
 }
@@ -556,9 +598,8 @@ function focusPin3d(i) {
   const loc = localFromLatLng(ll.lat, ll.lng);
   if (!loc) return;
   const h = three.heightAt(loc.x, loc.y) || 0;
-  three.controls.target.set(loc.x, loc.y, h);
-  three.camera.position.set(loc.x + 25, loc.y - 35, h + 30);
-  three.controls.update();
+  const T = three.THREE;
+  three.flyTo(new T.Vector3(loc.x, loc.y - 45, h + 45), new T.Vector3(loc.x, loc.y, h));
 }
 
 // ── obliques ─────────────────────────────────────────────────────────────────
