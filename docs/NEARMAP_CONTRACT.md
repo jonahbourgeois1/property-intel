@@ -98,7 +98,7 @@ Pins are catalog integer ids as **percent of the Nearmap nadir JPEG** (0,0 = top
 
 ## Reviewer-first elements (local until complete)
 
-**Two editors, one page, never both at once.** `nearmap-review.html?mode=regions` (default) edits vendor regions only: pins are not drawn, not consumed, not saved — Save posts the regions diff with **no `pins` key**, and `nmSavePins_` leaves column R alone when the key is absent. `?mode=pins` edits catalog pins only: regions are read-only context, Save posts `pins` with no `regions`. Pins are **seeded one per finished region** at its interior point, mapped by vendor class × account type (`SEED_MAP`); vegetation, Tree Overhang and Natural are skipped, **Lawn Grass is the only green class that gets a pin**; Car (no catalog pin) and Building (Deprecated) (duplicate footprint) are skipped and reported. Seeding stops at the pin cap and says so. Place pin adds by hand (picker suggests the region's mapped id). Deleting a pin in the pins editor never changes a region. The sheet menu opens each editor separately.
+**Two editors, one page, never both at once.** `nearmap-review.html?mode=regions` (default) edits vendor regions only: pins are not drawn, not consumed, not saved — Save posts the regions diff with **no `pins` key**, and `nmSavePins_` leaves column R alone when the key is absent. `?mode=pins` is Pass 2: **Auto Generate Pins** (on a fresh/testing open, or the button) places one pin per working `regions.json` feature named after that feature's class (`Lawn Grass` stays `Lawn Grass` — not a catalog id), except cover/veg skips (asphalt, building deprecated, concrete slab, driveway, low / medium-high / very-low / woody vegetation, natural, roof, translucent roofing, water body). **Place pin** only on a visible painted region that has no pin; the pin is at that region's interior point. **Delete pin** clicks a visible painted region that has a pin (or the pin itself); the region stays. Bare-map clicks and the class picker are not used. No pin cap. Deleting a pin never changes a region. Column R stores a packed `{v:2,c,p}` object so the 50k cell cap holds ~1.5k pins. Do **not** write these class names into `pins-catalog.json`. The sheet menu opens each editor separately.
 
 **Two open modes.** *Sheet mode* (`site_no=` from the Nearmap sheet, or `property=` from a published record): original and edits both come from CloudFront (`ai/original/` and `ai/edits/`), Save posts the working regions to Apps Script which PUTs them to S3, nothing is reset on reload. *Testing mode* (plain `delivery=` open, no sheet identity): every open starts from `ai/original/regions.json` with no pins; the local edits file and browser backups are ignored and local `ai/edits/regions.json` is reset to the original. `?fresh=0` resumes local edits; `?fresh=1` forces a fresh start even in sheet mode.
 
@@ -154,14 +154,14 @@ Fed by the Nearmap row and CloudFront: `?site_no=` → `nearmap-elements` then `
 - Render Lambda / headless camera on Nearmap meshes (mesh → GLB for the Nearmap viewer is in scope as of 2026-09-09)
 - Replacing `vert.jpg` or changing pin percents off the full-AOI JPEG. Display clip (mask or `vert-lot.jpg`) and Pass 1 `vert-lot-p1.jpg` are in scope; stored x,y stay percent of `vert.jpg`.
 - Sampling DSM/DTM into observed facts (canonical GeoTIFFs stay in ingest; 2D regions+lot distances ship first)
-- Auto-promoting vendor polygons into catalog pins
+- Auto-promoting vendor polygons into **catalog** pins (`pins-catalog.json` stays satellite vocabulary)
 - License / resell of vendor rasters — keep trial binaries in **ingest**; tiles hold derived stills, the derived mesh GLB, and compact JSON only. Confirm analyze/cache/derive/resell before customer-facing use of the derived GLB on public CloudFront.
 
 ## Taxlot clip + observed facts (2026-09-10)
 
 **Editor** (`nearmap-review.html`) keeps the vendor AOI.
 
-**Product** (`nearmap-viewer.html` **Clip to taxlot**, default on): remove everything outside the property line on 2D — opaque page-color hole-punch at the taxlot (Vert + satellite + region paint), camera locked to the lot, off-lot pins hidden. Uncheck Clip to see the neighborhood; observed facts stay on the rail (they are always regions ∩ taxlot). (`vert-lot.jpg` when `lot_clip.py` has been promoted still replaces the Vert overlay; pin x,y stay percent of full `vert.jpg`.) 3D mesh is still the capture until a mesh clip exists.
+**Product** (`nearmap-viewer.html` **Clip to taxlot**, default on): remove everything outside the property line on 2D — opaque page-color hole-punch at the taxlot (Vert + satellite + region paint), off-lot pins hidden. The camera **stays on the property** (opening zoom); do not `fitBounds` / restrict to the taxlot bounding box (Jones’s triangle put the house off to one side and the overlay flood made the map unusable). Uncheck Clip to see the neighborhood; observed facts stay on the rail (they are always regions ∩ taxlot). (`vert-lot.jpg` when `lot_clip.py` has been promoted still replaces the Vert overlay; pin x,y stay percent of full `vert.jpg`.) 3D mesh is still the capture until a mesh clip exists.
 
 **Lot cover on Private 2D** (`viewer.html` **Cover**): building / driveway / woody veg / pool from `ai/edits/regions.json` (original fallback), clipped to the same taxlot. GIS Property Facts table is unchanged.
 
@@ -178,7 +178,7 @@ Parcel lookup uses hub lat/lng when the index exists (Jones `6de88883…`), else
 1. Nearmap `vert.jpg` + `bounds` may replace `prepareSatNadir_` Static Maps.
 2. Reduced AI may inject into `runSatElementPinsCall_` the same way KB context does.
 3. `nearmap` may join `VIEW_ORDER`.
-4. Pins remain catalog ids. Do **not** auto-promote vendor polygons into `elements`.
+4. Nearmap Pass 2 pins are region-class labels on the Nearmap tab. Do **not** add those names to `pins-catalog.json` or flatten `role=`.
 5. Compass obliques → frontage-relative alpha/bravo is a separate decision.
 6. Merge `views.nearmap` onto the **existing** property hub (Jones = `6de88883bfd4a8349a901c54611ed9d7`). Do not call `upsertIndexEntry_` with `hashId(site_no)` as the hub id.
 

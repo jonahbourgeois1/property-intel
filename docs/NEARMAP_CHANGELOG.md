@@ -2,6 +2,90 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-10 — Delete pin tool
+
+**What.** Pins editor toolbar **Delete pin** (next to Place pin). Click a visible painted region that has a pin, or the pin itself: that pin is removed and the region stays. Empty map and unpinned regions refuse. List row button is labeled Delete.
+
+**Why.** Jonah: a button to delete pins, in line with Place pin (paint is the target, not free map clicks).
+
+**Files.** `nearmap-review.html` (v1.7.6), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; getElementById ids present (`toolDelete`). Browser localhost `?mode=pins` **v1.7.6**: Auto-generated 12. Toolbar **Delete pin** + list **Delete**. List Delete on Building → 11 pins, “Removed Building pin”. Delete pin tool, sagebrush click: “click a painted region that has a pin”, still 11. Swimming Pool layer only → click the pool pin: “Removed Swimming Pool pin”, heading `0 of 10`, cyan pool paint still on the map.
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Place pin only on an unpinned painted region
+
+**What.** Place pin no longer drops a pin at the click or opens a class picker. Turn on a layer (Driveway, Water Body, …), click a visible region that has no pin: the pin is named after that `regions.json` class and sits at the region's interior point. Empty map and already-pinned regions refuse.
+
+**Why.** Jonah: place pins on skipped layers by clicking a region that has no pin, at the centroid; painting is for regions, not free placement.
+
+**Files.** `nearmap-review.html` (v1.7.5), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; getElementById ids present. Browser localhost `?mode=pins` **v1.7.5**: Auto-generated 12. None → Driveway on → Place pin. Sagebrush click: “click a painted region that has no pin”, still 12 auto pins. Magenta driveway stem click: “Placed Driveway at the region interior”; list `Driveway 49,73 placed`; pin sits in the paint, not at the click. Second click on the same region: “That region already has a pin” (still 1 of 13).
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Auto Generate Pins skips cover/veg classes
+
+**What.** Pins editor button is **Auto Generate Pins** (was Seed from regions). On open (testing mode, or empty/catalog leftovers) it pins each `regions.json` feature named after that feature's class, except asphalt, building (deprecated), concrete slab, driveway, low / medium-high / very-low / woody vegetation, natural, roof, translucent roofing, and water body. Not the catalog. Default layers match the pinned classes.
+
+**Why.** Jonah: redesign pin mode — skip those cover/veg classes; names from regions.json; rename the seed button.
+
+**Files.** `nearmap-review.html` (v1.7.4), `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script. Browser localhost `?mode=pins` **v1.7.4**: button **Auto Generate Pins**; status “Auto-generated 12 pin(s) from regions.json · skipped 1543 cover/veg region(s)”; list is Building, Road (Driveable Surface), Lawn Grass ×3, Swimming Pool, Solar Panel, Residential Chimney ×2, Skylight — no catalog ids, no Driveway / Asphalt / Woody / Roof.
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Pin centroids sit in their region; layers hide both
+
+**What.** Pins editor draws region polygons the same way as the regions editor (`google.maps.Polygon`, not Data layer). Each pin is placed at that region's interior point. Checking a class shows its polygons and pins together; **None** hides both.
+
+**Why.** Jonah: centroid/region overlay not working — All showed dots that didn't sit in the paint; None hid polygons but left every centroid.
+
+**Files.** `nearmap-review.html` (v1.7.3), `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script. Browser localhost `?mode=pins` **v1.7.3**: default layers — pink pins sit in driveway paint, orange in building, cyan in pool (68 of 1555). **None** — map clear, heading `0 of 1555`. **Driveway** only — 18 pink polygons with a pin in each (`Driveway ×18`).
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Pins editor shows overlays and pins again
+
+**What.** `?mode=pins` draws checked AI layers (Maps Data, not 1,500 Polygon objects) and draws every region pin as a class-colored dot at the opening zoom. The v1.7.1 zoom-gate / skip-polygons path left a blank map when layers were on.
+
+**Why.** Jonah: pins review page not displaying overlays or pins.
+
+**Files.** `nearmap-review.html` (v1.7.2), `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; getElementById ids present. Browser localhost `nearmap-review.html?mode=pins` **v1.7.2**: Seeded 1555, heading `Region pins (1555) · grouped by class` (no zoom-in gate). Building / driveway / lawn / pool paint on the house; class-colored pin dots across the lot.
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Viewer stays on the property; pins/regions no longer freeze the map
+
+**What.** Product clip no longer `fitBounds` / restricts the camera to the taxlot bounding box (Jones’s triangle pulled the house off to one side). Opening zoom stays put; the hole-punch still hides the neighborhood. 2D regions use one Maps Data layer. Pins are optimized, viewport-culled, and grouped in the list when there are many. Pins editor (`?mode=pins`) does not turn every region layer on and does not draw 1,500 polygons under 1,500 markers.
+
+**Why.** Jonah: viewer opens on the property, then clips off to the side and becomes too slow to operate.
+
+**Files.** `nearmap-viewer.html` (v1.1.7), `nearmap-review.html` (v1.7.1), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review + viewer; `$('…')` ids present. Browser localhost: product `nearmap-viewer.html?full=1` **v1.1.7** stays on the Jones house inside taxlot `181102C000600` (clip hole-punch, house not shoved to a corner). Pins editor `?mode=pins` **v1.7.1**: seeded 1555, heading `Region pins (1555) · grouped by class · zoom in on the map`, no 1,555-marker flood on open; click **Swimming Pool ×1** pans/zooms and markers appear.
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Pass 2 pin editor: region-class names, no cap
+
+**What.** `nearmap-review.html` `?mode=pins` seeds one pin per `regions.json` feature. The pin name is the region class (Lawn Grass, Driveway, …), not a catalog id. No 20-pin cap. Place pin on a region uses that class. `nearmap.gs` save packs those pins into column R (`{v:2,c,p}`) so the sheet cell stays under 50k; Pass 1 Bedrock still uses `NM_MAX_PINS` and catalog ints. Product viewer labels pins from `name` / `class`. Catalog `role=` untouched.
+
+**Why.** Jonah: fill out Pass 2 (pin editor); uncap; pins from the regions list, named after the region class.
+
+**Files.** `nearmap-review.html` (v1.7.0), `apps scripts/nearmap.gs`, `apps scripts/config.gs` (comment), `nearmap-viewer.html` (v1.1.6), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review + viewer modules; `$('…')` ids present. `nearmap.gs` brace/paren 0. Browser localhost `nearmap-review.html?delivery=…&mode=pins` v1.7.0: **Region pins (1555)**, status “Seeded 1555 pin(s) from regions”, list names are region classes (Lawn Grass ×3, Driveway ×18, Woody Vegetation ×914), zero catalog `#id` labels.
+
+**Status.** Local; not committed. Paste `nearmap.gs` + `config.gs` (save **and** new deployment) before Save writes packed region pins.
+
 ## 2026-09-10 — Observed facts stay when Clip is off
 
 **What.** The Observed rail (lot / building / drive / veg / 5 ft / 30 ft) stays on when **Clip to taxlot** is unchecked. Facts are always regions ∩ taxlot; clip only changes what the map shows. Status keeps the taxlot id either way.

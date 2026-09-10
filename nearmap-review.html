@@ -5,14 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.6.11, 2026-09-09)
+  nearmap-review.html — isolated Nearmap trial QA (v1.7.6, 2026-09-10)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
     ?mode=regions (default) — Draw/erase vendor regions. Pins hidden, Save = regions FC.
-    ?mode=pins              — catalog pins on the finished (read-only) regions. Seed from
-                              regions = one pin per non-vegetation region at its interior
-                              point (Lawn Grass kept); Place pin adds by hand. Save = pins.
+    ?mode=pins              — Auto Generate Pins from regions.json class names
+                              except cover/veg skips. Place pin: click a visible
+                              painted region that has no pin; pin goes at that
+                              region's interior point. Delete pin: click a
+                              visible painted region that has a pin (or the pin).
+                              Bare map clicks do nothing.
   Regions follow the original/edits folder format ON S3 — never GitHub:
     original = CloudFront {delivery}/ai/original/regions.json (vendor, immutable)
     edits    = CloudFront {delivery}/ai/edits/regions.json (working FeatureCollection).
@@ -173,7 +176,8 @@
         <button type="button" class="btn tool on" data-tool="pan" id="toolPan">Pan</button>
         <button type="button" class="btn tool regions-only" data-tool="draw" id="toolDraw">Draw</button>
         <button type="button" class="btn tool pins-only" data-tool="place" id="toolPlace">Place pin</button>
-        <button type="button" class="btn pins-only" id="seedPins" title="One pin per finished region (no vegetation), at its interior point">Seed from regions</button>
+        <button type="button" class="btn tool pins-only" data-tool="delete" id="toolDelete">Delete pin</button>
+        <button type="button" class="btn pins-only" id="seedPins" title="Pin each region except cover/veg skips; name is the region class">Auto Generate Pins</button>
         <span id="brushClass"></span>
       </div>
       <label id="brushSizeRow" hidden>
@@ -193,7 +197,7 @@
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
       <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> (S3 via the sheet, or the local file). <strong>Revert changes</strong> discards paint since the last Save (or since you opened). <strong>Revert to original</strong> puts the vendor file back.</p>
-      <p class="meta pins-only" id="pinsNote">Pins editor. Regions are shown read-only (finish them in the Regions editor). Seed makes one pin per region at its interior point — no vegetation, Lawn Grass excepted. Place pin adds one by hand. Save writes the Nearmap sheet only.</p>
+      <p class="meta pins-only" id="pinsNote">Pins editor. Regions are read-only (finish them in the Regions editor). <strong>Auto Generate Pins</strong> places one pin per region at its interior point, named after the region class in regions.json (Lawn Grass stays Lawn Grass — not a catalog entry). Cover/veg classes are skipped (asphalt, building deprecated, concrete slab, driveway, vegetation, natural, roof, translucent roofing, water body, woody). No cap. <strong>Place pin</strong>: turn on a layer, then click a painted region that has no pin — the pin is placed at that region's interior point, not at the click. <strong>Delete pin</strong>: click a painted region that has a pin, or the pin itself — the region stays. Bare map clicks do nothing. Save writes the Nearmap sheet.</p>
       <label class="toggle regions-only"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
         <button type="button" class="btn" id="aiAll">All</button>
@@ -201,7 +205,7 @@
       </div>
       <div id="aiLayers"></div>
       <div class="pins-only">
-        <p class="meta" id="pinHeading">Catalog pins (percent of nadir JPEG)</p>
+        <p class="meta" id="pinHeading">Region pins (percent of nadir JPEG)</p>
         <ol id="pinList"></ol>
       </div>
     </div>
@@ -216,7 +220,7 @@
 </main>
 <div id="picker" hidden>
   <div class="picker-card">
-    <h2>Catalog pin</h2>
+    <h2>Region class</h2>
     <p class="meta" id="pickerHint"></p>
     <input id="pickerQ" type="search" placeholder="Type a name or id" autocomplete="off">
     <ul id="pickerHits"></ul>
@@ -225,11 +229,31 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.6.11';
+  var BUILD = 'v1.7.6';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
-  var PIN_HARD_LIMIT = 20;
+  var PIN_HARD_LIMIT = 0;
+  // Auto Generate Pins skips these regions.json classes (cover / veg).
+  // "Building" is pinned; "Building (Deprecated)" is not.
+  function pinClassKey(name) {
+    return String(name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  }
+  function skipAutoPinClass(name) {
+    var k = pinClassKey(name);
+    if (!k) return true;
+    if (k === 'asphalt' || k === 'concrete slab' || k === 'driveway' ||
+        k === 'roof' || k === 'translucent roofing' || k === 'water body') {
+      return true;
+    }
+    if (k === 'building (deprecated)' || k.indexOf('building (deprecated)') === 0) return true;
+    if (/^low vegetation/.test(k)) return true;
+    if (/^very low vegetation/.test(k)) return true;
+    if (/^medium and high vegetation/.test(k)) return true;
+    if (/^woody vegetation/.test(k)) return true;
+    if (/^natural\b/.test(k)) return true;
+    return false;
+  }
   var BRUSH_PX = 12;
   var JOIN_M = 1;
   // Erase clean-up (metres, local frame). A piece left after right-click erase is a
@@ -306,31 +330,14 @@
   var regionsRemote = { original: '', edits: '' };
   // Two editors on one page, never both at once:
   //   regions (default) — Draw/erase vendor regions; pins are not shown or saved.
-  //   pins   (?mode=pins) — catalog pins on the finished regions; regions read-only.
+  //   pins   (?mode=pins) — Auto Generate Pins from regions.json class names,
+  //                         skipping cover/veg classes (not the catalog).
+  //                         Place pin / Delete pin click painted regions.
   var MODE = qp('mode') === 'pins' ? 'pins' : 'regions';
   document.body.className = 'mode-' + MODE;
   var modeChipEl = document.getElementById('modeChip');
   if (modeChipEl) modeChipEl.textContent = MODE === 'pins' ? 'Pins' : 'Regions';
   var accountType = 'residential';
-  // Seed map: vendor class → catalog id [residential, commercial]. Vegetation,
-  // Tree Overhang, Car (no catalog pin) and Building (Deprecated) (duplicates
-  // Building) are deliberately absent. Lawn Grass is the one "green" class kept.
-  var SEED_MAP = {
-    'Building': [57, 19],
-    'Roof': [61, 61],
-    'Translucent Roofing': [61, 61],
-    'Driveway': [186, 186],
-    'Asphalt': [206, 206],
-    'Road (Driveable Surface)': [210, 210],
-    'Concrete Slab': [52, 52],
-    'Solar Panel': [69, 69],
-    'Swimming Pool': [130, 130],
-    'Lawn Grass': [114, 114],
-    'Water Body': [129, 132],
-    'Skylight': [68, 68],
-    'Residential Chimney': [16, 16],
-    'Dumpster': [98, 98]
-  };
   var dataRoot = String(qp('dataRoot') || '');
   var record = null;
   var catalogById = {};
@@ -340,6 +347,7 @@
   var aiShapes = [];
   var hintMarkers = [];
   var pinMarkers = [];
+  var lastPinView = '';
   var drawnShapes = [];
   var workShape = null;
   var brushLine = null;
@@ -350,6 +358,7 @@
   var sheetPromise = null;
   var mapsBooted = false;
   var toolMode = 'pan';
+  var pinPlaceHandled = false;
   var activeClass = '';
   var consumed = {};
   var originalById = {};
@@ -365,6 +374,7 @@
   var PAINT_HISTORY_MAX = 30;
   var pickerCb = null;
   var pickerSuggested = [];
+  var pickerKind = 'catalog';
   var drawVerts = [];
   var drawPreview = null;
 
@@ -778,7 +788,9 @@
     }
     names.sort();
     names.forEach(function (name) {
-      if (layerOn[name] === undefined) layerOn[name] = false;
+      if (layerOn[name] === undefined) {
+        layerOn[name] = MODE === 'pins' ? !skipAutoPinClass(name) : false;
+      }
       var row = document.createElement('label');
       row.className = 'layer-row' + (activeClass === name ? ' is-active' : '');
       row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
@@ -924,6 +936,58 @@
     }
   }
 
+  function pinLabel(p) {
+    if (!p) return '';
+    return p.name || p.class || p.ai_class ||
+      ((catalogById[p.id] && catalogById[p.id].name) || String(p.id != null ? p.id : ''));
+  }
+
+  function pinsLookLikeCatalog(pins) {
+    if (!pins || !pins.length) return false;
+    return pins.every(function (p) {
+      if (p.name || p.class || p.source === 'region') return false;
+      return typeof p.id === 'number' || /^\d+$/.test(String(p.id));
+    });
+  }
+
+  function uniqueRegionClasses() {
+    var seen = {};
+    var out = [];
+    ((aiPack && aiPack.features) || []).forEach(function (f) {
+      var cls = featureClass(f);
+      if (!cls || seen[cls]) return;
+      seen[cls] = true;
+      out.push(cls);
+    });
+    out.sort();
+    return out;
+  }
+
+  function pinClassName(p) {
+    return (p && (p.class || p.name || p.ai_class)) || '';
+  }
+  function pinVisible(p) {
+    var c = pinClassName(p);
+    if (!c) return true;
+    return layerOn[c] !== false;
+  }
+  function featureById(rid) {
+    var fs = (aiPack && aiPack.features) || [];
+    var id = String(rid || '');
+    if (!id) return null;
+    for (var i = 0; i < fs.length; i++) {
+      if (String(fs[i].id) === id) return fs[i];
+    }
+    return null;
+  }
+  function pinLatLng(p, b) {
+    if (p && p.region_id) {
+      var f = featureById(p.region_id);
+      var ll = f && interiorPoint(f);
+      if (ll) return ll;
+    }
+    return pctToLatLng(p.x, p.y, b);
+  }
   function sourceLabel(p) {
     return p.source || '';
   }
@@ -931,24 +995,54 @@
   function renderPinList() {
     var host = document.getElementById('pinList');
     host.innerHTML = '';
-    var pins = (record && record.elements) || [];
+    var all = (record && record.elements) || [];
+    var pins = all.filter(pinVisible);
+    var extra = all.length && pins.length !== all.length ? ' of ' + all.length : '';
     document.getElementById('pinHeading').textContent =
-      'Catalog pins (' + pins.length + ' / ' + PIN_HARD_LIMIT + ')';
-    if (!pins.length) {
+      'Region pins (' + pins.length + extra + ')' + (pins.length > 60 || all.length > 60 ? ' · grouped by class' : '');
+    if (!all.length) {
       var empty = document.createElement('li');
-      empty.innerHTML = '<span class="meta">None yet. Draw: click a centroid, then left-click to add / right-click to remove.</span>';
+      empty.innerHTML = '<span class="meta">None yet. Auto Generate Pins, or Place pin on a region.</span>';
       host.appendChild(empty);
       return;
     }
-    pins.forEach(function (p, i) {
-      var name = (catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id);
+    if (!pins.length) {
+      var hidden = document.createElement('li');
+      var anyLayer = Object.keys(layerOn).some(function (k) { return layerOn[k] !== false; });
+      hidden.innerHTML = anyLayer
+        ? '<span class="meta">No pins on the visible layers — Place pin on a painted region.</span>'
+        : '<span class="meta">Layers off — turn a class on to see its regions and pins.</span>';
+      host.appendChild(hidden);
+      return;
+    }
+    if (all.length > 60) {
+      var groups = {};
+      all.forEach(function (p, i) {
+        if (!pinVisible(p)) return;
+        var n = pinLabel(p);
+        if (!groups[n]) groups[n] = { count: 0, first: i };
+        groups[n].count += 1;
+      });
+      Object.keys(groups).sort().forEach(function (name) {
+        var g = groups[name];
+        var li = document.createElement('li');
+        li.setAttribute('data-pick-pin', String(g.first));
+        li.innerHTML = '<span class="grow">' + escapeHtml(name) +
+          ' <span class="meta">×' + g.count + '</span></span>';
+        host.appendChild(li);
+      });
+      return;
+    }
+    all.forEach(function (p, i) {
+      if (!pinVisible(p)) return;
+      var name = pinLabel(p);
       var li = document.createElement('li');
       var src = sourceLabel(p);
       li.innerHTML = '<span>' + (i + 1) + '</span><span class="grow" data-pick-pin="' + i + '">' + escapeHtml(name) +
-        ' <span class="meta">#' + p.id + ' · ' + p.x + ',' + p.y +
+        ' <span class="meta">' + p.x + ',' + p.y +
         (src ? ' <span class="src">' + escapeHtml(src) + '</span>' : '') +
         '</span></span>' +
-        '<button type="button" class="btn" data-del="' + i + '">x</button>';
+        '<button type="button" class="btn" data-del="' + i + '">Delete</button>';
       host.appendChild(li);
     });
   }
@@ -2075,28 +2169,28 @@
     var seedId = brushTarget && brushTarget.regionId;
     (ai.features || []).forEach(function (f, i) {
       var rid = String(f.id || i);
-      if (consumed[rid] && rid !== seedId && !pinOwnsRegion(rid)) return;
+      if (MODE !== 'pins' && consumed[rid] && rid !== seedId && !pinOwnsRegion(rid)) return;
       var cls = featureClass(f);
       if (layerOn[cls] === false) return;
       var color = colorForClass(cls);
-      var hot = !!activeClass && cls === activeClass;
+      var hot = MODE !== 'pins' && !!activeClass && cls === activeClass;
       featurePolys(f).forEach(function (polyRings) {
-        // All rings: outer + holes, so cutouts render as cutouts.
         var path = polyRings.map(ringToPath);
         if (hot) {
-          // White halo under the class-colored border so every outline of the
-          // active class reads on asphalt, roof, and vegetation alike.
           aiShapes.push(new google.maps.Polygon({
             paths: path,
             strokeColor: '#ffffff',
             strokeOpacity: 0.9,
             strokeWeight: 5,
             fillOpacity: 0,
+            geodesic: false,
             map: map,
             clickable: false,
             zIndex: 2
           }));
         }
+        var placing = MODE === 'pins' && toolMode === 'place';
+        var deleting = MODE === 'pins' && toolMode === 'delete';
         var poly = new google.maps.Polygon({
           paths: path,
           strokeColor: color,
@@ -2104,11 +2198,26 @@
           strokeWeight: hot ? 2.5 : 1.5,
           fillColor: color,
           fillOpacity: 0.32,
+          geodesic: false,
           map: map,
-          clickable: accept || (isEditTool() && !brushTarget),
+          clickable: placing || deleting || (MODE !== 'pins' && (accept || (isEditTool() && !brushTarget))),
           zIndex: hot ? 3 : 2
         });
         poly.__nmIdx = i;
+        if (placing || deleting) {
+          poly.addListener('click', function (ev) {
+            if (ev && ev.stop) ev.stop();
+            pinPlaceHandled = true;
+            var ll = ev && ev.latLng
+              ? { lat: ev.latLng.lat(), lng: ev.latLng.lng() }
+              : interiorPoint(f);
+            if (ll) {
+              if (placing) placePinAt(ll);
+              else deletePinAt(ll);
+            }
+            setTimeout(function () { pinPlaceHandled = false; }, 0);
+          });
+        }
         if (accept) {
           poly.addListener('click', function () { onAcceptFeature(i); });
         }
@@ -2197,6 +2306,7 @@
   }
 
   function redrawAi() {
+    lastPinView = '';
     clearAiShapes();
     if (!aiPack) {
       drawDrawn();
@@ -2210,30 +2320,55 @@
   }
 
   function drawPins() {
-    pinMarkers.forEach(function (m) { m.setMap(null); });
-    pinMarkers = [];
     var b = record && record.nadir && record.nadir.bounds;
-    if (MODE !== 'pins') return;
+    if (MODE !== 'pins') {
+      pinMarkers.forEach(function (m) { m.setMap(null); });
+      pinMarkers = [];
+      lastPinView = '';
+      renderPinList();
+      return;
+    }
     if (!map || !b) {
       renderPinList();
       return;
     }
-    ((record && record.elements) || []).forEach(function (p, i) {
-      var ll = pctToLatLng(p.x, p.y, b);
+    var pins = (record && record.elements) || [];
+    var vis = 0;
+    pins.forEach(function (p) { if (pinVisible(p)) vis += 1; });
+    var key = pins.length + ':' + vis + ':' + toolMode;
+    if (key === lastPinView) return;
+    lastPinView = key;
+    pinMarkers.forEach(function (m) { m.setMap(null); });
+    pinMarkers = [];
+    var deleting = toolMode === 'delete';
+    pins.forEach(function (p, i) {
+      if (!pinVisible(p)) return;
+      var ll = pinLatLng(p, b);
+      var color = colorForClass(pinClassName(p));
       var mk = new google.maps.Marker({
         position: ll,
         map: map,
-        optimized: false,
-        clickable: isEditTool() && !brushTarget,
+        optimized: true,
+        clickable: deleting,
         zIndex: 20,
-        label: { text: String(i + 1), color: '#1b2027', fontSize: '11px', fontWeight: '700' },
-        title: ((catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id)) + ' ' + p.x + ',' + p.y
+        title: pinLabel(p),
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 6,
+          fillColor: color,
+          fillOpacity: 0.95,
+          strokeColor: '#ffffff',
+          strokeWeight: 1
+        }
       });
-      if (isEditTool() && !brushTarget) {
+      mk.__pinIdx = i;
+      if (deleting) {
         (function (idx) {
           mk.addListener('click', function (ev) {
             if (ev && ev.stop) ev.stop();
-            selectBrushPin(idx);
+            pinPlaceHandled = true;
+            deletePin(idx);
+            setTimeout(function () { pinPlaceHandled = false; }, 0);
           });
         })(i);
       }
@@ -2244,7 +2379,7 @@
 
   function canAddPin() {
     var n = ((record && record.elements) || []).length;
-    if (n >= PIN_HARD_LIMIT) {
+    if (PIN_HARD_LIMIT > 0 && n >= PIN_HARD_LIMIT) {
       setStatus('Pin cap is ' + PIN_HARD_LIMIT, 'err');
       return false;
     }
@@ -2253,12 +2388,6 @@
 
   // ── Pins editor ──────────────────────────────────────────────────────────────
   var VEGETATION_RE = /vegetation|tree overhang|natural/i;
-
-  function seedIdForClass(cls) {
-    var row = SEED_MAP[cls];
-    if (!row) return null;
-    return accountType === 'commercial' ? row[1] : row[0];
-  }
 
   // Region the point falls in (visible layers first), for pin suggestions.
   function regionAt(ll) {
@@ -2274,9 +2403,10 @@
     return hit;
   }
 
-  // One pin per finished region at its interior point. Vegetation/nature classes
-  // are skipped (Lawn Grass kept); classes with no catalog pin are skipped and
-  // reported. Largest regions first so the cap lands on the small stuff.
+  // Auto Generate Pins: one pin per finished region at its interior point.
+  // The pin name is the region class from regions.json (Lawn Grass stays
+  // Lawn Grass). Cover/veg classes in skipAutoPinClass are not pinned.
+  // Not the catalog. No cap.
   function seedPinsFromRegions(replace) {
     if (!aiPack || !Array.isArray(aiPack.features)) {
       setStatus('Regions are not loaded yet', 'err');
@@ -2290,57 +2420,118 @@
     var c0 = featureCentroid({ geometry: { type: 'Polygon', coordinates: [[[b.west, b.south], [b.east, b.south], [b.east, b.north], [b.west, b.north], [b.west, b.south]]] } });
     var fr = meterFrame(c0.lat, c0.lng);
     var cands = [];
-    var skipped = {};
+    var skipped = 0;
     aiPack.features.forEach(function (f) {
       var rid = String(f.id);
       var cls = featureClass(f);
-      if (VEGETATION_RE.test(cls) && cls !== 'Lawn Grass') return;
+      if (skipAutoPinClass(cls)) { skipped += 1; return; }
       if (have[rid]) return;
-      var id = seedIdForClass(cls);
-      if (!id) { skipped[cls] = (skipped[cls] || 0) + 1; return; }
       var area = geometryAreaM2(f.geometry, fr);
-      cands.push({ f: f, rid: rid, cls: cls, id: id, area: area });
+      cands.push({ f: f, rid: rid, cls: cls, area: area });
     });
     cands.sort(function (p, q) { return q.area - p.area; });
-    var added = 0, oob = 0, capped = 0;
+    var added = 0, oob = 0;
     cands.forEach(function (cnd) {
-      if (((record && record.elements) || []).length >= PIN_HARD_LIMIT) { capped++; return; }
       var ll = interiorPoint(cnd.f);
       var xy = ll && latLngToPct(ll.lat, ll.lng, b);
       if (!xy) { oob++; return; }
-      var pin = { id: cnd.id, x: xy.x, y: xy.y, source: 'region', region_id: cnd.rid, ai_class: cnd.cls };
+      var pin = {
+        id: cnd.rid,
+        name: cnd.cls,
+        class: cnd.cls,
+        x: xy.x,
+        y: xy.y,
+        source: 'region',
+        region_id: cnd.rid,
+        ai_class: cnd.cls
+      };
       record.elements = (record.elements || []).concat([pin]);
       added++;
     });
     persistLocal();
     rebuildConsumed();
+    lastPinView = '';
     redrawAi();
     var notes = [];
-    var skipNames = Object.keys(skipped).sort();
-    if (skipNames.length) notes.push('no catalog pin for ' + skipNames.map(function (k) { return k + ' (' + skipped[k] + ')'; }).join(', '));
+    if (skipped) notes.push('skipped ' + skipped + ' cover/veg region(s)');
     if (oob) notes.push(oob + ' outside the nadir frame — not placed');
-    if (capped) notes.push(capped + ' over the ' + PIN_HARD_LIMIT + '-pin cap — not placed');
-    setStatus('Seeded ' + added + ' pin(s) from regions' + (notes.length ? ' · ' + notes.join(' · ') : '') + ' — Save to write the sheet', capped || oob ? 'err' : '');
+    setStatus('Auto-generated ' + added + ' pin(s) from regions.json' + (notes.length ? ' · ' + notes.join(' · ') : '') + ' — Save to write the sheet', oob ? 'err' : '');
+  }
+
+  // Visible painted region under the click (smallest area wins if they overlap).
+  // Hidden layers are ignored — Place pin only works on what is painted.
+  function placeRegionAt(ll) {
+    var fs = (aiPack && aiPack.features) || [];
+    var b = record && record.nadir && record.nadir.bounds;
+    var fr = null;
+    if (b) {
+      var c0 = featureCentroid({ geometry: { type: 'Polygon', coordinates: [[[b.west, b.south], [b.east, b.south], [b.east, b.north], [b.west, b.north], [b.west, b.south]]] } });
+      fr = meterFrame(c0.lat, c0.lng);
+    }
+    var hits = [];
+    for (var i = 0; i < fs.length; i++) {
+      var f = fs[i];
+      var cls = featureClass(f);
+      if (layerOn[cls] === false) continue;
+      if (!pointInFeature(ll, f)) continue;
+      hits.push({ f: f, area: fr ? geometryAreaM2(f.geometry, fr) : 0 });
+    }
+    if (!hits.length) return null;
+    hits.sort(function (a, b) { return a.area - b.area; });
+    return hits[0].f;
   }
 
   function placePinAt(ll) {
     if (!canAddPin()) return;
-    var f = regionAt(ll);
-    var cls = f ? featureClass(f) : '';
-    var seedId = cls ? seedIdForClass(cls) : null;
-    var suggested = [];
-    if (seedId) suggested.push(seedId);
-    suggestIds(cls).forEach(function (id) { if (suggested.indexOf(id) === -1) suggested.push(id); });
-    openPicker(cls ? ('Pin on ' + cls + ' as…') : 'Pin as…', suggested, function (catalogId) {
-      var pin = addPinAt(ll, catalogId, { source: 'placed', region_id: f ? String(f.id) : '', ai_class: cls });
-      if (!pin) return;
-      rebuildConsumed();
-      redrawAi();
-      setStatus('Placed ' + ((catalogById[catalogId] && catalogById[catalogId].name) || catalogId) + ' — Save to write the sheet');
-    });
+    var f = placeRegionAt(ll);
+    if (!f) {
+      setStatus('Place pin: click a painted region that has no pin', 'err');
+      return;
+    }
+    var rid = String(f.id || '');
+    if (rid && pinOwnsRegion(rid)) {
+      setStatus('That region already has a pin', 'err');
+      return;
+    }
+    var cls = featureClass(f);
+    var at = interiorPoint(f);
+    if (!at) {
+      setStatus('Could not find an interior point for that region', 'err');
+      return;
+    }
+    var pin = addRegionPin(at, cls, { source: 'placed', region_id: rid });
+    if (!pin) return;
+    rebuildConsumed();
+    lastPinView = '';
+    redrawAi();
+    setStatus('Placed ' + cls + ' at the region interior — Save to write the sheet');
   }
 
-  function addPinAt(ll, catalogId, meta) {
+  function pinIndexForRegion(rid) {
+    var id = String(rid || '');
+    if (!id) return -1;
+    var pins = (record && record.elements) || [];
+    for (var i = 0; i < pins.length; i++) {
+      if (String(pins[i].region_id || '') === id) return i;
+    }
+    return -1;
+  }
+
+  function deletePinAt(ll) {
+    var f = placeRegionAt(ll);
+    if (!f) {
+      setStatus('Delete pin: click a painted region that has a pin', 'err');
+      return;
+    }
+    var idx = pinIndexForRegion(f.id);
+    if (idx < 0) {
+      setStatus('That region has no pin', 'err');
+      return;
+    }
+    deletePin(idx);
+  }
+
+  function addRegionPin(ll, className, meta) {
     var b = record && record.nadir && record.nadir.bounds;
     var xy = latLngToPct(ll.lat, ll.lng, b);
     if (!xy) {
@@ -2348,16 +2539,25 @@
       return null;
     }
     if (!canAddPin()) return null;
-    var pin = { id: catalogId, x: xy.x, y: xy.y };
+    var cls = String(className || 'Unknown');
+    var rid = meta.region_id ? String(meta.region_id) : '';
+    var pin = {
+      id: rid || ('p' + Date.now()),
+      name: cls,
+      class: cls,
+      x: xy.x,
+      y: xy.y,
+      ai_class: cls
+    };
     if (meta.source) pin.source = meta.source;
-    if (meta.ai_class) pin.ai_class = meta.ai_class;
-    if (meta.drawn_id) pin.drawn_id = meta.drawn_id;
-    if (meta.ai_index != null) pin.ai_index = meta.ai_index;
-    if (meta.region_id) pin.region_id = String(meta.region_id);
-    if (meta.merged_from) pin.merged_from = meta.merged_from;
+    if (rid) pin.region_id = rid;
     record.elements = (record.elements || []).concat([pin]);
     persistLocal();
     return pin;
+  }
+
+  function addPinAt(ll, catalogId, meta) {
+    return addRegionPin(ll, (meta && meta.ai_class) || pinLabel({ id: catalogId }), meta || {});
   }
 
   function addDrawnFeature(ring, catalogId, meta) {
@@ -2381,9 +2581,21 @@
   function openPicker(hint, suggested, onPick) {
     pickerCb = onPick;
     pickerSuggested = suggested || [];
+    pickerKind = 'catalog';
     document.getElementById('pickerHint').textContent = hint || '';
     document.getElementById('pickerQ').value = '';
     renderPickerHits('', pickerSuggested);
+    document.getElementById('picker').hidden = false;
+    document.getElementById('pickerQ').focus();
+  }
+
+  function openClassPicker(hint, classes, onPick) {
+    pickerCb = onPick;
+    pickerSuggested = classes || [];
+    pickerKind = 'class';
+    document.getElementById('pickerHint').textContent = hint || '';
+    document.getElementById('pickerQ').value = '';
+    renderClassPickerHits('', pickerSuggested);
     document.getElementById('picker').hidden = false;
     document.getElementById('pickerQ').focus();
   }
@@ -2392,7 +2604,21 @@
     document.getElementById('picker').hidden = true;
     pickerCb = null;
     pickerSuggested = [];
+    pickerKind = 'catalog';
     if (!pickerCb) clearDrawPreview();
+  }
+
+  function renderClassPickerHits(q, classes) {
+    var host = document.getElementById('pickerHits');
+    host.innerHTML = '';
+    q = String(q || '').toLowerCase().trim();
+    (classes || []).forEach(function (cls) {
+      if (q && String(cls).toLowerCase().indexOf(q) === -1) return;
+      var li = document.createElement('li');
+      li.innerHTML = '<button type="button" class="suggest" data-class="' +
+        escapeHtml(cls) + '">' + escapeHtml(cls) + '</button>';
+      host.appendChild(li);
+    });
   }
 
   function renderPickerHits(q, suggested) {
@@ -2449,10 +2675,9 @@
       }
       if (rid && !featureById(rid) && originalById[rid]) restoreRegionIds([rid]);
       var hit = rid ? featureById(rid) : null;
-      var cls = (hit && featureClass(hit.feature)) || p.ai_class ||
-        ((catalogById[p.id] && catalogById[p.id].name) || 'region');
+      var cls = (hit && featureClass(hit.feature)) || p.ai_class || p.class || pinLabel(p) || 'region';
       if (hit && layerOn[cls] === false) layerOn[cls] = true;
-      var name = (catalogById[p.id] && catalogById[p.id].name) || ('#' + p.id);
+      var name = pinLabel(p);
       brushTarget = {
         pinIndex: idx,
         regionId: rid || (hit && String(hit.feature.id)) || '',
@@ -3001,12 +3226,15 @@
     var pins = (record && record.elements) || [];
     var p = pins[i];
     if (!p) return;
+    var label = pinLabel(p) || pinClassName(p) || 'pin';
     pins.splice(i, 1);
     if (MODE === 'pins') {
       // Pins editor: a pin is just a pin. Regions are never touched here.
       persistLocal();
-      drawPins();
-      setStatus('Removed pin');
+      lastPinView = '';
+      rebuildConsumed();
+      redrawAi();
+      setStatus('Removed ' + label + ' pin — Save to write the sheet');
       return;
     }
     if (p.drawn_id) {
@@ -3166,13 +3394,14 @@
     } else {
       redrawAi();
     }
-    if (map) map.setOptions({ draggableCursor: mode === 'place' ? 'crosshair' : (isEditTool() ? 'none' : null) });
+    if (map) map.setOptions({ draggableCursor: (mode === 'place' || mode === 'delete') ? 'crosshair' : (isEditTool() ? 'none' : null) });
     if (mode === 'accept') setStatus('Click a visible AI polygon');
     else if (mode === 'draw') {
       updateBrushLabel();
       setStatus('Draw: + click a centroid, then left-click adds and right-click removes. Scroll to zoom.');
     }
-    else if (mode === 'place') setStatus('Place pin: click the map where the pin belongs, then choose its catalog entry.');
+    else if (mode === 'place') setStatus('Place pin: turn on a layer, then click a painted region with no pin.');
+    else if (mode === 'delete') setStatus('Delete pin: click a painted region that has a pin, or the pin.');
     else setStatus('');
   }
 
@@ -3208,10 +3437,16 @@
       if (working.stamps.length) showBrushStroke();
     });
     map.fitBounds(b);
+    map.addListener('idle', function () {
+      if (MODE === 'pins') drawPins();
+    });
     map.addListener('click', function (e) {
       if (!e || !e.latLng) return;
-      if (toolMode === 'place' && MODE === 'pins') {
-        placePinAt({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+      if ((toolMode === 'place' || toolMode === 'delete') && MODE === 'pins') {
+        if (pinPlaceHandled) return;
+        var ll = { lat: e.latLng.lat(), lng: e.latLng.lng() };
+        if (toolMode === 'place') placePinAt(ll);
+        else deletePinAt(ll);
         return;
       }
       if (isEditTool() && !brushTarget) {
@@ -3313,13 +3548,10 @@
       ensureFeatures().then(function () {
         redrawAi();
         if (MODE === 'pins') {
-          // Pins editor shows the finished regions; turn every non-vegetation
-          // layer on so the reviewer sees what the pins sit on, and seed pins
-          // the first time a row has none.
-          Object.keys(layerOn).forEach(function (k) { layerOn[k] = !VEGETATION_RE.test(k) || k === 'Lawn Grass'; });
-          renderLayers(aiPack);
-          redrawAi();
-          if (!((record && record.elements) || []).length) seedPinsFromRegions(false);
+          var cur = (record && record.elements) || [];
+          if (FRESH_ON_OPEN || !cur.length || pinsLookLikeCatalog(cur)) {
+            seedPinsFromRegions(true);
+          }
         }
       }).catch(function () {});
     }).catch(function (e) { setStatus('AI hints: ' + e.message, 'err'); });
@@ -3499,7 +3731,7 @@
   document.getElementById('seedPins').addEventListener('click', function (ev) {
     ev.stopPropagation();
     var n = ((record && record.elements) || []).length;
-    if (n && !window.confirm('Replace the ' + n + ' current pin(s) with one pin per region?')) return;
+    if (n && !window.confirm('Replace the ' + n + ' current pin(s) with Auto Generate Pins? Cover/veg classes are not pinned.')) return;
     ensureFeatures().then(function () { seedPinsFromRegions(true); }).catch(function () {});
   });
   document.addEventListener('keydown', function (ev) {
@@ -3517,8 +3749,19 @@
   document.getElementById('pinList').addEventListener('click', function (ev) {
     var pick = ev.target.closest('[data-pick-pin]');
     if (pick) {
+      var idx = parseInt(pick.getAttribute('data-pick-pin'), 10);
+      if (MODE === 'pins') {
+        var p = ((record && record.elements) || [])[idx];
+        var nb = record && record.nadir && record.nadir.bounds;
+        if (map && p && nb) {
+          var ll = pinLatLng(p, nb);
+          map.panTo(ll);
+          if (map.getZoom() < 20) map.setZoom(20);
+        }
+        return;
+      }
       setTool('draw');
-      selectBrushPin(parseInt(pick.getAttribute('data-pick-pin'), 10));
+      selectBrushPin(idx);
       return;
     }
     var t = ev.target.closest('[data-del]');
@@ -3526,9 +3769,16 @@
     deletePin(parseInt(t.getAttribute('data-del'), 10));
   });
   document.getElementById('pickerQ').addEventListener('input', function () {
-    renderPickerHits(document.getElementById('pickerQ').value, pickerSuggested);
+    var q = document.getElementById('pickerQ').value;
+    if (pickerKind === 'class') renderClassPickerHits(q, pickerSuggested);
+    else renderPickerHits(q, pickerSuggested);
   });
   document.getElementById('pickerHits').addEventListener('click', function (ev) {
+    var clsBtn = ev.target.closest('[data-class]');
+    if (clsBtn) {
+      pickCatalog(clsBtn.getAttribute('data-class'));
+      return;
+    }
     var t = ev.target.closest('[data-id]');
     if (!t) return;
     pickCatalog(parseInt(t.getAttribute('data-id'), 10));

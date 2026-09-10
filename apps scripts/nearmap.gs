@@ -14,7 +14,10 @@
 //                (Bedrock 5 MB cap), never vert.jpg. Pin x,y stay percent of
 //                the FULL vert.jpg (sheet bounds). AI features are filtered
 //                to the taxlot before the prompt. Isolated from satellite.gs.
-//   Pins         [{id, x, y}] percent of that JPEG. Catalog ids only.
+//   Pins         Pass 2 pin editor: one pin per regions.json feature, named
+//                after the region class (not catalog ids). Uncapped. Packed
+//                into column R so the 50k cell cap holds ~1.5k pins.
+//                Pass 1 Bedrock still emits catalog ints (NM_MAX_PINS).
 //   Catalog      pins-catalog.json. NM_PASS1_EMIT_IDS is a COPY of the
 //                satellite standard/school lists, not an import from
 //                satellite.gs. Fresh Pass 1 = emit list. Validator wins.
@@ -971,22 +974,105 @@ function generateNearmapElementPinsBatch() {
   ui.alert('Nearmap Pass 1', 'Completed ' + done + ' of ' + batch.length + ' (queue ' + ready.length + ').', ui.ButtonSet.OK);
 }
 
+function nmParseOnePin_(p) {
+  if (!p) return null;
+  const x = parseFloat(p.x), y = parseFloat(p.y);
+  if (isNaN(x) || isNaN(y)) return null;
+  if (Math.abs(x) > 500 || Math.abs(y) > 500) return null;
+  const name = String(p.name || p.class || p.ai_class || '').trim();
+  const cls = String(p.class || p.ai_class || p.name || '').trim();
+  if (name || cls) {
+    const row = {
+      id: String(p.id != null ? p.id : ''),
+      name: name || cls,
+      class: cls || name,
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10
+    };
+    if (p.source) row.source = String(p.source);
+    if (p.ai_class) row.ai_class = String(p.ai_class);
+    if (p.region_id) row.region_id = String(p.region_id);
+    return row;
+  }
+  const id = parseInt(p.id, 10);
+  if (isNaN(id)) return null;
+  const row = { id: id, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10 };
+  if (p.source) row.source = String(p.source);
+  if (p.ai_class) row.ai_class = String(p.ai_class);
+  if (p.drawn_id) row.drawn_id = String(p.drawn_id);
+  if (p.region_id) row.region_id = String(p.region_id);
+  if (Array.isArray(p.merged_from)) row.merged_from = p.merged_from.map(String);
+  return row;
+}
+
+function nmUnpackPackedPins_(v) {
+  const classes = v.c || [];
+  const out = [];
+  (v.p || []).forEach(function (row) {
+    if (!row || !row.length) return;
+    const cls = String(classes[row[0]] || '');
+    const x = parseFloat(row[1]), y = parseFloat(row[2]);
+    if (!cls || isNaN(x) || isNaN(y)) return;
+    const rid = row[3] != null ? String(row[3]) : '';
+    out.push({
+      id: rid || cls,
+      name: cls,
+      class: cls,
+      x: x,
+      y: y,
+      source: 'region',
+      region_id: rid,
+      ai_class: cls
+    });
+  });
+  return out;
+}
+
+function nmPackPinsForSheet_(pins) {
+  const classes = [];
+  const idx = {};
+  function ci(name) {
+    const n = String(name || '');
+    if (idx[n] == null) { idx[n] = classes.length; classes.push(n); }
+    return idx[n];
+  }
+  const p = (pins || []).map(function (pin) {
+    const cls = String(pin.class || pin.name || pin.ai_class || '');
+    return [ci(cls), pin.x, pin.y, String(pin.region_id || pin.id || '')];
+  });
+  return { v: 2, source: 'regions', c: classes, p: p };
+}
+
 function nmParsePins_(raw) {
   const s = String(raw || '').trim();
   if (!s || s.indexOf('ERROR:') === 0) return [];
   let v;
   try { v = JSON.parse(s); } catch (e) { return []; }
+  if (v && v.v === 2 && Array.isArray(v.c) && Array.isArray(v.p)) return nmUnpackPackedPins_(v);
   if (!Array.isArray(v)) return [];
-  return v.filter(function (p) {
-    return p && !isNaN(parseInt(p.id, 10)) && !isNaN(parseFloat(p.x)) && !isNaN(parseFloat(p.y));
-  }).map(function (p) {
-    const row = { id: parseInt(p.id, 10), x: parseFloat(p.x), y: parseFloat(p.y) };
-    if (p.source) row.source = String(p.source);
-    if (p.ai_class) row.ai_class = String(p.ai_class);
-    if (p.drawn_id) row.drawn_id = String(p.drawn_id);
-    if (p.region_id) row.region_id = String(p.region_id);
-    if (Array.isArray(p.merged_from)) row.merged_from = p.merged_from.map(String);
-    return row;
+  return v.map(nmParseOnePin_).filter(Boolean);
+}
+
+function nmValidateRegionPins_(pins) {
+  if (!Array.isArray(pins)) return [];
+  const out = [];
+  const seen = {};
+  for (let i = 0; i < pins.length; i++) {
+    const row = nmParseOnePin_(pins[i]);
+    if (!row || !(row.name || row.class)) continue;
+    const key = String(row.region_id || row.id) + ':' + row.x + ':' + row.y;
+    if (seen[key]) continue;
+    seen[key] = true;
+    out.push(row);
+  }
+  return out;
+}
+
+function nmPinsAreRegionStyle_(pins) {
+  if (!Array.isArray(pins) || !pins.length) return true;
+  return pins.some(function (p) {
+    return p && (p.name || p.class || p.source === 'region' ||
+      (p.id != null && !/^\d+$/.test(String(p.id))));
   });
 }
 
@@ -1106,7 +1192,7 @@ function processNearmapForActiveRow() {
 }
 
 // Two editors on one page: mode=regions (default; Draw/erase vendor regions) and
-// mode=pins (catalog pins seeded from the finished regions). Never both at once.
+// mode=pins (one pin per region, named after the region class). Never both at once.
 function buildNearmapReviewUrl_(sheet, row, mode) {
   const delivery = String(sheet.getRange(row, NM_COL_DELIVERY).getValue() || '').trim();
   const siteNo = nmValidSiteNo_(sheet.getRange(row, NM_COL_SITE_NO).getValue());
@@ -1242,12 +1328,19 @@ function nmSavePins_(payload) {
   const siteNo = nmValidSiteNo_(payload && payload.site_no);
   if (!siteNo) throw new Error('site_no required');
   const hasPins = Array.isArray(payload.pins);
-  const pins = hasPins ? nmValidateElementPins_(payload.pins, (function () {
-    const cat = nmFetchPinCatalog_(payload.account_type || '');
-    return cat.elementIds;
-  })()) : null;
-  if (hasPins && payload.pins.length > NM_MAX_PINS) {
-    throw new Error('refusing save over NM_MAX_PINS (' + NM_MAX_PINS + ')');
+  let pins = null;
+  if (hasPins) {
+    if (nmPinsAreRegionStyle_(payload.pins)) {
+      pins = nmValidateRegionPins_(payload.pins);
+    } else {
+      pins = nmValidateElementPins_(payload.pins, (function () {
+        const cat = nmFetchPinCatalog_(payload.account_type || '');
+        return cat.elementIds;
+      })());
+      if (payload.pins.length > NM_MAX_PINS) {
+        throw new Error('refusing save over NM_MAX_PINS (' + NM_MAX_PINS + ')');
+      }
+    }
   }
   if (!hasPins && !payload.regions) throw new Error('nothing to save (no pins, no regions)');
   const sheet = nmSheet_();
@@ -1258,7 +1351,18 @@ function nmSavePins_(payload) {
   for (let i = 0; i < vals.length; i++) {
     if (nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]) !== siteNo) continue;
     const row = i + 2;
-    if (hasPins) writePlainCell(sheet, row, NM_COL_ELEMENTS, pins.length ? JSON.stringify(pins) : '');
+    if (hasPins) {
+      let cell;
+      if (nmPinsAreRegionStyle_(pins) || (pins.length && pins[0].class)) {
+        cell = JSON.stringify(nmPackPinsForSheet_(pins));
+        if (cell.length > 49000) {
+          throw new Error('pin list too large for the sheet cell (' + cell.length + ' chars). Delete some pins or split the delivery.');
+        }
+      } else {
+        cell = pins.length ? JSON.stringify(pins) : '';
+      }
+      writePlainCell(sheet, row, NM_COL_ELEMENTS, pins.length ? cell : '');
+    }
     const prevW = nmParseW_(vals[i][NM_COL_DRAWN - 1]);
     const drawn = payload.drawn ? nmParseDrawn_(payload.drawn) : prevW.drawn;
     let edits = prevW.edits;

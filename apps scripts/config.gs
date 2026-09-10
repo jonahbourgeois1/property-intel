@@ -112,6 +112,7 @@ const INTERIOR_SHEET    = 'Interior';
 const INTEL_LINKS_SHEET = 'Intel Links';
 const GOLF_SHEET        = 'Golf';
 const GOLF_PINS_SHEET   = 'Golf Pins';
+const NEARMAP_SHEET     = 'Nearmap'; // own tab; never a mode of Satellite
 const GITHUB_REPO       = 'jonahbourgeois1/property-intel';
 const GITHUB_BRANCH     = 'main';
 const VIEWER_BASE_URL   = 'https://responder-intel.vyanet.com/viewer.html';
@@ -146,6 +147,10 @@ const GOLF_MAX_PINS    = 200; // manual golf placements; duplicates allowed.
 // PIN_CONCERN_RANGES id-range math is retired.
 const ELEMENT_REVIEW_URL = 'https://responder-intel.vyanet.com/element-review.html'; // Pass 1 pin QA page
 const GOLF_REVIEW_URL    = 'https://responder-intel.vyanet.com/golf-review.html'; // golf lat/lng pin QA page
+const NEARMAP_REVIEW_URL = 'https://responder-intel.vyanet.com/nearmap-review.html';
+const NM_TILES_BASE      = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
+const NM_REGISTRY_URL    = 'https://d3fg47bqswi0rr.cloudfront.net/reference/nearmap.json';
+const NM_MAX_PINS        = 20; // Nearmap Pass 1 Bedrock cap only. Pin editor (Pass 2) is uncapped region-class pins.
 
 // (v5.24: PIN_ELEMENT_RANGES / PIN_CONCERN_RANGES removed — the merged
 // pins-catalog.json is tag-based; fetchPinCatalog_ filters on role/analysis/
@@ -225,6 +230,41 @@ const GOLF_HEADERS = [
   'Lat', 'Lng', 'Nadir Elements', 'Elements Reviewed', 'Status'
 ];
 const GOLF_PIN_HEADERS = ['Id', 'Name', 'Definition', 'Section'];
+
+// ── Nearmap sheet column map (1-indexed) — sibling of Satellite, not a mode ──
+// Identity is Site No (A), never address. CloudFront URLs come from promote.py.
+// Do not reuse SAT_COL_*. Do not write views.security.
+const NM_COL_SITE_NO      = 1;  // A
+const NM_COL_ACCOUNT_TYPE = 2;  // B
+const NM_COL_ACCOUNT      = 3;  // C
+const NM_COL_ADDRESS      = 4;  // D
+const NM_COL_HOA          = 5;  // E
+const NM_COL_LAT          = 6;  // F
+const NM_COL_LNG          = 7;  // G
+const NM_COL_DELIVERY     = 8;  // H — delivery_id (address slug)
+const NM_COL_SURVEY_DATE  = 9;  // I
+const NM_COL_NADIR_URL    = 10; // J
+const NM_COL_NADIR_BOUNDS = 11; // K — {north,south,east,west}
+const NM_COL_NORTH_URL    = 12; // L
+const NM_COL_EAST_URL     = 13; // M
+const NM_COL_SOUTH_URL    = 14; // N
+const NM_COL_WEST_URL     = 15; // O
+const NM_COL_AI_URL       = 16; // P
+const NM_COL_MANIFEST_URL = 17; // Q
+const NM_COL_ELEMENTS     = 18; // R — [{id,x,y}]
+const NM_COL_REVIEWED     = 19; // S
+const NM_COL_STATUS       = 20; // T
+const NM_COL_REVIEW_LINK  = 21; // U
+const NM_COL_UPLOAD_DATE  = 22; // V
+const NM_COL_DRAWN        = 23; // W — reviewer FeatureCollection (not vendor AI)
+
+const NM_HEADERS = [
+  'Site No', 'Account Type', 'Account Name', 'Property Address', 'HOA',
+  'Lat', 'Lng', 'Delivery Id', 'Survey Date', 'Nadir URL', 'Nadir Bounds',
+  'North URL', 'East URL', 'South URL', 'West URL', 'AI URL', 'Manifest URL',
+  'Nadir Elements', 'Elements Reviewed', 'Status', 'Review Link', 'Upload Date',
+  'Drawn Features'
+];
 
 // ── Plane sheet column map (1-indexed) — NEW 27-column layout (v5.20) ───────
 // Migrated by plane-migration-v1.gs on 2026-07-14. Blocks read left-to-right
