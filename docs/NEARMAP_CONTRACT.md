@@ -149,10 +149,29 @@ Fed by the Nearmap row and CloudFront: `?site_no=` → `nearmap-elements` then `
 ## Out of scope until promotion
 
 - Editing satellite Pass 1/2, `SAT_PASS1_EMIT_IDS`, or the pin catalog
-- Putting Nearmap on `viewer.html` or vyanet Private
+- Nesting Nearmap in a hub iframe (`embed=1` is unused). Trial UX is leave/return (`?full=1` + **Standard viewer**). In-hub Nearmap that keeps HOME / PRIVATE / COMMUNITY is later, only when Jonah asks.
+- Adding `nearmap` to production `VIEW_ORDER` / `syncNow()` / index `views.nearmap` (join stays the two-row `NEARMAP_DELIVERY_HUB` table)
 - Render Lambda / headless camera on Nearmap meshes (mesh → GLB for the Nearmap viewer is in scope as of 2026-09-09)
-- Clipping Vert to taxlot (trial serves Nearmap’s AOI with bounds)
-- License / resell of vendor rasters — keep trial binaries in **ingest**; tiles hold derived stills, the derived mesh GLB, and compact JSON only
+- Replacing `vert.jpg` or changing pin percents off the full-AOI JPEG. Display clip (mask or `vert-lot.jpg`) and Pass 1 `vert-lot-p1.jpg` are in scope; stored x,y stay percent of `vert.jpg`.
+- Sampling DSM/DTM into observed facts (canonical GeoTIFFs stay in ingest; 2D regions+lot distances ship first)
+- Auto-promoting vendor polygons into catalog pins
+- License / resell of vendor rasters — keep trial binaries in **ingest**; tiles hold derived stills, the derived mesh GLB, and compact JSON only. Confirm analyze/cache/derive/resell before customer-facing use of the derived GLB on public CloudFront.
+
+## Taxlot clip + observed facts (2026-09-10)
+
+**Editor** (`nearmap-review.html`) keeps the vendor AOI.
+
+**Product** (`nearmap-viewer.html` **Clip to taxlot**, default on): remove everything outside the property line on 2D — opaque page-color hole-punch at the taxlot (Vert + satellite + region paint), camera locked to the lot, off-lot pins hidden. Uncheck Clip to see the neighborhood; observed facts stay on the rail (they are always regions ∩ taxlot). (`vert-lot.jpg` when `lot_clip.py` has been promoted still replaces the Vert overlay; pin x,y stay percent of full `vert.jpg`.) 3D mesh is still the capture until a mesh clip exists.
+
+**Lot cover on Private 2D** (`viewer.html` **Cover**): building / driveway / woody veg / pool from `ai/edits/regions.json` (original fallback), clipped to the same taxlot. GIS Property Facts table is unchanged.
+
+**Observed facts** are Nearmap-derived, not GIS. Computed in the viewer from edited regions ∩ taxlot (`js/vyanet-viewer/nearmap-lot.js`): lot/building/drive/veg/pool/roof/solar/lawn m², veg % of lot, min woody-veg→building distance, counts inside 5 ft / 30 ft, tree-overhang flag. Optional S3 snapshot: `nearmap/{delivery}/observed.json` from `tools/nearmap/lot_clip.py` (promote uploads it). Viewer recomputes from edits so a reviewer Save wins. Do not write these into `data/gis/{id}.json`.
+
+**Pass 1** (Nearmap tab only, still isolated from `satellite.gs`): filter `hints.json` centroids to the taxlot (parcel tile from Pages); prefer GET `vert-lot-p1.jpg` then `vert-p1.jpg` (never CloudFront HEAD). Pin x,y remain percent of full `vert.jpg` via sheet bounds. Validator still wins.
+
+**lot_clip.py** (operator, no GitHub, no upload): taxlot from `data/parcels/` or Pages; writes `vert-lot.jpg`, `vert-lot-p1.jpg`, `lot.json`, `observed.json`, stamps manifest `urls.vert_lot` / `bounds_lot`. Then `promote.py`.
+
+Parcel lookup uses hub lat/lng when the index exists (Jones `6de88883…`), else AOI centre. Same Deschutes/Lane 0.07° grid and unaccounted-ROW skip as `nadir-geo.js`.
 
 ## Promotion checklist (only when Jonah says the workflow is established)
 

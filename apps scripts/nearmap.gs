@@ -10,7 +10,10 @@
 //                upsert data/index/ (Jones hub is name-hashed; writing
 //                hashId(site_no) would mint a second hub).
 //   Nadir        CloudFront JPEG + explicit bounds (not Static Maps).
-//                Pass 1 fetches vert-p1.jpg (Bedrock 5 MB cap), not vert.jpg.
+//                Pass 1 fetches vert-lot-p1.jpg when present, else vert-p1.jpg
+//                (Bedrock 5 MB cap), never vert.jpg. Pin x,y stay percent of
+//                the FULL vert.jpg (sheet bounds). AI features are filtered
+//                to the taxlot before the prompt. Isolated from satellite.gs.
 //   Pins         [{id, x, y}] percent of that JPEG. Catalog ids only.
 //   Catalog      pins-catalog.json. NM_PASS1_EMIT_IDS is a COPY of the
 //                satellite standard/school lists, not an import from
@@ -85,7 +88,9 @@ LOCATION RULE — NO ASSUMPTIONS
 Every pin location MUST be copied from one numbered AI feature. Do not estimate, interpolate, or "place near" a visual landmark. Do not move a pin to a door, curb cut, yard, or building edge unless that exact point is an AI feature centroid.
 - Copy that feature's x and y exactly.
 - Set "ai" to that feature's index.
-- The JPEG is only for choosing WHICH numbered feature belongs to the TARGET property when several share a class (neighbors are often in the list). It is not a source of coordinates.
+- The JPEG is only for choosing WHICH numbered feature belongs to the TARGET property. It is not a source of coordinates.
+- When a taxlot filter is applied, the numbered list is already restricted to that lot — do not pick neighbor features.
+- x,y are percent of the FULL delivery Vert (sheet bounds), even if the JPEG you see is a lot crop. Copy them unchanged.
 - If no AI feature of a mapped class sits on the target property, omit that catalog id.
 - Do not emit a catalog id that has no class-mapping row and no matching AI feature. Front door, Vehicle Entrance, Fence, Sidewalk, Garage, Front yard, and Back yard have no Nearmap class — omit them.
 - Never invent an id. Never use a Nearmap class name as an id. Never emit Building (Deprecated) as an id.
@@ -627,6 +632,8 @@ function nmPrepareAiFeatures_(body, bounds) {
       class: cls,
       x: xy.x,
       y: xy.y,
+      lon: h.lon,
+      lat: h.lat,
       confidence: h.confidence,
       area_sqm: h.area_sqm
     });
@@ -710,7 +717,19 @@ function nmBedrockNadirUrl_(nadirUrl) {
   return s;
 }
 
+function nmLotP1Url_(nadirUrl) {
+  const s = String(nadirUrl || '');
+  if (/\/vert\.jpg(\?|$)/i.test(s)) return s.replace(/\/vert\.jpg/i, '/vert-lot-p1.jpg');
+  if (/\/vert-p1\.jpg(\?|$)/i.test(s)) return s.replace(/\/vert-p1\.jpg/i, '/vert-lot-p1.jpg');
+  return '';
+}
+
 function nmFetchNadirForBedrock_(nadirUrl) {
+  const lotP1 = nmLotP1Url_(nadirUrl);
+  if (lotP1) {
+    const lotB64 = fetchImageAsBase64(lotP1);
+    if (lotB64) return { b64: lotB64, url: lotP1 };
+  }
   const p1 = nmBedrockNadirUrl_(nadirUrl);
   let b64 = fetchImageAsBase64(p1);
   if (b64) return { b64: b64, url: p1 };
@@ -719,6 +738,100 @@ function nmFetchNadirForBedrock_(nadirUrl) {
     if (b64) return { b64: b64, url: nadirUrl };
   }
   return { b64: null, url: p1 };
+}
+
+const NM_PARCEL_PAGES = 'https://responder-intel.vyanet.com/data/parcels/';
+const NM_PARCEL_COUNTIES = [
+  { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
+  { name: 'lane', lat0: 43.40, lng0: -124.20, step: 0.07 }
+];
+
+function nmParcelFileFor_(lat, lng, county) {
+  const latCell = Math.floor((lat - county.lat0) / county.step) * county.step + county.lat0;
+  const lngCell = Math.floor((lng - county.lng0) / county.step) * county.step + county.lng0;
+  return county.name + '_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
+}
+
+function nmPointInRing_(lat, lng, ring) {
+  let inside = false;
+  if (!ring || ring.length < 4) return false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+    if (((yi > lat) !== (yj > lat)) &&
+        (lng < (xj - xi) * (lat - yi) / ((yj - yi) || 1e-12) + xi)) inside = !inside;
+  }
+  return inside;
+}
+
+function nmPolyContains_(poly, lat, lng) {
+  if (!poly || !poly[0] || !nmPointInRing_(lat, lng, poly[0])) return false;
+  for (let h = 1; h < poly.length; h++) {
+    if (poly[h] && nmPointInRing_(lat, lng, poly[h])) return false;
+  }
+  return true;
+}
+
+function nmUnaccountedParcel_(props) {
+  props = props || {};
+  if (String(props.ACCTNO || '') === '000None') return true;
+  const raw = String(props.TAXLOT || '');
+  if (!/^\d+$/.test(raw)) return false;
+  const n = Number(raw);
+  return n === 77 || n === 88 || n === 99;
+}
+
+function nmFetchLotPolys_(lat, lng) {
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  for (let c = 0; c < NM_PARCEL_COUNTIES.length; c++) {
+    const name = nmParcelFileFor_(lat, lng, NM_PARCEL_COUNTIES[c]);
+    try {
+      const res = UrlFetchApp.fetch(NM_PARCEL_PAGES + name, { muteHttpExceptions: true });
+      if (res.getResponseCode() !== 200) continue;
+      const gj = JSON.parse(res.getContentText());
+      const feats = (gj && gj.features) || [];
+      let best = null, bestArea = Infinity;
+      for (let i = 0; i < feats.length; i++) {
+        const f = feats[i], g = f.geometry || {};
+        if (nmUnaccountedParcel_(f.properties)) continue;
+        const polys = g.type === 'Polygon' ? [g.coordinates]
+                    : g.type === 'MultiPolygon' ? g.coordinates : [];
+        let hit = false;
+        for (let p = 0; p < polys.length; p++) {
+          if (nmPolyContains_(polys[p], lat, lng)) { hit = true; break; }
+        }
+        if (!hit) continue;
+        const acres = Number((f.properties || {}).MAPACRES);
+        const area = isFinite(acres) && acres > 0 ? acres : polys.length;
+        if (area < bestArea) { best = polys; bestArea = area; }
+      }
+      if (best) return best;
+    } catch (e) { /* tile 404s are normal */ }
+  }
+  return null;
+}
+
+function nmFilterAiToLot_(features, lotPolys) {
+  const out = [];
+  (features || []).forEach(function (f) {
+    const lat = parseFloat(f.lat), lon = parseFloat(f.lon);
+    if (!isFinite(lat) || !isFinite(lon)) return;
+    let hit = false;
+    for (let p = 0; p < lotPolys.length; p++) {
+      if (nmPolyContains_(lotPolys[p], lat, lon)) { hit = true; break; }
+    }
+    if (!hit) return;
+    out.push({
+      i: out.length,
+      class: f.class,
+      x: f.x,
+      y: f.y,
+      lon: f.lon,
+      lat: f.lat,
+      confidence: f.confidence,
+      area_sqm: f.area_sqm
+    });
+  });
+  return out;
 }
 
 function runNearmapElementPinsCall_(sheet, row) {
@@ -743,7 +856,17 @@ function runNearmapElementPinsCall_(sheet, row) {
     return false;
   }
   const aiUrl = String(sheet.getRange(row, NM_COL_AI_URL).getValue() || '').trim();
-  const aiFeatures = nmFetchAiFeatures_(aiUrl, bounds);
+  let aiFeatures = nmFetchAiFeatures_(aiUrl, bounds);
+  const lat = parseFloat(sheet.getRange(row, NM_COL_LAT).getValue());
+  const lng = parseFloat(sheet.getRange(row, NM_COL_LNG).getValue());
+  const lotLat = isFinite(lat) ? lat : (Number(bounds.north) + Number(bounds.south)) / 2;
+  const lotLng = isFinite(lng) ? lng : (Number(bounds.east) + Number(bounds.west)) / 2;
+  const lotPolys = nmFetchLotPolys_(lotLat, lotLng);
+  if (lotPolys) {
+    const n0 = aiFeatures.length;
+    aiFeatures = nmFilterAiToLot_(aiFeatures, lotPolys);
+    Logger.log('Nearmap Pass 1 row ' + row + ' lot-filtered AI ' + n0 + ' → ' + aiFeatures.length);
+  }
   if (!aiFeatures.length) {
     writePlainCell(sheet, row, NM_COL_ELEMENTS, 'ERROR: no AI features (hints.json + bounds)');
     return false;

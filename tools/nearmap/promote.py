@@ -6,8 +6,10 @@ Invalidates CloudFront after stills + registry write.
 Does not call GitHub.
 
 Folder format on CloudFront: ai/original/regions.json (vendor, immutable) and
-ai/edits/regions.json (seeded from original here; reviewer edits themselves are
-published by Apps Script to GitHub data/nearmap/edits/{id}.json, not to S3).
+ai/edits/regions.json (seeded from original here; reviewer Save is Apps Script
+SigV4 PUT to S3). Optional lot-clip products (vert-lot.jpg, vert-lot-p1.jpg,
+lot.json, observed.json) upload if present — generate them with
+tools/nearmap/lot_clip.py before promote.
 """
 from __future__ import annotations
 

@@ -59,6 +59,18 @@
     background: #3a1818;
   }
   .zoom-btn.on:hover { border-color: #cd3333; background: #4a2020; }
+  .zoom-btn.cover.on { border-color: #e85d04; color: #ffd6b3; background: #3a2218; }
+  #nm-cover-legend {
+    display: none; position: absolute; left: 16px; bottom: 160px; z-index: 10;
+    width: 220px; padding: 10px 12px; border-radius: 8px;
+    background: rgba(18,22,27,0.92); border: 1px solid rgba(255,255,255,0.14);
+    font-family: 'DM Mono', monospace; font-size: 11px; color: #c9d1dc;
+  }
+  body.embed #nm-cover-legend { bottom: 16px; left: auto; right: 16px; }
+  #nm-cover-legend.on { display: block; }
+  #nm-cover-legend .kicker { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #555f6e; margin-bottom: 6px; }
+  #nm-cover-legend .row { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
+  #nm-cover-legend .sw { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 6px; }
   #panel { width: 360px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; transition: transform 0.3s ease, width 0.3s ease; }
   #panel.hidden { transform: translateX(360px); width: 0; }
   .panel-header { padding: 14px 16px 0; flex-shrink: 0; }
@@ -489,8 +501,10 @@
   <div id="map-controls">
     <div class="zoom-btn reset" id="zoom-reset" title="Reset to fit" onclick="fitView()">Fit</div>
     <div class="zoom-btn reset" id="parcel-toggle" title="Show or hide the property boundary" style="display:none" onclick="toggleParcel()">Lot</div>
+    <div class="zoom-btn reset" id="cover-toggle" title="Nearmap lot cover (building, drive, vegetation, pool)" style="display:none" onclick="toggleNmCover()">Cover</div>
     <div class="zoom-btn reset" id="nadir-toggle" title="Show or hide the captured nadir image over the map" style="display:none" onclick="toggleOverlay()">Image</div>
   </div>
+  <div id="nm-cover-legend"></div>
   <div id="tab-rail"></div>
   <div id="loading"><div class="spinner"></div><div class="loading-text" id="loading-text">Loading property data...</div></div>
   <div id="error"><div class="error-icon">⚠</div><div class="error-title">Property not found</div><div class="error-msg" id="error-msg">No property data provided.</div></div>
@@ -565,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.7';
+const VERSION     = 'v2.10.8';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -1583,6 +1597,90 @@ function toggleParcel() {
   parcelShown = !parcelShown;
   applyParcelToggle();
 }
+let nmCoverOn = true;
+let nmCoverShapes = [];
+let nmCoverFacts = null;
+let nmCoverMod = null;
+window.toggleNmCover = function () {
+  const btn = document.getElementById('cover-toggle');
+  if (!btn || btn.style.display === 'none') return;
+  nmCoverOn = !nmCoverOn;
+  btn.classList.toggle('on', nmCoverOn);
+  nmCoverShapes.forEach(function (s) { s.setMap(nmCoverOn && map ? map : null); });
+  const legend = document.getElementById('nm-cover-legend');
+  if (legend) legend.classList.toggle('on', nmCoverOn && !!nmCoverFacts);
+};
+async function loadNearmapLotCover(lat, lng) {
+  const pid = (new URLSearchParams(window.location.search)).get('property') || '';
+  if (!pid || !isFinite(lat) || !isFinite(lng)) return;
+  let prop, lotMod;
+  try {
+    prop = await import('./js/vyanet-viewer/property.js?v=1.8.17');
+    lotMod = await import('./js/vyanet-viewer/nearmap-lot.js?v=1.8.17');
+  } catch (e) { return; }
+  nmCoverMod = lotMod;
+  const delivery = prop.NEARMAP_HUB_DELIVERY[pid];
+  if (!delivery) return;
+  const tiles = (prop.CF_NEARMAP || 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/').replace(/\/?$/, '/');
+  const lot = await lotMod.loadTaxlot(DATA_ROOT, lat, lng);
+  let fc = null;
+  const urls = [tiles + delivery + '/ai/edits/regions.json', tiles + delivery + '/ai/original/regions.json'];
+  for (let i = 0; i < urls.length; i++) {
+    try {
+      const r = await fetch(urls[i], { cache: 'no-store' });
+      if (r.ok) { fc = await r.json(); break; }
+    } catch (e) {}
+  }
+  if (!fc || !Array.isArray(fc.features)) return;
+  const feats = lotMod.displayFeatures(fc, lot && lot.polys, !!lot);
+  const survey = (fc.survey_date || '');
+  nmCoverFacts = lot ? lotMod.observedFacts(feats, lot.polys, {
+    survey_date: survey,
+    taxlot: lot.taxlot || ''
+  }) : null;
+  nmCoverShapes.forEach(function (s) { s.setMap(null); });
+  nmCoverShapes = [];
+  if (!map) return;
+  const groups = lotMod.COVER_GROUPS;
+  lotMod.COVER_ORDER.forEach(function (gid) {
+    const spec = groups[gid];
+    feats.forEach(function (f) {
+      if (lotMod.coverGroup(lotMod.featureClass(f)) !== gid) return;
+      lotMod.featureRings(f).forEach(function (poly) {
+        const paths = poly.map(function (ring) {
+          return ring.map(function (pt) { return { lat: pt[1], lng: pt[0] }; });
+        });
+        const shape = new google.maps.Polygon({
+          paths: paths,
+          strokeColor: spec.color, strokeOpacity: 0.95, strokeWeight: 1.5,
+          fillColor: spec.color, fillOpacity: gid === 'veg' ? 0.22 : 0.32,
+          map: nmCoverOn && map ? map : null, clickable: false, zIndex: 2
+        });
+        nmCoverShapes.push(shape);
+      });
+    });
+  });
+  const btn = document.getElementById('cover-toggle');
+  if (btn) {
+    btn.style.display = 'flex';
+    btn.classList.toggle('on', nmCoverOn);
+  }
+  const legend = document.getElementById('nm-cover-legend');
+  if (legend && nmCoverFacts) {
+    const d = nmCoverFacts.defensible || {};
+    const min = d.min_veg_to_building_m;
+    legend.innerHTML =
+      '<div class="kicker">Lot cover · Nearmap' + (survey ? ' ' + survey : '') + '</div>' +
+      '<div class="row"><span><span class="sw" style="background:#e85d04"></span>Building</span><span>' + lotMod.fmtM2(nmCoverFacts.building_m2) + '</span></div>' +
+      '<div class="row"><span><span class="sw" style="background:#f72585"></span>Driveway</span><span>' + lotMod.fmtM2(nmCoverFacts.driveway_m2) + '</span></div>' +
+      '<div class="row"><span><span class="sw" style="background:#2d6a4f"></span>Woody veg</span><span>' + lotMod.fmtM2(nmCoverFacts.veg_m2) + '</span></div>' +
+      '<div class="row"><span><span class="sw" style="background:#4cc9f0"></span>Pool</span><span>' + lotMod.fmtM2(nmCoverFacts.pool_m2) + '</span></div>' +
+      '<div class="row"><span>Veg → building</span><span>' + (min == null ? '—' : min + ' m') + '</span></div>' +
+      '<div class="row"><span>Inside 5 ft / 30 ft</span><span>' + d.within_5ft + ' / ' + d.within_30ft + '</span></div>';
+    legend.classList.toggle('on', nmCoverOn);
+  }
+  dbg('Nearmap lot cover: ' + feats.length + ' regions', 'ok');
+}
 function fitView() {
   if (!map) return;
   if (groundOverlay && groundOverlay.getBounds) {
@@ -1730,6 +1828,7 @@ function initMap(lat, lng, storedRing) {
       zIndex: 1
     });
     drawParcelBoundary(lat, lng, storedRing || null);
+    loadNearmapLotCover(lat, lng);
     hideLoading();
     setTimeout(() => { if (map) { google.maps.event.trigger(map, 'resize'); map.setCenter({ lat, lng }); } }, 100);
     dbg('Map ready at ' + lat.toFixed(5) + ',' + lng.toFixed(5), 'ok');

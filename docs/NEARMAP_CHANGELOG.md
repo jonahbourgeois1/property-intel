@@ -2,6 +2,54 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-10 — Observed facts stay when Clip is off
+
+**What.** The Observed rail (lot / building / drive / veg / 5 ft / 30 ft) stays on when **Clip to taxlot** is unchecked. Facts are always regions ∩ taxlot; clip only changes what the map shows. Status keeps the taxlot id either way.
+
+**Why.** Jonah: lot info should stay present when clip is unchecked.
+
+**Files.** `nearmap-viewer.html` (v1.1.5), `docs/NEARMAP_CONTRACT.md`.
+
+**How it was checked.** Browser localhost:8899 Macalpine `?full=1`: uncheck Clip — neighborhood returns, Observed rail and taxlot `181102C000600` remain.
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — Clip to taxlot removes outside the property line (2D)
+
+**What.** Clip is no longer a 72% dim over the neighborhood. On 2D it punches an opaque `#111318` hole at the taxlot, locks the camera to the lot, hides off-lot pins, and covers Vert + satellite + region paint outside the line. Uncheck restores the capture AOI. Pin % still refer to full `vert.jpg`. 3D mesh is unchanged.
+
+**Why.** Jonah: clip should remove everything outside the property line, not darken the screen.
+
+**Files.** `js/vyanet-viewer/nearmap-lot.js`, `test-nearmap-lot.mjs`, `nearmap-viewer.html` (v1.1.4), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `docs/VYANET_VIEWER_NEXT_AGENT.md`.
+
+**How it was checked.** `node --check` on `nearmap-lot.js`. `node test-nearmap-lot.mjs` (mask winding + padBounds). Extracted viewer module `node --check`; `$('…')` ids present. Browser localhost:8899 Macalpine `?full=1` v1.1.4: clip on shows only the taxlot (neighbors gone, Vert sharp inside the red line); clip off restores the capture AOI and 1538 regions.
+
+**Status.** Local; not committed.
+
+## 2026-09-10 — lot-clip Vert/regions, observed facts, Private 2D cover, lot-aware Pass 1
+
+**What.** Product Nearmap clips to the taxlot (mask or `vert-lot.jpg`); regions that miss the lot are not drawn. Observed facts (areas + veg→building 5 ft / 30 ft) sit on the Nearmap rail, not in GIS. Private 2D gets a **Cover** overlay (building / drive / veg / pool) from the same clipped regions. Nearmap Pass 1 filters AI hints to the lot and prefers `vert-lot-p1.jpg`; pin % stay on full `vert.jpg`. Editor unchanged (full AOI). `NM_UPSERT_INDEX` still false.
+
+**Why.** Jonah: start building lot-clip, observed facts, Private 2D lot-cover, and Vert as Nearmap-only Pass 1.
+
+**Files.** `js/vyanet-viewer/nearmap-lot.js`, `test-nearmap-lot.mjs`, `tools/nearmap/lot_clip.py`, `tools/nearmap/promote.py`, `nearmap-viewer.html` (v1.1.3), `viewer.html` (v2.10.8), `vyanet-viewer.html` + `js/vyanet-viewer/property.js` (hub 1.8.17), `apps scripts/nearmap.gs`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`.
+
+**How it was checked.** `node --check` on `nearmap-lot.js`, extracted nearmap-viewer module, `property.js`. `node test-nearmap-lot.mjs`. `python -m py_compile tools/nearmap/lot_clip.py`. Ids / onclick / `$('lotClip')` on the HTML files. Browser localhost:8899: Macalpine `?full=1` hub 1.1.3, Clip on, taxlot `181102C000600`, 1534/1538 regions, observed facts (building 3,695 m², veg 59.3% of lot, 21/46 inside 5/30 ft). Jones hub 1.8.17 Private 2D Cover on with the same numbers; Property Facts button still present.
+
+**Status.** Local; not committed. Paste `nearmap.gs` (save **and** new deployment) before Pass 1 uses the lot filter. `lot_clip.py` + promote for `vert-lot.jpg` is optional — mask clip works without it.
+
+## 2026-09-10 — docs catch-up after hub 1.8.16
+
+**What.** Hub 1.8.15 changelog status is shipped (superseded by 1.8.16). Contract / runbook / index clause match leave/return (`?full=1`, `embed=1` unused, GIS off Nearmap). `docs/VYANET_VIEWER_NEXT_AGENT.md` rewritten off hub 1.8.0 / HOME·PRIVATE·PUBLIC·LIVE.
+
+**Why.** Next-agent file and 1.8.15 status were stale after `c925508`.
+
+**Files.** `docs/NEARMAP_CHANGELOG.md`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, `docs/VYANET_VIEWER_NEXT_AGENT.md`.
+
+**How it was checked.** Read against live `HUB_BUILD` 1.8.16 / `nearmap-viewer` v1.1.2. No viewer code change.
+
+**Status.** Local; not committed.
+
 ## 2026-09-09 — nearmap-viewer v1.1.2: drop Property Facts from the Nearmap page
 
 **What.** The Nearmap full-page rail is AI layers + lot line + catalog pins only. Property Facts (GIS known facts) stay on hub Private 2D and 3D.
@@ -34,9 +82,9 @@ Newest on top. Format: What / Why / Files / How it was checked / Status.
 
 **Files.** `nearmap-viewer.html` (v1.1.0), `vyanet-viewer.html` (hub 1.8.15), `js/vyanet-viewer/property.js`, `docs/NEARMAP_CONTRACT.md`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
 
-**How it was checked.** `node --check` on both extracted scripts; ids / onclick / dup funcs. Browser: Macalpine delivery opens hub home (hub 1.8.15), Private → Nearmap, GIS facts + lot line, 3D drape. GitHub Pages stays on the previous build until this is pushed.
+**How it was checked.** `node --check` on both extracted scripts; ids / onclick / dup funcs. Browser: Macalpine delivery opens hub home (hub 1.8.15), Private → Nearmap, GIS facts + lot line, 3D drape.
 
-**Status.** Local; ready to commit.
+**Status.** Shipped on `main` (`5e36083`). Superseded by hub 1.8.16 leave/return.
 
 ## 2026-09-09 — nearmap-viewer v1.0.3: 3D fills cover the whole footprint
 
