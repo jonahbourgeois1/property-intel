@@ -87,14 +87,38 @@ Existence checks: `s3.head_object` only. Invalidate CloudFront after still uploa
     "west": { "url": "..." }
   },
   "ai_url": "https://d3fg47bqswi0rr.cloudfront.net/nearmap/{delivery_id}/ai/features.json",
-  "elements": [{ "id": 57, "x": 56.5, "y": 51, "source": "ai" }],
+  "elements": [{ "id": "r12", "name": "Lawn Grass", "class": "Lawn Grass", "x": 72.0, "y": 36.9, "source": "region", "region_id": "12" }],
   "drawn": { "type": "FeatureCollection", "features": [] },
+  "fr": {
+    "concerns": [{ "id": 190, "x": 40.0, "y": 55.5 }],
+    "considerations": "…",
+    "recommendations": "…"
+  },
+  "wildfire": {
+    "concerns": [{ "id": 205, "x": 48.0, "y": 42.0 }],
+    "considerations": "…",
+    "recommendations": "…"
+  },
   "lat": 0,
   "lng": 0
 }
 ```
 
-Pins are catalog integer ids as **percent of the Nearmap nadir JPEG** (0,0 = top-left). Viewers unproject with `nadir.bounds`. Refuse non-finite coords; never clamp into the frame. Reviewer regions are written to S3 `ai/edits/regions.json` through Apps Script (see Regions below) — never to GitHub. **Do not** write reviewer edits into CloudFront `ai/features.json` or `ai/original/regions.json`.
+Pins: **Pass 2** element pins are region-class names as **percent of the Nearmap nadir JPEG** (0,0 = top-left). **Pass 3** concern pins are catalog integer ids (`role: concern`) in the same percent space. Viewers unproject with `nadir.bounds`. Refuse non-finite coords; never clamp into the frame. Reviewer regions are written to S3 `ai/edits/regions.json` through Apps Script (see Regions below) — never to GitHub. **Do not** write reviewer edits into CloudFront `ai/features.json` or `ai/original/regions.json`.
+
+## Pass 3 — FR + Wildfire concerns (2026-09-10)
+
+Nearmap Pass 2 is the pin editor. Pass 3 is the Bedrock concern layer, sibling of satellite Pass 2, isolated in `nearmap.gs` (do not call `parseSatPass2_` / `runSatPass2Half_` / `satFetchPinCatalog_`; do not add a second `prompts.gs`).
+
+| Rule | Detail |
+|---|---|
+| Gate | `NM_COL_REVIEWED` (S) === true **and** column R has region-style pins (`nmPinsAreRegionStyle_` + length > 0). Catalog leftovers and empty R refuse. |
+| Sheet | **Append** X–AC (do not insert/shift A–W): FR Concerns / Considerations / Recommendations, WF Concerns / Considerations / Recommendations (`NM_COL_FR_*`, `NM_COL_WF_*`). Run **Set Up Nearmap Sheet** after paste so headers exist. |
+| Catalog | `nmFetchPinCatalog_` cache `nmPinCatalogV2:{kind}:{type}` adds `frConcernNames/Ids` and `wfConcernNames/Ids` identically to satellite (account_type match, `role === 'concern'`, `analysis` tag fr/wf). School uses commercial via `normalizeAccountType`. Empty vocab logs a warning and **aborts that half** (no silent drop-all loop). **Never flatten `role=`.** |
+| Inputs per half | Nadir via `nmFetchNadirForBedrock_` (`vert-lot-p1.jpg` then `vert-p1.jpg`, never `vert.jpg`, never CloudFront HEAD). Compass obliques N/E/S/W from the sheet until a ~3.5M-char base64 budget; remaining skipped with a log; prompt lists what was attached. Confirmed Pass 2 pins as `"n. Lawn Grass at (x, y)"` — class names, not catalog element ids. Region **counts only** (`nmCompactRegionsForPrompt_`) — never 1,500 polygons. KB queries match satellite Pass 2. |
+| Validator | `validateConcernPins_` in `plane.gs` (reuse). Drops ids not in the concern set, **refuses the 5–95 box, never clamps**, cap `PLANE_MAX_PINS` (10), no duplicate ids. Optional taxlot drop via `nmFilterConcernsToLot_` (also refuse, never clamp). Pin % stay on full `vert.jpg`. |
+| Halves | Independent writes. Failed half leaves its three columns empty; batch retries missing half. Menu: **Generate Pass 3 — FR + Wildfire Concerns (This Row)** / **(All Reviewed)**. |
+| Publish | `nmBuildRecord_` adds satellite-shaped `fr` / `wildfire` `{ concerns, considerations, recommendations }` into `data/nearmap/{id}.json`. **Do not** write `views.security` / `views.wildfire` / `NM_UPSERT_INDEX`. Viewer reads them from `nearmap-elements` (and published JSON as fallback). |
 
 ## Reviewer-first elements (local until complete)
 
@@ -136,11 +160,11 @@ When the prompt and the validator disagree, the validator wins (`nmValidatePass1
 - **Trial viewer** is `vyanet-viewer.html`. Private **Nearmap** opens `nearmap-viewer.html?full=1` on the whole page; **Standard viewer** (top right) returns to the hub. Join is `NEARMAP_DELIVERY_HUB` in `js/vyanet-viewer/property.js` (Macalpine → Jones `6de88883…`, Columbia → `744a3639…`). Do **not** hash `site_no` for that join. Still do **not** add `nearmap` to production `VIEW_ORDER` or `syncNow()`.
 - **Do not** add Nearmap to `syncNow()`, top-level Sync This Row, or Satellite Pipeline.
 
-## Nearmap viewer (`nearmap-viewer.html`, 2026-09-09)
+## Nearmap viewer (`nearmap-viewer.html`, 2026-09-10)
 
 Trial product surface is **`vyanet-viewer.html`**: same gate, HOME, PRIVATE (3D · 2D · Nearmap · Live · Plugins), COMMUNITY, and GIS facts as every other property. Private **Nearmap** navigates to `nearmap-viewer.html?full=1` (full page, not an iframe). **Standard viewer** (top right) returns to the hub Private 3D/2D. Standalone `?delivery=` for a known trial delivery **redirects** into the hub (`stage=home`) unless `full=1`. Property Facts / GIS stay on hub Private 2D and 3D (`data/gis/{hubId}.json`) — the Nearmap page does not load them. Lot lines on Nearmap 2D are still `data/parcels/` with the same Deschutes/Lane 0.07° grid as `viewer.html`.
 
-Fed by the Nearmap row and CloudFront: `?site_no=` → `nearmap-elements` then `{delivery}/manifest.json`; `?delivery=` alone works; `&tiles=` overrides the base for local serve trees. Tabs inside the substrate: **2D** (Google Maps satellite + nadir GroundOverlay + region polygons + numbered pins + lot line), **3D** (Three.js r128 GLB; region **fills** drape the mesh via a heightmap grid so a Building tints the whole footprint on the roof, not a floating cap or a buried ring; outlines drape the surface; pins as sprites; tab disabled when `urls.mesh` is absent), **Obliques** (N/E/S/W + nadir, lightbox). One AI-layer panel drives both views; vegetation layers start off, Lawn Grass on. Regions come from `ai/edits/regions.json` (fallback original). Sheet **Open Nearmap Viewer (This Row)** still opens `nearmap-viewer.html?delivery=…`, which redirects to the hub.
+Fed by the Nearmap row and CloudFront: `?site_no=` → `nearmap-elements` then `{delivery}/manifest.json`; `?delivery=` alone works; `&tiles=` overrides the base for local serve trees. Tabs inside the substrate: **2D** (Google Maps satellite + nadir GroundOverlay + region polygons + numbered region-class pins + Pass 3 FR/WF concern pins + lot line), **3D** (Three.js r128 GLB; region **fills** drape the mesh via a heightmap grid so a Building tints the whole footprint on the roof, not a floating cap or a buried ring; outlines drape the surface; pins as sprites; tab disabled when `urls.mesh` is absent), **Obliques** (N/E/S/W + nadir, lightbox). Right rail (v1.1.12) is four **stacked** tabs: **AI layers** (lot line, clip, observed facts, class checkboxes; vegetation layers start off, Lawn Grass on), **First Responder** (Pass 3 FR considerations / recommendations / FR concern pins), **Wildfire** (Pass 3 WF half), **Pins** (region-class names). Map markers follow the rail tab. `?rail=fr|wf|pins` deep-links a pane. Regions come from `ai/edits/regions.json` (fallback original). `?delivery=` also calls `nearmap-elements`. Sheet **Open Nearmap Viewer (This Row)** still opens `nearmap-viewer.html?delivery=…`, which redirects to the hub.
 
 **Mesh (supersedes the 2026-09-07 "inventory only" clause).** `tools/nearmap/mesh_to_glb.py` converts the MapBrowser `MeshTiledOBJ` (OBJ + MTL + JPEG textures + `.ofs` origin + `Tiles.prj`) into `{serve}/mesh/model.glb` (textures ≤ 4096 px, Draco via `gltf-pipeline`) and `mesh/mesh.json`, and stamps `urls.mesh` / `urls.mesh_meta` / `mesh{}` into the manifest. Frame: X east, Y north, Z up, metres; origin at the nadir-bounds centre projected through the delivery's own `Tiles.prj` (NAD83 Oregon North, intl ft); `mesh.local` holds the nadir corners in that frame (same bilinear convention as `model-viewer`'s `nadir.local`). Z0 = 2nd percentile of z. `promote.py` uploads `mesh/*` with the serve dir (`model/gltf-binary`). Still true: do not point `viewer360` / the headless render camera at Nearmap meshes; plane/drone GLBs stay the render source.
 
@@ -161,7 +185,7 @@ Fed by the Nearmap row and CloudFront: `?site_no=` → `nearmap-elements` then `
 
 **Editor** (`nearmap-review.html`) keeps the vendor AOI.
 
-**Product** (`nearmap-viewer.html` **Clip to taxlot**, default on): remove everything outside the property line on 2D — opaque page-color hole-punch at the taxlot (Vert + satellite + region paint), off-lot pins hidden. The camera **stays on the property** (opening zoom); do not `fitBounds` / restrict to the taxlot bounding box (Jones’s triangle put the house off to one side and the overlay flood made the map unusable). Uncheck Clip to see the neighborhood; observed facts stay on the rail (they are always regions ∩ taxlot). (`vert-lot.jpg` when `lot_clip.py` has been promoted still replaces the Vert overlay; pin x,y stay percent of full `vert.jpg`.) 3D mesh is still the capture until a mesh clip exists.
+**Product** (`nearmap-viewer.html` **Clip to taxlot**, default on): remove everything outside the property line on 2D — opaque page-color hole-punch at the taxlot (Vert + satellite + region paint), off-lot pins hidden. The camera **stays on the property** (opening zoom); do not `fitBounds` / restrict to the taxlot bounding box (Jones’s triangle put the house off to one side and the overlay flood made the map unusable). Uncheck Clip to see the neighborhood; observed facts stay on the rail (they are always regions ∩ taxlot). (`vert-lot.jpg` when `lot_clip.py` has been promoted still replaces the Vert overlay; pin x,y stay percent of full `vert.jpg`.) Lot line and Clip to taxlot checkboxes are **2D-only** (hidden on the 3D tab, v1.1.13). 3D mesh is still the capture until a mesh clip exists.
 
 **Lot cover on Private 2D** (`viewer.html` **Cover**): building / driveway / woody veg / pool from `ai/edits/regions.json` (original fallback), clipped to the same taxlot. GIS Property Facts table is unchanged.
 
@@ -178,10 +202,12 @@ Parcel lookup uses hub lat/lng when the index exists (Jones `6de88883…`), else
 1. Nearmap `vert.jpg` + `bounds` may replace `prepareSatNadir_` Static Maps.
 2. Reduced AI may inject into `runSatElementPinsCall_` the same way KB context does.
 3. `nearmap` may join `VIEW_ORDER`.
-4. Nearmap Pass 2 pins are region-class labels on the Nearmap tab. Do **not** add those names to `pins-catalog.json` or flatten `role=`.
+4. Nearmap Pass 2 pins are region-class labels on the Nearmap tab. Pass 3 concerns are catalog `role=concern` ids. Do **not** add region class names to `pins-catalog.json` or flatten `role=`.
 5. Compass obliques → frontage-relative alpha/bravo is a separate decision.
 6. Merge `views.nearmap` onto the **existing** property hub (Jones = `6de88883bfd4a8349a901c54611ed9d7`). Do not call `upsertIndexEntry_` with `hashId(site_no)` as the hub id.
 
 ## Changelog
 
+- **2026-09-10** — Right rail is four stacked tabs (v1.1.12): AI layers, First Responder, Wildfire, Pins. Map markers follow the tab. Pass 3 still publishes `fr` / `wildfire` on `data/nearmap/{id}.json` (not `views.security`).
+- **2026-09-10** — Pass 3 FR + wildfire concerns: appended sheet columns X–AC, Bedrock halves in `nearmap.gs`, catalog concern ids via `validateConcernPins_`, published `fr` / `wildfire` on `data/nearmap/{id}.json` (not `views.security`). Viewer **v1.1.9** showed concern pins + prose at the top of the rail (superseded by v1.1.11 tabs).
 - **2026-09-07** — First clause. Isolated mothership tab `Nearmap` / S3 prefixes / `data/nearmap/` / review page. Canonical tree matches Ahartsi.zip API + MapBrowser shapes. Trial sync skips `data/index/` so Jones is not forked. Satellite / Plane / `syncNow` unchanged.

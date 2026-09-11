@@ -18,6 +18,10 @@
 //                after the region class (not catalog ids). Uncapped. Packed
 //                into column R so the 50k cell cap holds ~1.5k pins.
 //                Pass 1 Bedrock still emits catalog ints (NM_MAX_PINS).
+//   Pass 3       FR + wildfire concern pins (catalog role=concern ids) plus
+//                considerations/recommendations. Gated on Elements Reviewed
+//                and region-style pins in R. Two independent Bedrock halves.
+//                Reuses validateConcernPins_ (plane.gs). Never flatten role=.
 //   Catalog      pins-catalog.json. NM_PASS1_EMIT_IDS is a COPY of the
 //                satellite standard/school lists, not an import from
 //                satellite.gs. Fresh Pass 1 = emit list. Validator wins.
@@ -33,8 +37,8 @@
 //                promotion-time, onto the EXISTING hub, not this id.
 //   Out of scope Mesh→GLB, VIEW_ORDER, satellite Pass 1/2.
 //
-// Menu: Set Up Nearmap Sheet, Import from CloudFront registry,
-// Open Nearmap Review, Sync. First-round pins come from the reviewer.
+// Menu: Set Up Nearmap Sheet, Import, Review/Pins/Viewer, Pass 3
+// FR+WF concerns, Sync. First-round pins come from the reviewer.
 // After paste: save AND create a new web-app deployment version.
 // ============================================================
 
@@ -112,6 +116,72 @@ Return ONLY a single JSON object. No markdown, no code fences, no commentary.
 {"nadir_pins": [{"id": 61, "x": 62.5, "y": 31.0, "ai": 3}]}
 "nadir_pins" is an array of objects with integer "id", numeric "x" and "y" copied from the AI feature, and integer "ai" (that feature's index). Return an empty array if no mapped AI feature is on the target property.`;
 }
+
+function nmFrConcernsPrompt_() {
+  return `You are a First Responder Property Intelligence Analyst producing the ACCESS & OPERATIONAL CONCERNS layer for a property.
+You will receive a NADIR (straight-down) Nearmap vertical JPEG, zero or more COMPASS OBLIQUES (north / east / south / west — looking toward the property), a list of CONFIRMED PROPERTY ELEMENTS a human already verified, and a compact REGION CLASS INVENTORY (counts only — you do not receive polygons). Treat confirmed elements as established fact — do not re-identify elements or dispute them.
+
+OBJECTIVE
+From a first-responder perspective (fire, EMS, law enforcement reaching and operating on this property), identify ACCESS, EGRESS, VISIBILITY, and OPERATIONAL concerns, and mark each with a concern pin on the NADIR. Then write two short prose paragraphs: "considerations" and "recommendations". Use the obliques to confirm height, approach, and occlusion that the nadir cannot show. Use the region inventory only as context (how much lawn, vegetation, driveway, roof is present) — never invent a pin from a class count alone.
+
+GROUNDING IN CONFIRMED ELEMENTS
+Reason FROM the confirmed elements. Where a concern is driven by a specific confirmed element (e.g. a single narrow driveway implies slow apparatus egress; a pool implies a water-rescue target), place the concern pin on or beside that element's location. Some concerns are contextual or about the ABSENCE of a feature (open perimeter, blind approach, no turnaround, distant hydrant) — place those at the relevant location on the target property even if no single element drives them. Concerns are NOT limited to locations that have an element pin.
+
+TARGET PROPERTY ONLY
+Assess only this property's taxlot / Nearmap vertical. Do not pin neighboring parcels or streets beyond what directly affects access to the target.
+
+CONFIDENCE STANDARD
+Report only concerns supported by clear visual evidence and the confirmed elements — at least 95 percent confidence. Do not speculate about interior conditions, occupancy, ownership, code compliance, or hazards not visible. If uncertain, omit.
+
+CONCERN PIN VOCABULARY
+At the end of this prompt is a numbered list of approved CONCERN pin names. Use ONLY catalog integer ids from that list. Never invent an id, never reuse an id, never use a Nearmap region class name as an id. Select AT MOST ${PLANE_MAX_PINS} concern pins, prioritizing the most operationally significant.
+
+COORDINATES
+For every concern pin provide x,y percentage coordinates on the NADIR JPEG: (0,0) top-left, (100,100) bottom-right, (50,50) center. These percents are of the FULL delivery Vert (sheet bounds), even if the JPEG you see is a lot crop. Place each pin at the actual location of the concern. Do not clamp a guess into the frame — if you cannot place it honestly, omit it.
+
+PROSE FIELDS
+"considerations": 2–4 sentences summarizing the key access/egress/visibility/operational factors a responding crew should know for THIS property, grounded in the confirmed elements, the images, and the concern pins. Plain, factual, operational tone. No headers, no lists.
+"recommendations": 2–4 sentences of concrete, actionable guidance for responders (e.g. staging, approach, apparatus placement, access workarounds). No headers, no lists.
+
+OUTPUT RULES
+Return ONLY a single JSON object. No markdown, no code fences, no commentary.
+{"nadir_pins": [{"id": 190, "x": 40.0, "y": 55.5}], "considerations": "...", "recommendations": "..."}
+"nadir_pins" may be an empty array if no approved concern applies. Both prose fields are required strings.`;
+}
+
+function nmWfConcernsPrompt_() {
+  return `You are a Wildfire Property Intelligence Analyst producing the WILDFIRE CONCERNS layer for a property.
+You will receive a NADIR (straight-down) Nearmap vertical JPEG, zero or more COMPASS OBLIQUES (north / east / south / west — looking toward the property), a list of CONFIRMED PROPERTY ELEMENTS a human already verified, and a compact REGION CLASS INVENTORY (counts only — you do not receive polygons). Treat confirmed elements as established fact — do not re-identify elements or dispute them.
+
+OBJECTIVE
+From a wildfire perspective (ignition exposure, fuel continuity, defensible space, ember and fire spread, and firefighting access under fire conditions), identify WILDFIRE concerns and mark each with a concern pin on the NADIR. Then write two short prose paragraphs: "considerations" and "recommendations". Use the obliques to confirm vegetation height, roof/ember exposure, and clearance that the nadir cannot show. Use the region inventory only as context — never invent a pin from a class count alone.
+
+GROUNDING IN CONFIRMED ELEMENTS
+Reason FROM the confirmed elements. Where a concern is driven by a confirmed element (e.g. vegetation touching a structure, a woodpile against a wall, dense tree cover over the roofline), place the concern pin on or beside that element's location. Many wildfire concerns are about fuel continuity, defensible-space gaps, or the ABSENCE of clearance — place those at the relevant location on the target property even if no single element drives them. Concerns are NOT limited to locations that have an element pin.
+
+TARGET PROPERTY ONLY
+Assess only this property's taxlot / Nearmap vertical. Do not pin neighboring parcels beyond fuel/exposure that directly threatens the target.
+
+CONFIDENCE STANDARD
+Report only concerns supported by clear visual evidence and the confirmed elements — at least 95 percent confidence. Vegetation density and clearance may be obscured by shadow or resolution; only assess what is clearly visible. Do not speculate. If uncertain, omit.
+
+CONCERN PIN VOCABULARY
+At the end of this prompt is a numbered list of approved WILDFIRE CONCERN pin names. Use ONLY catalog integer ids from that list. Never invent an id, never reuse an id, never use a Nearmap region class name as an id. Select AT MOST ${PLANE_MAX_PINS} concern pins, prioritizing the most significant wildfire risks.
+
+COORDINATES
+For every concern pin provide x,y percentage coordinates on the NADIR JPEG: (0,0) top-left, (100,100) bottom-right, (50,50) center. These percents are of the FULL delivery Vert (sheet bounds), even if the JPEG you see is a lot crop. Place each pin at the actual location of the concern. Do not clamp a guess into the frame — if you cannot place it honestly, omit it.
+
+PROSE FIELDS
+"considerations": 2–4 sentences summarizing the key wildfire exposure and defensible-space factors for THIS property, grounded in the confirmed elements, the images, and the concern pins. Plain, factual tone. No headers, no lists.
+"recommendations": 2–4 sentences of concrete, actionable wildfire-mitigation guidance (e.g. clearance, fuel removal, structure hardening priorities, access under fire conditions). No headers, no lists.
+
+OUTPUT RULES
+Return ONLY a single JSON object. No markdown, no code fences, no commentary.
+{"nadir_pins": [{"id": 205, "x": 40.0, "y": 55.5}], "considerations": "...", "recommendations": "..."}
+"nadir_pins" may be an empty array if no approved concern applies. Both prose fields are required strings.`;
+}
+
+const NM_PASS3_IMAGE_BUDGET = 3500000;
 
 // Trial: never mint a hub. Flip only when Jonah names the existing hub
 // (Jones = 6de88883bfd4a8349a901c54611ed9d7) and promotion is explicit.
@@ -403,7 +473,8 @@ function setupNearmapSheet() {
   ui.alert('Nearmap',
     (created ? 'Created' : 'Updated') + ' the "' + NEARMAP_SHEET + '" tab (' +
     NM_HEADERS.length + ' columns). Satellite, Plane, Drone, and Golf were not modified.\n\n' +
-    'Import from CloudFront registry, then fill Site No by hand. Do not guess Jones site numbers.',
+    'Import from CloudFront registry, then fill Site No by hand. Do not guess Jones site numbers.\n' +
+    'Pass 3 columns are X–AC (FR/WF concerns). Tick Elements Reviewed after pin QA, then Generate Pass 3.',
     ui.ButtonSet.OK);
 }
 
@@ -525,7 +596,8 @@ function nmPass1EmitIds_(rawAccountType) {
 
 function nmFetchPinCatalog_(accountTypeRaw) {
   const kind = nmPass1Kind_(accountTypeRaw);
-  const cacheKey = 'nmPinCatalogV1:' + kind;
+  const type = normalizeAccountType(accountTypeRaw);
+  const cacheKey = 'nmPinCatalogV2:' + kind + ':' + type;
   const cache = CacheService.getScriptCache();
   const cached = cache.get(cacheKey);
   if (cached) return JSON.parse(cached);
@@ -547,11 +619,34 @@ function nmFetchPinCatalog_(accountTypeRaw) {
     arr.forEach(function (p) { o[p.id] = true; });
     return o;
   };
+  const hasAnalysis = function (p, a) {
+    return Array.isArray(p.analysis) && p.analysis.indexOf(a) !== -1;
+  };
+  // Identical to satFetchPinCatalog_ concern filter. School uses commercial
+  // (`type`) so FR/WF vocabularies stay populated. Do not flatten role=.
+  const forType = all.filter(function (p) {
+    return Array.isArray(p.account_type) && p.account_type.indexOf(type) !== -1;
+  });
+  const frConcern = forType.filter(function (p) {
+    return p.role === 'concern' && hasAnalysis(p, 'fr');
+  });
+  const wfConcern = forType.filter(function (p) {
+    return p.role === 'concern' && hasAnalysis(p, 'wf');
+  });
+  if (!frConcern.length || !wfConcern.length) {
+    Logger.log('nmFetchPinCatalog_ WARNING [' + type + '/' + kind + ']: concern vocabulary is EMPTY (fr=' +
+      frConcern.length + ', wf=' + wfConcern.length +
+      '). Pass 3 will drop every concern pin. Has role= been flattened in pins-catalog.json?');
+  }
   const out = {
     emitNames: numbered(emitPins),
     emitIds: idSet(emitPins),
     elementNames: numbered(all),
-    elementIds: idSet(all)
+    elementIds: idSet(all),
+    frConcernNames: numbered(frConcern),
+    frConcernIds: idSet(frConcern),
+    wfConcernNames: numbered(wfConcern),
+    wfConcernIds: idSet(wfConcern)
   };
   try { cache.put(cacheKey, JSON.stringify(out), 21600); } catch (e) {}
   return out;
@@ -974,6 +1069,378 @@ function generateNearmapElementPinsBatch() {
   ui.alert('Nearmap Pass 1', 'Completed ' + done + ' of ' + batch.length + ' (queue ' + ready.length + ').', ui.ButtonSet.OK);
 }
 
+// ── Pass 3: FR + wildfire concerns (catalog role=concern) ────────────────────
+// Sibling of satellite Pass 2. Isolated clone: do not call parseSatPass2_ /
+// runSatPass2Half_ / satFetchPinCatalog_. Validator is validateConcernPins_
+// in plane.gs (reuse, do not copy). Pin x,y stay percent of full vert.jpg.
+
+function parseNmPass3_(text) {
+  if (!text) return null;
+  let t = String(text).replace(/```json/gi, '').replace(/```/g, '').trim();
+  const start = t.indexOf('{'), end = t.lastIndexOf('}');
+  if (start === -1 || end === -1 || end <= start) return null;
+  t = t.substring(start, end + 1);
+  let parsed;
+  try { parsed = JSON.parse(t); } catch (e) {
+    Logger.log('parseNmPass3_: JSON.parse failed — ' + e.message);
+    return null;
+  }
+  if (!Array.isArray(parsed.nadir_pins)) {
+    Logger.log('parseNmPass3_: nadir_pins missing/!array');
+    return null;
+  }
+  if (typeof parsed.considerations !== 'string' || !parsed.considerations.trim()) {
+    Logger.log('parseNmPass3_: considerations missing');
+    return null;
+  }
+  if (typeof parsed.recommendations !== 'string' || !parsed.recommendations.trim()) {
+    Logger.log('parseNmPass3_: recommendations missing');
+    return null;
+  }
+  return parsed;
+}
+
+function nmParseConcernCell_(raw) {
+  const s = String(raw || '').trim();
+  if (!s || s.indexOf('ERROR:') === 0) return [];
+  let v;
+  try { v = JSON.parse(s); } catch (e) { return []; }
+  if (!Array.isArray(v)) return [];
+  return v.filter(function (p) {
+    return p && typeof p === 'object' &&
+      !isNaN(parseInt(p.id, 10)) && !isNaN(parseFloat(p.x)) && !isNaN(parseFloat(p.y));
+  }).map(function (p) {
+    return { id: parseInt(p.id, 10), x: parseFloat(p.x), y: parseFloat(p.y) };
+  });
+}
+
+function nmConcernBlockFromCells_(concernsRaw, considerRaw, recRaw) {
+  return {
+    concerns: nmParseConcernCell_(concernsRaw),
+    considerations: String(considerRaw || '').trim(),
+    recommendations: String(recRaw || '').trim()
+  };
+}
+
+function nmConfirmedPinsAsText_(pins) {
+  if (!pins || !pins.length) return '(no confirmed element pins were placed for this property)';
+  return pins.map(function (p, i) {
+    const name = String(p.name || p.class || p.ai_class || 'pin').trim();
+    return (i + 1) + '. ' + name + ' at (' + p.x + ', ' + p.y + ')';
+  }).join('\n');
+}
+
+function nmFormatRegionCounts_(counts, nFeat) {
+  const keys = Object.keys(counts || {}).sort();
+  if (!keys.length && !(nFeat > 0)) return '(no region inventory)';
+  const lines = keys.map(function (k) { return k + ': ' + counts[k]; });
+  return (nFeat > 0 ? (nFeat + ' features total.\n') : '') + lines.join('\n');
+}
+
+function nmCountsFromRegionsBody_(body) {
+  if (!body || typeof body !== 'object') return null;
+  if (body.counts && typeof body.counts === 'object' && !Array.isArray(body.counts)) {
+    return { counts: body.counts, n: Array.isArray(body.features) ? body.features.length : 0 };
+  }
+  if (!Array.isArray(body.features)) return null;
+  const counts = {};
+  body.features.forEach(function (f) {
+    const cls = (f && f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown';
+    counts[cls] = (counts[cls] || 0) + 1;
+  });
+  return { counts: counts, n: body.features.length };
+}
+
+function nmFetchRegionsCounts_(url) {
+  const s = String(url || '').trim();
+  if (!s) return null;
+  try {
+    const res = UrlFetchApp.fetch(s, { muteHttpExceptions: true, followRedirects: true });
+    if (res.getResponseCode() !== 200) return null;
+    return nmCountsFromRegionsBody_(JSON.parse(res.getContentText()));
+  } catch (e) {
+    Logger.log('nmFetchRegionsCounts_ failed: ' + e.message);
+    return null;
+  }
+}
+
+function nmCompactRegionsForPrompt_(sheet, row, aiUrl) {
+  const w = nmParseW_(sheet.getRange(row, NM_COL_DRAWN).getValue());
+  if (w.edits && w.edits.counts && typeof w.edits.counts === 'object') {
+    const n = (typeof w.edits.features === 'number') ? w.edits.features : 0;
+    return nmFormatRegionCounts_(w.edits.counts, n);
+  }
+  const fetched = nmFetchRegionsCounts_(nmRegionsEditsUrl_(aiUrl)) ||
+    nmFetchRegionsCounts_(nmRegionsOriginalUrl_(aiUrl));
+  if (fetched) return nmFormatRegionCounts_(fetched.counts, fetched.n);
+  return '(no region inventory)';
+}
+
+function nmPctToLatLng_(x, y, bounds) {
+  return {
+    lat: bounds.north - (Number(y) / 100) * (bounds.north - bounds.south),
+    lng: bounds.west + (Number(x) / 100) * (bounds.east - bounds.west)
+  };
+}
+
+function nmFilterConcernsToLot_(pins, lotPolys, bounds) {
+  if (!lotPolys || !bounds || !pins || !pins.length) return pins || [];
+  const kept = [];
+  pins.forEach(function (p) {
+    const ll = nmPctToLatLng_(p.x, p.y, bounds);
+    let hit = false;
+    for (let i = 0; i < lotPolys.length; i++) {
+      if (nmPolyContains_(lotPolys[i], ll.lat, ll.lng)) { hit = true; break; }
+    }
+    if (hit) kept.push(p);
+  });
+  if (kept.length !== pins.length) {
+    Logger.log('nmFilterConcernsToLot_: dropped ' + (pins.length - kept.length) + ' off-lot concern pin(s)');
+  }
+  return kept;
+}
+
+function nmPass3Spec_(key) {
+  if (key === 'fr') {
+    return {
+      key: 'fr',
+      promptFn: nmFrConcernsPrompt_,
+      kbQuery: 'first responder property access egress visibility operational concerns hazards',
+      colConcerns: NM_COL_FR_CONCERNS,
+      colConsider: NM_COL_FR_CONSIDER,
+      colRec: NM_COL_FR_REC
+    };
+  }
+  return {
+    key: 'wf',
+    promptFn: nmWfConcernsPrompt_,
+    kbQuery: 'wildfire defensible space fuel continuity ember exposure structure hardening',
+    colConcerns: NM_COL_WF_CONCERNS,
+    colConsider: NM_COL_WF_CONSIDER,
+    colRec: NM_COL_WF_REC
+  };
+}
+
+function nmAppendObliqueImages_(userContent, urls, budgetUsed) {
+  const labels = [
+    { key: 'north', label: 'IMAGE — NORTH OBLIQUE (camera looking south toward the property).' },
+    { key: 'east',  label: 'IMAGE — EAST OBLIQUE (camera looking west toward the property).' },
+    { key: 'south', label: 'IMAGE — SOUTH OBLIQUE (camera looking north toward the property).' },
+    { key: 'west',  label: 'IMAGE — WEST OBLIQUE (camera looking east toward the property).' }
+  ];
+  const attached = [];
+  const skipped = [];
+  let used = budgetUsed;
+  labels.forEach(function (row) {
+    const url = String(urls[row.key] || '').trim();
+    if (!url) { skipped.push(row.key.toUpperCase() + ' (no URL)'); return; }
+    const b64 = fetchImageAsBase64(url);
+    if (!b64) { skipped.push(row.key.toUpperCase() + ' (fetch failed)'); return; }
+    if (used + b64.length > NM_PASS3_IMAGE_BUDGET) {
+      skipped.push(row.key.toUpperCase() + ' (payload budget)');
+      Logger.log('Nearmap Pass 3: skipping ' + row.key + ' oblique — payload budget');
+      return;
+    }
+    used += b64.length;
+    userContent.push({ type: 'text', text: row.label });
+    userContent.push({
+      type: 'image',
+      source: { type: 'base64', media_type: guessImageMediaType_(url), data: b64 }
+    });
+    attached.push(row.key.toUpperCase());
+  });
+  return { attached: attached, skipped: skipped, used: used };
+}
+
+function runNearmapPass3Half_(sheet, row, spec) {
+  if (typeof validateConcernPins_ !== 'function') {
+    throw new Error('validateConcernPins_ is not defined — paste plane.gs');
+  }
+  const address = String(sheet.getRange(row, NM_COL_ADDRESS).getValue() || '').trim();
+  const accountTypeRaw = sheet.getRange(row, NM_COL_ACCOUNT_TYPE).getValue();
+  const accountType = normalizeAccountType(accountTypeRaw);
+  const nadirUrl = String(sheet.getRange(row, NM_COL_NADIR_URL).getValue() || '').trim();
+  if (!nadirUrl) return false;
+
+  const catalog = nmFetchPinCatalog_(accountTypeRaw);
+  const vocab = spec.key === 'fr' ? catalog.frConcernNames : catalog.wfConcernNames;
+  const ids = spec.key === 'fr' ? catalog.frConcernIds : catalog.wfConcernIds;
+  if (!vocab || !String(vocab).trim()) {
+    Logger.log('Nearmap Pass 3 ' + spec.key + ' row ' + row +
+      ': EMPTY concern vocabulary — aborting half (do not flatten role= in pins-catalog.json)');
+    return false;
+  }
+
+  const prompt = spec.promptFn() +
+    '\n\nAPPROVED CONCERN PIN VOCABULARY (use ONLY these ids):\n' + vocab;
+  let kbContext = '';
+  try {
+    if (typeof queryKnowledgeBase === 'function') kbContext = queryKnowledgeBase(spec.kbQuery) || '';
+  } catch (e) {
+    Logger.log('Nearmap Pass 3 KB query failed: ' + e.message);
+  }
+  const fullPrompt = kbContext ? prompt + '\n\nREFERENCE CONTEXT FROM KNOWLEDGE BASE:\n' + kbContext : prompt;
+
+  const nadir = nmFetchNadirForBedrock_(nadirUrl);
+  if (!nadir.b64) return false;
+
+  const pins = nmParsePins_(sheet.getRange(row, NM_COL_ELEMENTS).getValue());
+  const confirmedText = nmConfirmedPinsAsText_(pins);
+  const aiUrl = String(sheet.getRange(row, NM_COL_AI_URL).getValue() || '').trim();
+  const regionText = nmCompactRegionsForPrompt_(sheet, row, aiUrl);
+
+  const userContent = [
+    { type: 'text', text: 'IMAGE — NADIR (straight-down Nearmap vertical; x,y percent of the FULL delivery Vert). Source: ' + nadir.url },
+    { type: 'image', source: { type: 'base64', media_type: guessImageMediaType_(nadir.url), data: nadir.b64 } }
+  ];
+  const obl = nmAppendObliqueImages_(userContent, {
+    north: sheet.getRange(row, NM_COL_NORTH_URL).getValue(),
+    east: sheet.getRange(row, NM_COL_EAST_URL).getValue(),
+    south: sheet.getRange(row, NM_COL_SOUTH_URL).getValue(),
+    west: sheet.getRange(row, NM_COL_WEST_URL).getValue()
+  }, nadir.b64.length);
+  const imageNote = 'Images attached: NADIR' +
+    (obl.attached.length ? ', ' + obl.attached.join(', ') : '') + '.' +
+    (obl.skipped.length ? ' Omitted: ' + obl.skipped.join(', ') + '.' : '');
+
+  userContent.push({
+    type: 'text',
+    text:
+      'Property address: ' + address + ' [' + accountType + '].\n' +
+      imageNote + '\n\n' +
+      'CONFIRMED PROPERTY ELEMENTS (human-approved, region-class names), as "n. Class at (x, y)" on the nadir:\n' +
+      confirmedText +
+      '\n\nREGION CLASS INVENTORY (counts only — polygons are not attached):\n' +
+      regionText +
+      '\n\nUsing these confirmed elements, the region inventory, and the attached images, return ONLY the JSON object described in your instructions (concern pins in "nadir_pins", plus "considerations" and "recommendations").'
+  });
+
+  const result = callBedrock(fullPrompt, userContent, 4000);
+  if (!result) return false;
+  const parsed = parseNmPass3_(result);
+  if (!parsed) {
+    Logger.log(spec.key + ' Nearmap Pass 3 raw (row ' + row + '): ' + result.substring(0, 500));
+    return false;
+  }
+
+  let concernPins = validateConcernPins_(parsed.nadir_pins, ids);
+  const lat = parseFloat(sheet.getRange(row, NM_COL_LAT).getValue());
+  const lng = parseFloat(sheet.getRange(row, NM_COL_LNG).getValue());
+  const bounds = nmParseBounds_(sheet.getRange(row, NM_COL_NADIR_BOUNDS).getValue());
+  const lotPolys = nmFetchLotPolys_(lat, lng);
+  if (lotPolys && bounds) concernPins = nmFilterConcernsToLot_(concernPins, lotPolys, bounds);
+
+  writePlainCell(sheet, row, spec.colConcerns, concernPins.length ? JSON.stringify(concernPins) : '');
+  writePlainCell(sheet, row, spec.colConsider, parsed.considerations.trim());
+  writePlainCell(sheet, row, spec.colRec, parsed.recommendations.trim());
+  Logger.log('Nearmap Pass 3 ' + spec.key.toUpperCase() + ': row ' + row + ' — ' +
+    concernPins.length + ' concerns [' + address + ']');
+  return true;
+}
+
+function runNearmapPass3Row_(sheet, row) {
+  const reviewed = sheet.getRange(row, NM_COL_REVIEWED).getValue() === true;
+  if (!reviewed) return { ran: false, fr: false, wf: false, gated: true, reason: 'not reviewed' };
+  const pins = nmParsePins_(sheet.getRange(row, NM_COL_ELEMENTS).getValue());
+  if (!pins.length) return { ran: false, fr: false, wf: false, gated: true, reason: 'no pins' };
+  if (!nmPinsAreRegionStyle_(pins)) {
+    return { ran: false, fr: false, wf: false, gated: true, reason: 'catalog leftovers' };
+  }
+  let fr = false, wf = false;
+  try { fr = runNearmapPass3Half_(sheet, row, nmPass3Spec_('fr')); }
+  catch (e) { Logger.log('Nearmap Pass 3 FR ERROR row ' + row + ': ' + e.message); }
+  Utilities.sleep(1500);
+  try { wf = runNearmapPass3Half_(sheet, row, nmPass3Spec_('wf')); }
+  catch (e) { Logger.log('Nearmap Pass 3 WF ERROR row ' + row + ': ' + e.message); }
+  const bits = [];
+  if (fr) bits.push('fr');
+  if (wf) bits.push('wf');
+  writePlainCell(sheet, row, NM_COL_STATUS, bits.length ? ('pass3:' + bits.join(',')) : 'pass3:fail');
+  return { ran: true, fr: fr, wf: wf, gated: false };
+}
+
+function generateNearmapPass3ForActiveRow() {
+  const ui = SpreadsheetApp.getUi();
+  const sheet = nmSheet_();
+  const row = nmActiveRow_();
+  if (!row) return;
+  if (sheet.getMaxColumns() < NM_COL_WF_REC) {
+    ui.alert('Pass 3', 'Run Set Up Nearmap Sheet first so columns X–AC (FR/WF concerns) exist.', ui.ButtonSet.OK);
+    return;
+  }
+  const address = String(sheet.getRange(row, NM_COL_ADDRESS).getValue() || '').trim();
+  if (sheet.getRange(row, NM_COL_REVIEWED).getValue() !== true) {
+    ui.alert('Pass 3 blocked — review required',
+      'Row ' + row + ' has not been marked "Elements Reviewed".\n\n' +
+      'Finish the Pins editor (Open Nearmap Pins Editor), then tick "Elements Reviewed" before running Pass 3.',
+      ui.ButtonSet.OK);
+    return;
+  }
+  const pins = nmParsePins_(sheet.getRange(row, NM_COL_ELEMENTS).getValue());
+  if (!pins.length || !nmPinsAreRegionStyle_(pins)) {
+    ui.alert('Pass 3 blocked — pins required',
+      'Row ' + row + ' needs confirmed region-class pins in Nadir Elements (column R).\n\n' +
+      'Open Nearmap Pins Editor, Auto Generate / Place pins, Save, then tick Elements Reviewed.',
+      ui.ButtonSet.OK);
+    return;
+  }
+  const r = runNearmapPass3Row_(sheet, row);
+  ui.alert('Nearmap Pass 3 — FR + Wildfire',
+    'Property: ' + (address || ('row ' + row)) + '\n\n' +
+    'FR concerns/considerations/recommendations: ' + (r.fr ? 'written ✓' : 'FAILED ✗') + '\n' +
+    'Wildfire concerns/considerations/recommendations: ' + (r.wf ? 'written ✓' : 'FAILED ✗') +
+    (r.fr && r.wf ? '' : '\n\nA failed analysis left its columns empty — rerun Pass 3 to retry the missing half. See logs.'),
+    ui.ButtonSet.OK);
+}
+
+function nmRowReadyForPass3_(rowVals) {
+  if (rowVals[NM_COL_REVIEWED - 1] !== true) return false;
+  const pins = nmParsePins_(rowVals[NM_COL_ELEMENTS - 1]);
+  if (!pins.length || !nmPinsAreRegionStyle_(pins)) return false;
+  const fr = String(rowVals[NM_COL_FR_CONCERNS - 1] || '').trim();
+  const wf = String(rowVals[NM_COL_WF_CONCERNS - 1] || '').trim();
+  return !fr || !wf;
+}
+
+function generateNearmapPass3Batch() {
+  const ui = SpreadsheetApp.getUi();
+  const sheet = nmSheet_();
+  if (sheet.getMaxColumns() < NM_COL_WF_REC) {
+    ui.alert('Nearmap Pass 3', 'Run Set Up Nearmap Sheet first so columns X–AC (FR/WF concerns) exist.', ui.ButtonSet.OK);
+    return;
+  }
+  const last = sheet.getLastRow();
+  if (last < 2) { ui.alert('Nearmap Pass 3', 'No data rows.', ui.ButtonSet.OK); return; }
+  const width = Math.max(sheet.getLastColumn(), NM_HEADERS.length);
+  const data = sheet.getRange(2, 1, last - 1, width).getValues();
+  const ready = [];
+  for (let i = 0; i < data.length; i++) {
+    if (nmRowReadyForPass3_(data[i])) ready.push(i + 2);
+  }
+  if (!ready.length) {
+    ui.alert('Nearmap Pass 3 — FR + Wildfire',
+      'No reviewed rows are awaiting Pass 3.\n(A row runs when "Elements Reviewed" is ticked, column R has region-class pins, and FR or Wildfire concerns are still empty.)',
+      ui.ButtonSet.OK);
+    return;
+  }
+  let frDone = 0, wfDone = 0, rows = 0, attempted = 0;
+  for (let i = 0; i < ready.length; i++) {
+    if (attempted >= BATCH_SIZE) break;
+    attempted++; rows++;
+    const r = runNearmapPass3Row_(sheet, ready[i]);
+    if (r.fr) frDone++;
+    if (r.wf) wfDone++;
+    Utilities.sleep(2000);
+  }
+  const remaining = ready.length - attempted;
+  ui.alert('Nearmap Pass 3 — FR + Wildfire',
+    'Rows processed: ' + rows + '\n' +
+    'FR analyses written: ' + frDone + '\nWildfire analyses written: ' + wfDone +
+    (remaining > 0 ? '\nRemaining: ' + remaining + ' — run again to continue.' : '\nAll ready rows processed.') +
+    '\n\nAny failed half left its columns empty and will be retried on the next run.',
+    ui.ButtonSet.OK);
+}
+
 function nmParseOnePin_(p) {
   if (!p) return null;
   const x = parseFloat(p.x), y = parseFloat(p.y);
@@ -1111,7 +1578,17 @@ function nmBuildRecord_(sheet, row, id) {
     ai_url: String(sheet.getRange(row, NM_COL_AI_URL).getValue() || '').trim(),
     elements: nmParsePins_(sheet.getRange(row, NM_COL_ELEMENTS).getValue()),
     drawn: null,
-    regions: null
+    regions: null,
+    fr: nmConcernBlockFromCells_(
+      sheet.getRange(row, NM_COL_FR_CONCERNS).getValue(),
+      sheet.getRange(row, NM_COL_FR_CONSIDER).getValue(),
+      sheet.getRange(row, NM_COL_FR_REC).getValue()
+    ),
+    wildfire: nmConcernBlockFromCells_(
+      sheet.getRange(row, NM_COL_WF_CONCERNS).getValue(),
+      sheet.getRange(row, NM_COL_WF_CONSIDER).getValue(),
+      sheet.getRange(row, NM_COL_WF_REC).getValue()
+    )
   };
   const w = nmParseW_(sheet.getRange(row, NM_COL_DRAWN).getValue());
   rec.drawn = w.drawn;
@@ -1159,9 +1636,8 @@ function processNearmapSheet() {
   if (!files.length) { Logger.log('Nearmap: nothing to push'); return; }
   if (!pushAllToGitHub(files, 'Nearmap')) return;
   updates.forEach(function (u) {
-    const link = NEARMAP_REVIEW_URL + '?property=' + u.id +
-      (u.rec.delivery_id ? '&delivery=' + encodeURIComponent(u.rec.delivery_id) : '');
-    writePlainCell(sheet, u.row, NM_COL_REVIEW_LINK, link);
+    const link = buildNearmapViewerUrl_(sheet, u.row);
+    if (link) writePlainCell(sheet, u.row, NM_COL_REVIEW_LINK, link);
     sheet.getRange(u.row, NM_COL_UPLOAD_DATE).setValue(new Date().toLocaleString());
     writePlainCell(sheet, u.row, NM_COL_STATUS, 'synced');
   });
@@ -1183,9 +1659,8 @@ function processNearmapForActiveRow() {
     SpreadsheetApp.getUi().alert('Nearmap sync', 'GitHub push failed.', SpreadsheetApp.getUi().ButtonSet.OK);
     return;
   }
-  const link = NEARMAP_REVIEW_URL + '?property=' + r.id +
-    (r.rec.delivery_id ? '&delivery=' + encodeURIComponent(r.rec.delivery_id) : '');
-  writePlainCell(sheet, row, NM_COL_REVIEW_LINK, link);
+  const link = buildNearmapViewerUrl_(sheet, row);
+  if (link) writePlainCell(sheet, row, NM_COL_REVIEW_LINK, link);
   sheet.getRange(row, NM_COL_UPLOAD_DATE).setValue(new Date().toLocaleString());
   writePlainCell(sheet, row, NM_COL_STATUS, 'synced');
   SpreadsheetApp.getUi().alert('Nearmap sync', 'Published data/nearmap/' + r.id + '.json', SpreadsheetApp.getUi().ButtonSet.OK);
@@ -1226,63 +1701,91 @@ function nmOpenEditor_(mode, label) {
 function openNearmapReviewForActiveRow() { nmOpenEditor_('regions', 'Regions'); }
 function openNearmapPinsForActiveRow() { nmOpenEditor_('pins', 'Pins'); }
 
-// Read-only Nearmap viewer (2D / 3D / obliques) fed by this row + CloudFront only.
-const NEARMAP_VIEWER_URL = 'https://responder-intel.vyanet.com/nearmap-viewer.html';
+// Product viewer (full page, no hub redirect). Same URL written to column U on sync.
+// Do not pass property=hashId(site_no) — that is not the Jones hub id.
+function buildNearmapViewerUrl_(sheet, row) {
+  const siteNo = nmValidSiteNo_(sheet.getRange(row, NM_COL_SITE_NO).getValue());
+  const delivery = String(sheet.getRange(row, NM_COL_DELIVERY).getValue() || '').trim();
+  const parts = ['full=1'];
+  if (siteNo) parts.push('site_no=' + encodeURIComponent(siteNo));
+  if (delivery) parts.push('delivery=' + encodeURIComponent(delivery));
+  if (!siteNo && !delivery) return null;
+  return NEARMAP_VIEWER_URL + '?' + parts.join('&');
+}
 
 function openNearmapViewerForActiveRow() {
   const sheet = nmSheet_();
   const row = nmActiveRow_();
   if (!row) return;
-  const siteNo = nmValidSiteNo_(sheet.getRange(row, NM_COL_SITE_NO).getValue());
-  const delivery = String(sheet.getRange(row, NM_COL_DELIVERY).getValue() || '').trim();
-  if (!siteNo && !delivery) {
+  const url = buildNearmapViewerUrl_(sheet, row);
+  if (!url) {
     SpreadsheetApp.getUi().alert('Nearmap Viewer', 'Row needs a Site No and/or Delivery Id.', SpreadsheetApp.getUi().ButtonSet.OK);
     return;
   }
-  const parts = [];
-  if (siteNo) parts.push('site_no=' + encodeURIComponent(siteNo));
-  if (delivery) parts.push('delivery=' + encodeURIComponent(delivery));
   const address = String(sheet.getRange(row, NM_COL_ADDRESS).getValue() || '').trim();
-  reviewOpenDialog_((address || 'Nearmap') + ' — Viewer', NEARMAP_VIEWER_URL + '?' + parts.join('&'));
+  reviewOpenDialog_((address || 'Nearmap') + ' — Viewer', url);
 }
 
 function nmGetElements_(p) {
-  const siteNo = nmValidSiteNo_(p && p.site_no);
-  if (!siteNo) throw new Error('site_no required');
+  const siteNo = nmValidSiteNo_(p && (p.site_no || p.site));
+  const deliveryWant = String((p && (p.delivery_id || p.delivery)) || '').trim().toLowerCase();
+  if (!siteNo && !deliveryWant) throw new Error('site_no or delivery required');
   const sheet = nmSheet_();
   const last = sheet.getLastRow();
   if (last < 2) throw new Error('Nearmap sheet empty');
-  const vals = sheet.getRange(2, 1, last - 1, NM_HEADERS.length).getValues();
+  const width = Math.max(sheet.getLastColumn(), NM_HEADERS.length);
+  const vals = sheet.getRange(2, 1, last - 1, width).getValues();
   const creds = getCredentials();
+  let found = -1;
+  let deliveryHits = 0;
   for (let i = 0; i < vals.length; i++) {
-    if (nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]) !== siteNo) continue;
-    const bounds = nmParseBounds_(vals[i][NM_COL_NADIR_BOUNDS - 1]);
-    const aiUrl = String(vals[i][NM_COL_AI_URL - 1] || '').trim();
-    const w = nmParseW_(vals[i][NM_COL_DRAWN - 1]);
-    const id = nmPropertyId_(siteNo, creds.hashSalt);
-    return {
-      ok: true,
-      route: 'nearmap-elements',
-      site_no: siteNo,
-      property_id: id,
-      account_type: normalizeAccountType(vals[i][NM_COL_ACCOUNT_TYPE - 1]),
-      delivery_id: String(vals[i][NM_COL_DELIVERY - 1] || '').trim(),
-      address: String(vals[i][NM_COL_ADDRESS - 1] || '').trim(),
-      nadir_url: String(vals[i][NM_COL_NADIR_URL - 1] || '').trim(),
-      bounds: bounds,
-      ai_url: aiUrl,
-      regions_original_url: nmRegionsOriginalUrl_(aiUrl),
-      regions_edits_url: nmRegionsEditsUrl_(aiUrl),
-      regions_edits: w.edits,
-      pins: nmParsePins_(vals[i][NM_COL_ELEMENTS - 1]),
-      drawn: w.drawn,
-      north_url: String(vals[i][NM_COL_NORTH_URL - 1] || '').trim(),
-      east_url: String(vals[i][NM_COL_EAST_URL - 1] || '').trim(),
-      south_url: String(vals[i][NM_COL_SOUTH_URL - 1] || '').trim(),
-      west_url: String(vals[i][NM_COL_WEST_URL - 1] || '').trim()
-    };
+    const rowSite = nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]);
+    const rowDel = String(vals[i][NM_COL_DELIVERY - 1] || '').trim().toLowerCase();
+    if (siteNo) {
+      if (rowSite === siteNo) { found = i; break; }
+    } else if (deliveryWant && rowDel === deliveryWant) {
+      deliveryHits++;
+      if (found < 0) found = i;
+    }
   }
-  throw new Error('no Nearmap row for site_no ' + siteNo);
+  if (found < 0) {
+    throw new Error(siteNo ? ('no Nearmap row for site_no ' + siteNo) : ('no Nearmap row for delivery ' + deliveryWant));
+  }
+  if (!siteNo && deliveryHits > 1) {
+    throw new Error('delivery matches ' + deliveryHits + ' Nearmap rows — pass site_no (do not guess Jones)');
+  }
+  const i = found;
+  const rowSite = nmValidSiteNo_(vals[i][NM_COL_SITE_NO - 1]);
+  const bounds = nmParseBounds_(vals[i][NM_COL_NADIR_BOUNDS - 1]);
+  const aiUrl = String(vals[i][NM_COL_AI_URL - 1] || '').trim();
+  const w = nmParseW_(vals[i][NM_COL_DRAWN - 1]);
+  const id = nmPropertyId_(rowSite, creds.hashSalt);
+  const cell = function (col) {
+    return (col > 0 && col <= vals[i].length) ? vals[i][col - 1] : '';
+  };
+  return {
+    ok: true,
+    route: 'nearmap-elements',
+    site_no: rowSite,
+    property_id: id,
+    account_type: normalizeAccountType(cell(NM_COL_ACCOUNT_TYPE)),
+    delivery_id: String(cell(NM_COL_DELIVERY) || '').trim(),
+    address: String(cell(NM_COL_ADDRESS) || '').trim(),
+    nadir_url: String(cell(NM_COL_NADIR_URL) || '').trim(),
+    bounds: bounds,
+    ai_url: aiUrl,
+    regions_original_url: nmRegionsOriginalUrl_(aiUrl),
+    regions_edits_url: nmRegionsEditsUrl_(aiUrl),
+    regions_edits: w.edits,
+    pins: nmParsePins_(cell(NM_COL_ELEMENTS)),
+    drawn: w.drawn,
+    north_url: String(cell(NM_COL_NORTH_URL) || '').trim(),
+    east_url: String(cell(NM_COL_EAST_URL) || '').trim(),
+    south_url: String(cell(NM_COL_SOUTH_URL) || '').trim(),
+    west_url: String(cell(NM_COL_WEST_URL) || '').trim(),
+    fr: nmConcernBlockFromCells_(cell(NM_COL_FR_CONCERNS), cell(NM_COL_FR_CONSIDER), cell(NM_COL_FR_REC)),
+    wildfire: nmConcernBlockFromCells_(cell(NM_COL_WF_CONCERNS), cell(NM_COL_WF_CONSIDER), cell(NM_COL_WF_REC))
+  };
 }
 
 // Reviewer working regions → validated ai/edits/regions.json document. Same shape

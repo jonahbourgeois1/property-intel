@@ -10,7 +10,7 @@ After any Apps Script paste: **save AND create a new web-app deployment version*
 - Python 3 with Pillow (`pip install pillow`)
 - Optional: boto3 for promote (`pip install boto3`)
 - Ahartsi-style zip (Transactional API folder and/or MapBrowser 3D zips)
-- Apps Script project “GitHub Property Intel Automation” — paste `config.gs` (constants only), `nearmap.gs`, `menu.gs`, `critique-api.gs`. **Replace** those files in place. Do not add a second `prompts.gs` (global `const` collision). Nearmap Pass 1 prompt lives in `nearmap.gs`.
+- Apps Script project “GitHub Property Intel Automation” — paste `config.gs` (constants only), `nearmap.gs`, `menu.gs`, `critique-api.gs`. **Replace** those files in place. Do not add a second `prompts.gs` (global `const` collision). Nearmap Pass 1 and Pass 3 prompts live in `nearmap.gs`.
 
 Do not put GeoTIFFs, OBJ, or LAS in this public repo.
 
@@ -106,7 +106,7 @@ Use `review_server.py` (not `python -m http.server`) so Draw can PUT local `ai/e
 
 **… → Open Nearmap Pins Editor (This Row)** opens `?mode=pins` (v1.7.6): the finished regions are read-only. **Auto Generate Pins** (runs on a fresh/testing open) places one pin per `regions.json` feature at its interior point, named after that class — not a catalog entry. Skipped (no auto pin): asphalt, building (deprecated), concrete slab, driveway, low / medium-high / very-low / woody vegetation, natural, roof, translucent roofing, water body. A class checkbox shows that class's polygons **and** pins together; **None** hides both. **Place pin**: turn on a skipped layer (Driveway, Water Body, …), click a painted region that has no pin — pin goes at the interior point. **Delete pin**: click a painted region that has a pin, or the pin itself; the region stays. Clicks on empty map do not place or delete. List **Delete** removes one pin without touching regions; Save writes packed pins to column R. Do regions first, then pins.
 
-Paste for this build: `config.gs`, `nearmap.gs`, `menu.gs` (and `critique-api.gs` if its Nearmap routes are not deployed), save, **new deployment version**.
+Paste for this build: `config.gs`, `nearmap.gs`, `menu.gs` (and `critique-api.gs` if its Nearmap routes are not deployed), save, **new deployment version**. Then **Set Up Nearmap Sheet** so columns X–AC (Pass 3 FR/WF) exist.
 
 ### Sheet mode (v1.6.0) — original/edits folder format on S3, no GitHub
 
@@ -126,15 +126,27 @@ GitHub: the two Apps Script commits under `data/nearmap/edits/` from the 2026-09
 
 Local v1.4.0 (`delivery=` only, no `site_no`): Pan / Draw (Accept removed). One erase stroke cuts every same-class region it crosses. Wheel zoom works in Draw before and after a pick. Erase on painted additions keeps clean edges and never deletes the vendor scrap the addition was grown from. **Testing mode:** every open starts from `ai/original/regions.json` with no pins and resets `ai/edits/regions.json` to the original; add `&fresh=0` to resume edits instead. Sidebar counts reflect the working regions from load (hints.json counts are only a placeholder for the first second). Clear brush next to `◀ ▶` drops the picked region. Paint absorbs any same-class scrap the result covers; Pan or hiding the layer drops the pick. Regions files are fetched with no-store; the edits file on disk always wins over the browser backup. To reset a delivery to the vendor original, copy `ai/original/regions.json` over `ai/edits/regions.json` (or click Revert regions). The active layer (last checked, or click a checked layer's name) highlights every border of that class; Driveway is pink. The stroke preview is as wide as the cursor and matches the area painted or erased. Paint that does not touch the selected region creates a new same-class region and the class count updates. Right-click erase acts on whatever visible region is under the brush (the picked one first, then same class, then any); over bare ground it says "Nothing to remove". An erase that cuts a region in two leaves two regions (the picked one keeps the largest piece, the rest become `dN` with `origin: split`); slivers left by an erase are dropped, and erasing essentially the whole region removes it and its pin (`◀` brings it back). Size slider under Draw; `◀ ▶` under Size step back/forward through paint strokes (memory only, Revert clears them; Ctrl+Z / Ctrl+Shift+Z while Draw is on). The selected pin and polygon are not highlighted. Scroll-zoom stays on while drawing. Published to Pages 2026-09-09.
 
-After sync: `nearmap-review.html?property={hashId(site_no)}`
+After sync: column U is the product viewer `nearmap-viewer.html?full=1&site_no=…&delivery=…` (not the review page). Regions/pins editors stay on the menu items.
 
 ### 5b. Viewer (`nearmap-viewer.html`)
 
-**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`, which **redirects** into `vyanet-viewer.html?property={hub}&delivery=…&stage=home` for trial deliveries in `NEARMAP_DELIVERY_HUB` (Macalpine → Jones). Same gate / HOME / PRIVATE / COMMUNITY as every other property. Private nested **Nearmap** **leaves the hub** and opens `nearmap-viewer.html?full=1` (vendor 2D / 3D / Obliques plus AI layers and lot line). **Clip to taxlot** (default on, v1.1.7) removes everything outside the property line on 2D (opaque hole-punch, camera stays on the property, off-lot pins hidden); uncheck to see the neighborhood. Observed facts (areas, defensible-space distances) are on that rail — not GIS Property Facts. Top-right **Standard viewer** returns to `vyanet-viewer.html?stage=private`. Private 2D **Cover** shows the same lot-clipped building/drive/veg/pool overlay. Local: `http://localhost:8899/nearmap-viewer.html?full=1&delivery=18775-macalpine-loop-bend-or-97702`. Direct hub: `vyanet-viewer.html?property=6de88883bfd4a8349a901c54611ed9d7&role=tech`. Optional lot JPEG: `python tools/nearmap/lot_clip.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702` then promote. 3D needs `urls.mesh` in the manifest (step 2b + promote). Paste `nearmap.gs` + `menu.gs` (save, new deployment) is only needed for the menu item itself.
+**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`, which **redirects** into `vyanet-viewer.html?property={hub}&delivery=…&stage=home` for trial deliveries in `NEARMAP_DELIVERY_HUB` (Macalpine → Jones). Same gate / HOME / PRIVATE / COMMUNITY as every other property. Private nested **Nearmap** **leaves the hub** and opens `nearmap-viewer.html?full=1` (vendor 2D / 3D / Obliques). Right rail (v1.1.12) has four stacked tabs: **AI layers** (lot line, clip, observed facts, class checkboxes), **First Responder**, **Wildfire**, **Pins**. Map markers follow the tab. **Clip to taxlot** (default on, v1.1.8) removes everything outside the property line on 2D (opaque hole-punch, camera stays on the property, off-lot pins hidden); uncheck to see the neighborhood. Observed facts (areas, defensible-space distances) are on the AI layers pane — not GIS Property Facts. `nearmap-elements` loads by `site_no` or `delivery`. Element pins stay region-class names. Top-right **Standard viewer** returns to `vyanet-viewer.html?stage=private`. Private 2D **Cover** shows the same lot-clipped building/drive/veg/pool overlay. Local: `http://localhost:8899/nearmap-viewer.html?full=1&delivery=18775-macalpine-loop-bend-or-97702`. Direct hub: `vyanet-viewer.html?property=6de88883bfd4a8349a901c54611ed9d7&role=tech`. Optional lot JPEG: `python tools/nearmap/lot_clip.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702` then promote. 3D needs `urls.mesh` in the manifest (step 2b + promote). Paste `config.gs` + `nearmap.gs` + `menu.gs` (save, new deployment) for Pass 3 and the menu items.
+
+### 5c. Pass 3 — FR + Wildfire concerns
+
+After pin QA:
+
+1. Tick **Elements Reviewed** (column S) on the Nearmap row. Column R must hold region-class pins (packed `{v:2,c,p}`), not leftover catalog ints.
+2. **Property Intel → Nearmap Pipeline → Generate Pass 3 — FR + Wildfire Concerns (This Row)** (or All Reviewed).
+3. Each half (FR then WF) sends nadir + compass obliques (until the ~3.5M-char budget), confirmed pin names, region **class counts only**, KB context, and the catalog concern vocabulary. Writes X–Z (FR) and AA–AC (WF).
+4. A failed half leaves its columns empty — rerun Pass 3 to retry. Empty concern vocab (flattened `role=`) aborts that half; do not flatten the catalog.
+5. Then **Sync This Row** so `data/nearmap/{id}.json` carries `fr` / `wildfire`. Does **not** write `views.security`.
+
+Gate copy if S is unticked: finish the Pins editor, tick Elements Reviewed, then Pass 3.
 
 ### 6. Sync to GitHub
 
-**Sync This Row** / **Sync Nearmap to GitHub**. Writes `data/nearmap/{id}.json` only. Trial does **not** touch `data/index/` (`NM_UPSERT_INDEX = false`). Does not write `views.security`.
+**Sync This Row** / **Sync Nearmap to GitHub**. Writes `data/nearmap/{id}.json` only (elements + `fr` / `wildfire` when Pass 3 has run). Column U gets the full product viewer (`?full=1`), not `nearmap-review.html`. Trial does **not** touch `data/index/` (`NM_UPSERT_INDEX = false`). Does not write `views.security`.
 
 Compare visually to Jones satellite + plane. Nearmap AOI is the vendor crop, not the taxlot.
 

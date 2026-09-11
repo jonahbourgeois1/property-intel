@@ -38,13 +38,13 @@ Current hub (`hub 1.8.17`, `js/vyanet-viewer/property.js` `HUB_BUILD`):
 - `model-viewer.html` can load a GLB from the view record’s `viewer360` (`model=` via qp, stop at first `&`) when the iframe only has `?property=&view=`.
 - Live passcode is a hub overlay (Chrome blocks `window.prompt`). Prefetch must not prompt. Gateway alias retry: URL property, `idx.id`, `views.drone-test`, `views.drone`, `views.plane`.
 
-**Nearmap trial** (`nearmap-viewer.html` **v1.1.7**, editor `nearmap-review.html` **v1.7.6**):
+**Nearmap trial** (`nearmap-viewer.html` **v1.1.13**, editor `nearmap-review.html` **v1.7.6**):
 
 - Join is a **two-row table**, not production hub membership. Do **not** hash `site_no` for that join:
   - `18775-macalpine-loop-bend-or-97702` → Jones `6de88883bfd4a8349a901c54611ed9d7`
   - `410-sw-columbia-st-bend-or-97702` → `744a3639be95ce309192dc69b5a8e9f6`
 - Standalone `nearmap-viewer.html?delivery=` on a known trial property **redirects to hub home** first unless `full=1`.
-- Nearmap page: 2D / 3D / Obliques, AI layers, lot line, pins (region-class names). **Clip to taxlot** (default on) removes everything outside the property line on 2D; the camera stays on the property (v1.1.7 — do not fit the taxlot bbox). 3D region fills **drape the mesh** (~8 cm lift); the 3D mesh itself is still the capture. Off layers are not built until turned on. `embed=1` is unused.
+- Nearmap page: 2D / 3D / Obliques. Right rail tabs stacked vertically (v1.1.12): **AI layers**, **First Responder**, **Wildfire**, **Pins**. Lot line and observed facts on AI layers; Pass 3 FR/WF prose + catalog concern pins on their tabs; region-class pins on Pins. Map markers follow the rail tab. **Clip to taxlot** (default on) removes everything outside the property line on 2D; the camera stays on the property (v1.1.7 — do not fit the taxlot bbox). 3D region fills **drape the mesh** (~8 cm lift); the 3D mesh itself is still the capture. Off layers are not built until turned on. `embed=1` is unused.
 - Editor: paint/erase, holes, gap-close, **Revert changes** vs **Revert to original**. Pins editor **Place pin** / **Delete pin** click a visible painted region (interior / remove pin) — not a free map click. Revert buttons were not clicked in a real browser session.
 
 Test property: Jones / Tracy, `18775 Macalpine Loop, Bend OR 97702`. **Jones is name-keyed `6de88883…` (`hashId("jones")`), not `hash(14725)` (`d9f759…`).** Jones is AMBIG (site_nos 14725 / 33278 / 34734) — never guess which site_no; skip index write if missing.

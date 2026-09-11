@@ -5,19 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
 <!--
-  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.7, 2026-09-10)
+  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.12, 2026-09-10)
   Standalone ?delivery= on a known trial property redirects into vyanet-viewer
     (same HOME / PRIVATE / COMMUNITY). Private → Nearmap opens this page full-bleed
     (?full=1) with Standard viewer (top right) back to the hub. embed=1 is unused
     for now. Product surface clips Vert + regions to the taxlot (editor keeps the
     AOI): opaque hole-punch at the property line. Camera stays on the property
     (do not fitBounds the whole taxlot — that put Jones off to one side).
-    Observed facts are Nearmap-derived, not GIS Property Facts.
+    Observed facts are Nearmap-derived, not GIS Property Facts. Right rail is
+    four stacked tabs: AI layers, First Responder, Wildfire, Pins.
+    Lot line and Clip to taxlot are 2D-only (hidden on the 3D tab).
+    Pass 3 FR/WF concern pins (catalog ids) and considerations live on this page.
 -->
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { width: 100%; height: 100%; background: #111318; overflow: hidden; font-family: monospace; color: #8a93a2; }
-  :root { --bar-h: 64px; --panel-w: 300px; }
+  :root { --bar-h: 64px; --panel-w: 340px; }
   #bar { position: fixed; top: 0; left: 0; right: 0; z-index: 40; height: var(--bar-h); display: flex; align-items: center; gap: 8px; padding: 0 16px; background: #0b0e12; border-bottom: 1px solid rgba(255,255,255,0.10); }
   #bar .name { color: #f0f2f5; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #bar .addr { font-size: 12px; color: #555f6e; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -47,8 +50,16 @@
   #lightbox.on { display: flex; }
   #lightbox img { max-width: 96vw; max-height: 92vh; object-fit: contain; }
   #panel { position: fixed; top: var(--bar-h); right: 0; bottom: 0; width: var(--panel-w); background: #0b0e12; border-left: 1px solid rgba(255,255,255,0.10); display: flex; flex-direction: column; z-index: 30; }
-  #panel h2 { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #555f6e; padding: 12px 14px 6px; }
-  #panel .scroll { flex: 1; overflow: auto; padding: 0 14px 14px; }
+  #railTabs { display: flex; flex-direction: column; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.10); }
+  .rail-tab { display: flex; align-items: center; justify-content: space-between; width: 100%; text-align: left; font-family: monospace; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; padding: 11px 14px; color: #555f6e; cursor: pointer; background: transparent; border: 0; border-left: 3px solid transparent; }
+  .rail-tab:hover { color: #c9d1dc; background: rgba(255,255,255,0.02); }
+  .rail-tab.on { color: #a855f7; border-left-color: #a855f7; background: rgba(168,85,247,0.10); }
+  .rail-tab[data-rail="fr"].on { color: #ef4444; border-left-color: #ef4444; background: rgba(239,68,68,0.10); }
+  .rail-tab[data-rail="wf"].on { color: #f59e0b; border-left-color: #f59e0b; background: rgba(245,158,11,0.10); }
+  .rail-n { color: inherit; opacity: 0.7; font-size: 11px; }
+  .pane { display: none; flex: 1; overflow: auto; padding: 10px 14px 14px; }
+  .pane.on { display: block; }
+  body.view-3d #lotControls { display: none; }
   .layer-btns { display: flex; gap: 6px; margin: 4px 0 10px; }
   .layer-btns button, #panel .btn { font-family: monospace; font-size: 11px; padding: 6px 10px; border-radius: 6px; cursor: pointer; background: rgba(0,0,0,0.35); color: #8a93a2; border: 1px solid #2a3040; }
   .layer-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; color: #c9d1dc; cursor: pointer; }
@@ -67,6 +78,20 @@
   .nm-obs-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #c9d1dc; padding: 2px 0; }
   .nm-obs-row span:last-child { color: #f0f2f5; text-align: right; }
   .nm-obs-note { font-size: 10px; color: #555f6e; margin-top: 8px; line-height: 1.4; }
+  .rec-block { margin: 8px 0 12px; padding: 10px 12px; border: 1px solid #2a3040; border-radius: 8px; background: #1a1f27; }
+  .rec-label { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
+  .rec-label.fr { color: #ef4444; }
+  .rec-label.wf { color: #f59e0b; }
+  .rec-text { font-size: 12px; color: #c9d1dc; line-height: 1.5; }
+  .nm-empty { font-size: 11px; color: #555f6e; line-height: 1.45; margin: 8px 0 12px; }
+  .concern-list { list-style: none; margin: 6px 0 8px; }
+  .concern-list li { display: block; padding: 6px 0; border-bottom: 1px solid #1a1f27; font-size: 12px; color: #c9d1dc; cursor: pointer; }
+  .concern-list li:hover { color: #f0f2f5; }
+  .concern-list li .row { display: flex; gap: 8px; align-items: baseline; }
+  .concern-list li .num { font-weight: 700; min-width: 32px; flex-shrink: 0; }
+  .concern-list li .num.fr { color: #ef4444; }
+  .concern-list li .num.wf { color: #f59e0b; }
+  .concern-list li .def { font-size: 10px; color: #555f6e; line-height: 1.35; margin-top: 2px; }
   #status { padding: 10px 14px; font-size: 11px; color: #555f6e; border-top: 1px solid rgba(255,255,255,0.08); min-height: 34px; }
   #status.err { color: #ef4444; }
   #progress { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(11,14,18,0.9); border: 1px solid #2a3040; border-radius: 10px; padding: 14px 18px; font-size: 12px; color: #c9d1dc; display: none; z-index: 5; }
@@ -111,14 +136,31 @@
   <div class="view" id="viewObl"><div id="obl"></div></div>
 </div>
 <aside id="panel">
-  <h2>AI layers</h2>
-  <div class="scroll">
-    <label class="layer-row"><input type="checkbox" id="lotToggle" checked><span class="swatch" style="background:#cd3333"></span>Lot line</label>
-    <label class="layer-row"><input type="checkbox" id="lotClip" checked title="Remove everything outside the property line"><span class="swatch" style="background:#111318"></span>Clip to taxlot</label>
+  <div id="railTabs" role="tablist" aria-orientation="vertical">
+    <button type="button" class="rail-tab on" id="railAi" data-rail="ai" role="tab" aria-selected="true">AI layers</button>
+    <button type="button" class="rail-tab" id="railFr" data-rail="fr" role="tab" aria-selected="false">First Responder<span class="rail-n" id="railFrN"></span></button>
+    <button type="button" class="rail-tab" id="railWf" data-rail="wf" role="tab" aria-selected="false">Wildfire<span class="rail-n" id="railWfN"></span></button>
+    <button type="button" class="rail-tab" id="railPins" data-rail="pins" role="tab" aria-selected="false">Pins<span class="rail-n" id="railPinsN"></span></button>
+  </div>
+  <div class="pane on" id="paneAi" role="tabpanel">
+    <div id="lotControls">
+      <label class="layer-row"><input type="checkbox" id="lotToggle" checked><span class="swatch" style="background:#cd3333"></span>Lot line</label>
+      <label class="layer-row"><input type="checkbox" id="lotClip" checked title="Remove everything outside the property line"><span class="swatch" style="background:#111318"></span>Clip to taxlot</label>
+    </div>
     <div id="nmObs"></div>
     <div class="layer-btns"><button type="button" id="aiAll">All</button><button type="button" id="aiNone">None</button><button type="button" id="reloadRegions" title="Re-read ai/edits/regions.json (picks up editor saves)" style="margin-left:auto">Reload</button></div>
     <div id="aiLayers"></div>
-    <label class="layer-row pins"><input type="checkbox" id="pinsToggle" checked><span class="swatch" style="background:#a855f7"></span>Pins<span class="n" id="pinCount">0</span></label>
+  </div>
+  <div class="pane" id="paneFr" role="tabpanel">
+    <div id="nmFrBody"></div>
+    <ol class="concern-list" id="concernListFr"></ol>
+  </div>
+  <div class="pane" id="paneWf" role="tabpanel">
+    <div id="nmWfBody"></div>
+    <ol class="concern-list" id="concernListWf"></ol>
+  </div>
+  <div class="pane" id="panePins" role="tabpanel">
+    <label class="layer-row pins" style="margin-top:0;border-top:none;padding-top:0"><input type="checkbox" id="pinsToggle" checked><span class="swatch" style="background:#a855f7"></span>Pins<span class="n" id="pinCount">0</span></label>
     <ol id="pinList"></ol>
   </div>
   <div id="status">Loading…</div>
@@ -135,7 +177,7 @@ import {
   loadTaxlot, displayFeatures, observedFacts, factsHtml,
   mapsPathsFromLot, mapsMaskPaths, lotContainsLngLat
 } from './js/vyanet-viewer/nearmap-lot.js?v=1.1.4a';
-const BUILD = 'v1.1.7';
+const BUILD = 'v1.1.13';
 const NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 const MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -146,7 +188,14 @@ const VEGETATION_RE = /vegetation|tree overhang|natural/i;
 document.getElementById('build').textContent = 'nearmap ' + BUILD;
 
 const qp = new URLSearchParams(location.search);
-const siteNo = (qp.get('site_no') || qp.get('site') || '').trim();
+function parseRail(raw) {
+  const v = String(raw || '').toLowerCase().trim();
+  if (v === 'fr' || v === 'responder' || v === 'security') return 'fr';
+  if (v === 'wf' || v === 'wildfire' || v === 'wild fire') return 'wf';
+  if (v === 'pins' || v === 'pin') return 'pins';
+  return 'ai';
+}
+let siteNo = (qp.get('site_no') || qp.get('site') || '').trim();
 let delivery = (qp.get('delivery') || '').trim();
 const tilesBase = (qp.get('tiles') || CF_TILES).replace(/\/?$/, '/');
 const EMBED = qp.get('embed') === '1';
@@ -172,7 +221,11 @@ if (HUB_REDIRECT) {
 const state = {
   address: '', bounds: null, nadirUrl: '', obliques: {}, manifest: null,
   meshUrl: '', meshMeta: null, regions: null, classes: [], layerOn: {}, pins: [],
-  catalog: {}, pinsOn: true, tab: '2d',
+  catalog: {}, pinsOn: true, concernsOn: true, concernsError: '',
+  fr: { concerns: [], considerations: '', recommendations: '' },
+  wildfire: { concerns: [], considerations: '', recommendations: '' },
+  tab: '2d',
+  rail: parseRail(qp.get('rail') || qp.get('panel')),
   lot: null, lotClip: true, displayFeats: [], facts: null,
   vertLotUrl: '', lotCropBounds: null, observedUrl: '',
   openCam: null
@@ -180,6 +233,7 @@ const state = {
 let map = null, mapReady = false, groundOverlay = null;
 let dataLayer = null;
 let markers2d = [];
+let concernMarkers2d = [];
 let lastPinView = '';
 let pinDrawTimer = 0;
 let three = null;      // { renderer, scene, camera, controls, mesh, groups: {cls: Group}, pinGroup, heightmap }
@@ -243,11 +297,83 @@ function pinName(p) {
   const c = state.catalog[p.id];
   return (c && c.name) || ('#' + p.id);
 }
+function concernName(p) {
+  if (!p) return '';
+  const c = state.catalog[p.id];
+  return (c && c.name) || p.name || ('#' + p.id);
+}
+function concernDef(p) {
+  const c = p && state.catalog[p.id];
+  return (c && c.definition) || '';
+}
+function parseConcernList(raw) {
+  if (Array.isArray(raw)) {
+    return raw.filter((p) => p && p.id != null && isFinite(Number(p.x)) && isFinite(Number(p.y)))
+      .map((p) => ({ id: Number(p.id), x: Number(p.x), y: Number(p.y) }));
+  }
+  if (typeof raw === 'string' && raw.trim().charAt(0) === '[') {
+    try { return parseConcernList(JSON.parse(raw)); } catch (e) { return []; }
+  }
+  return [];
+}
+function concernBlockFrom(src) {
+  if (!src || typeof src !== 'object') {
+    return { concerns: [], considerations: '', recommendations: '' };
+  }
+  return {
+    concerns: parseConcernList(src.concerns),
+    considerations: String(src.considerations || '').trim(),
+    recommendations: String(src.recommendations || '').trim()
+  };
+}
+function concernBlockHas(block) {
+  if (!block) return false;
+  return !!(block.considerations || block.recommendations || (block.concerns && block.concerns.length));
+}
+function applyConcerns(fr, wf) {
+  if (fr) state.fr = concernBlockFrom(fr);
+  if (wf) state.wildfire = concernBlockFrom(wf);
+}
+function allConcernPins() {
+  const out = [];
+  (state.fr.concerns || []).forEach((p, i) => { if (p) out.push(Object.assign({}, p, { kind: 'fr', idx: i })); });
+  (state.wildfire.concerns || []).forEach((p, i) => { if (p) out.push(Object.assign({}, p, { kind: 'wf', idx: i })); });
+  return out;
+}
+function elementPinsVisible() {
+  return !!state.pinsOn && state.rail === 'pins';
+}
+function concernKindOn(kind) {
+  if (!state.concernsOn) return false;
+  if (state.rail === 'fr') return kind === 'fr';
+  if (state.rail === 'wf') return kind === 'wf';
+  return false;
+}
+function showRail(id) {
+  const rail = parseRail(id);
+  state.rail = rail;
+  ['ai', 'fr', 'wf', 'pins'].forEach((k) => {
+    const tab = $('rail' + (k === 'ai' ? 'Ai' : k === 'fr' ? 'Fr' : k === 'wf' ? 'Wf' : 'Pins'));
+    const pane = $('pane' + (k === 'ai' ? 'Ai' : k === 'fr' ? 'Fr' : k === 'wf' ? 'Wf' : 'Pins'));
+    const on = k === rail;
+    if (tab) {
+      tab.classList.toggle('on', on);
+      tab.setAttribute('aria-selected', on ? 'true' : 'false');
+    }
+    if (pane) pane.classList.toggle('on', on);
+  });
+  applyLayers();
+}
+function escHtml(s) {
+  return String(s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
 
 // ── data ─────────────────────────────────────────────────────────────────────
 async function loadRow() {
-  if (!siteNo) return null;
-  const u = NM_API_URL + '?route=nearmap-elements&site_no=' + encodeURIComponent(siteNo) + '&_=' + Date.now();
+  if (!siteNo && !delivery) return null;
+  let u = NM_API_URL + '?route=nearmap-elements&_=' + Date.now();
+  if (siteNo) u += '&site_no=' + encodeURIComponent(siteNo);
+  if (delivery) u += '&delivery=' + encodeURIComponent(delivery);
   const r = await fetch(u, { redirect: 'follow' });
   const t = await r.text();
   if (t.trim().charAt(0) === '<') throw new Error('Apps Script returned a web page instead of JSON (transient) — reload');
@@ -258,10 +384,28 @@ async function loadRow() {
   if (row.nadir_url) state.nadirUrl = row.nadir_url;
   state.obliques = { north: row.north_url, east: row.east_url, south: row.south_url, west: row.west_url };
   state.pins = Array.isArray(row.pins) ? row.pins : [];
+  applyConcerns(row.fr, row.wildfire);
+  if (row.property_id) state.propertyId = row.property_id;
+  if (row.site_no && !siteNo) siteNo = String(row.site_no);
   state.regionsEditsUrl = row.regions_edits_url || '';
   state.regionsOriginalUrl = row.regions_original_url || '';
   if (row.delivery_id && !delivery) delivery = String(row.delivery_id);
   return row;
+}
+async function loadRowWithRetry() {
+  let last = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const row = await loadRow();
+      state.concernsError = '';
+      return row;
+    } catch (e) {
+      last = e;
+      state.concernsError = String(e.message || e);
+      if (attempt < 2) await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
+    }
+  }
+  throw last;
 }
 async function loadManifest() {
   if (!delivery) return null;
@@ -373,6 +517,8 @@ function renderPanel() {
   });
   const shownPins = state.pins.map((p, i) => pinOnLot(p) ? i : -1).filter((i) => i >= 0);
   $('pinCount').textContent = String(shownPins.length);
+  const pinN = $('railPinsN');
+  if (pinN) pinN.textContent = shownPins.length ? String(shownPins.length) : '';
   const list = $('pinList');
   list.innerHTML = '';
   if (shownPins.length > 60) {
@@ -389,6 +535,7 @@ function renderPanel() {
       li.innerHTML = '<span class="num">' + g.n + '</span><span>' + name + '</span>';
       list.appendChild(li);
     });
+    renderConcernsPanel();
     return;
   }
   shownPins.forEach((i) => {
@@ -398,19 +545,77 @@ function renderPanel() {
     li.innerHTML = '<span class="num">' + (i + 1) + '</span><span>' + pinName(p) + '</span><span class="cls">' + (p.class || p.ai_class || '') + '</span>';
     list.appendChild(li);
   });
+  renderConcernsPanel();
+}
+function renderConcernsPanel() {
+  renderHalfPane('fr');
+  renderHalfPane('wf');
+}
+function renderHalfPane(kind) {
+  const isWf = kind === 'wf';
+  const host = $(isWf ? 'nmWfBody' : 'nmFrBody');
+  const list = $(isWf ? 'concernListWf' : 'concernListFr');
+  const countEl = $(isWf ? 'railWfN' : 'railFrN');
+  if (!host || !list) return;
+  const block = (isWf ? state.wildfire : state.fr) || {};
+  const pins = (block.concerns || []).map((p, i) => Object.assign({}, p, { kind: kind, idx: i }));
+  const shown = pins.filter(pinOnLot);
+  if (countEl) countEl.textContent = shown.length ? String(shown.length) : '';
+  if (concernBlockHas(block)) {
+    let html = '';
+    if (block.considerations) {
+      html += '<div class="rec-block"><div class="rec-label ' + kind + '">' +
+        (isWf ? 'Wildfire considerations' : 'Responder considerations') +
+        '</div><div class="rec-text">' + escHtml(block.considerations) + '</div></div>';
+    }
+    if (block.recommendations) {
+      html += '<div class="rec-block"><div class="rec-label ' + kind + '">' +
+        (isWf ? 'Wildfire recommendations' : 'First responder recommendations') +
+        '</div><div class="rec-text">' + escHtml(block.recommendations) + '</div></div>';
+    }
+    host.innerHTML = html;
+  } else if (state.concernsError) {
+    host.innerHTML = '<p class="nm-empty">Could not load Pass 3 from the sheet: ' +
+      escHtml(state.concernsError) + ' — hard-refresh this page.</p>';
+  } else {
+    host.innerHTML = '<p class="nm-empty">No Pass 3 ' + (isWf ? 'wildfire' : 'first-responder') +
+      ' concerns yet. After pin QA, tick Elements Reviewed, run Generate Pass 3, then hard-refresh this page.</p>';
+  }
+  list.innerHTML = '';
+  shown.forEach((p) => {
+    const li = document.createElement('li');
+    li.dataset.kind = p.kind;
+    li.dataset.i = String(p.idx);
+    const tag = isWf ? 'WF' : 'FR';
+    const def = concernDef(p);
+    li.innerHTML = '<div class="row"><span class="num ' + kind + '">' + tag + (p.idx + 1) + '</span><span>' +
+      escHtml(concernName(p)) + '</span></div>' +
+      (def ? '<div class="def">' + escHtml(def) + '</div>' : '');
+    list.appendChild(li);
+  });
 }
 function applyLayers() {
   styleDataLayer();
   if ((state.pins || []).length > 80) draw2dPins();
   else markers2d.forEach((m) => {
     const i = m.__pinIdx;
-    m.setVisible(state.pinsOn && pinOnLot(state.pins[i]));
+    m.setVisible(elementPinsVisible() && pinOnLot(state.pins[i]));
+  });
+  concernMarkers2d.forEach((m) => {
+    const p = m.__concern;
+    m.setVisible(!!p && concernKindOn(p.kind) && pinOnLot(p));
   });
   if (three) {
     const missing = state.classes.some((c) => state.layerOn[c] && !three.groups[c]);
     if (missing) draw3dRegions();
     else Object.keys(three.groups).forEach((cls) => { three.groups[cls].visible = !!state.layerOn[cls]; });
-    if (three.pinGroup) three.pinGroup.visible = state.pinsOn;
+    if (three.pinGroup) three.pinGroup.visible = elementPinsVisible();
+    if (three.concernGroup) {
+      three.concernGroup.children.forEach((g) => {
+        const p = g.userData && g.userData.concern;
+        g.visible = !!(p && concernKindOn(p.kind) && pinOnLot(p));
+      });
+    }
   }
 }
 
@@ -508,9 +713,11 @@ async function loadParcelOverlay() {
     drawLotMask();
     draw2dRegions();
     draw2dPins();
+    draw2dConcerns();
+    applyLayers();
     applyMapRestriction();
   }
-  if (three) draw3dRegions();
+  if (three) { draw3dRegions(); draw3dPins(); draw3dConcerns(); }
 }
 
 // ── 2D (Google Maps) ─────────────────────────────────────────────────────────
@@ -548,6 +755,8 @@ function init2d() {
   });
   draw2dRegions();
   draw2dPins();
+  draw2dConcerns();
+  applyLayers();
   mapReady = true;
   loadParcelOverlay();
 }
@@ -614,12 +823,13 @@ function draw2dPins() {
   const labelOn = inView.length <= 40 || z >= 21;
   inView.forEach((row) => {
     const mk = new google.maps.Marker({
-      position: row.ll, map: map, optimized: true, zIndex: 20,
+      position: row.ll, map: map, optimized: true, zIndex: 10,
+      visible: elementPinsVisible(),
       title: pinName(row.p),
-      label: labelOn ? { text: String(row.i + 1), color: '#1b2027', fontSize: '11px', fontWeight: '700' } : null,
-      icon: labelOn ? undefined : {
-        path: google.maps.SymbolPath.CIRCLE, scale: 5,
-        fillColor: '#a855f7', fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 1
+      label: labelOn ? { text: String(row.i + 1), color: '#ffffff', fontSize: '10px', fontWeight: '700' } : null,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE, scale: labelOn ? 8 : 5,
+        fillColor: '#a855f7', fillOpacity: 0.92, strokeColor: '#ffffff', strokeWeight: 1
       }
     });
     mk.__pinIdx = row.i;
@@ -628,6 +838,39 @@ function draw2dPins() {
       info.open({ map, anchor: mk });
     });
     markers2d.push(mk);
+  });
+}
+function draw2dConcerns() {
+  const b = state.bounds;
+  concernMarkers2d.forEach((m) => m.setMap(null));
+  concernMarkers2d = [];
+  if (!map || !b) return;
+  const info = new google.maps.InfoWindow();
+  allConcernPins().forEach((p) => {
+    if (!pinOnLot(p)) return;
+    const ll = pctToLatLng(p.x, p.y, b);
+    const color = p.kind === 'wf' ? '#f59e0b' : '#ef4444';
+    const tag = (p.kind === 'wf' ? 'WF' : 'FR') + (p.idx + 1);
+    const name = concernName(p);
+    const def = concernDef(p);
+    const mk = new google.maps.Marker({
+      position: ll, map: map, optimized: false, zIndex: 80,
+      visible: concernKindOn(p.kind),
+      title: tag + ' · ' + name,
+      label: { text: tag, color: '#ffffff', fontSize: '11px', fontWeight: '700' },
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE, scale: 16,
+        fillColor: color, fillOpacity: 1, strokeColor: '#ffffff', strokeWeight: 2,
+        labelOrigin: new google.maps.Point(0, 0)
+      }
+    });
+    mk.__concern = p;
+    mk.addListener('click', () => {
+      info.setContent('<div style="font:12px monospace;color:#111;max-width:240px"><b>' + tag + ' · ' + name + '</b>' +
+        (def ? '<br><span style="color:#555">' + def + '</span>' : '') + '</div>');
+      info.open({ map, anchor: mk });
+    });
+    concernMarkers2d.push(mk);
   });
 }
 
@@ -730,9 +973,10 @@ async function init3d() {
     return null;
   }
 
-  three = { THREE, renderer, scene, camera, controls, mesh, groups: {}, pinGroup: null, heightAt, box };
+  three = { THREE, renderer, scene, camera, controls, mesh, groups: {}, pinGroup: null, concernGroup: null, heightAt, box };
   draw3dRegions();
   draw3dPins();
+  draw3dConcerns();
 
   // Opening view = model-viewer's: pull back and up at ~45°, offset south (-Y)
   // and up (+Z) by 0.8 × (1.4 × the larger horizontal span).
@@ -917,7 +1161,7 @@ function draw3dPins() {
   const { THREE, scene, heightAt } = three;
   if (three.pinGroup) scene.remove(three.pinGroup);
   const group = new THREE.Group();
-  group.visible = state.pinsOn;
+  group.visible = elementPinsVisible();
   three.pinGroup = group;
   scene.add(group);
   const b = state.bounds;
@@ -964,6 +1208,41 @@ function draw3dPins() {
     }
   });
 }
+function draw3dConcerns() {
+  const { THREE, scene, heightAt } = three;
+  if (three.concernGroup) scene.remove(three.concernGroup);
+  const group = new THREE.Group();
+  three.concernGroup = group;
+  scene.add(group);
+  const b = state.bounds;
+  allConcernPins().forEach((p) => {
+    if (!pinOnLot(p)) return;
+    const ll = pctToLatLng(p.x, p.y, b);
+    const loc = localFromLatLng(ll.lat, ll.lng);
+    if (!loc) return;
+    const h = heightAt(loc.x, loc.y);
+    const z = (h === null ? 0 : h);
+    const color = p.kind === 'wf' ? '#f59e0b' : '#ef4444';
+    const tag = (p.kind === 'wf' ? 'WF' : 'FR') + (p.idx + 1);
+    const cv = document.createElement('canvas');
+    cv.width = 128; cv.height = 128;
+    const ctx = cv.getContext('2d');
+    ctx.beginPath(); ctx.arc(64, 64, 52, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+    ctx.lineWidth = 8; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 36px monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(tag, 64, 66);
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+    sprite.scale.set(5, 5, 1);
+    sprite.position.set(loc.x, loc.y, z + 6);
+    const stem = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(loc.x, loc.y, z + 0.2), new THREE.Vector3(loc.x, loc.y, z + 3.2)]);
+    const g = new THREE.Group();
+    g.userData.concern = p;
+    g.visible = concernKindOn(p.kind);
+    g.add(sprite);
+    g.add(new THREE.Line(stem, new THREE.LineBasicMaterial({ color: p.kind === 'wf' ? 0xf59e0b : 0xef4444 })));
+    group.add(g);
+  });
+}
 function focusPin3d(i) {
   if (!three) return;
   const p = state.pins[i];
@@ -1001,6 +1280,7 @@ $('lightbox').addEventListener('click', () => $('lightbox').classList.remove('on
 // ── tabs + panel events ──────────────────────────────────────────────────────
 function showTab(t) {
   state.tab = t;
+  document.body.classList.toggle('view-3d', t === '3d');
   ['2d', '3d', 'Obl'].forEach((k) => {
     $('view' + k).classList.toggle('on', k.toLowerCase() === t.toLowerCase());
     $('tab' + k).classList.toggle('on', k.toLowerCase() === t.toLowerCase());
@@ -1034,6 +1314,11 @@ $('aiLayers').addEventListener('change', (ev) => {
 $('aiAll').addEventListener('click', () => { state.classes.forEach((c) => { state.layerOn[c] = true; }); renderPanel(); applyLayers(); });
 $('aiNone').addEventListener('click', () => { state.classes.forEach((c) => { state.layerOn[c] = false; }); renderPanel(); applyLayers(); });
 $('pinsToggle').addEventListener('change', (ev) => { state.pinsOn = ev.target.checked; applyLayers(); });
+$('railTabs').addEventListener('click', (ev) => {
+  const btn = ev.target.closest('.rail-tab');
+  if (!btn) return;
+  showRail(btn.getAttribute('data-rail'));
+});
 $('lotToggle').addEventListener('change', (ev) => {
   parcelShown = ev.target.checked;
   if (parcelPoly) parcelPoly.setMap(parcelShown ? map : null);
@@ -1052,8 +1337,9 @@ $('lotClip').addEventListener('change', (ev) => {
   drawLotMask();
   draw2dRegions();
   draw2dPins();
+  draw2dConcerns();
   fitMapToLot();
-  if (three) { draw3dRegions(); draw3dPins(); }
+  if (three) { draw3dRegions(); draw3dPins(); draw3dConcerns(); }
   setStatus(statusText());
 });
 $('reloadRegions').addEventListener('click', async () => {
@@ -1078,6 +1364,33 @@ $('pinList').addEventListener('click', (ev) => {
     if (mk) google.maps.event.trigger(mk, 'click');
   }
 });
+function onConcernListClick(ev) {
+  const li = ev.target.closest('li');
+  if (!li) return;
+  const kind = li.dataset.kind;
+  const i = parseInt(li.dataset.i, 10);
+  const p = allConcernPins().find((row) => row.kind === kind && row.idx === i);
+  if (!p) return;
+  if (state.tab === '3d') {
+    const ll = pctToLatLng(p.x, p.y, state.bounds);
+    const loc = localFromLatLng(ll.lat, ll.lng);
+    if (!loc || !three) return;
+    const h = three.heightAt(loc.x, loc.y) || 0;
+    const T = three.THREE;
+    three.flyTo(new T.Vector3(loc.x, loc.y - 45, h + 45), new T.Vector3(loc.x, loc.y, h));
+    return;
+  }
+  if (state.tab !== '2d') showTab('2d');
+  if (map) {
+    const ll = pctToLatLng(p.x, p.y, state.bounds);
+    map.panTo(ll);
+    if (map.getZoom() < 20) map.setZoom(20);
+    const mk = concernMarkers2d.find((m) => m.__concern && m.__concern.kind === p.kind && m.__concern.idx === p.idx);
+    if (mk) google.maps.event.trigger(mk, 'click');
+  }
+}
+$('concernListFr').addEventListener('click', onConcernListClick);
+$('concernListWf').addEventListener('click', onConcernListClick);
 function statusText() {
   const n = (state.displayFeats && state.displayFeats.length) || (state.regions && state.regions.features || []).length;
   const nAll = (state.regions && state.regions.features || []).length;
@@ -1087,9 +1400,10 @@ function statusText() {
     if (!isNaN(d)) saved = ' saved ' + d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
   const nPins = state.pins.filter(pinOnLot).length;
+  const nConcerns = allConcernPins().filter(pinOnLot).length;
   const lotBit = state.lot ? ' · lot ' + (state.lot.taxlot || '') : '';
   const clipped = !!(state.lotClip && state.lot);
-  return delivery + ' · ' + n + (clipped && n !== nAll ? '/' + nAll : '') + ' regions (' + (state.regionsSource || 'none') + saved + lotBit + ') · ' + nPins + ' pins' +
+  return delivery + ' · ' + n + (clipped && n !== nAll ? '/' + nAll : '') + ' regions (' + (state.regionsSource || 'none') + saved + lotBit + ') · ' + nPins + ' pins · ' + nConcerns + ' concerns' +
     (state.meshUrl ? ' · 3D mesh' + (state.meshMeta && state.meshMeta.triangles ? ' ' + Math.round(state.meshMeta.triangles / 1000) + 'k tris' : '') : ' · no 3D mesh');
 }
 
@@ -1099,20 +1413,36 @@ function statusText() {
   try {
     if (!siteNo && !delivery) { fail('Need ?site_no= (from the Nearmap sheet) or ?delivery='); return; }
     setStatus('Loading Nearmap row…');
-    try { await loadRow(); } catch (e) { setStatus(e.message, true); }
-    setStatus('Loading delivery…');
+    try { await loadRowWithRetry(); }
+    catch (e) { setStatus(String(e.message || e), true); }
+    if (!state.bounds) setStatus('Loading delivery…');
     await loadManifest();
     if (!state.bounds) { fail('No nadir bounds for ' + (delivery || siteNo) + ' — import the registry row or check the delivery id.'); return; }
+    const publishedId = state.propertyId || '';
+    if (publishedId && !concernBlockHas(state.fr) && !concernBlockHas(state.wildfire)) {
+      const rec = await fetchJsonOptional(dataRoot() + 'nearmap/' + publishedId + '.json');
+      if (rec) applyConcerns(rec.fr, rec.wildfire);
+    }
     $('nm').textContent = state.address || delivery;
     $('addr').textContent = delivery + (state.manifest && state.manifest.survey_date ? ' · flown ' + state.manifest.survey_date : '');
     document.title = 'Nearmap — ' + (state.address || delivery);
     if (state.meshUrl) { $('tab3d').disabled = false; $('tab3d').title = '3D mesh'; }
     await Promise.all([loadRegions(), loadCatalog()]);
     renderPanel();
+    showRail(state.rail);
     renderObliques();
     setStatus('Loading map…');
     await bootMaps();
     init2d();
+    if (!concernBlockHas(state.fr) && !concernBlockHas(state.wildfire)) {
+      try {
+        await loadRowWithRetry();
+        renderPanel();
+        draw2dPins();
+        draw2dConcerns();
+        applyLayers();
+      } catch (e) { /* concernsError already set */ }
+    }
     setStatus(statusText());
     if (state.meshMetaUrl) fetchJsonOptional(state.meshMetaUrl).then((m) => { if (m) { state.meshMeta = m; setStatus(statusText()); } });
   } catch (e) {

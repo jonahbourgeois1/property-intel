@@ -2,6 +2,90 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-10 — Hide lot line / clip checkboxes on 3D
+
+**What.** Product viewer **v1.1.13**: Lot line and Clip to taxlot stay on the 2D AI layers pane only. The 3D tab hides those two checkboxes (they drive the Maps hole-punch and lot polygon, not the mesh).
+
+**Why.** Jonah: in the 3D model tab, remove those checkboxes.
+
+**Files.** `nearmap-viewer.html` (v1.1.13).
+
+**How it was checked.** `node --check` on extracted module. Browser localhost `?full=1&delivery=` **v1.1.13**: 2D AI layers still has Lot line + Clip to taxlot. 3D: `lotControls` `display:none`, those two checkboxes gone from the rail; class list remains. Back to 2D restores both checkboxes.
+
+**Status.** Committed; Pages after push.
+
+## 2026-09-10 — Rail tabs stacked vertically
+
+**What.** Product viewer **v1.1.12**: the four rail tabs (AI layers, First Responder, Wildfire, Pins) are a vertical stack with a left accent, not a horizontal row.
+
+**Why.** Jonah: have the tabs stacked vertically.
+
+**Files.** `nearmap-viewer.html` (v1.1.12).
+
+**How it was checked.** `node --check` on extracted module. Browser localhost `?full=1&delivery=` **v1.1.12**: `flex-direction:column`, tab tops 64 / 100 / 136 / 172 (same left). First Responder tab shows FR prose + FR1–FR6 on the map.
+
+**Status.** Committed; Pages after push.
+
+## 2026-09-10 — Right rail is four tabs (AI layers / First Responder / Wildfire / Pins)
+
+**What.** Product viewer **v1.1.11** splits the single right rail into four tabs, same pattern as `viewer.html` view-tabs: **AI layers** (lot line, clip, observed facts, class checkboxes), **First Responder** (Pass 3 FR prose + FR1… list), **Wildfire** (Pass 3 WF prose + WF1… list), **Pins** (region-class pins). Map markers follow the tab: FR markers only on First Responder, WF only on Wildfire, purple element pins only on Pins. Optional `?rail=fr|wf|pins`.
+
+**Why.** Jonah: rather than one stacked rail, break it up like the Vyanet viewer.
+
+**Files.** `nearmap-viewer.html` (v1.1.11), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `docs/VYANET_VIEWER_NEXT_AGENT.md`.
+
+**How it was checked.** `node --check` on extracted module; ids `railTabs` / `paneAi` / `paneFr` / `paneWf` / `panePins` / `concernListFr` / `concernListWf` present; no leftover `concernToggle`. Browser localhost `?full=1&delivery=` **v1.1.11**: four tabs, FR tab shows FR1–FR6, Wildfire tab WF1–WF4, Pins tab 20, AI layers has class list and no concern stack.
+
+**Status.** Committed; Pages after push.
+
+## 2026-09-10 — Viewer actually shows Pass 3 (retry + marker stacking)
+
+**What.** Viewer **v1.1.10**: retries `nearmap-elements` three times (Apps Script first fetch often fails/HTML-redirects, then the empty rail stuck). Element pins are small purple dots; FR/WF concern markers are larger, higher z-index, labeled FR1/WF1. Sheet load errors stay in the Concerns panel.
+
+**Why.** Jonah: still not showing. Live API already had 6 FR + 4 WF pins and prose; the open tab had swallowed the first fetch and the numbered Google pins covered the concern markers.
+
+**Files.** `nearmap-viewer.html` (v1.1.10).
+
+**How it was checked.** Browser localhost `?full=1&delivery=` after retry: Concerns **10**, FR/WF prose in the rail, FR1–FR6 and WF1–WF4 on the map. Live Bedrock not re-run.
+
+**Status.** Committed; Pages after push.
+
+## 2026-09-10 — Viewer shows Pass 3 concerns
+
+**What.** Product viewer **v1.1.9** puts FR/WF considerations, recommendations, and catalog concern pins at the top of the rail (not under the AI layer list). Map markers are labeled FR1/WF1. `nearmap-elements` accepts `delivery=` as well as `site_no=`, so `?full=1&delivery=` loads the sheet row. Duplicate deliveries still require `site_no` (Jones).
+
+**Why.** Jonah: see all the new concern pins and considerations in the viewer.
+
+**Files.** `nearmap-viewer.html` (v1.1.9), `apps scripts/nearmap.gs` (`nmGetElements_`), `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted viewer module; ids `nmConcernWrap`, `nmConcerns`, `concernToggle`, `concernList` present. Browser localhost `?full=1&delivery=` **v1.1.9**: Concerns section is under Observed, above AI layers. Live sheet/API data appears only after paste + new deployment + Pass 3.
+
+**Status.** Committed; Pages after push.
+
+## 2026-09-10 — Column U is the full product viewer
+
+**What.** Sync writes column U (`Review Link`) to `nearmap-viewer.html?full=1&site_no=&delivery=` — the standalone Nearmap page, not `nearmap-review.html`. Does not pass `property=hashId(site_no)` (that is not the Jones hub). **Open Nearmap Viewer (This Row)** uses the same URL.
+
+**Why.** Jonah: column U should open the full viewer, not the review page.
+
+**Files.** `apps scripts/config.gs` (`NEARMAP_VIEWER_URL`), `apps scripts/nearmap.gs` (`buildNearmapViewerUrl_`), `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** Helper URL shape inspected in source (`full=1` present; review URL unused on sync). Existing U cells keep the old review link until the next Sync. Live sheet **not** rewritten from here.
+
+**Status.** Committed. Sheet column U updates on the next Nearmap sync (Apps Script paste still required).
+
+## 2026-09-10 — Pass 3 FR + Wildfire concerns
+
+**What.** Nearmap Pass 3: two independent Bedrock halves (FR then wildfire) after pin QA. Inputs are nadir (`vert-lot-p1` / `vert-p1`), compass obliques until a 3.5M-char budget, confirmed region-class pins as text, region class counts (never polygons), KB, and catalog `role=concern` ids. Writes appended sheet columns X–AC. Sync publishes satellite-shaped `fr` / `wildfire` on `data/nearmap/{id}.json` only. Product viewer **v1.1.8** shows concern pins (catalog names) plus considerations/recommendations. Menu items under Nearmap Pipeline only.
+
+**Why.** Jonah: third pass for concerns and considerations, similar to satellite, using acquired regions/pins and nadir/oblique images.
+
+**Files.** `apps scripts/config.gs` (NM_COL_FR/WF + headers), `apps scripts/nearmap.gs` (prompts, catalog V2, Pass 3 run, publish), `apps scripts/menu.gs`, `nearmap-viewer.html` (v1.1.8), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, `docs/VYANET_VIEWER_NEXT_AGENT.md`.
+
+**How it was checked.** `node --check` on extracted viewer `<script type="module">`; getElementById ids `nmConcerns`, `concernToggle`, `concernCount`, `concernList` present. Brace balance on `nearmap.gs` / `menu.gs`. Browser: local product viewer still loads Macalpine `?full=1` (concern rail empty until Apps Script Pass 3 runs). Live Bedrock / sheet Pass 3 **not** verified — Jonah must paste `config.gs`, `nearmap.gs`, `menu.gs`, save, **new deployment**, Set Up Nearmap Sheet (X–AC), tick Elements Reviewed, then Generate Pass 3.
+
+**Status.** Viewer HTML committed with later rail tabs (v1.1.13). Apps Script Pass 3 still needs editor paste + new deployment if not already live.
+
 ## 2026-09-10 — Delete pin tool
 
 **What.** Pins editor toolbar **Delete pin** (next to Place pin). Click a visible painted region that has a pin, or the pin itself: that pin is removed and the region stays. Empty map and unpinned regions refuse. List row button is labeled Delete.
