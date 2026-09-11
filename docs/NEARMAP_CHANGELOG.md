@@ -2,6 +2,35 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-11 — Region brush pick: no 10 m snap, grow the new region
+
+**What.** Review page **v1.7.8** Draw pick and paint:
+- Click the painted region (or its interior-point centroid within ~14 px). Do not snap to a sheet pin or to a vertex-average 10 m away.
+- Overlapping classes pick the smallest area (a driveway stem wins over a vegetation blanket).
+- After a detached stroke creates a new region, the brush arms that new region (was still armed on the original scrap, so the next stroke made another island).
+- Paint overlay covers the whole map (the old 48 px right gap sat on this property's driveway).
+- Dragging across the toolbar no longer drops stamps.
+
+**Why.** Jonah's Macalpine regions editor (live v1.7.4): a mint Low Vegetation sausage on the dirt path plus a leftover green scrap — pick armed the wrong class (pin / first-overlap / 10 m centroid), then detached-paint left islands because the brush stayed on the original scrap.
+
+**Files.** `nearmap-review.html` (v1.7.8), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; getElementById ids all present (35). Browser localhost regions Draw **v1.7.8**: `#brushHit` inset 0. Click empty dirt → status “Click a painted region or its centroid”, brush still `+ click a region` (no 10 m snap). Click a Driveway centroid → `Driveway — left add · right remove`, Clear enabled, hit overlay on, Driveway row active.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Pin editor: lock the frame, scroll only the right rail
+
+**What.** Review page **v1.7.7**: header, map, and top-left tools stay in the viewport. The long pin/layer list scrolls inside the right rail (`.panel-scroll`). Save stays at the bottom of that rail.
+
+**Why.** Jonah: scrolling the pin list scrolled the whole viewer and hid the top-left buttons.
+
+**Files.** `nearmap-review.html` (v1.7.7), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; getElementById ids all present (35). Browser localhost `?mode=pins` **v1.7.7**: `html/body` overflow hidden, document `scrollHeight === clientHeight`, `.panel-scroll` canScroll (1245 > 891). After scrolling pin 12 into view: `window.scrollY` still 0, `#tools` still at top 46.6, Save still on screen, last pin `Road (Driveable Surface)` visible in the rail.
+
+**Status.** Local; Pages after push.
+
 ## 2026-09-10 — Hide lot line / clip checkboxes on 3D
 
 **What.** Product viewer **v1.1.13**: Lot line and Clip to taxlot stay on the 2D AI layers pane only. The 3D tab hides those two checkboxes (they drive the Maps hole-punch and lot polygon, not the mesh).

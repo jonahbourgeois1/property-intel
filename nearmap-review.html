@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.7.6, 2026-09-10)
+  nearmap-review.html — isolated Nearmap trial QA (v1.7.8, 2026-09-11)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -24,8 +24,10 @@
     Revert to original = vendor original. Revert changes = last Save / session start.
   TESTING MODE applies only to plain delivery= opens: each open starts from original
     (?fresh=0 resumes local edits; ?fresh=1 forces a fresh start in sheet mode).
-  Reviewer-first: Pan / Draw. Draw: + picks a centroid, left-click adds, right-click removes;
-  Clear brush drops the pick. (Accept button removed; onAcceptFeature is unreachable.)
+  Reviewer-first: Pan / Draw. Draw: + click a visible painted region or its centroid;
+  left-click adds, right-click removes. Clear brush drops the pick. (Accept button
+  removed; onAcceptFeature is unreachable.) After a detached stroke becomes a new
+  region, the brush arms that new region so the next stroke can grow it.
   Paint that does not touch the selected region becomes a new same-class region;
   the class counter updates. Right-click erase that cuts a region in two writes each
   extra piece as its own region (origin split); slivers left behind are dropped, and
@@ -41,16 +43,29 @@
     --ink: #eef2f6; --ink-dim: #9aa7b4; --hot: #4fd1c5; --err: #f97066;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; background: var(--ground); color: var(--ink); font: 13px/1.4 system-ui, sans-serif; }
-  header { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--line); }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none;
+    background: var(--ground); color: var(--ink); font: 13px/1.4 system-ui, sans-serif;
+  }
+  body { display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: center; gap: 12px; padding: 8px 14px;
+    border-bottom: 1px solid var(--line); flex: 0 0 auto;
+  }
   header h1 { font-size: 14px; font-weight: 600; margin: 0; }
   #build { color: var(--ink-dim); font-size: 11px; }
   #addr { color: var(--ink-dim); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  main { display: grid; grid-template-columns: 1fr 320px; height: calc(100% - 42px); }
-  #stage { position: relative; min-width: 0; }
+  main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
   #map { position: absolute; inset: 0; }
   #brushHit {
-    position: absolute; inset: 0 48px 0 0; z-index: 3; display: none;
+    position: absolute; inset: 0; z-index: 3; display: none;
     cursor: none; touch-action: none;
   }
   #brushHit.on { display: block; }
@@ -117,9 +132,19 @@
   #brushHistRow { display: flex; align-items: center; gap: 6px; }
   #brushHistRow[hidden] { display: none; }
   #brushHistRow .btn { padding: 2px 10px; line-height: 1.2; }
-  .panel { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-width: 0; }
-  .panel h2 { margin: 0; padding: 10px 12px; font-size: 12px; font-weight: 600; border-bottom: 1px solid var(--line); }
-  .panel-scroll { flex: 1; overflow: auto; padding: 10px 12px; }
+  .panel {
+    border-left: 1px solid var(--line); background: var(--panel);
+    display: flex; flex-direction: column;
+    min-width: 0; min-height: 0; overflow: hidden;
+  }
+  .panel h2 {
+    margin: 0; padding: 10px 12px; font-size: 12px; font-weight: 600;
+    border-bottom: 1px solid var(--line); flex: 0 0 auto;
+  }
+  .panel-scroll {
+    flex: 1 1 auto; min-height: 0; overflow: auto;
+    overscroll-behavior: contain; padding: 10px 12px;
+  }
   .meta { color: var(--ink-dim); font-size: 11px; margin: 0 0 8px; }
   .swatch { width: 12px; height: 12px; border-radius: 2px; flex: 0 0 12px; border: 1px solid rgba(255,255,255,0.45); }
   .layer-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px; }
@@ -131,7 +156,11 @@
   #pinList li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--line); }
   #pinList li span.grow { flex: 1; min-width: 0; }
   .src { font-size: 10px; color: var(--hot); }
-  .submit-bar { padding: 10px 12px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .submit-bar {
+    padding: 10px 12px; border-top: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    flex: 0 0 auto;
+  }
   .submit-bar .status { flex: 1 0 100%; margin-top: 4px; }
   .btn { background: #2b333e; color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer; }
   .btn.primary { background: #1f6feb; border-color: #1f6feb; }
@@ -229,7 +258,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.7.6';
+  var BUILD = 'v1.7.8';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -864,7 +893,7 @@
     updateBrushLabel();
     syncBrushChrome();
     redrawAi();
-    setStatus('Brush cleared — + click a centroid to pick another region');
+    setStatus('Brush cleared — click a painted region or its centroid');
   }
 
   function stepPaintHistory(dir) {
@@ -900,7 +929,7 @@
   function updateBrushLabel() {
     var el = document.getElementById('brushClass');
     if (!brushTarget) {
-      el.textContent = isEditTool() ? '+ click a centroid' : '';
+      el.textContent = isEditTool() ? '+ click a region' : '';
       el.style.color = '';
       return;
     }
@@ -2186,7 +2215,7 @@
             geodesic: false,
             map: map,
             clickable: false,
-            zIndex: 2
+            zIndex: 3
           }));
         }
         var placing = MODE === 'pins' && toolMode === 'place';
@@ -2200,8 +2229,8 @@
           fillOpacity: 0.32,
           geodesic: false,
           map: map,
-          clickable: placing || deleting || (MODE !== 'pins' && (accept || (isEditTool() && !brushTarget))),
-          zIndex: hot ? 3 : 2
+          clickable: placing || deleting || accept,
+          zIndex: 2
         });
         poly.__nmIdx = i;
         if (placing || deleting) {
@@ -2220,14 +2249,6 @@
         }
         if (accept) {
           poly.addListener('click', function () { onAcceptFeature(i); });
-        }
-        if (isEditTool() && !brushTarget) {
-          (function (idx) {
-            poly.addListener('click', function (ev) {
-              if (ev && ev.stop) ev.stop();
-              selectBrushRegion(idx);
-            });
-          })(i);
         }
         aiShapes.push(poly);
       });
@@ -2705,7 +2726,7 @@
     for (var i = 0; i < pins.length; i++) {
       if (String(pins[i].region_id || '') === rid) pinIndex = i;
     }
-    if (pinIndex !== -1) {
+    if (MODE === 'pins' && pinIndex !== -1) {
       selectBrushPin(pinIndex);
       return;
     }
@@ -2726,44 +2747,53 @@
     setStatus('Draw is ' + cls + ' — left-click adds, right-click removes');
   }
 
-  function selectBrushAt(ll) {
-    var pins = (record && record.elements) || [];
-    var b = record && record.nadir && record.nadir.bounds;
-    var best = -1, bestD = pinHitM();
-    if (b) {
-      for (var i = 0; i < pins.length; i++) {
-        var pll = pctToLatLng(pins[i].x, pins[i].y, b);
-        var d = distM(ll, pll);
-        if (d < bestD) { bestD = d; best = i; }
-      }
-    }
-    if (best !== -1) {
-      selectBrushPin(best);
-      return true;
-    }
-    if (!aiPack || !aiPack.features) return false;
-    var near = -1;
-    var nearD = pinHitM();
-    for (var j = 0; j < aiPack.features.length; j++) {
-      var f = aiPack.features[j];
-      var rid = String(f.id || j);
-      if (consumed[rid]) continue;
-      var cls = featureClass(f);
+  // Draw pick: the visible region under the click. Do not snap to a pin or to
+  // a vertex-average centroid 10 m away (that armed the wrong class and then
+  // detached-painted a new island). Overlaps take the smallest area so a
+  // driveway stem wins over a vegetation blanket. Hint-marker clicks still
+  // call selectBrushRegion for the marker's feature.
+  function pickRegionIndexAt(ll) {
+    if (!aiPack || !Array.isArray(aiPack.features) || !ll) return -1;
+    var inside = [];
+    var i, f, cls, c, d, fr, area;
+    for (i = 0; i < aiPack.features.length; i++) {
+      f = aiPack.features[i];
+      cls = featureClass(f);
       if (layerOn[cls] === false) continue;
-      if (pointInFeature(ll, f) || featureHitsStamp(f, ll, brushRadiusM())) {
-        selectBrushRegion(j);
-        return true;
+      if (pointInFeature(ll, f)) inside.push(i);
+    }
+    if (inside.length) {
+      var bestI = inside[0], bestA = Infinity;
+      for (i = 0; i < inside.length; i++) {
+        f = aiPack.features[inside[i]];
+        c = interiorPoint(f) || featureCentroid(f);
+        fr = c ? meterFrame(c.lat, c.lng) : meterFrame(ll.lat, ll.lng);
+        area = geometryAreaM2(f.geometry, fr);
+        if (area < bestA) { bestA = area; bestI = inside[i]; }
       }
-      var c = featureCentroid(f);
+      return bestI;
+    }
+    var near = -1, nearD = pxToMeters(14);
+    for (i = 0; i < aiPack.features.length; i++) {
+      f = aiPack.features[i];
+      cls = featureClass(f);
+      if (layerOn[cls] === false) continue;
+      c = interiorPoint(f);
       if (!c) continue;
-      var d = distM(ll, c);
-      if (d < nearD) { nearD = d; near = j; }
+      d = distM(ll, c);
+      if (d < nearD) { nearD = d; near = i; }
     }
-    if (near !== -1) {
-      selectBrushRegion(near);
-      return true;
+    return near;
+  }
+
+  function selectBrushAt(ll) {
+    var idx = pickRegionIndexAt(ll);
+    if (idx < 0) {
+      setStatus('Click a painted region or its centroid');
+      return false;
     }
-    return false;
+    selectBrushRegion(idx);
+    return true;
   }
 
   // Same-class regions that the painted result now covers or overlaps (any vertex
@@ -2862,7 +2892,7 @@
       updateBrushLabel();
       syncBrushChrome();
       redrawAi();
-      setStatus('That region no longer exists — + click a centroid to pick again', 'err');
+      setStatus('That region no longer exists — click a painted region or its centroid', 'err');
       return;
     }
     var extraFeats = [];
@@ -2922,7 +2952,10 @@
       aiPack.features.push(newFeat);
       if (extra.length) removeRegionIds(extra);
       else refreshLayerCounts();
-      working = { ids: [String(seedId)], stamps: [] };
+      // Keep painting the region that was just drawn, not the original scrap.
+      brushTarget.regionId = newId;
+      brushTarget.pinIndex = -1;
+      working = { ids: [String(newId)], stamps: [] };
       clearBrushStroke();
       persistLocal();
       persistRegions().then(function (how) {
@@ -3398,7 +3431,7 @@
     if (mode === 'accept') setStatus('Click a visible AI polygon');
     else if (mode === 'draw') {
       updateBrushLabel();
-      setStatus('Draw: + click a centroid, then left-click adds and right-click removes. Scroll to zoom.');
+      setStatus('Draw: click a painted region or its centroid, then left-click adds and right-click removes. Scroll to zoom.');
     }
     else if (mode === 'place') setStatus('Place pin: turn on a layer, then click a painted region with no pin.');
     else if (mode === 'delete') setStatus('Delete pin: click a painted region that has a pin, or the pin.');
@@ -3490,11 +3523,11 @@
       brushAt(ll);
     });
     hit.addEventListener('pointermove', function (ev) {
-      if (pointerOverTools(ev)) {
+      if (pointerOverTools(ev) && !brushing) {
         hideBrushCursor();
         return;
       }
-      moveBrushCursor(ev.clientX, ev.clientY);
+      if (!pointerOverTools(ev)) moveBrushCursor(ev.clientX, ev.clientY);
       if (!brushing || !brushPainting) return;
       var ll = eventToLl(ev);
       if (ll) brushAt(ll);
