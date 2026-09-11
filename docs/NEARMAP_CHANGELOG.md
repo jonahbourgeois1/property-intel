@@ -2,6 +2,18 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-11 — Faster review open (v1.7.17)
+
+**What.** Review page **v1.7.17**: Maps JS starts immediately (no `libraries=geometry`; `distM` is always the local haversine). `manifest.json`, `ai/original/regions.json`, and `vert.jpg` prefetch in parallel. Original is not cache-busted; a fresh testing open does not fetch edits. Regions mode skips the pin catalog and `hints.json`. Empty MapType under the opaque nadir (no Google satellite tiles). Checking a layer builds polygons/hints in rAF chunks of 80; hint markers use `optimized: true`.
+
+**Why.** Jonah: the whole regions-editor open felt slow (map, layers, first paint). The old boot was a queue: manifest → Maps+geometry → satellite tiles + JPEG → hints → cache-busted original+edits.
+
+**Files.** `nearmap-review.html` (v1.7.17), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script (braces 989/989, parens 3276/3276). getElementById literals match ids (35). No `libraries=geometry`. Browser localhost Macalpine `?mode=regions` chip **v1.7.17**: Maps JS, `vert.jpg`, `original/regions.json` (no `?_=`), and `manifest.json` all start at 37–38 ms. GroundOverlay JPEG on the map by ~200 ms (overlay.js 193 ms, document load 215 ms; JPEG was warm-cache). Zero `mt*.google.com` / `khms` satellite tiles; empty MapType `#1b2027` tiles present; `google.maps.geometry` undefined. No GET of edits, hints, or pins-catalog. Driveway check: 0 long tasks, max rAF gap 10 ms, pink polygons visible immediately. Draw pick-then-drag: status `Added to Driveway · meshed 18 overlapping`, brush stayed `Driveway — left add · right remove`.
+
+**Status.** Local; Pages after push.
+
 ## 2026-09-11 — Layer checkboxes do not retarget the brush (v1.7.16)
 
 **What.** Review page **v1.7.16**: turning a class overlay on only shows that layer. It does not set `activeClass` or call `armClassBrush`. Unchecking the armed class still drops the pick. Clicking a checked row's name still sets the active-class highlight (borders / next dirt-drag class) without moving the brush.

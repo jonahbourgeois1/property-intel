@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.7.16, 2026-09-11)
+  nearmap-review.html — isolated Nearmap trial QA (v1.7.17, 2026-09-11)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -36,6 +36,9 @@
   extra piece as its own region (origin split); slivers left behind are dropped, and
   a region that is all slivers is removed. Size slider under Draw; back/forward arrows under Size
   step through paint edits (memory only). Selected pin is not enlarged. Scroll-zoom stays on.
+  Open: Maps JS starts immediately (no geometry library); original/regions.json and
+  vert.jpg prefetch in parallel with manifest; empty basemap under the opaque
+  nadir (no Google satellite tiles); original is cacheable, edits stay uncached.
   Published to Pages 2026-09-09.
   Sibling of golf-review / element-review. Not on VIEW_ORDER.
   Query: property= and/or delivery=. Optional tiles=. site_no= enables sheet save.
@@ -262,7 +265,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.7.16';
+  var BUILD = 'v1.7.17';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -392,8 +395,12 @@
   var layerOn = {};
   var aiPack = null;
   var featuresPromise = null;
+  var originalPrefetch = null;
+  var manifestPrefetch = null;
   var sheetPromise = null;
   var mapsBooted = false;
+  var drawGen = 0;
+  var DRAW_CHUNK = 80;
   var toolMode = 'pan';
   var pinPlaceHandled = false;
   var activeClass = '';
@@ -756,10 +763,21 @@
     };
   }
 
+  function prefetchManifest() {
+    if (!delivery) return Promise.resolve(null);
+    if (!manifestPrefetch) {
+      var url = joinUrl(tilesBase, delivery + '/manifest.json');
+      manifestPrefetch = fetchJson(url).catch(function () { return null; });
+    }
+    return manifestPrefetch;
+  }
+
   function loadFromTiles() {
     if (!delivery) return Promise.resolve(null);
-    var url = joinUrl(tilesBase, delivery + '/manifest.json');
-    return fetchJson(url).then(function (man) {
+    return prefetchManifest().then(function (man) {
+      if (man) return man;
+      return fetchJson(joinUrl(tilesBase, delivery + '/manifest.json'));
+    }).then(function (man) {
       var rec = {
         view: 'nearmap',
         source: 'nearmap',
@@ -1147,12 +1165,6 @@
   }
 
   function distM(a, b) {
-    if (window.google && google.maps.geometry && google.maps.geometry.spherical) {
-      return google.maps.geometry.spherical.computeDistanceBetween(
-        new google.maps.LatLng(a.lat, a.lng),
-        new google.maps.LatLng(b.lat, b.lng)
-      );
-    }
     var R = 6371000;
     var toRad = Math.PI / 180;
     var dLat = (b.lat - a.lat) * toRad;
@@ -2198,67 +2210,99 @@
     hintMarkers = [];
   }
 
-  function drawPolygons(ai) {
-    if (!map || !ai) return;
-    var accept = toolMode === 'accept';
+  function addPolygonForFeature(f, i) {
+    if (!map || !f) return;
+    var rid = String(f.id || i);
     var seedId = brushTarget && brushTarget.regionId;
-    (ai.features || []).forEach(function (f, i) {
-      var rid = String(f.id || i);
-      if (MODE !== 'pins' && consumed[rid] && rid !== seedId && !pinOwnsRegion(rid)) return;
-      var cls = featureClass(f);
-      if (layerOn[cls] === false) return;
-      var color = colorForClass(cls);
-      var hot = MODE !== 'pins' && !!activeClass && cls === activeClass;
-      featurePolys(f).forEach(function (polyRings) {
-        var path = polyRings.map(ringToPath);
-        if (hot) {
-          aiShapes.push(new google.maps.Polygon({
-            paths: path,
-            strokeColor: '#ffffff',
-            strokeOpacity: 0.9,
-            strokeWeight: 5,
-            fillOpacity: 0,
-            geodesic: false,
-            map: map,
-            clickable: false,
-            zIndex: 3
-          }));
-        }
-        var placing = MODE === 'pins' && toolMode === 'place';
-        var deleting = MODE === 'pins' && toolMode === 'delete';
-        var poly = new google.maps.Polygon({
+    if (MODE !== 'pins' && consumed[rid] && rid !== seedId && !pinOwnsRegion(rid)) return;
+    var cls = featureClass(f);
+    if (layerOn[cls] === false) return;
+    var color = colorForClass(cls);
+    var hot = MODE !== 'pins' && !!activeClass && cls === activeClass;
+    var accept = toolMode === 'accept';
+    featurePolys(f).forEach(function (polyRings) {
+      var path = polyRings.map(ringToPath);
+      if (hot) {
+        aiShapes.push(new google.maps.Polygon({
           paths: path,
-          strokeColor: color,
-          strokeOpacity: hot ? 1 : 0.95,
-          strokeWeight: hot ? 2.5 : 1.5,
-          fillColor: color,
-          fillOpacity: 0.32,
+          strokeColor: '#ffffff',
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+          fillOpacity: 0,
           geodesic: false,
           map: map,
-          clickable: placing || deleting || accept,
-          zIndex: 2
-        });
-        poly.__nmIdx = i;
-        if (placing || deleting) {
-          poly.addListener('click', function (ev) {
-            if (ev && ev.stop) ev.stop();
-            pinPlaceHandled = true;
-            var ll = ev && ev.latLng
-              ? { lat: ev.latLng.lat(), lng: ev.latLng.lng() }
-              : interiorPoint(f);
-            if (ll) {
-              if (placing) placePinAt(ll);
-              else deletePinAt(ll);
-            }
-            setTimeout(function () { pinPlaceHandled = false; }, 0);
-          });
-        }
-        if (accept) {
-          poly.addListener('click', function () { onAcceptFeature(i); });
-        }
-        aiShapes.push(poly);
+          clickable: false,
+          zIndex: 3
+        }));
+      }
+      var placing = MODE === 'pins' && toolMode === 'place';
+      var deleting = MODE === 'pins' && toolMode === 'delete';
+      var poly = new google.maps.Polygon({
+        paths: path,
+        strokeColor: color,
+        strokeOpacity: hot ? 1 : 0.95,
+        strokeWeight: hot ? 2.5 : 1.5,
+        fillColor: color,
+        fillOpacity: 0.32,
+        geodesic: false,
+        map: map,
+        clickable: placing || deleting || accept,
+        zIndex: 2
       });
+      poly.__nmIdx = i;
+      if (placing || deleting) {
+        poly.addListener('click', function (ev) {
+          if (ev && ev.stop) ev.stop();
+          pinPlaceHandled = true;
+          var ll = ev && ev.latLng
+            ? { lat: ev.latLng.lat(), lng: ev.latLng.lng() }
+            : interiorPoint(f);
+          if (ll) {
+            if (placing) placePinAt(ll);
+            else deletePinAt(ll);
+          }
+          setTimeout(function () { pinPlaceHandled = false; }, 0);
+        });
+      }
+      if (accept) {
+        poly.addListener('click', function () { onAcceptFeature(i); });
+      }
+      aiShapes.push(poly);
     });
+  }
+
+  function addHintForFeature(f, i) {
+    if (!map || !f || MODE === 'pins') return;
+    var cls = featureClass(f);
+    if (!cls || layerOn[cls] === false) return;
+    if (consumed[String(f.id)]) return;
+    var c = interiorPoint(f);
+    if (!c) return;
+    var color = colorForClass(cls);
+    var picking = isEditTool() && !brushTarget;
+    var mk = new google.maps.Marker({
+      position: c,
+      map: map,
+      clickable: picking,
+      optimized: true,
+      zIndex: picking ? 10 : 4,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: picking ? 8 : 4.5,
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: picking ? 2 : 1
+      },
+      title: cls
+    });
+    if (picking) {
+      mk.addListener('click', function (ev) {
+        if (ev && ev.stop) ev.stop();
+        selectBrushRegion(i);
+      });
+    }
+    hintMarkers.push(mk);
   }
 
   function hintRows(ai) {
@@ -2269,40 +2313,7 @@
   function drawHints(ai) {
     if (!map || !ai || MODE === 'pins') return;
     if (!document.getElementById('hintToggle').checked) return;
-    var picking = isEditTool() && !brushTarget;
-    (ai.features || []).forEach(function (f, i) {
-      var cls = featureClass(f);
-      if (!cls || layerOn[cls] === false) return;
-      if (consumed[String(f.id)]) return;
-      var c = interiorPoint(f);
-      if (!c) return;
-      var color = colorForClass(cls);
-      var mk = new google.maps.Marker({
-        position: c,
-        map: map,
-        clickable: picking,
-        optimized: false,
-        zIndex: picking ? 10 : 4,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: picking ? 8 : 4.5,
-          fillColor: color,
-          fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: picking ? 2 : 1
-        },
-        title: cls
-      });
-      if (picking) {
-        (function (idx) {
-          mk.addListener('click', function (ev) {
-            if (ev && ev.stop) ev.stop();
-            selectBrushRegion(idx);
-          });
-        })(i);
-      }
-      hintMarkers.push(mk);
-    });
+    (ai.features || []).forEach(function (f, i) { addHintForFeature(f, i); });
   }
 
   function clearDrawnShapes() {
@@ -2333,6 +2344,7 @@
   }
 
   function redrawAi() {
+    var gen = ++drawGen;
     lastPinView = '';
     clearAiShapes();
     if (!aiPack) {
@@ -2340,10 +2352,42 @@
       drawPins();
       return;
     }
-    drawPolygons(aiPack);
-    drawHints(aiPack);
     drawDrawn();
     drawPins();
+    if (!map) return;
+    var feats = aiPack.features || [];
+    var seedId = brushTarget && brushTarget.regionId;
+    var hintOn = MODE !== 'pins' && document.getElementById('hintToggle').checked;
+    var jobs = [];
+    var i, f, rid, cls;
+    for (i = 0; i < feats.length; i++) {
+      f = feats[i];
+      rid = String(f.id || i);
+      if (MODE !== 'pins' && consumed[rid] && rid !== seedId && !pinOwnsRegion(rid)) continue;
+      cls = featureClass(f);
+      if (layerOn[cls] === false) continue;
+      jobs.push({ kind: 'poly', idx: i });
+    }
+    if (hintOn) {
+      for (i = 0; i < feats.length; i++) {
+        f = feats[i];
+        cls = featureClass(f);
+        if (!cls || layerOn[cls] === false) continue;
+        if (consumed[String(f.id)]) continue;
+        jobs.push({ kind: 'hint', idx: i });
+      }
+    }
+    var n = 0;
+    function step() {
+      if (gen !== drawGen) return;
+      var end = Math.min(n + DRAW_CHUNK, jobs.length);
+      for (; n < end; n++) {
+        if (jobs[n].kind === 'poly') addPolygonForFeature(feats[jobs[n].idx], jobs[n].idx);
+        else addHintForFeature(feats[jobs[n].idx], jobs[n].idx);
+      }
+      if (n < jobs.length) requestAnimationFrame(step);
+    }
+    if (jobs.length) step();
   }
 
   function drawPins() {
@@ -3715,23 +3759,37 @@
     if (map) return;
     var b = record && record.nadir && record.nadir.bounds;
     var url = record && record.nadir && record.nadir.url;
-    if (!b || !url) {
-      fail('No nadir bounds/url. Import registry or pass ?delivery=');
-      return;
-    }
+    if (!b || !url) return;
     var center = {
       lat: (b.north + b.south) / 2,
       lng: (b.east + b.west) / 2
     };
+    function EmptyMapType() {}
+    EmptyMapType.prototype.tileSize = new google.maps.Size(256, 256);
+    EmptyMapType.prototype.maxZoom = 22;
+    EmptyMapType.prototype.minZoom = 14;
+    EmptyMapType.prototype.name = 'empty';
+    EmptyMapType.prototype.getTile = function (_coord, _zoom, ownerDocument) {
+      var div = ownerDocument.createElement('div');
+      div.style.width = '256px';
+      div.style.height = '256px';
+      div.style.background = '#1b2027';
+      return div;
+    };
     map = new google.maps.Map(document.getElementById('map'), {
       center: center,
       zoom: 19,
-      mapTypeId: 'satellite',
+      backgroundColor: '#1b2027',
       tilt: 0,
       rotateControl: false,
+      mapTypeControl: false,
+      fullscreenControl: true,
       gestureHandling: 'greedy',
-      streetViewControl: false
+      streetViewControl: false,
+      mapTypeId: 'empty'
     });
+    map.mapTypes.set('empty', new EmptyMapType());
+    map.setMapTypeId('empty');
     overlay = new google.maps.GroundOverlay(url, b, { opacity: 1, clickable: false });
     overlay.setMap(map);
     pixOverlay = new google.maps.OverlayView();
@@ -3926,59 +3984,61 @@
       if (brushing && !buttonsPainting(ev)) finishGesture(ev);
     }, true);
     drawPins();
-    loadAiIndex();
+    if (aiPack && Array.isArray(aiPack.features)) redrawAi();
   }
 
   function loadAiIndex() {
-    if (!record || !record.ai_url) return;
-    var hintsUrl = hintsUrlFrom(record.ai_url);
-    fetchJson(hintsUrl).then(function (h) {
-      aiPack = {
-        counts: (h && h.counts) || {},
-        hints: (h && h.hints) || [],
-        features: null
-      };
-      // hints.json carries the VENDOR counts. In sheet mode the edited regions
-      // are the truth, so nothing is drawn from hints — the first render is the
-      // working set (original − removed + changed). Local delivery= opens keep the
-      // instant vendor render since they start from original anyway.
-      if (SHEET_MODE) {
-        setStatus('Loading regions…');
-      } else {
-        renderLayers(aiPack);
-        redrawAi();
-      }
-      ensureFeatures().then(function () {
-        redrawAi();
-        if (MODE === 'pins') {
-          var cur = (record && record.elements) || [];
-          if (FRESH_ON_OPEN || !cur.length || pinsLookLikeCatalog(cur)) {
-            seedPinsFromRegions(true);
-          }
+    if (SHEET_MODE) setStatus('Loading regions…');
+    ensureFeatures().then(function () {
+      renderLayers(aiPack);
+      if (map) redrawAi();
+      if (MODE === 'pins') {
+        var cur = (record && record.elements) || [];
+        if (FRESH_ON_OPEN || !cur.length || pinsLookLikeCatalog(cur)) {
+          seedPinsFromRegions(true);
         }
-      }).catch(function () {});
-    }).catch(function (e) { setStatus('AI hints: ' + e.message, 'err'); });
+      }
+    }).catch(function () {});
   }
 
-  // Regions files are mutable working copies (edits is rewritten by every paint and
-  // by Revert), so never let the browser answer from its HTTP cache. Before this a
-  // stale cached edits/regions.json could resurface after a disk revert.
+  // Edits are rewritten by every paint and by Revert — never let the browser
+  // answer those from its HTTP cache. Original is the vendor snapshot and may
+  // be cached (no query-string bust).
   function fetchJsonOptional(url) {
     if (!url) return Promise.resolve(null);
-    // A CDN can hand back a copy from minutes ago even with cache: no-store on
-    // our side; a unique query string defeats that too.
     var u = url + (url.indexOf('?') === -1 ? '?' : '&') + '_=' + Date.now();
     return fetchJson(u, { noStore: true }).catch(function () { return null; });
+  }
+
+  function preloadVertJpg(url) {
+    if (!url) return;
+    var img = new Image();
+    img.decoding = 'async';
+    img.src = url;
+  }
+
+  function prefetchOriginalRegions() {
+    var url = regionsOriginalUrl();
+    if (!url) return Promise.resolve(null);
+    if (!originalPrefetch) {
+      originalPrefetch = fetchJson(url).catch(function () { return null; });
+    }
+    return originalPrefetch;
+  }
+
+  function fetchEditsRegions() {
+    if (FRESH_ON_OPEN && !SHEET_MODE) return Promise.resolve(null);
+    var url = SHEET_MODE ? (regionsRemote.edits || regionsEditsUrl()) : regionsEditsUrl();
+    return fetchJsonOptional(url);
   }
 
   function ensureFeatures() {
     if (aiPack && Array.isArray(aiPack.features)) return Promise.resolve(aiPack);
     if (featuresPromise) return featuresPromise;
-    // Sheet mode: the row tells us where original and edits live, so wait for it.
     featuresPromise = Promise.resolve(SHEET_MODE ? sheetPromise : null).then(function () {
       return Promise.all([
-        fetchJsonOptional(regionsOriginalUrl()),
-        fetchJsonOptional(SHEET_MODE ? (regionsRemote.edits || regionsEditsUrl()) : regionsEditsUrl())
+        prefetchOriginalRegions(),
+        fetchEditsRegions()
       ]);
     }).then(function (pair) {
       var orig = pair[0];
@@ -4040,22 +4100,32 @@
     return featuresPromise;
   }
 
+  function tryInitMap() {
+    if (map) return;
+    if (!(window.google && google.maps && google.maps.Map)) return;
+    if (!hasNadir()) return;
+    initMap();
+  }
+
   function bootMaps() {
-    if (mapsBooted) return;
+    if (mapsBooted) {
+      tryInitMap();
+      return;
+    }
     mapsBooted = true;
     if (window.google && google.maps && google.maps.Map) {
-      initMap();
+      tryInitMap();
       return;
     }
     var s = document.createElement('script');
     s.src = 'https://maps.googleapis.com/maps/api/js?key=' + ER_MAPS_KEY +
-      '&libraries=geometry&callback=nmMapsReady';
+      '&callback=nmMapsReady';
     s.async = true;
     s.onerror = function () { fail('Maps JS failed to load'); };
     document.head.appendChild(s);
   }
 
-  window.nmMapsReady = function () { if (!map) initMap(); };
+  window.nmMapsReady = function () { tryInitMap(); };
 
   document.getElementById('aiLayers').addEventListener('change', function (ev) {
     var t = ev.target;
@@ -4291,7 +4361,13 @@
       .then(function () { saveBtn.disabled = false; });
   });
 
-  loadFromGithub().then(function () {
+  bootMaps();
+  if (delivery) {
+    preloadVertJpg(joinUrl(tilesBase, delivery + '/vert.jpg'));
+    prefetchOriginalRegions();
+    prefetchManifest();
+  }
+  (propertyId ? loadFromGithub() : Promise.resolve(null)).then(function () {
     if (hasNadir()) return record;
     return loadFromTiles();
   }).then(function () {
@@ -4302,6 +4378,7 @@
     if (record.nadir.url.indexOf('http') !== 0 && delivery) {
       record.nadir.url = joinUrl(tilesBase, delivery + '/vert.jpg');
     }
+    preloadVertJpg(record.nadir.url);
     if (FRESH_ON_OPEN) {
       // Testing: pins and drawn groups also start empty on every open.
       record.elements = [];
@@ -4319,7 +4396,8 @@
       else drawPins();
     });
     bootMaps();
-    loadCatalog().then(function () { if (map) drawPins(); });
+    loadAiIndex();
+    if (MODE === 'pins') loadCatalog().then(function () { if (map) drawPins(); });
   }).catch(function (e) { fail(String(e.message || e)); });
 })();
 </script>
