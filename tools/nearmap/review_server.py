@@ -36,6 +36,9 @@ def edits_dest(rel: str, root: Path) -> Path | None:
 
 class ReviewHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
+        path = (self.path or "").split("?", 1)[0].lower()
+        if path.endswith(".html") or path.endswith(".js"):
+            self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, HEAD, PUT, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nearmap Review — Property Intel</title>
 <!--
-  nearmap-review.html — isolated Nearmap trial QA (v1.7.8, 2026-09-11)
+  nearmap-review.html — isolated Nearmap trial QA (v1.7.16, 2026-09-11)
   Closed-loop interiors stay empty (no flood-fill on connect). Leftover seams
   between brush passes close like erase drops slivers; erase cutouts stay.
   TWO EDITORS, one page, never both at once:
@@ -24,11 +24,14 @@
     Revert to original = vendor original. Revert changes = last Save / session start.
   TESTING MODE applies only to plain delivery= opens: each open starts from original
     (?fresh=0 resumes local edits; ?fresh=1 forces a fresh start in sheet mode).
-  Reviewer-first: Pan / Draw. Draw: + click a visible painted region or its centroid;
-  left-click adds, right-click removes. Clear brush drops the pick. (Accept button
-  removed; onAcceptFeature is unreachable.) After a detached stroke becomes a new
-  region, the brush arms that new region so the next stroke can grow it.
-  Paint that does not touch the selected region becomes a new same-class region;
+  Reviewer-first: Pan / Draw. Draw uses a full-map hit overlay. Layer checkboxes
+  only show/hide overlays — they do not retarget the brush. Click a painted
+  region to arm, then drag to grow; with no pick, drag on dirt uses the last
+  name-click / pick class. Click does not stamp. Pan tool moves the map. The
+  custom brush cursor stays visible after a pick; #brushHit falls back to
+  crosshair if the ring is not yet placed. Maps pointercancel is ignored so a
+  drag is a stroke, not a one-dot commit. Clear brush drops the pick.
+  Paint that does not touch or approach the selected region becomes a new same-class region;
   the class counter updates. Right-click erase that cuts a region in two writes each
   extra piece as its own region (origin split); slivers left behind are dropped, and
   a region that is all slivers is removed. Size slider under Draw; back/forward arrows under Size
@@ -66,7 +69,9 @@
   #map { position: absolute; inset: 0; }
   #brushHit {
     position: absolute; inset: 0; z-index: 3; display: none;
-    cursor: none; touch-action: none;
+    cursor: crosshair; touch-action: none;
+    pointer-events: auto;
+    background: rgba(0,0,0,0);
   }
   #brushHit.on { display: block; }
   #brushStroke {
@@ -75,7 +80,7 @@
   }
   #brushStroke.on { display: block; }
   #brushCursor {
-    position: absolute; left: 0; top: 0; z-index: 4;
+    position: absolute; left: 0; top: 0; z-index: 6;
     pointer-events: none; display: none;
     transform: translate(-50%, -50%);
   }
@@ -100,13 +105,12 @@
     background: color-mix(in srgb, #f97066 28%, transparent);
     box-shadow: 0 0 0 2px #f97066, 0 0 0 3px rgba(0,0,0,0.45);
   }
-  #stage.brush-on .gm-style,
-  #stage.brush-on .gm-style > div { cursor: none !important; }
   #stage.brush-on .gmnoprint,
   #stage.brush-on .gmnoprint * { cursor: pointer !important; }
   #tools {
     position: absolute; top: 10px; left: 10px; z-index: 5;
-    display: flex; flex-direction: column; gap: 6px; align-items: stretch;
+    display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+    width: max-content;
     max-width: calc(100% - 20px);
     background: rgba(27,32,39,0.92); padding: 6px 8px; border-radius: 6px;
     border: 1px solid var(--line);
@@ -258,7 +262,7 @@
 </div>
 <script>
 (function () {
-  var BUILD = 'v1.7.8';
+  var BUILD = 'v1.7.16';
   var NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var ER_MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
   var CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
@@ -285,6 +289,10 @@
   }
   var BRUSH_PX = 12;
   var JOIN_M = 1;
+  // Same-class paint this close to an existing region grows it instead of a
+  // new island. 4 m is about a driveway stem. joinR used to be 3× brush radius,
+  // which shrank to ~2 m at z21 and left a second Driveway next to the first.
+  var JOIN_NEAR_M = 4;
   // Erase clean-up (metres, local frame). A piece left after right-click erase is a
   // fragment when its area is under ERASE_MIN_FRAG_M2 (a crumb) or its mean width
   // (2 x area / perimeter) is under ERASE_SLIVER_WIDTH_M (a thin remnant). Fragments
@@ -397,6 +405,9 @@
   var brushing = false;
   var brushPainting = false;
   var paintErase = false;
+  var panDrag = null;
+  var press = null;
+  var lastPtr = { x: 0, y: 0, on: false };
   var brushTarget = null;
   var paintHistory = [];
   var paintFuture = [];
@@ -476,6 +487,10 @@
     });
   }
 
+  // Always { feature, index }. A second definition that returned the raw Feature
+  // won by hoisting and made seed.feature undefined: grow threw
+  // "Cannot set properties of undefined (setting 'geometry')" and stamps
+  // committed as thin line-regions instead of a filled brush union.
   function featureById(id) {
     var fs = (aiPack && aiPack.features) || [];
     for (var i = 0; i < fs.length; i++) {
@@ -1000,19 +1015,10 @@
     if (!c) return true;
     return layerOn[c] !== false;
   }
-  function featureById(rid) {
-    var fs = (aiPack && aiPack.features) || [];
-    var id = String(rid || '');
-    if (!id) return null;
-    for (var i = 0; i < fs.length; i++) {
-      if (String(fs[i].id) === id) return fs[i];
-    }
-    return null;
-  }
   function pinLatLng(p, b) {
     if (p && p.region_id) {
-      var f = featureById(p.region_id);
-      var ll = f && interiorPoint(f);
+      var hit = featureById(p.region_id);
+      var ll = hit && interiorPoint(hit.feature);
       if (ll) return ll;
     }
     return pctToLatLng(p.x, p.y, b);
@@ -1694,7 +1700,7 @@
     }
   }
 
-  function unionPaintedGeometry(seedFeat, extraFeats, stamps, brushR, erase) {
+  function unionPaintedGeometry(seedFeat, extraFeats, stamps, brushR, erase, closeM) {
     var feats = [];
     if (seedFeat) feats.push(seedFeat);
     (extraFeats || []).forEach(function (f) { if (f) feats.push(f); });
@@ -1709,7 +1715,7 @@
     lat0 /= pts.length;
     lng0 /= pts.length;
     var fr = meterFrame(lat0, lng0);
-    var gapM = erase ? 0 : Math.max(brushR, brushR * GAP_CLOSE_BRUSH);
+    var gapM = erase ? 0 : Math.max(brushR, brushR * GAP_CLOSE_BRUSH, closeM || 0);
     var pad = brushR + JOIN_M + 1 + gapM;
     var west = Infinity, east = -Infinity, south = Infinity, north = -Infinity;
     pts.forEach(function (p) {
@@ -2528,16 +2534,6 @@
     setStatus('Placed ' + cls + ' at the region interior — Save to write the sheet');
   }
 
-  function pinIndexForRegion(rid) {
-    var id = String(rid || '');
-    if (!id) return -1;
-    var pins = (record && record.elements) || [];
-    for (var i = 0; i < pins.length; i++) {
-      if (String(pins[i].region_id || '') === id) return i;
-    }
-    return -1;
-  }
-
   function deletePinAt(ll) {
     var f = placeRegionAt(ll);
     if (!f) {
@@ -2716,7 +2712,7 @@
     }).catch(function (e) { setStatus(String(e.message || e), 'err'); });
   }
 
-  function selectBrushRegion(idx) {
+  function selectBrushRegion(idx, quiet) {
     if (!aiPack || !aiPack.features || !aiPack.features[idx]) return;
     var f = aiPack.features[idx];
     var rid = String(f.id || idx);
@@ -2738,20 +2734,51 @@
       color: colorForClass(cls),
       label: cls
     };
-    working = { ids: [rid], stamps: [] };
+    working = { ids: [rid], stamps: quiet ? (working.stamps || []) : [] };
     activeClass = cls;
-    renderLayers(aiPack);
     updateBrushLabel();
+    if (quiet) {
+      restoreBrushCursor();
+      return;
+    }
+    renderLayers(aiPack);
     redrawAi();
     syncBrushChrome();
-    setStatus('Draw is ' + cls + ' — left-click adds, right-click removes');
+    setStatus('Draw is ' + cls + ' — drag to add, right-drag to remove');
+    restoreBrushCursor();
+  }
+
+  function armClassBrush(cls) {
+    if (!cls) return false;
+    if (layerOn[cls] === false) layerOn[cls] = true;
+    brushTarget = {
+      pinIndex: -1,
+      regionId: '',
+      className: cls,
+      color: colorForClass(cls),
+      label: cls
+    };
+    activeClass = cls;
+    updateBrushLabel();
+    restoreBrushCursor();
+    return true;
+  }
+
+  function startPaintStroke(ll, erase) {
+    panDrag = null;
+    paintErase = !!erase;
+    brushing = true;
+    brushPainting = true;
+    working.stamps = [];
+    restoreBrushCursor();
+    if (ll) brushAt(ll);
   }
 
   // Draw pick: the visible region under the click. Do not snap to a pin or to
   // a vertex-average centroid 10 m away (that armed the wrong class and then
   // detached-painted a new island). Overlaps take the smallest area so a
-  // driveway stem wins over a vegetation blanket. Hint-marker clicks still
-  // call selectBrushRegion for the marker's feature.
+  // driveway stem wins over a vegetation blanket. If an active class is set
+  // (layer row or last pick), overlapping hits of that class win first.
   function pickRegionIndexAt(ll) {
     if (!aiPack || !Array.isArray(aiPack.features) || !ll) return -1;
     var inside = [];
@@ -2763,13 +2790,21 @@
       if (pointInFeature(ll, f)) inside.push(i);
     }
     if (inside.length) {
-      var bestI = inside[0], bestA = Infinity;
-      for (i = 0; i < inside.length; i++) {
-        f = aiPack.features[inside[i]];
+      var pool = inside;
+      if (activeClass) {
+        var same = [];
+        for (i = 0; i < inside.length; i++) {
+          if (featureClass(aiPack.features[inside[i]]) === activeClass) same.push(inside[i]);
+        }
+        if (same.length) pool = same;
+      }
+      var bestI = pool[0], bestA = Infinity;
+      for (i = 0; i < pool.length; i++) {
+        f = aiPack.features[pool[i]];
         c = interiorPoint(f) || featureCentroid(f);
         fr = c ? meterFrame(c.lat, c.lng) : meterFrame(ll.lat, ll.lng);
         area = geometryAreaM2(f.geometry, fr);
-        if (area < bestA) { bestA = area; bestI = inside[i]; }
+        if (area < bestA) { bestA = area; bestI = pool[i]; }
       }
       return bestI;
     }
@@ -2794,6 +2829,109 @@
     }
     selectBrushRegion(idx);
     return true;
+  }
+
+  function joinReachM(brushR) {
+    return Math.max(JOIN_NEAR_M, brushR + Math.max(JOIN_M, brushR * GAP_CLOSE_BRUSH));
+  }
+
+  function featureNearFeature(a, b, r) {
+    if (!a || !b) return false;
+    var aPolys = featurePolys(a);
+    var i;
+    for (i = 0; i < aPolys.length; i++) {
+      if (polyOverlapsFeature(aPolys[i], b)) return true;
+    }
+    var aPts = featurePoints(a);
+    for (i = 0; i < aPts.length; i++) {
+      if (featureHitsStamp(b, aPts[i], r)) return true;
+    }
+    var bPts = featurePoints(b);
+    for (i = 0; i < bPts.length; i++) {
+      if (featureHitsStamp(a, bPts[i], r)) return true;
+    }
+    return false;
+  }
+
+  function nearbySameClass(geom, cls, excludeIds, r) {
+    if (!geom) return [];
+    var probe = { geometry: geom };
+    var out = [];
+    (aiPack.features || []).forEach(function (f) {
+      var rid = String(f.id);
+      if (excludeIds[rid]) return;
+      if (featureClass(f) !== cls) return;
+      if (layerOn[cls] === false) return;
+      if (consumed[rid]) return;
+      if (featureNearFeature(probe, f, r)) {
+        out.push(rid);
+        return;
+      }
+      // Vertex tests miss two stacked fills whose rings don't sit inside each
+      // other. Interior points catch that case so mesh can union them.
+      var ia = interiorPoint(f);
+      if (ia && pointInFeature(ia, probe)) {
+        out.push(rid);
+        return;
+      }
+      var ib = interiorPoint(probe);
+      if (ib && pointInFeature(ib, f)) out.push(rid);
+    });
+    return out;
+  }
+
+  function largestSameClassHost(ids, skipId) {
+    var best = '', bestA = -1;
+    (ids || []).forEach(function (id) {
+      if (skipId && id === String(skipId)) return;
+      var hit = featureById(id);
+      if (!hit) return;
+      var c = interiorPoint(hit.feature) || featureCentroid(hit.feature);
+      if (!c) return;
+      var area = geometryAreaM2(hit.feature.geometry, meterFrame(c.lat, c.lng));
+      if (area > bestA) {
+        bestA = area;
+        best = id;
+      }
+    });
+    return best;
+  }
+
+  // Union target with every overlapping / nearby same-class region so paint
+  // meshes instead of stacking a second fill on top of the first.
+  function meshSameClass(targetId, cls, brushR) {
+    var seed = featureById(targetId);
+    if (!seed || !seed.feature) return 0;
+    var joinR = joinReachM(brushR);
+    var extra = [];
+    var extraFeats = [];
+    var exclude = {};
+    exclude[String(targetId)] = true;
+    var pass, more, geom;
+    for (pass = 0; pass < 24; pass++) {
+      geom = extra.length
+        ? unionPaintedGeometry(seed.feature, extraFeats, [], brushR, false, joinR)
+        : seed.feature.geometry;
+      if (!geom) break;
+      more = nearbySameClass(geom, cls, exclude, joinR);
+      if (!more.length) break;
+      more.forEach(function (id) {
+        var hit = featureById(id);
+        if (!hit) return;
+        extra.push(id);
+        extraFeats.push(hit.feature);
+        exclude[id] = true;
+      });
+    }
+    if (!extra.length) return 0;
+    var meshed = unionPaintedGeometry(seed.feature, extraFeats, [], brushR, false, joinR);
+    if (!meshed) return 0;
+    seed.feature.geometry = meshed;
+    seed.feature.properties = seed.feature.properties || {};
+    seed.feature.properties.origin = 'merged';
+    mergeLockedHoles(seed.feature, extraFeats);
+    removeRegionIds(extra);
+    return extra.length;
   }
 
   // Same-class regions that the painted result now covers or overlaps (any vertex
@@ -2824,14 +2962,18 @@
 
   // Union seed + extras + stamps, then keep absorbing same-class regions the result
   // overlaps until nothing new is picked up (bounded). Mutates extra/extraFeats.
-  function unionWithAbsorb(seedFeat, extra, extraFeats, stamps, r, cls, seedId) {
-    var geom = unionPaintedGeometry(seedFeat, extraFeats, stamps, r, false);
+  function unionWithAbsorb(seedFeat, extra, extraFeats, stamps, r, cls, seedId, nearR) {
+    var reach = nearR != null ? nearR : r;
+    var geom = unionPaintedGeometry(seedFeat, extraFeats, stamps, r, false, reach);
     var pass;
-    for (pass = 0; pass < 4 && geom; pass++) {
+    for (pass = 0; pass < 24 && geom; pass++) {
       var exclude = {};
       if (seedId) exclude[String(seedId)] = true;
       extra.forEach(function (id) { exclude[id] = true; });
       var more = overlappedSameClass(geom, cls, exclude);
+      nearbySameClass(geom, cls, exclude, reach).forEach(function (id) {
+        if (more.indexOf(id) < 0) more.push(id);
+      });
       if (!more.length) break;
       more.forEach(function (id) {
         var hit = featureById(id);
@@ -2839,7 +2981,7 @@
         extra.push(id);
         extraFeats.push(hit.feature);
       });
-      geom = unionPaintedGeometry(seedFeat, extraFeats, stamps, r, false);
+      geom = unionPaintedGeometry(seedFeat, extraFeats, stamps, r, false, reach);
     }
     return geom;
   }
@@ -2872,18 +3014,21 @@
 
   function applyPaintStroke(erase) {
     var minStamps = 1;
-    if (!brushTarget || !brushTarget.regionId || working.stamps.length < minStamps) {
+    if (!brushTarget || working.stamps.length < minStamps) {
       working.stamps = [];
       clearBrushStroke();
       return;
     }
     var r = brushRadiusM();
-    var joinR = r + Math.max(JOIN_M, r * GAP_CLOSE_BRUSH);
+    var joinR = joinReachM(r);
     var cls = brushTarget.className;
     var seedId = brushTarget.regionId;
     var dense = densifyStamps(working.stamps, Math.min(0.45, Math.max(0.2, r * 0.4)));
-    var seed = featureById(seedId);
-    if (!seed) {
+    var seed = seedId ? featureById(seedId) : null;
+    if (seed && !seed.feature && (seed.geometry || seed.type === 'Feature')) {
+      seed = { feature: seed, index: -1 };
+    }
+    if (seedId && !seed) {
       // The picked region is gone (absorbed, split away, or undone). Drop the
       // pick so the reviewer sees the + cursor instead of a dead brush.
       working = { ids: [], stamps: [] };
@@ -2897,12 +3042,90 @@
     }
     var extraFeats = [];
     var extra = [];
-    var ids = [String(seedId)];
+    var ids = seedId ? [String(seedId)] : [];
     if (erase) {
+      if (!seed) {
+        working.stamps = [];
+        clearBrushStroke();
+        setStatus('Nothing to remove — click a painted region first', 'err');
+        return;
+      }
       applyEraseStroke(seed, dense, r, cls);
       return;
     }
+    var stampGeom = unionPaintedGeometry(null, [], dense, r, false, joinR);
+    var nearPaint = stampGeom ? nearbySameClass(stampGeom, cls, {}, joinR) : [];
+    if (!seed && nearPaint.length) {
+      var hostId0 = largestSameClassHost(nearPaint, null);
+      var host0 = hostId0 ? featureById(hostId0) : null;
+      if (host0) {
+        seed = host0;
+        seedId = hostId0;
+        brushTarget.regionId = hostId0;
+      }
+    }
+    if (!seed) {
+      ids = hitIdsForStroke(dense, joinR, cls, null);
+      extraFeats = [];
+      extra = [];
+      ids.forEach(function (id) {
+        var hit = featureById(id);
+        if (hit) { extra.push(id); extraFeats.push(hit.feature); }
+      });
+      var freshGeom = unionWithAbsorb(null, extra, extraFeats, dense, r, cls, null, joinR);
+      if (!freshGeom) {
+        working.stamps = [];
+        clearBrushStroke();
+        setStatus('Paint did not produce a region', 'err');
+        return;
+      }
+      var freshId = nextRegionId('d');
+      pushPaintHistory();
+      var freshFeat = {
+        type: 'Feature',
+        id: freshId,
+        geometry: freshGeom,
+        properties: { 'class': cls, name: cls, origin: 'drawn' }
+      };
+      mergeLockedHoles(freshFeat, extraFeats);
+      aiPack.features.push(freshFeat);
+      if (extra.length) removeRegionIds(extra);
+      else refreshLayerCounts();
+      var nMesh0 = meshSameClass(freshId, cls, r);
+      brushTarget.regionId = freshId;
+      brushTarget.pinIndex = -1;
+      working = { ids: [String(freshId)], stamps: [] };
+      clearBrushStroke();
+      persistLocal();
+      persistRegions().then(function (how) {
+        refreshLayerCounts();
+        updateBrushLabel();
+        redrawAi();
+        syncBrushChrome();
+        var n = (aiPack.counts && aiPack.counts[cls]) || 0;
+        setStatus('New ' + cls + ' region · ' + cls + ' ' + n +
+          (nMesh0 ? (' · meshed ' + nMesh0 + ' overlapping') : '') +
+          (how === 'file' ? ' — wrote edits/regions.json' : ''));
+      });
+      return;
+    }
+    var pickId = String(seedId);
     var detached = !strokeTouchesFeature(dense, seed.feature, joinR);
+    if (stampGeom && featureNearFeature({ geometry: stampGeom }, seed.feature, joinR)) {
+      detached = false;
+    }
+    if (nearPaint.indexOf(String(seedId)) >= 0) detached = false;
+    // Paint that lands on another same-class scrap (stacked fill) grows that
+    // host and meshes — it does not add a second polygon on top.
+    if (detached && nearPaint.length) {
+      var hostId = largestSameClassHost(nearPaint, seedId);
+      var host = hostId ? featureById(hostId) : null;
+      if (host) {
+        seed = host;
+        seedId = hostId;
+        detached = false;
+      }
+    }
 
     function collectExtras(idList) {
       extraFeats = [];
@@ -2922,14 +3145,15 @@
       collectExtras(ids);
       // Keep the picked region out of the absorb pass: if the new paint reaches
       // it (directly or via scraps), the stroke is a grow, not a new region.
-      var newGeom = unionWithAbsorb(null, extra, extraFeats, dense, r, cls, seedId);
+      var newGeom = unionWithAbsorb(null, extra, extraFeats, dense, r, cls, seedId, joinR);
       if (!newGeom) {
         working.stamps = [];
         clearBrushStroke();
         setStatus('Paint did not produce a region', 'err');
         return;
       }
-      var reachesSeed = strokeTouchesFeature(dense, seed.feature, joinR);
+      var reachesSeed = strokeTouchesFeature(dense, seed.feature, joinR) ||
+        featureNearFeature({ geometry: newGeom }, seed.feature, joinR);
       if (!reachesSeed) {
         var newPolys = geometryPolys(newGeom);
         for (var q = 0; q < newPolys.length && !reachesSeed; q++) {
@@ -2952,6 +3176,7 @@
       aiPack.features.push(newFeat);
       if (extra.length) removeRegionIds(extra);
       else refreshLayerCounts();
+      var nMesh = meshSameClass(newId, cls, r);
       // Keep painting the region that was just drawn, not the original scrap.
       brushTarget.regionId = newId;
       brushTarget.pinIndex = -1;
@@ -2965,18 +3190,28 @@
         syncBrushChrome();
         var n = (aiPack.counts && aiPack.counts[cls]) || 0;
         setStatus('New ' + cls + ' region · ' + cls + ' ' + n +
+          (nMesh ? (' · meshed ' + nMesh + ' overlapping') : '') +
           (how === 'file' ? ' — wrote edits/regions.json' : ''));
       });
       return;
     }
 
     ids = hitIdsForStroke(dense, joinR, cls, seedId);
+    nearPaint.forEach(function (id) {
+      if (ids.indexOf(id) < 0) ids.push(id);
+    });
     collectExtras(ids);
-    var geom = unionWithAbsorb(seed.feature, extra, extraFeats, dense, r, cls, seedId);
+    var geom = unionWithAbsorb(seed.feature, extra, extraFeats, dense, r, cls, seedId, joinR);
     if (!geom) {
       working.stamps = [];
       clearBrushStroke();
       setStatus('Paint did not produce a region', 'err');
+      return;
+    }
+    if (!seed.feature) {
+      working.stamps = [];
+      clearBrushStroke();
+      setStatus('Paint could not attach to the region — click the filled area and drag again', 'err');
       return;
     }
     ids = [String(seedId)].concat(extra);
@@ -2986,6 +3221,11 @@
     seed.feature.properties.origin = seed.feature.properties.origin || 'merged';
     mergeLockedHoles(seed.feature, extraFeats);
     if (extra.length) removeRegionIds(extra);
+    var nMesh = meshSameClass(seedId, cls, r);
+    if (!featureById(pickId)) {
+      brushTarget.regionId = seedId;
+      brushTarget.pinIndex = -1;
+    }
     if (brushTarget.pinIndex >= 0) {
       var pin = ((record && record.elements) || [])[brushTarget.pinIndex];
       if (pin) {
@@ -3011,7 +3251,7 @@
       redrawAi();
       syncBrushChrome();
       setStatus('Added to ' + (brushTarget.label || cls) +
-        (ids.length > 1 ? (' · merged ' + ids.length + ' regions') : '') +
+        ((extra.length + nMesh) ? (' · meshed ' + (extra.length + nMesh + 1) + ' overlapping') : '') +
         (how === 'file' ? ' — wrote edits/regions.json' : ''));
     });
   }
@@ -3135,10 +3375,19 @@
   }
 
   function brushAt(ll) {
-    if (!brushTarget || !aiPack || !Array.isArray(aiPack.features)) return;
+    if (!brushTarget || !ll) return;
+    var last = working.stamps[working.stamps.length - 1];
+    if (last) {
+      var jump = distM(last, ll);
+      if (jump < 0.12) return;
+      var maxJump = Math.max(25, brushRadiusM() * 12);
+      if (jump > maxJump) return;
+    }
     working.stamps.push(ll);
-    var r = brushRadiusM();
-    working.ids = hitIdsForStroke(working.stamps, r + Math.max(JOIN_M, r * GAP_CLOSE_BRUSH), brushTarget.className, brushTarget.regionId);
+    if (aiPack && Array.isArray(aiPack.features)) {
+      var r = brushRadiusM();
+      working.ids = hitIdsForStroke(working.stamps, joinReachM(r), brushTarget.className, brushTarget.regionId);
+    }
     updateBrushLabel();
     showBrushStroke();
   }
@@ -3322,19 +3571,21 @@
     if (!map || !pixOverlay) return null;
     var proj = pixOverlay.getProjection();
     if (!proj) return null;
-    var rect = document.getElementById('map').getBoundingClientRect();
-    var ll = proj.fromContainerPixelToLatLng(
-      new google.maps.Point(ev.clientX - rect.left, ev.clientY - rect.top)
-    );
+    var div = map.getDiv() || document.getElementById('map');
+    var rect = div.getBoundingClientRect();
+    var x = ev.clientX - rect.left;
+    var y = ev.clientY - rect.top;
+    if (x < -2 || y < -2 || x > rect.width + 2 || y > rect.height + 2) return null;
+    var ll = proj.fromContainerPixelToLatLng(new google.maps.Point(x, y));
     if (!ll) return null;
     return { lat: ll.lat(), lng: ll.lng() };
   }
 
   function pointerOverTools(ev) {
     var tools = document.getElementById('tools');
-    var r = tools.getBoundingClientRect();
-    return ev.clientX >= r.left && ev.clientX <= r.right &&
-      ev.clientY >= r.top && ev.clientY <= r.bottom;
+    if (!tools) return false;
+    var top = document.elementFromPoint(ev.clientX, ev.clientY);
+    return !!(top && tools.contains(top));
   }
 
   function moveBrushCursor(clientX, clientY) {
@@ -3343,20 +3594,37 @@
       el.className = '';
       return;
     }
+    lastPtr.x = clientX;
+    lastPtr.y = clientY;
+    lastPtr.on = true;
     var stage = document.getElementById('stage').getBoundingClientRect();
     el.style.left = (clientX - stage.left) + 'px';
     el.style.top = (clientY - stage.top) + 'px';
     styleBrushCursor();
   }
 
+  function restoreBrushCursor() {
+    if (!isEditTool()) {
+      hideBrushCursor();
+      return;
+    }
+    if (lastPtr.on) moveBrushCursor(lastPtr.x, lastPtr.y);
+    else styleBrushCursor();
+  }
+
   function hideBrushCursor() {
     document.getElementById('brushCursor').className = '';
+    var hit = document.getElementById('brushHit');
+    if (hit && isEditTool()) hit.style.cursor = 'crosshair';
+    else if (hit) hit.style.cursor = '';
   }
 
   function styleBrushCursor() {
     var el = document.getElementById('brushCursor');
+    var hit = document.getElementById('brushHit');
     if (!isEditTool()) {
       el.className = '';
+      if (hit) hit.style.cursor = '';
       return;
     }
     if (brushTarget) {
@@ -3369,22 +3637,25 @@
       el.style.width = '';
       el.style.height = '';
     }
+    var placed = el.style.left !== '' && el.style.top !== '';
+    if (hit) hit.style.cursor = placed ? 'none' : 'crosshair';
   }
 
   function syncBrushChrome() {
     var stage = document.getElementById('stage');
     var hit = document.getElementById('brushHit');
     var edit = isEditTool();
-    var armed = edit && !!brushTarget;
     stage.classList.toggle('brush-on', edit);
-    hit.classList.toggle('on', armed);
+    // Overlay stays on for the whole Draw tool: Maps clicks never fire through
+    // filled polygons (even clickable:false), so pick/paint/pan all use this.
+    hit.classList.toggle('on', edit);
     if (map) {
       map.setOptions({
         draggable: !edit,
-        gestureHandling: 'greedy',
+        gestureHandling: edit ? 'none' : 'greedy',
         scrollwheel: true,
-        draggableCursor: edit ? 'none' : (toolMode === 'draw' ? 'crosshair' : null),
-        draggingCursor: edit ? 'none' : null,
+        draggableCursor: edit ? 'crosshair' : (toolMode === 'draw' ? 'crosshair' : null),
+        draggingCursor: edit ? 'crosshair' : null,
         disableDoubleClickZoom: false
       });
     }
@@ -3394,12 +3665,12 @@
     if (histRow) histRow.hidden = !edit;
     syncPaintHistoryButtons();
     if (!edit) hideBrushCursor();
-    else if (document.getElementById('brushCursor').style.left) styleBrushCursor();
+    else restoreBrushCursor();
   }
 
   function setTool(mode) {
     var leavingEdit = isEditTool() && mode !== 'draw';
-    var enteringDraw = mode === 'draw';
+    var enteringDraw = mode === 'draw' && toolMode !== 'draw';
     toolMode = mode;
     var btns = document.querySelectorAll('#tools .tool');
     for (var i = 0; i < btns.length; i++) {
@@ -3411,6 +3682,8 @@
       brushing = false;
       brushPainting = false;
       paintErase = false;
+      panDrag = null;
+      press = null;
       clearBrushStroke();
     }
     if (enteringDraw || leavingEdit) {
@@ -3427,11 +3700,11 @@
     } else {
       redrawAi();
     }
-    if (map) map.setOptions({ draggableCursor: (mode === 'place' || mode === 'delete') ? 'crosshair' : (isEditTool() ? 'none' : null) });
+    if (map) map.setOptions({ draggableCursor: (mode === 'place' || mode === 'delete') ? 'crosshair' : (isEditTool() ? 'crosshair' : null) });
     if (mode === 'accept') setStatus('Click a visible AI polygon');
     else if (mode === 'draw') {
       updateBrushLabel();
-      setStatus('Draw: click a painted region or its centroid, then left-click adds and right-click removes. Scroll to zoom.');
+      setStatus('Draw: check a class and drag to paint. Click a region to grow it. Pan tool to move the map. Scroll to zoom.');
     }
     else if (mode === 'place') setStatus('Place pin: turn on a layer, then click a painted region with no pin.');
     else if (mode === 'delete') setStatus('Delete pin: click a painted region that has a pin, or the pin.');
@@ -3480,10 +3753,6 @@
         var ll = { lat: e.latLng.lat(), lng: e.latLng.lng() };
         if (toolMode === 'place') placePinAt(ll);
         else deletePinAt(ll);
-        return;
-      }
-      if (isEditTool() && !brushTarget) {
-        selectBrushAt({ lat: e.latLng.lat(), lng: e.latLng.lng() });
       }
     });
     map.addListener('rightclick', function (e) {
@@ -3491,8 +3760,7 @@
     });
     var hit = document.getElementById('brushHit');
     // Maps ignores the wheel while draggable is false (Draw), so zoom is ours for
-    // the whole stage in Draw — before a pick (map underneath) and after (hit
-    // overlay). The tool panel stops wheel propagation itself.
+    // the whole stage in Draw. The tool panel stops wheel propagation itself.
     function zoomByWheel(ev) {
       if (!isEditTool() || !map) return;
       if (pointerOverTools(ev)) return;
@@ -3508,53 +3776,155 @@
       if (isEditTool()) ev.preventDefault();
     });
     hit.addEventListener('pointerdown', function (ev) {
-      if (!isEditTool() || !brushTarget) return;
+      if (!isEditTool()) return;
       if (pointerOverTools(ev)) return;
-      if (ev.button !== 0 && !(toolMode === 'draw' && ev.button === 2)) return;
-      ev.preventDefault();
+      var erase = ev.button === 2;
+      if (ev.button !== 0 && !erase) return;
+      ev.stopPropagation();
       try { hit.setPointerCapture(ev.pointerId); } catch (err) {}
       var ll = eventToLl(ev);
-      if (!ll) return;
-      paintErase = toolMode === 'draw' && ev.button === 2;
-      brushing = true;
-      brushPainting = true;
-      working.stamps = [];
-      styleBrushCursor();
-      brushAt(ll);
+      lastPtr.x = ev.clientX;
+      lastPtr.y = ev.clientY;
+      moveBrushCursor(ev.clientX, ev.clientY);
+      press = { x: ev.clientX, y: ev.clientY, ll: ll, erase: erase };
+      if (erase) {
+        if (!brushTarget && activeClass) armClassBrush(activeClass);
+        if (!brushTarget || !ll) return;
+        startPaintStroke(ll, true);
+        press = null;
+      }
     });
-    hit.addEventListener('pointermove', function (ev) {
-      if (pointerOverTools(ev) && !brushing) {
+    function buttonsPainting(ev) {
+      return !!(ev.buttons & 1) || !!(ev.buttons & 2);
+    }
+    function beginStrokeFromPress() {
+      if (!press) return;
+      var ll = press.ll;
+      var erase = press.erase;
+      press = null;
+      if (erase) {
+        if (!brushTarget && activeClass) armClassBrush(activeClass);
+        if (brushTarget && ll) startPaintStroke(ll, true);
+        return;
+      }
+      if (brushTarget && brushTarget.regionId) {
+        if (ll) startPaintStroke(ll, false);
+        return;
+      }
+      var idx = ll ? pickRegionIndexAt(ll) : -1;
+      if (idx >= 0) {
+        selectBrushRegion(idx, true);
+        if (ll) startPaintStroke(ll, false);
+        return;
+      }
+      if (activeClass) {
+        armClassBrush(activeClass);
+        if (ll) startPaintStroke(ll, false);
+        return;
+      }
+      panDrag = { x: lastPtr.x, y: lastPtr.y, ll: ll, panned: true };
+    }
+    function onBrushMove(ev) {
+      if (!isEditTool()) return;
+      lastPtr.x = ev.clientX;
+      lastPtr.y = ev.clientY;
+      lastPtr.on = true;
+      if (press && buttonsPainting(ev) && !brushing) {
+        var dx = ev.clientX - press.x;
+        var dy = ev.clientY - press.y;
+        if ((dx * dx + dy * dy) > 64) beginStrokeFromPress();
+      }
+      if (brushing && !buttonsPainting(ev)) {
+        finishGesture(ev);
+      }
+      if (panDrag && !brushing) {
+        if (!(ev.buttons & 1)) {
+          finishGesture(ev);
+        } else {
+          var pdx = ev.clientX - panDrag.x;
+          var pdy = ev.clientY - panDrag.y;
+          if (!panDrag.panned && (pdx * pdx + pdy * pdy) > 64) panDrag.panned = true;
+          if (panDrag.panned && map) {
+            map.panBy(-pdx, -pdy);
+            panDrag.x = ev.clientX;
+            panDrag.y = ev.clientY;
+          }
+        }
+      }
+      if (brushing && buttonsPainting(ev) && brushPainting) {
+        ev.preventDefault();
+        try {
+          var ll = eventToLl(ev);
+          if (ll) brushAt(ll);
+        } catch (err) {}
+      }
+      if (!brushing && pointerOverTools(ev)) {
         hideBrushCursor();
         return;
       }
-      if (!pointerOverTools(ev)) moveBrushCursor(ev.clientX, ev.clientY);
-      if (!brushing || !brushPainting) return;
-      var ll = eventToLl(ev);
-      if (ll) brushAt(ll);
-    });
-    function endBrushPointer() {
-      if (brushing && brushPainting) applyPaintStroke(paintErase);
-      brushing = false;
-      brushPainting = false;
-      paintErase = false;
-      styleBrushCursor();
-    }
-    hit.addEventListener('pointerup', endBrushPointer);
-    hit.addEventListener('pointercancel', endBrushPointer);
-    document.addEventListener('pointermove', function (ev) {
-      if (!isEditTool()) return;
       var stage = document.getElementById('stage').getBoundingClientRect();
       if (ev.clientX < stage.left || ev.clientX > stage.right ||
           ev.clientY < stage.top || ev.clientY > stage.bottom) {
-        if (!brushing) hideBrushCursor();
-        return;
-      }
-      if (pointerOverTools(ev)) {
         hideBrushCursor();
         return;
       }
       moveBrushCursor(ev.clientX, ev.clientY);
+    }
+    var finishing = false;
+    function finishGesture(ev) {
+      if (finishing) return;
+      finishing = true;
+      try {
+        if (press && !brushing) {
+          var clickLl = press.ll;
+          var wasErase = press.erase;
+          press = null;
+          if (!wasErase) {
+            var idx = clickLl ? pickRegionIndexAt(clickLl) : -1;
+            if (idx >= 0) selectBrushRegion(idx);
+            else if (activeClass) armClassBrush(activeClass);
+            else setStatus('Check a class and drag to paint, or click a painted region');
+          }
+          restoreBrushCursor();
+          return;
+        }
+        press = null;
+        if (panDrag) {
+          var cancelled = ev && ev.type === 'pointercancel';
+          if (!cancelled && !panDrag.panned && panDrag.ll) selectBrushAt(panDrag.ll);
+          panDrag = null;
+          restoreBrushCursor();
+          return;
+        }
+        if (!brushing) return;
+        if (ev && ev.type === 'pointercancel') return;
+        if (brushPainting) {
+          try { applyPaintStroke(paintErase); }
+          catch (err) { setStatus(String(err.message || err), 'err'); }
+        }
+        brushing = false;
+        brushPainting = false;
+        paintErase = false;
+        restoreBrushCursor();
+      } finally {
+        finishing = false;
+      }
+    }
+    hit.addEventListener('pointerenter', function (ev) {
+      if (!isEditTool()) return;
+      if (pointerOverTools(ev)) return;
+      moveBrushCursor(ev.clientX, ev.clientY);
     });
+    document.addEventListener('pointermove', onBrushMove, { capture: true, passive: false });
+    document.addEventListener('mousemove', onBrushMove, { capture: true, passive: false });
+    document.addEventListener('pointerup', finishGesture, true);
+    document.addEventListener('mouseup', finishGesture, true);
+    document.addEventListener('pointercancel', function (ev) {
+      // Maps often cancels the overlay pointer. Do not keep painting on hover:
+      // the next move with buttons=0 finishes; a move with the button still
+      // down (mousemove after cancel) continues the stroke.
+      if (brushing && !buttonsPainting(ev)) finishGesture(ev);
+    }, true);
     drawPins();
     loadAiIndex();
   }
@@ -3693,8 +4063,7 @@
     var name = t.getAttribute('data-layer');
     if (!name) return;
     layerOn[name] = t.checked;
-    if (t.checked) activeClass = name;
-    else if (activeClass === name) activeClass = '';
+    if (!t.checked && activeClass === name) activeClass = '';
     if (!t.checked && brushTarget && brushTarget.className === name) {
       // Hiding the picked region's layer drops the pick; painting an invisible
       // region would be confusing.

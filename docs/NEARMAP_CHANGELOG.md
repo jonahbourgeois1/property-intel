@@ -2,6 +2,102 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-11 — Layer checkboxes do not retarget the brush (v1.7.16)
+
+**What.** Review page **v1.7.16**: turning a class overlay on only shows that layer. It does not set `activeClass` or call `armClassBrush`. Unchecking the armed class still drops the pick. Clicking a checked row's name still sets the active-class highlight (borders / next dirt-drag class) without moving the brush.
+
+**Why.** Jonah: checking a different overlay stole the Draw brush onto that class.
+
+**Files.** `nearmap-review.html` (v1.7.16), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script (braces 977/977). Layer `change` / name `click` handlers do not call `armClassBrush`. getElementById literals match ids. Browser localhost Macalpine **v1.7.16**: Draw → check Driveway → check Lawn Grass → brush label stayed `+ click a region`, Clear brush stayed disabled, both overlays on.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Draw grow uses one featureById (v1.7.15)
+
+**What.** Review page **v1.7.15**: a second `featureById` (raw Feature, for pin interiors) is removed. The live helper is again `{ feature, index }`. `pinLatLng` reads `hit.feature`. Duplicate `pinIndexForRegion` that dropped `preferIdx` is removed. Grow will not assign `.geometry` on undefined.
+
+**Why.** Jonah on v1.7.14 Macalpine: paint did not add a filled brush into the region. It inconsistently dropped thin stamp-sausages (Driveway 18→21) or threw `Cannot set properties of undefined (setting 'geometry')` and left the stroke preview. The later `featureById` made `seed.feature` undefined, so every grow was "detached" stamps-only.
+
+**Files.** `nearmap-review.html` (v1.7.15), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script (braces 979/979). One `featureById`, one `pinIndexForRegion`, no duplicate functions. `pinLatLng` uses `hit.feature`. getElementById literals match ids (35). Live hold-and-drag on Macalpine dirt is for Jonah.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Draw cursor stays after a pick; click vs drag (v1.7.14)
+
+**What.** Review page **v1.7.14**: Draw no longer hides the OS cursor with no fallback. The paint/pick ring is restored after a class check or a click-pick; `#brushHit` keeps a crosshair until the ring is placed under the pointer. Click = pick/arm only; drag past ~8 px starts the stroke. `applyPaintStroke` cannot stick `finishing`/`brushing` on a throw. Checking a layer in Draw arms that class's paint ring.
+
+**Why.** Jonah on v1.7.13: after selecting a region to draw, the cursor disappeared (Draw sets `cursor: none` on the overlay, and the custom ring was not moved after the pick).
+
+**Files.** `nearmap-review.html` (v1.7.14), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script (braces 979/979). getElementById literals match ids (35). Pre-existing dupes: `featureById`, `pinIndexForRegion`. Browser localhost Macalpine `?mode=regions` chip **v1.7.14**: Draw + Driveway check + hover → `#brushCursor` class `paint`, `display:block`, 24px pink ring on the map (screenshot). Overlay cursor is `crosshair` until the ring is placed, then `none`. Synthetic click-then-hover kept the paint ring. Live hold-and-drag on a physical mouse was not re-done this pass.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Brush only paints while a mouse button is down (v1.7.13)
+
+**What.** Review page **v1.7.13**: stamps are recorded only when `buttons` includes left or right. A move with no button down ends the stroke. `pointerdown` no longer `preventDefault`s (that blocked `mouseup` after Maps `pointercancel`, leaving `brushing` stuck on). `mousemove` continues a drag after cancel.
+
+**Why.** Jonah on v1.7.12: the brush kept painting while hovering, with mouse 1 not held.
+
+**Files.** `nearmap-review.html` (v1.7.13), `docs/NEARMAP_CHANGELOG.md`.
+
+**How it was checked.** `node --check` on extracted review script; braces balanced.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Draw stroke tracks the drag (v1.7.12)
+
+**What.** Review page **v1.7.12**: brush stamps are recorded on `document` pointermove (capture, not-passive). `pointercancel` no longer commits the stroke (Maps was cancelling the overlay on the first drag sample, leaving a one-dot dab). Check a class and drag on empty map to paint a **new** region — no pick required. Press on a painted region and drag to grow it in the same gesture. Pan with the Pan tool while Draw is painting (`gestureHandling: none`).
+
+**Why.** Jonah: unable to add anything new with the brush; when it worked it was only a single dot.
+
+**Files.** `nearmap-review.html` (v1.7.12), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; braces balanced. Browser drag on Macalpine not fully exercised this pass (synthetic pointerup does not match a real drag).
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Draw pick/paint on the hit overlay (v1.7.11)
+
+**What.** Review page **v1.7.11**: `#brushHit` is on for the whole Draw tool, not only after a pick. Click on the overlay picks the region under the cursor (Maps never delivers a click through filled polygons). Drag on empty map pans. A pointer sample that teleports >15 m is dropped so a lost capture cannot densify a sausage across the lot. Re-clicking Draw does not drop the current pick.
+
+**Why.** Jonah on Macalpine v1.7.10: Draw was armed on Driveway, a live diagonal sausage sat on the dirt, and paint was not landing on the cursor. Pick went through `map.click` under non-clickable polygons (often never fires); drag-to-pan painted instead.
+
+**Files.** `nearmap-review.html` (v1.7.11), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script. Overlay pick of a Driveway interior round-trips (projection error 0 m) and arms `Driveway — left add · right remove`. Maps `click` is no longer used for Draw pick. Live drag-paint on the stem not re-done in this pass (synthetic pointerup does not commit a stroke).
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Draw meshes overlapping same-class (no stacked fills)
+
+**What.** Review page **v1.7.10**: after a grow or a new-region stroke, overlapping / nearby same-class scraps are raster-unioned into the host and the extras are removed (`meshSameClass`, up to 24 absorb passes). Paint that lands on another same-class scrap grows that host instead of stacking a second fill. Nearby tests also use interior points (vertex-in-polygon missed two stacked rings). Local `review_server.py` sends `Cache-Control: no-store` for `.html`/`.js`.
+
+**Why.** Jonah on localhost still at v1.7.8: Driveway 19 with many overlapping pink outlines and darker stacked fills. Paint was adding a new Feature on top of the vendor scraps instead of one meshed outline.
+
+**Files.** `nearmap-review.html` (v1.7.10), `tools/nearmap/review_server.py`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script (braces 929/929). getElementById literals match ids. Local GET after restart: `Cache-Control: no-store`, BUILD `v1.7.10`, `meshSameClass` present. Browser Macalpine regions editor chip is **v1.7.10**, Driveway **18** (testing mode from original). Paint-over-stacked-scraps is for Jonah to confirm.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-11 — Draw joins nearby same-class instead of a second island
+
+**What.** Review page **v1.7.9**: paint within `JOIN_NEAR_M` (4 m) of the picked same-class region grows it. Join reach no longer shrinks to ~2 m when zoomed in. Same-class scraps that close to the result are absorbed. A new region is only created when the stroke is isolated.
+
+**Why.** Jonah on Macalpine v1.7.8: picked Driveway, painted the dirt path next to it, got `New Driveway region · Driveway 2` — a second pink island instead of one driveway.
+
+**Files.** `nearmap-review.html` (v1.7.9), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script; getElementById ids all present (35). `JOIN_NEAR_M = 4` and `featureNearFeature` present. Browser join-on-Macalpine dirt path **not** re-painted this pass (Jonah’s screenshot is live v1.7.8).
+
+**Status.** Local; Pages after push.
+
 ## 2026-09-11 — Region brush pick: no 10 m snap, grow the new region
 
 **What.** Review page **v1.7.8** Draw pick and paint:
