@@ -2,6 +2,50 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-14 — Review satellite background (v1.7.18)
+
+**What.** Review page **v1.7.18**: `mapTypeId` is Google `satellite` again (`tilt: 0`, no map-type dropdown). The v1.7.17 empty MapType is removed so tiles show around the opaque nadir JPEG. Parallel boot, cacheable original, skipped geometry library, and chunked layer draw stay.
+
+**Why.** Jonah: the Google Maps background still needs to display around the Nearmap still.
+
+**Files.** `nearmap-review.html` (v1.7.18), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on extracted review script (braces 987/987). getElementById literals match ids. No `EmptyMapType`. Browser localhost Macalpine `?mode=regions` chip **v1.7.18**: 35 `maps/vt` satellite tiles around the nadir JPEG; overlay `vert.jpg` still on; Maps URL has no `libraries=geometry`.
+
+**Status.** Local; Pages after push.
+
+## 2026-09-14 — Ahartsi remaining five on tiles + registry
+
+**What.** Normalized the five Ahartsi API properties that were not already on CloudFront (Macalpine and Columbia stay as they were). Promoted serving stills + regions + lot-clip products to `property-intel-tiles`. Merged all five into `reference/nearmap.json` (registry now has 7 deliveries). Amber Meadow MapBrowser mesh (zip labeled **19530**) converted to Draco GLB on the **19570** serve prefix — mesh origin matches the 19570 API nadir centre. Archived `Ahartsi.zip` to ingest `nearmap/ahartsi-2026-09-07/raw/` and each canonical tree under `nearmap/{delivery}/canonical/`. Did not write GitHub `data/`. Did not add `NEARMAP_DELIVERY_HUB` rows (no existing index hubs). `site_no` left null.
+
+| Address | delivery_id | taxlot | hints | 3D |
+|---|---|---|---|---|
+| 19570 Amber Meadow Dr, Bend | `19570-amber-meadow-dr-bend-or-97702` | 181113DD00200 | 466 | 3.3 MB GLB |
+| 694 SE 3rd St, Bend | `694-se-3rd-st-bend-or-97702` | 181204CB00300 | 218 | no |
+| 56625 Nest Pine Dr, Sunriver | `56625-nest-pine-dr-sunriver-or-97707` | 201108B003200 | 126 | no |
+| 20853 SE Tamar Ln, Bend | `20853-se-tamar-ln-bend-or-97702` | 181215BB08700 | 43 | no |
+| 338 SW 6th St, Redmond | `338-sw-6th-street-redmond-or-97756` | 151316AA08901 | 13 | no (tiny AOI) |
+
+**Why.** Jonah: add the other five Ahartsi properties to the Nearmap sheet, including AWS if the zip is present.
+
+**Files.** Operator AWS only (`tmp/` gitignored). Docs: `docs/NEARMAP_RUNBOOK.md`, `docs/NEARMAP_CONTRACT.md`, this changelog. No Apps Script / viewer / `data/` edits.
+
+**How it was checked.** `s3.head_object` on each `vert.jpg` and Amber `mesh/model.glb` (3,327,872 bytes). Live CloudFront `reference/nearmap.json` lists 7 deliveries (updated 2026-09-14T16:48:54Z). Lot-clip wrote taxlots from local `data/parcels`. Mesh origin lat/lng equals the 19570 VRT centre. Sheet Import was **not** run from this machine (Apps Script menu). `NEARMAP_DELIVERY_HUB` still Macalpine → Jones and Columbia only.
+
+**Status.** Tiles + ingest + registry live. Jonah: **Import from CloudFront registry**, then fill Site No by hand.
+
+## 2026-09-11 — Faster Nearmap viewer open (v1.1.14)
+
+**What.** Product viewer **v1.1.14**: Maps JS, `manifest.json`, and `vert.jpg` start together. Apps Script `nearmap-elements` runs in the background (not a 3-retry gate before first paint). Empty MapType under the opaque nadir (no Google satellite tiles). Open only draws checked classes (~dozens, not 1,500 vegetation polygons); checking a class adds it in rAF chunks of 80. `ai/original/regions.json` and `manifest.json` are cacheable; edits stay no-store. Parcel GeoJSON fetch no longer uses `cache: 'no-store'`.
+
+**Why.** Jonah: the Nearmap viewer took about 30 seconds to open. The old boot waited on Apps Script, then cache-busted regions, then `addGeoJson` of every clipped feature (1,534 on Macalpine, most hidden), plus a 4.7 MB parcel tile.
+
+**Files.** `nearmap-viewer.html` (v1.1.14), `js/vyanet-viewer/nearmap-lot.js`, `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`.
+
+**How it was checked.** `node --check` on the extracted viewer module (braces 329/329). `$()` / getElementById literals match ids. No `loadRowWithRetry`, no `mapTypeId: 'satellite'`. Browser localhost Macalpine `?full=1&delivery=` chip **v1.1.14**: Maps JS, `vert.jpg`, `manifest.json` (no `?_=`), and Apps Script all start at 20 ms. GroundOverlay on the map by ~220 ms (document load 222 ms; JPEG warm-cache). Zero `maps/vt` satellite tiles; 35 empty `#111318` tiles. Parcel GeoJSON starts at 227 ms (does not wait on Apps Script’s 2.6 s). Edits still `?_=`. Driveway / Building / Lawn paint on; vegetation off; clip + lot line on.
+
+**Status.** Local; Pages after push.
+
 ## 2026-09-11 — Faster review open (v1.7.17)
 
 **What.** Review page **v1.7.17**: Maps JS starts immediately (no `libraries=geometry`; `distM` is always the local haversine). `manifest.json`, `ai/original/regions.json`, and `vert.jpg` prefetch in parallel. Original is not cache-busted; a fresh testing open does not fetch edits. Regions mode skips the pin catalog and `hints.json`. Empty MapType under the opaque nadir (no Google satellite tiles). Checking a layer builds polygons/hints in rAF chunks of 80; hint markers use `optimized: true`.

@@ -93,7 +93,7 @@ CloudFront-only (no GitHub yet):
 
 `https://responder-intel.vyanet.com/nearmap-review.html?delivery=18775-macalpine-loop-bend-or-97702`
 
-Local (v1.7.17):
+Local (v1.7.18):
 
 `python tools/nearmap/review_server.py 8899` then  
 `http://127.0.0.1:8899/nearmap-review.html?delivery=18775-macalpine-loop-bend-or-97702`
@@ -104,7 +104,7 @@ Use `review_server.py` (not `python -m http.server`) so Draw can PUT local `ai/e
 
 ### Two editors (v1.5.0)
 
-**Property Intel → Nearmap Pipeline → Open Nearmap Regions Editor (This Row)** opens `?mode=regions` (v1.7.17): merge/erase vendor regions. Draw: click a painted region and drag to grow it, or drag on dirt to paint the armed / name-clicked class. Layer checkboxes only show/hide overlays — they do not steal the brush. A click without a drag only picks. Hover does not paint. The brush cursor stays after a pick. Grow unions the filled brush into the region (`featureById` is `{ feature, index }` — do not add a second raw-Feature helper). Pan with the Pan tool. Overlapping same-class scraps are meshed into one outline (not stacked fills). Open is parallel (Maps + original regions + vert.jpg); original is cacheable. Revert regions → original, Save publishes the regions diff. Pins are not shown and not touched.
+**Property Intel → Nearmap Pipeline → Open Nearmap Regions Editor (This Row)** opens `?mode=regions` (v1.7.18): merge/erase vendor regions. Google satellite shows around the nadir JPEG. Draw: click a painted region and drag to grow it, or drag on dirt to paint the armed / name-clicked class. Layer checkboxes only show/hide overlays — they do not steal the brush. A click without a drag only picks. Hover does not paint. The brush cursor stays after a pick. Grow unions the filled brush into the region (`featureById` is `{ feature, index }` — do not add a second raw-Feature helper). Pan with the Pan tool. Overlapping same-class scraps are meshed into one outline (not stacked fills). Open is parallel (Maps + original regions + vert.jpg); original is cacheable. Revert regions → original, Save publishes the regions diff. Pins are not shown and not touched.
 
 **… → Open Nearmap Pins Editor (This Row)** opens `?mode=pins` (v1.7.7): the finished regions are read-only. Header, map, and top-left tools stay put; only the right rail scrolls. **Auto Generate Pins** (runs on a fresh/testing open) places one pin per `regions.json` feature at its interior point, named after that class — not a catalog entry. Skipped (no auto pin): asphalt, building (deprecated), concrete slab, driveway, low / medium-high / very-low / woody vegetation, natural, roof, translucent roofing, water body. A class checkbox shows that class's polygons **and** pins together; **None** hides both. **Place pin**: turn on a skipped layer (Driveway, Water Body, …), click a painted region that has no pin — pin goes at the interior point. **Delete pin**: click a painted region that has a pin, or the pin itself; the region stays. Clicks on empty map do not place or delete. List **Delete** removes one pin without touching regions; Save writes packed pins to column R. Do regions first, then pins.
 
@@ -132,7 +132,7 @@ After sync: column U is the product viewer `nearmap-viewer.html?full=1&site_no=�
 
 ### 5b. Viewer (`nearmap-viewer.html`)
 
-**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`, which **redirects** into `vyanet-viewer.html?property={hub}&delivery=…&stage=home` for trial deliveries in `NEARMAP_DELIVERY_HUB` (Macalpine → Jones). Same gate / HOME / PRIVATE / COMMUNITY as every other property. Private nested **Nearmap** **leaves the hub** and opens `nearmap-viewer.html?full=1` (vendor 2D / 3D / Obliques). Right rail (v1.1.12) has four stacked tabs: **AI layers** (lot line, clip, observed facts, class checkboxes), **First Responder**, **Wildfire**, **Pins**. Map markers follow the tab. **Clip to taxlot** (default on, v1.1.8) removes everything outside the property line on 2D (opaque hole-punch, camera stays on the property, off-lot pins hidden); uncheck to see the neighborhood. Observed facts (areas, defensible-space distances) are on the AI layers pane — not GIS Property Facts. `nearmap-elements` loads by `site_no` or `delivery`. Element pins stay region-class names. Top-right **Standard viewer** returns to `vyanet-viewer.html?stage=private`. Private 2D **Cover** shows the same lot-clipped building/drive/veg/pool overlay. Local: `http://localhost:8899/nearmap-viewer.html?full=1&delivery=18775-macalpine-loop-bend-or-97702`. Direct hub: `vyanet-viewer.html?property=6de88883bfd4a8349a901c54611ed9d7&role=tech`. Optional lot JPEG: `python tools/nearmap/lot_clip.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702` then promote. 3D needs `urls.mesh` in the manifest (step 2b + promote). Paste `config.gs` + `nearmap.gs` + `menu.gs` (save, new deployment) for Pass 3 and the menu items.
+**Property Intel → Nearmap Pipeline → Open Nearmap Viewer (This Row)** → `nearmap-viewer.html?site_no=…&delivery=…`, which **redirects** into `vyanet-viewer.html?property={hub}&delivery=…&stage=home` for trial deliveries in `NEARMAP_DELIVERY_HUB` (Macalpine → Jones). Same gate / HOME / PRIVATE / COMMUNITY as every other property. Private nested **Nearmap** **leaves the hub** and opens `nearmap-viewer.html?full=1` (vendor 2D / 3D / Obliques). Right rail (v1.1.12) has four stacked tabs: **AI layers** (lot line, clip, observed facts, class checkboxes), **First Responder**, **Wildfire**, **Pins**. Map markers follow the tab. **Clip to taxlot** (default on, v1.1.8) removes everything outside the property line on 2D (opaque hole-punch, camera stays on the property, off-lot pins hidden); uncheck to see the neighborhood. Observed facts (areas, defensible-space distances) are on the AI layers pane — not GIS Property Facts. Open (v1.1.14) does not wait on `nearmap-elements` when `delivery=` is in the URL — pins/Pass 3 fill in when the row returns. Local: `http://127.0.0.1:8899/nearmap-viewer.html?full=1&delivery=18775-macalpine-loop-bend-or-97702`. Direct hub: `vyanet-viewer.html?property=6de88883bfd4a8349a901c54611ed9d7&role=tech`. Optional lot JPEG: `python tools/nearmap/lot_clip.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702` then promote. 3D needs `urls.mesh` in the manifest (step 2b + promote). Paste `config.gs` + `nearmap.gs` + `menu.gs` (save, new deployment) for Pass 3 and the menu items.
 
 ### 5c. Pass 3 — FR + Wildfire concerns
 
@@ -196,6 +196,42 @@ Optional ingest archive (no token):
 aws s3 sync tmp/nearmap-canonical/410-sw-columbia-st-bend-or-97702/canonical s3://property-intel-ingest/nearmap/410-sw-columbia-st-bend-or-97702/canonical/
 ```
 
+## Ahartsi remaining five (2026-09-14)
+
+Zip on disk: `C:\Users\Jonah Bourgeois\Downloads\Ahartsi.zip` (Windows Explorer `Ahartsi.zip\Ahartsi` is the same archive, not a separate extract). Macalpine was already on tiles; these five were not.
+
+```
+python tools/nearmap/normalize.py --zip "C:\Users\Jonah Bourgeois\Downloads\Ahartsi.zip" --out tmp/nearmap-canonical --serve-out tmp/nearmap-serve
+```
+
+Skip re-promoting Macalpine. Per delivery:
+
+```
+python tools/nearmap/lot_clip.py --serve-dir tmp/nearmap-serve --delivery <delivery_id>
+python tools/nearmap/promote.py --serve-dir tmp/nearmap-serve --delivery <delivery_id>
+aws s3 sync tmp/nearmap-canonical/<delivery_id>/canonical s3://property-intel-ingest/nearmap/<delivery_id>/canonical/
+```
+
+Amber Meadow 3D (zip member `Ahartsi/MapBrowser_3D/19530 AMBER MEADOW DR.zip`) attaches to the **19570** API delivery — mesh origin is the 19570 nadir centre, not a neighboring lot:
+
+```
+python tools/nearmap/mesh_to_glb.py --zip "C:\Users\Jonah Bourgeois\Downloads\Ahartsi.zip" --member "Ahartsi/MapBrowser_3D/19530 AMBER MEADOW DR.zip" --serve-dir tmp/nearmap-serve/19570-amber-meadow-dr-bend-or-97702
+```
+
+Raw zip archive: `s3://property-intel-ingest/nearmap/ahartsi-2026-09-07/raw/Ahartsi.zip`.
+
+Then sheet **Property Intel → Nearmap Pipeline → Import from CloudFront registry**. Leaves Site No blank. Satellite address matches exist for Tamar (Browne Res) and Amber Meadow STE 190 (Austin Mercantile) — copy those site numbers from the Satellite tab only if you confirm they are the same lot. Do not add `NEARMAP_DELIVERY_HUB` until an existing index hub exists (trial still does not write `data/index/`).
+
+Review (CloudFront, no GitHub):
+
+- `nearmap-review.html?delivery=19570-amber-meadow-dr-bend-or-97702`
+- `nearmap-review.html?delivery=694-se-3rd-st-bend-or-97702`
+- `nearmap-review.html?delivery=56625-nest-pine-dr-sunriver-or-97707`
+- `nearmap-review.html?delivery=20853-se-tamar-ln-bend-or-97702`
+- `nearmap-review.html?delivery=338-sw-6th-street-redmond-or-97756` (48×27 m AOI)
+
+Viewer: `nearmap-viewer.html?full=1&delivery=…` (no hub redirect). Amber Meadow has a 3D tab.
+
 ## Later: full API access
 
 Replace steps 1–2 with a job that, given `site_no` + parcel ring from the sheet, calls Transactional Content API + AI Feature API and writes the **same canonical tree**. Then run promote.py (or the same promote code in that job).
@@ -206,7 +242,7 @@ MapBrowser 3D remains optional: inventory under `canonical/mesh/`, never the mod
 
 ## Failure notes
 
-- **Redmond 6th / tiny AOI:** open in MapBrowser before treating as a real sample.
-- **19530 vs 19570 Amber Meadow:** 3D export and API folder disagree — confirm the lot before joining `site_no`.
+- **Redmond 6th / tiny AOI:** still on the registry (`338-sw-6th-street-redmond-or-97756`, 48×27 m). Open in MapBrowser before treating it as a full sample.
+- **19530 vs 19570 Amber Meadow:** MapBrowser zip is labeled 19530; API folder is 19570. Mesh origin matches the 19570 VRT centre, so the GLB is served on the 19570 prefix. Confirm the lot before joining `site_no` (published satellite is STE 190 / Austin Mercantile).
 - **Promote without credentials:** normalize still writes `--serve-out`; skip AWS and review locally.
 - **Apps Script:** editor-clean ≠ deployed (three prior incidents).
