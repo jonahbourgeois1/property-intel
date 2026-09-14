@@ -2,6 +2,42 @@
 
 Newest on top. Format: What / Why / Files / How it was checked / Status.
 
+## 2026-09-14 — Macalpine Fire Risk sidecar on live tiles (v1.1.16)
+
+**What.** Attached `ai/firerisk.json` (Feature API `include=all`: wildfire 4, RSI 97, wind/hail/hurricane, Zone 0/1/2) to live Macalpine `18775-macalpine-loop-bend-or-97702`. Stamped `urls.firerisk` on the live S3 manifest and registry. Did **not** replace stills, mesh, or `ai/edits/regions.json` (Ahartsi 9-pack stays). Other deliveries unchanged. Viewer **v1.1.16** already loads the sidecar on the Wildfire tab. `promote.py --files` / `--url` for sidecar-only uploads.
+
+**Why.** Jonah: this data live alongside the other Nearmap data in the product viewer; one property is enough.
+
+**Files.** `tools/nearmap/promote.py`, `nearmap-viewer.html` (v1.1.16), `js/vyanet-viewer/nearmap-lot.js` (parcel fetch uses the browser cache), `docs/NEARMAP_CONTRACT.md`, `docs/NEARMAP_RUNBOOK.md`, this changelog. Tiles: `nearmap/18775-macalpine-loop-bend-or-97702/ai/firerisk.json` + manifest. Did not write GitHub `data/`.
+
+**How it was checked.** `s3.head_object` on `ai/firerisk.json` and `manifest.json`. Live `urls.firerisk` present. `node --check` on extracted viewer script. Browser: Pages `nearmap-viewer.html?full=1&delivery=18775-macalpine-loop-bend-or-97702` Wildfire tab after push.
+
+**Status.** Tiles + registry. Pages after this commit is on `main`.
+
+## 2026-09-14 — All entitled packs on local Fire Risk viewer (v1.1.16)
+
+**What.** Feature API pull of every pack on the Commercial Geospatial key at Macalpine, plus `include=all` scores. Packed 254 unique polygons (21 classes) and RSI / wind / hail / hurricane / combined wind-hail onto `zz-scratch-macalpine-firerisk`. Viewer **v1.1.16** Wildfire tab shows those scores. `include=damage` 403; NIR/CIR coverage empty at Bend. Did not promote.
+
+**Why.** Jonah: put everything this key can return into the local viewer.
+
+**Files.** `nearmap-viewer.html` (v1.1.16), `tmp/fetch_all_macalpine.py`, `tmp/pack_all_scratch.py`, `docs/NEARMAP_CONTRACT.md`, this changelog.
+
+**How it was checked.** `node --check` on extracted viewer script (braces 366/366). Local 8899. Browser `?full=1&delivery=zz-scratch-macalpine-firerisk`: chip **v1.1.16**, 254 regions, Wildfire card RSI 97, wind 2/5, hail 4/5, hurricane 5 (FEMA n/a), solar/driveway/clay tile on AI layers. Did not promote. NIR/CIR 0 surveys; `include=damage` 403.
+
+**Status.** Local scratch only.
+
+## 2026-09-14 — Local Fire Risk viewer (v1.1.15)
+
+**What.** Product viewer **v1.1.15** loads optional `ai/firerisk.json` (Nearmap `vulnerabilityScore` 1–5, model inputs, Zone 0/1/2 rings). The Wildfire tab shows that card; 2D draws the buffers and scored roof when that pane is selected. Packed Macalpine 2026-07-02 into gitignored `tmp/nearmap-serve/zz-scratch-macalpine-firerisk/` from phase4f Feature API (`wildfire_risk` + `include=wildfireScore,defensibleSpace`). Did not promote. Did not write GitHub `data/`. Did not add a hub join.
+
+**Why.** Commercial Geospatial Fire Risk is now on the API key; Jonah asked for a local viewer of the Macalpine score.
+
+**Files.** `nearmap-viewer.html` (v1.1.15), `tmp/pack_firerisk_scratch.py` (gitignored tree), `docs/NEARMAP_CONTRACT.md`, this changelog.
+
+**How it was checked.** Extracted module script: `node --check` exit 0, braces 359/359, parens 1521/1521, every `$('id')` has a matching `id`. Local `review_server.py 8899`. Browser `?full=1&delivery=zz-scratch-macalpine-firerisk`: chip **v1.1.15**, Wildfire tab selected with score **4**, Zone 0/1/2 on the nadir, status `199 regions · fire score 4 · lot 181102C000600`. AI layers shows wildfire-pack classes (Roof/Building on, veg off). 3D canvas 1580×1016 after mesh 100%. Obliques tab lists N/E/S/W. Did not promote. Apps Script Pass 3 404 is expected (scratch id is not on the sheet).
+
+**Status.** Local scratch only.
+
 ## 2026-09-14 — Review satellite background (v1.7.18)
 
 **What.** Review page **v1.7.18**: `mapTypeId` is Google `satellite` again (`tilt: 0`, no map-type dropdown). The v1.7.17 empty MapType is removed so tiles show around the opaque nadir JPEG. Parallel boot, cacheable original, skipped geometry library, and chunked layer draw stay.

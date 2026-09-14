@@ -188,7 +188,7 @@ export function lotBounds(lotPolys) {
 }
 
 async function fetchGeojson(url) {
-  const res = await fetch(url, { cache: 'no-store' });
+  const res = await fetch(url);
   if (!res.ok) return null;
   return await res.json();
 }

@@ -64,7 +64,15 @@ python tools/nearmap/promote.py --serve-dir tmp/nearmap-serve --delivery 18775-m
 
 `mesh/model.glb` (content type `model/gltf-binary`, 24 h cache) and `mesh/mesh.json` upload with everything else; `ai/edits/regions.json` is seeded from original if absent.
 
-Omitting `--delivery` promotes every folder under `--serve-dir`.
+Omitting `--delivery` promotes every folder under `--serve-dir`. **Do not omit `--delivery` when `tmp/nearmap-serve/` holds scratch folders** (`zz-scratch-*`).
+
+Partial attach (sidecar only — does not replace stills, mesh, original, or reviewer edits). Reads the live S3 manifest, stamps `urls.<name>`, uploads the listed files, merges the registry, invalidates:
+
+```
+python tools/nearmap/promote.py --serve-dir tmp/nearmap-serve --delivery 18775-macalpine-loop-bend-or-97702 --files ai/firerisk.json --url firerisk=ai/firerisk.json
+```
+
+Macalpine Fire Risk (`ai/firerisk.json`) sits **alongside** the existing Ahartsi 9-pack regions. Do not full-promote `zz-scratch-macalpine-firerisk` onto this prefix.
 
 The script:
 

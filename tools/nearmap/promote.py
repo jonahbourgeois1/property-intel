@@ -10,6 +10,12 @@ ai/edits/regions.json (seeded from original here; reviewer Save is Apps Script
 SigV4 PUT to S3). Optional lot-clip products (vert-lot.jpg, vert-lot-p1.jpg,
 lot.json, observed.json) upload if present — generate them with
 tools/nearmap/lot_clip.py before promote.
+
+Partial attach (sidecar only; does not replace stills, mesh, or regions):
+
+  python tools/nearmap/promote.py --serve-dir tmp/nearmap-serve \\
+    --delivery 18775-macalpine-loop-bend-or-97702 \\
+    --files ai/firerisk.json --url firerisk=ai/firerisk.json
 """
 from __future__ import annotations
 
@@ -24,6 +30,7 @@ DIST_ID = "EQJBJ6X237VQF"
 REGION = "us-east-1"
 PREFIX = "nearmap"
 REGISTRY_KEY = "reference/nearmap.json"
+CF_BASE = "https://d3fg47bqswi0rr.cloudfront.net"
 
 
 def content_type(path: Path) -> str:
@@ -46,6 +53,35 @@ def put_and_head(s3, local: Path, key: str) -> None:
     s3.upload_file(str(local), BUCKET, key, ExtraArgs=extra)
     s3.head_object(Bucket=BUCKET, Key=key)
     print(f"  PUT+HEAD s3://{BUCKET}/{key} ({local.stat().st_size} bytes)")
+
+
+def load_s3_json(s3, key: str) -> dict:
+    obj = s3.get_object(Bucket=BUCKET, Key=key)
+    return json.loads(obj["Body"].read().decode("utf-8"))
+
+
+def stamp_urls(manifest: dict, did: str, extra_urls: dict[str, str]) -> dict:
+    urls = dict(manifest.get("urls") or {})
+    for name, rel in extra_urls.items():
+        rel = rel.replace("\\", "/").lstrip("/")
+        urls[name] = f"{CF_BASE}/{PREFIX}/{did}/{rel}"
+        if name == "firerisk":
+            manifest["firerisk"] = True
+    manifest["urls"] = urls
+    return manifest
+
+
+def parse_url_stamps(items: list[str]) -> dict[str, str]:
+    out = {}
+    for raw in items:
+        if "=" not in raw:
+            raise SystemExit(f"--url needs name=relative/path (got {raw!r})")
+        name, rel = raw.split("=", 1)
+        name, rel = name.strip(), rel.strip().replace("\\", "/").lstrip("/")
+        if not name or not rel:
+            raise SystemExit(f"--url needs name=relative/path (got {raw!r})")
+        out[name] = rel
+    return out
 
 
 def load_registry(s3) -> dict:
@@ -134,18 +170,62 @@ def seed_edits(s3, folder: Path, did: str, reset: bool) -> None:
     print("  seeded ai/edits/regions.json from original")
 
 
-def promote_one(s3, cf, folder: Path, reset_edits: bool = False) -> str:
+def promote_one(
+    s3,
+    cf,
+    folder: Path,
+    reset_edits: bool = False,
+    only_files: list[str] | None = None,
+    extra_urls: dict[str, str] | None = None,
+) -> str:
+    extra_urls = extra_urls or {}
     man_path = folder / "manifest.json"
-    if not man_path.is_file():
-        raise SystemExit(f"missing {man_path}")
-    manifest = json.loads(man_path.read_text(encoding="utf-8"))
-    did = manifest["delivery_id"]
-    print(f"Promoting {did}")
-    for p in iter_serve_files(folder):
-        rel = p.relative_to(folder).as_posix()
-        key = f"{PREFIX}/{did}/{rel}"
-        put_and_head(s3, p, key)
-    seed_edits(s3, folder, did, reset_edits)
+    did_guess = folder.name
+    if only_files is not None:
+        # Partial upload must not replace the live manifest with a stale local tree.
+        key = f"{PREFIX}/{did_guess}/manifest.json"
+        try:
+            manifest = load_s3_json(s3, key)
+        except Exception as e:
+            raise SystemExit(f"partial promote needs live s3://{BUCKET}/{key}: {e}") from e
+        did = manifest.get("delivery_id") or did_guess
+        if did != did_guess:
+            raise SystemExit(f"folder {did_guess} != live delivery_id {did}")
+        print(f"Promoting {did} (files only)")
+        stamp_urls(manifest, did, extra_urls)
+        # Do not overwrite a local serve-tree manifest (it may have unpromoted lot-clip URLs).
+        stamped = folder / "_manifest_upload.json"
+        stamped.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        rels = list(only_files)
+        if extra_urls and "manifest.json" not in rels:
+            rels.append("manifest.json")
+        try:
+            for rel in rels:
+                rel = rel.replace("\\", "/").lstrip("/")
+                if rel.startswith("ai/edits/") or "/ai/edits/" in rel:
+                    print(f"  skip local reviewer edits {rel}")
+                    continue
+                p = stamped if rel == "manifest.json" else folder / rel
+                if not p.is_file():
+                    raise SystemExit(f"missing {p}")
+                put_and_head(s3, p, f"{PREFIX}/{did}/{rel}")
+        finally:
+            stamped.unlink(missing_ok=True)
+        # Do not reseed edits on a sidecar attach.
+    else:
+        if not man_path.is_file():
+            raise SystemExit(f"missing {man_path}")
+        manifest = json.loads(man_path.read_text(encoding="utf-8"))
+        did = manifest["delivery_id"]
+        stamp_urls(manifest, did, extra_urls)
+        if extra_urls:
+            man_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        print(f"Promoting {did}")
+        for p in iter_serve_files(folder):
+            rel = p.relative_to(folder).as_posix()
+            key = f"{PREFIX}/{did}/{rel}"
+            put_and_head(s3, p, key)
+        seed_edits(s3, folder, did, reset_edits)
     reg = load_registry(s3)
     merged = merge_delivery(reg, manifest)
     tmp = folder / "_registry_upload.json"
@@ -162,6 +242,19 @@ def main() -> int:
     ap.add_argument("--delivery", default="", help="One delivery_id folder; default = all")
     ap.add_argument("--reset-edits", action="store_true",
                     help="Reseed s3 ai/edits/regions.json from original even if it exists")
+    ap.add_argument(
+        "--files",
+        default="",
+        help="Comma-separated relative paths only (partial promote). Reads live S3 "
+             "manifest, never uploads reviewer edits, never reseeds edits.",
+    )
+    ap.add_argument(
+        "--url",
+        action="append",
+        default=[],
+        help="Stamp urls.<name> on the live manifest (repeatable). Form: name=relative/path "
+             "e.g. firerisk=ai/firerisk.json",
+    )
     args = ap.parse_args()
 
     import boto3
@@ -175,6 +268,13 @@ def main() -> int:
     if not root.is_dir():
         raise SystemExit(f"serve-dir not found: {root}")
 
+    only_files = [p.strip().replace("\\", "/").lstrip("/") for p in args.files.split(",") if p.strip()] or None
+    extra_urls = parse_url_stamps(args.url)
+    if only_files is not None and not args.delivery:
+        raise SystemExit("--files requires --delivery")
+    if extra_urls and not args.delivery:
+        raise SystemExit("--url requires --delivery")
+
     if args.delivery:
         folders = [root / args.delivery]
         if not folders[0].is_dir():
@@ -185,7 +285,12 @@ def main() -> int:
             raise SystemExit(f"no delivery folders with manifest.json under {root}")
 
     for folder in folders:
-        promote_one(s3, cf, folder, reset_edits=args.reset_edits)
+        promote_one(
+            s3, cf, folder,
+            reset_edits=args.reset_edits,
+            only_files=only_files,
+            extra_urls=extra_urls,
+        )
     print("Done.")
     return 0
 

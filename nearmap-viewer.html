@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
 <!--
-  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.12, 2026-09-10)
+  nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.16, 2026-09-14)
   Standalone ?delivery= on a known trial property redirects into vyanet-viewer
     (same HOME / PRIVATE / COMMUNITY). Private → Nearmap opens this page full-bleed
     (?full=1) with Standard viewer (top right) back to the hub. embed=1 is unused
@@ -16,6 +16,9 @@
     four stacked tabs: AI layers, First Responder, Wildfire, Pins.
     Lot line and Clip to taxlot are 2D-only (hidden on the 3D tab).
     Pass 3 FR/WF concern pins (catalog ids) and considerations live on this page.
+    Optional ai/firerisk.json (Betterview wildfireScore, RSI, wind/hail/hurricane,
+    Zone 0/1/2) paints the Wildfire tab and 2D overlays. Present on Macalpine;
+    other deliveries omit the file and the extra scores stay hidden.
 -->
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -112,6 +115,19 @@
   .rd-name { font-size: 12px; font-weight: 600; color: #f0f2f5; line-height: 1.35; }
   .rd-meta { font-size: 10px; color: #555f6e; margin-top: 4px; line-height: 1.45; }
   .rd-body { padding: 0 14px 14px; }
+  .nm-fire { margin: 0 0 12px; padding: 12px; border: 1px solid rgba(245,158,11,0.45); border-radius: 10px; background: rgba(245,158,11,0.08); }
+  .nm-fire-kicker { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: #f59e0b; margin-bottom: 8px; }
+  .nm-fire-score { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+  .nm-fire-n { font-size: 36px; font-weight: 700; line-height: 1; color: #f0f2f5; }
+  .nm-fire-n.s1 { color: #ef4444; } .nm-fire-n.s2 { color: #f97316; } .nm-fire-n.s3 { color: #f59e0b; }
+  .nm-fire-n.s4 { color: #84cc16; } .nm-fire-n.s5 { color: #22c55e; }
+  .nm-fire-label { font-size: 12px; color: #c9d1dc; line-height: 1.35; }
+  .nm-fire-note { font-size: 10px; color: #555f6e; margin-top: 2px; }
+  .nm-fire-row { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: #c9d1dc; padding: 2px 0; }
+  .nm-fire-row span:last-child { color: #f0f2f5; text-align: right; }
+  .nm-fire-zone { margin-top: 8px; padding-top: 8px; border-top: 1px solid #2a3040; }
+  .nm-fire-zone h4 { font-size: 11px; color: #f59e0b; font-weight: 600; margin-bottom: 4px; }
+  .nm-fire-sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
   @media (max-width: 760px) {
     :root { --panel-w: 0px; }
     #panel { display: none; }
@@ -172,22 +188,29 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-import { dataRoot, NEARMAP_DELIVERY_HUB } from './js/vyanet-viewer/property.js?v=1.8.17';
+import { dataRoot, NEARMAP_DELIVERY_HUB } from './js/vyanet-viewer/property.js?v=1.8.22';
 import {
   loadTaxlot, displayFeatures, observedFacts, factsHtml,
   mapsPathsFromLot, mapsMaskPaths, lotContainsLngLat
-} from './js/vyanet-viewer/nearmap-lot.js?v=1.1.4a';
-const BUILD = 'v1.1.13';
+} from './js/vyanet-viewer/nearmap-lot.js?v=1.1.5';
+const BUILD = 'v1.1.16';
 const NM_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 const MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 const CF_TILES = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
 const THREE_JSM = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const DRACO_PATH = 'https://www.gstatic.com/draco/versioned/decoders/1.5.6/';
 const VEGETATION_RE = /vegetation|tree overhang|natural/i;
+const FIRE_ZONE_STYLE = {
+  0: { fill: '#ef4444', stroke: '#ef4444', opacity: 0.22 },
+  1: { fill: '#f59e0b', stroke: '#d97706', opacity: 0.16 },
+  2: { fill: '#eab308', stroke: '#ca8a04', opacity: 0.10 }
+};
+const FIRE_SCORE_COLOR = { 1: '#ef4444', 2: '#f97316', 3: '#f59e0b', 4: '#84cc16', 5: '#22c55e' };
 
 document.getElementById('build').textContent = 'nearmap ' + BUILD;
 
 const qp = new URLSearchParams(location.search);
+const RAIL_FROM_URL = !!(qp.get('rail') || qp.get('panel'));
 function parseRail(raw) {
   const v = String(raw || '').toLowerCase().trim();
   if (v === 'fr' || v === 'responder' || v === 'security') return 'fr';
@@ -228,9 +251,13 @@ const state = {
   rail: parseRail(qp.get('rail') || qp.get('panel')),
   lot: null, lotClip: true, displayFeats: [], facts: null,
   vertLotUrl: '', lotCropBounds: null, observedUrl: '',
+  fireriskUrl: '', firerisk: null,
   openCam: null
 };
 let map = null, mapReady = false, groundOverlay = null;
+let mapsBooted = false;
+let drawGen = 0;
+const DRAW_CHUNK = 80;
 let dataLayer = null;
 let markers2d = [];
 let concernMarkers2d = [];
@@ -238,6 +265,7 @@ let lastPinView = '';
 let pinDrawTimer = 0;
 let three = null;      // { renderer, scene, camera, controls, mesh, groups: {cls: Group}, pinGroup, heightmap }
 let parcelPoly = null, parcelShown = true, lotMask = null;
+let fireLayer = null;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
@@ -250,7 +278,21 @@ async function fetchJson(url, opt) {
   if (!r.ok) throw new Error(r.status + ' ' + url);
   return r.json();
 }
-async function fetchJsonOptional(url) { try { return await fetchJson(bust(url), { cache: 'no-store' }); } catch (e) { return null; } }
+async function fetchCached(url) {
+  if (!url) return null;
+  try { return await fetchJson(url); } catch (e) { return null; }
+}
+async function fetchNoStore(url) {
+  if (!url) return null;
+  try { return await fetchJson(bust(url), { cache: 'no-store' }); } catch (e) { return null; }
+}
+async function fetchJsonOptional(url) { return fetchNoStore(url); }
+function preloadVertJpg(url) {
+  if (!url) return;
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = url;
+}
 function featureClass(f) { return (f && f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown'; }
 function featureRings(f) {
   const g = (f && f.geometry) || {};
@@ -263,7 +305,9 @@ function colorForClass(name) {
     Building: '#e85d04', 'Building (Deprecated)': '#9d0208', Roof: '#dc2f02', 'Translucent Roofing': '#f48c06',
     Driveway: '#f72585', Asphalt: '#495057', 'Road (Driveable Surface)': '#343a40', 'Concrete Slab': '#adb5bd',
     'Solar Panel': '#3a86ff', 'Swimming Pool': '#4cc9f0', 'Water Body': '#0077b6', 'Residential Chimney': '#7b2cbf',
-    Skylight: '#ffd166', 'Woody Vegetation': '#2d6a4f', 'Medium and High Vegetation (>2m)': '#40916c',
+    Skylight: '#ffd166', Tile: '#b45309', 'Clay Tile': '#c2410c', Gable: '#9a3412',
+    'Building lifecycle': '#7c2d12',
+    'Woody Vegetation': '#2d6a4f', 'Medium and High Vegetation (>2m)': '#40916c',
     'Medium and High Vegetation with Woody Vegetation': '#1b4332', 'Low Vegetation (0.5m-2m)': '#74c69d',
     'Very Low Vegetation (<0.5m)': '#95d5b2', 'Lawn Grass': '#52b788', 'Natural (soft)': '#b7e4c7',
     Car: '#4cc9f0', Dumpster: '#9d4edd', 'Tree Overhang': '#2d6a4f', 'Leaf-off Vegetation': '#95d5b2'
@@ -374,7 +418,7 @@ async function loadRow() {
   let u = NM_API_URL + '?route=nearmap-elements&_=' + Date.now();
   if (siteNo) u += '&site_no=' + encodeURIComponent(siteNo);
   if (delivery) u += '&delivery=' + encodeURIComponent(delivery);
-  const r = await fetch(u, { redirect: 'follow' });
+  const r = await fetch(u, { redirect: 'follow', cache: 'no-store' });
   const t = await r.text();
   if (t.trim().charAt(0) === '<') throw new Error('Apps Script returned a web page instead of JSON (transient) — reload');
   const row = JSON.parse(t);
@@ -392,24 +436,19 @@ async function loadRow() {
   if (row.delivery_id && !delivery) delivery = String(row.delivery_id);
   return row;
 }
-async function loadRowWithRetry() {
-  let last = null;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const row = await loadRow();
-      state.concernsError = '';
-      return row;
-    } catch (e) {
-      last = e;
-      state.concernsError = String(e.message || e);
-      if (attempt < 2) await new Promise((r) => setTimeout(r, 900 * (attempt + 1)));
-    }
+async function loadRowOnce() {
+  try {
+    const row = await loadRow();
+    state.concernsError = '';
+    return row;
+  } catch (e) {
+    state.concernsError = String(e.message || e);
+    return null;
   }
-  throw last;
 }
 async function loadManifest() {
   if (!delivery) return null;
-  const man = await fetchJsonOptional(joinUrl(tilesBase, delivery + '/manifest.json'));
+  const man = await fetchCached(joinUrl(tilesBase, delivery + '/manifest.json'));
   if (!man) return null;
   state.manifest = man;
   if (!state.address) state.address = man.address || '';
@@ -428,14 +467,15 @@ async function loadManifest() {
     state.lotCropBounds = man.bounds_lot;
   }
   if (urls.observed || local) state.observedUrl = pick('observed', 'observed.json');
+  if (urls.firerisk || local) state.fireriskUrl = pick('firerisk', 'ai/firerisk.json');
   if (!state.regionsEditsUrl) state.regionsEditsUrl = joinUrl(tilesBase, delivery + '/ai/edits/regions.json');
   if (!state.regionsOriginalUrl) state.regionsOriginalUrl = joinUrl(tilesBase, delivery + '/ai/original/regions.json');
   return man;
 }
 async function loadRegions() {
-  let fc = await fetchJsonOptional(state.regionsEditsUrl);
+  let fc = await fetchNoStore(state.regionsEditsUrl);
   let src = 'edits';
-  if (!fc || !Array.isArray(fc.features)) { fc = await fetchJsonOptional(state.regionsOriginalUrl); src = 'original'; }
+  if (!fc || !Array.isArray(fc.features)) { fc = await fetchCached(state.regionsOriginalUrl); src = 'original'; }
   if (!fc || !Array.isArray(fc.features)) { state.regions = { features: [] }; return false; }
   const sig = (fc.saved || '') + ':' + fc.features.length;
   const changed = sig !== state.regionsSig;
@@ -453,6 +493,31 @@ async function loadRegions() {
   });
   applyLotFilter();
   return changed;
+}
+async function loadFirerisk() {
+  if (!state.fireriskUrl) return null;
+  const doc = await fetchCached(state.fireriskUrl);
+  if (!doc || !Array.isArray(doc.buildings) || !doc.buildings.length) return null;
+  state.firerisk = doc;
+  if (!RAIL_FROM_URL) state.rail = 'wf';
+  return doc;
+}
+function firePrimary() {
+  const list = (state.firerisk && state.firerisk.buildings) || [];
+  return list[0] || null;
+}
+function fireScoreN(b) {
+  const n = b && b.score && b.score.vulnerabilityScore;
+  return Number.isFinite(Number(n)) ? Number(n) : null;
+}
+function pct1(n) {
+  if (n == null || !isFinite(Number(n))) return '—';
+  return Math.round(Number(n) * 100) + '%';
+}
+function fmtNum(n, digits) {
+  if (n == null || !isFinite(Number(n))) return '—';
+  const x = Number(n);
+  return digits == null ? String(x) : x.toFixed(digits);
 }
 function applyLotFilter() {
   const clip = !!(state.lotClip && state.lot && state.lot.polys);
@@ -547,6 +612,86 @@ function renderPanel() {
   });
   renderConcernsPanel();
 }
+function fireCardHtml() {
+  const b = firePrimary();
+  if (!b) return '';
+  const n = fireScoreN(b);
+  const score = b.score || {};
+  const mi = b.modelInputFeatures || {};
+  const cls = n != null ? ' s' + n : '';
+  const words = n == null ? 'No discrete score' : (n <= 2 ? 'More exposed' : n === 3 ? 'Moderate' : 'Better protected');
+  const rsi = b.roofSpotlightIndex || {};
+  let html = '<div class="nm-fire">';
+  html += '<div class="nm-fire-kicker">Nearmap Property Insights · ' +
+    escHtml((state.firerisk && state.firerisk.survey_date) || '') + '</div>';
+  html += '<div class="nm-fire-score"><div class="nm-fire-n' + cls + '">' +
+    (n == null ? '—' : n) + '</div><div><div class="nm-fire-label">Wildfire ' + words +
+    '</div><div class="nm-fire-note">1 = most vulnerable · 5 = least</div></div></div>';
+  const rows = [
+    ['Wildfire probability', score.vulnerabilityProbability == null ? '—' : Number(score.vulnerabilityProbability).toFixed(3)],
+    ['Wildfire rate factor', fmtNum(score.vulnerabilityRateFactor, 2)],
+    ['FEMA wildfire frequency', femaFreq(score.femaAnnualWildfireFrequency)],
+    ['Roof Spotlight Index', rsi.value == null ? '—' : (rsi.value + (rsi.confidence != null ? ' · conf ' + Number(rsi.confidence).toFixed(2) : ''))],
+    ['Hurricane vuln / rate', perilPair(b.hurricaneScore)],
+    ['Hurricane FEMA freq', femaFreq(b.hurricaneScore && b.hurricaneScore.femaAnnualHurricaneFrequency)],
+    ['Wind vuln / risk / rate', perilTriple(b.windScore)],
+    ['Hail vuln / risk / rate', perilTriple(b.hailScore)],
+    ['Combined wind+hail risk', b.windHailRiskScore && b.windHailRiskScore.riskScore != null
+      ? (b.windHailRiskScore.riskScore + ' · rate ' + fmtNum(b.windHailRiskScore.riskRateFactor, 2))
+      : '—'],
+    ['Fire-resistant roof', mi.fireResistantMaterialPresent ? 'Yes' : 'No'],
+    ['Tree overhang / roof debris', pct1(mi.treeOverhangRatio) + ' / ' + pct1(mi.roofDebrisRatio)],
+    ['Indefensible space (weighted)', pct1(mi.indefensibleSpaceWeightedAverage)]
+  ];
+  (b.roofFacts || []).forEach(function (grp) {
+    const bits = (grp.components || []).filter(function (c) { return c.dominant || (c.area_sqm || 0) > 0; })
+      .map(function (c) { return (c['class'] || '') + (c.ratio ? ' ' + Math.round(c.ratio * 100) + '%' : ''); });
+    if (bits.length) rows.push([grp.group || 'Roof fact', bits.join(', ')]);
+  });
+  rows.forEach((row) => {
+    html += '<div class="nm-fire-row"><span>' + escHtml(row[0]) + '</span><span>' + escHtml(row[1]) + '</span></div>';
+  });
+  (b.zones || []).forEach((z) => {
+    const st = FIRE_ZONE_STYLE[z.zoneId] || FIRE_ZONE_STYLE[0];
+    html += '<div class="nm-fire-zone"><h4><span class="nm-fire-sw" style="background:' + st.fill +
+      '"></span>Zone ' + escHtml(String(z.zoneId)) + ' · ' + escHtml(z.label || '') + '</h4>';
+    html += '<div class="nm-fire-row"><span>Defensible cover</span><span>' + pct1(z.defensibleSpaceCoverageRatio) + '</span></div>';
+    html += '<div class="nm-fire-row"><span>Risk objects</span><span>' + pct1(z.totalRiskObjectCoverageRatio) + '</span></div>';
+    (z.riskObjects || []).forEach((o) => {
+      html += '<div class="nm-fire-row"><span>' + escHtml(o['class'] || 'object') +
+        '</span><span>' + (o.area_sqm == null ? '—' : Math.round(o.area_sqm) + ' m²') + '</span></div>';
+    });
+    html += '</div>';
+  });
+  const denied = ((state.firerisk && state.firerisk.denied) || []).join(', ');
+  const miss = ((state.firerisk && state.firerisk.unavailable) || []).join(', ');
+  html += '<div class="nm-obs-note">Feature API include=all at this taxlot. Zone rings stay on this tab (buffers extend past the lot).';
+  if (denied) html += ' Denied: ' + escHtml(denied) + '.';
+  if (miss) html += ' No coverage: ' + escHtml(miss) + '.';
+  html += ' Pass 3 Bedrock concerns are separate.</div>';
+  html += '</div>';
+  return html;
+}
+function femaFreq(n) {
+  if (n == null || !isFinite(Number(n))) return '—';
+  const x = Number(n);
+  if (x < 0) return 'n/a here';
+  return x.toExponential(2);
+}
+function perilPair(s) {
+  if (!s) return '—';
+  const v = s.vulnerabilityScore;
+  const r = s.vulnerabilityRateFactor;
+  if (v == null && r == null) return '—';
+  return (v == null ? '—' : v) + ' · rate ' + fmtNum(r, 2);
+}
+function perilTriple(s) {
+  if (!s) return '—';
+  const v = s.vulnerabilityScore;
+  const risk = s.riskScore;
+  const r = s.vulnerabilityRateFactor;
+  return (v == null ? '—' : v) + ' / ' + (risk == null ? '—' : risk) + ' · rate ' + fmtNum(r, 2);
+}
 function renderConcernsPanel() {
   renderHalfPane('fr');
   renderHalfPane('wf');
@@ -560,9 +705,14 @@ function renderHalfPane(kind) {
   const block = (isWf ? state.wildfire : state.fr) || {};
   const pins = (block.concerns || []).map((p, i) => Object.assign({}, p, { kind: kind, idx: i }));
   const shown = pins.filter(pinOnLot);
-  if (countEl) countEl.textContent = shown.length ? String(shown.length) : '';
+  const scoreN = isWf ? fireScoreN(firePrimary()) : null;
+  if (countEl) {
+    if (isWf && scoreN != null) countEl.textContent = String(scoreN);
+    else countEl.textContent = shown.length ? String(shown.length) : '';
+  }
+  let html = '';
+  if (isWf) html += fireCardHtml();
   if (concernBlockHas(block)) {
-    let html = '';
     if (block.considerations) {
       html += '<div class="rec-block"><div class="rec-label ' + kind + '">' +
         (isWf ? 'Wildfire considerations' : 'Responder considerations') +
@@ -574,9 +724,11 @@ function renderHalfPane(kind) {
         '</div><div class="rec-text">' + escHtml(block.recommendations) + '</div></div>';
     }
     host.innerHTML = html;
-  } else if (state.concernsError) {
+  } else if (state.concernsError && !html) {
     host.innerHTML = '<p class="nm-empty">Could not load Pass 3 from the sheet: ' +
       escHtml(state.concernsError) + ' — hard-refresh this page.</p>';
+  } else if (html) {
+    host.innerHTML = html;
   } else {
     host.innerHTML = '<p class="nm-empty">No Pass 3 ' + (isWf ? 'wildfire' : 'first-responder') +
       ' concerns yet. After pin QA, tick Elements Reviewed, run Generate Pass 3, then hard-refresh this page.</p>';
@@ -595,6 +747,8 @@ function renderHalfPane(kind) {
   });
 }
 function applyLayers() {
+  draw2dRegions();
+  drawFireOverlays();
   styleDataLayer();
   if ((state.pins || []).length > 80) draw2dPins();
   else markers2d.forEach((m) => {
@@ -621,7 +775,7 @@ function applyLayers() {
 
 async function propertyLatLng() {
   if (propertyId) {
-    const idx = await fetchJsonOptional(dataRoot() + 'index/' + propertyId + '.json');
+    const idx = await fetchCached(dataRoot() + 'index/' + propertyId + '.json');
     if (idx && isFinite(Number(idx.lat)) && isFinite(Number(idx.lng))) {
       return { lat: Number(idx.lat), lng: Number(idx.lng) };
     }
@@ -722,11 +876,15 @@ async function loadParcelOverlay() {
 
 // ── 2D (Google Maps) ─────────────────────────────────────────────────────────
 function bootMaps() {
+  if (mapsBooted) {
+    return Promise.resolve();
+  }
+  mapsBooted = true;
   return new Promise((resolve, reject) => {
     if (window.google && google.maps && google.maps.Map) return resolve();
     window.nmViewerMapsReady = () => resolve();
     const s = document.createElement('script');
-    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + MAPS_KEY + '&callback=nmViewerMapsReady&v=weekly';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + MAPS_KEY + '&callback=nmViewerMapsReady';
     s.async = true;
     s.onerror = () => reject(new Error('Maps JS failed to load'));
     document.head.appendChild(s);
@@ -734,11 +892,29 @@ function bootMaps() {
 }
 function init2d() {
   const b = overlayBounds() || state.bounds;
+  const center = { lat: (b.north + b.south) / 2, lng: (b.east + b.west) / 2 };
+  function EmptyMapType() {}
+  EmptyMapType.prototype.tileSize = new google.maps.Size(256, 256);
+  EmptyMapType.prototype.maxZoom = 22;
+  EmptyMapType.prototype.minZoom = 14;
+  EmptyMapType.prototype.name = 'empty';
+  EmptyMapType.prototype.getTile = function (_coord, _zoom, ownerDocument) {
+    const div = ownerDocument.createElement('div');
+    div.style.width = '256px';
+    div.style.height = '256px';
+    div.style.background = '#111318';
+    return div;
+  };
   map = new google.maps.Map($('map2d'), {
-    center: { lat: (b.north + b.south) / 2, lng: (b.east + b.west) / 2 }, zoom: 19,
-    mapTypeId: 'satellite', tilt: 0, rotateControl: false, streetViewControl: false,
-    gestureHandling: 'greedy', backgroundColor: '#111318'
+    center: center, zoom: 19,
+    backgroundColor: '#111318',
+    tilt: 0, rotateControl: false, streetViewControl: false,
+    mapTypeControl: false, fullscreenControl: true,
+    gestureHandling: 'greedy',
+    mapTypeId: 'empty'
   });
+  map.mapTypes.set('empty', new EmptyMapType());
+  map.setMapTypeId('empty');
   const ou = overlayUrl();
   const ob = overlayBounds();
   if (ou && ob) {
@@ -773,17 +949,82 @@ function styleDataLayer() {
     };
   });
 }
+function layerVisible(cls) {
+  if (state.layerOn[cls] === undefined) return !VEGETATION_RE.test(cls) || cls === 'Lawn Grass';
+  return !!state.layerOn[cls];
+}
+function visibleFeats(feats) {
+  return (feats || []).filter((f) => layerVisible(featureClass(f)));
+}
 function draw2dRegions() {
+  const gen = ++drawGen;
   if (dataLayer) { dataLayer.setMap(null); dataLayer = null; }
   const feats = state.displayFeats.length || (state.lotClip && state.lot)
     ? state.displayFeats
     : ((state.regions && state.regions.features) || []);
   if (!map || !feats.length) return;
+  const shown = visibleFeats(feats);
+  if (!shown.length) return;
   dataLayer = new google.maps.Data({ map: map });
-  try {
-    dataLayer.addGeoJson({ type: 'FeatureCollection', features: feats });
-  } catch (e) { /* skip malformed vendor scraps */ }
-  styleDataLayer();
+  let n = 0;
+  function step() {
+    if (gen !== drawGen || !dataLayer) return;
+    const slice = shown.slice(n, n + DRAW_CHUNK);
+    n += slice.length;
+    try { dataLayer.addGeoJson({ type: 'FeatureCollection', features: slice }); }
+    catch (e) { /* skip malformed vendor scraps */ }
+    styleDataLayer();
+    if (n < shown.length) requestAnimationFrame(step);
+  }
+  step();
+}
+function drawFireOverlays() {
+  if (fireLayer) { fireLayer.setMap(null); fireLayer = null; }
+  if (!map || state.rail !== 'wf' || !state.firerisk) return;
+  const feats = [];
+  (state.firerisk.buildings || []).forEach((b) => {
+    (b.zones || []).forEach((z) => {
+      if (!z.geometry) return;
+      feats.push({
+        type: 'Feature',
+        properties: { kind: 'zone', zoneId: z.zoneId, label: z.label || ('Zone ' + z.zoneId) },
+        geometry: z.geometry
+      });
+    });
+    if (b.geometry) {
+      feats.push({
+        type: 'Feature',
+        properties: {
+          kind: 'roof',
+          score: fireScoreN(b),
+          label: (b['class'] || 'Roof') + (fireScoreN(b) != null ? ' · score ' + fireScoreN(b) : '')
+        },
+        geometry: b.geometry
+      });
+    }
+  });
+  if (!feats.length) return;
+  fireLayer = new google.maps.Data({ map: map });
+  fireLayer.addGeoJson({ type: 'FeatureCollection', features: feats });
+  fireLayer.setStyle((feat) => {
+    const kind = feat.getProperty('kind');
+    if (kind === 'roof') {
+      const n = Number(feat.getProperty('score'));
+      const color = FIRE_SCORE_COLOR[n] || '#f0f2f5';
+      return {
+        visible: true, clickable: true, zIndex: 8,
+        fillColor: color, fillOpacity: 0.45,
+        strokeColor: color, strokeOpacity: 1, strokeWeight: 2.5
+      };
+    }
+    const zid = Number(feat.getProperty('zoneId'));
+    const st = FIRE_ZONE_STYLE[zid] || FIRE_ZONE_STYLE[0];
+    return {
+      visible: true, clickable: false, zIndex: 6 + zid,
+      fillColor: st.fill, fillOpacity: st.opacity,
+      strokeColor: st.stroke, strokeOpacity: 0.95, strokeWeight: 1.5
+    };
+  });
 }
 function schedulePinDraw() {
   if (pinDrawTimer) clearTimeout(pinDrawTimer);
@@ -1336,6 +1577,7 @@ $('lotClip').addEventListener('change', (ev) => {
   }
   drawLotMask();
   draw2dRegions();
+  drawFireOverlays();
   draw2dPins();
   draw2dConcerns();
   fitMapToLot();
@@ -1403,7 +1645,8 @@ function statusText() {
   const nConcerns = allConcernPins().filter(pinOnLot).length;
   const lotBit = state.lot ? ' · lot ' + (state.lot.taxlot || '') : '';
   const clipped = !!(state.lotClip && state.lot);
-  return delivery + ' · ' + n + (clipped && n !== nAll ? '/' + nAll : '') + ' regions (' + (state.regionsSource || 'none') + saved + lotBit + ') · ' + nPins + ' pins · ' + nConcerns + ' concerns' +
+  const fireBit = fireScoreN(firePrimary()) != null ? ' · fire score ' + fireScoreN(firePrimary()) : '';
+  return delivery + ' · ' + n + (clipped && n !== nAll ? '/' + nAll : '') + ' regions (' + (state.regionsSource || 'none') + saved + lotBit + ') · ' + nPins + ' pins · ' + nConcerns + ' concerns' + fireBit +
     (state.meshUrl ? ' · 3D mesh' + (state.meshMeta && state.meshMeta.triangles ? ' ' + Math.round(state.meshMeta.triangles / 1000) + 'k tris' : '') : ' · no 3D mesh');
 }
 
@@ -1412,39 +1655,57 @@ function statusText() {
   if (HUB_REDIRECT) return;
   try {
     if (!siteNo && !delivery) { fail('Need ?site_no= (from the Nearmap sheet) or ?delivery='); return; }
-    setStatus('Loading Nearmap row…');
-    try { await loadRowWithRetry(); }
-    catch (e) { setStatus(String(e.message || e), true); }
-    if (!state.bounds) setStatus('Loading delivery…');
+    const mapsP = bootMaps();
+    if (delivery) preloadVertJpg(joinUrl(tilesBase, delivery + '/vert.jpg'));
+    const rowP = (siteNo || delivery) ? loadRowOnce() : Promise.resolve(null);
+    if (!delivery) {
+      setStatus('Loading Nearmap row…');
+      await rowP;
+    }
+    setStatus('Loading delivery…');
     await loadManifest();
     if (!state.bounds) { fail('No nadir bounds for ' + (delivery || siteNo) + ' — import the registry row or check the delivery id.'); return; }
-    const publishedId = state.propertyId || '';
-    if (publishedId && !concernBlockHas(state.fr) && !concernBlockHas(state.wildfire)) {
-      const rec = await fetchJsonOptional(dataRoot() + 'nearmap/' + publishedId + '.json');
-      if (rec) applyConcerns(rec.fr, rec.wildfire);
-    }
     $('nm').textContent = state.address || delivery;
     $('addr').textContent = delivery + (state.manifest && state.manifest.survey_date ? ' · flown ' + state.manifest.survey_date : '');
     document.title = 'Nearmap — ' + (state.address || delivery);
     if (state.meshUrl) { $('tab3d').disabled = false; $('tab3d').title = '3D mesh'; }
-    await Promise.all([loadRegions(), loadCatalog()]);
+    if (state.nadirUrl) preloadVertJpg(state.nadirUrl);
+    const regionsP = loadRegions();
+    const fireP = loadFirerisk();
+    const catP = loadCatalog();
+    setStatus('Loading map…');
+    await mapsP;
+    init2d();
+    await Promise.all([regionsP, fireP, catP]);
     renderPanel();
     showRail(state.rail);
     renderObliques();
-    setStatus('Loading map…');
-    await bootMaps();
-    init2d();
-    if (!concernBlockHas(state.fr) && !concernBlockHas(state.wildfire)) {
-      try {
-        await loadRowWithRetry();
-        renderPanel();
+    if (mapReady) {
+      draw2dRegions();
+      draw2dPins();
+      draw2dConcerns();
+      applyLayers();
+    }
+    setStatus(statusText());
+    rowP.then(async (row) => {
+      if (row) {
+        $('nm').textContent = state.address || delivery;
+        if (state.meshUrl) { $('tab3d').disabled = false; $('tab3d').title = '3D mesh'; }
+      }
+      const publishedId = state.propertyId || propertyId || '';
+      if (publishedId && !concernBlockHas(state.fr) && !concernBlockHas(state.wildfire)) {
+        const rec = await fetchCached(dataRoot() + 'nearmap/' + publishedId + '.json');
+        if (rec) applyConcerns(rec.fr, rec.wildfire);
+      }
+      renderPanel();
+      if (mapReady) {
         draw2dPins();
         draw2dConcerns();
         applyLayers();
-      } catch (e) { /* concernsError already set */ }
-    }
-    setStatus(statusText());
-    if (state.meshMetaUrl) fetchJsonOptional(state.meshMetaUrl).then((m) => { if (m) { state.meshMeta = m; setStatus(statusText()); } });
+      }
+      setStatus(statusText());
+    }).catch(() => {});
+    if (state.meshMetaUrl) fetchCached(state.meshMetaUrl).then((m) => { if (m) { state.meshMeta = m; setStatus(statusText()); } });
   } catch (e) {
     fail(String(e.message || e));
   }
