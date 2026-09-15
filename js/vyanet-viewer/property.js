@@ -59,22 +59,47 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.22';
+export const HUB_BUILD = '1.8.23';
 export const LIVE_PAGE_SIZE = 4;
+// Chrome + CHEKT together hold about this many concurrent MJPEGs.
+// Gud Parcel 1 is 8; opening 15 at once leaves parcels 2/3 on "no stream".
+export const MAX_LIVE_MJPEG = 8;
+
+export function isLiveOffline(c) {
+  return String((c && c.status) || '').toLowerCase() === 'offline';
+}
+
+export function stopMjpegImg(img) {
+  if (!img) return;
+  if (typeof img.__mjpegStop === 'function') img.__mjpegStop();
+  img.onload = null;
+  img.onerror = null;
+  img.removeAttribute('src');
+}
 
 // CHEKT MJPEG is multipart/x-mixed-replace. Chrome often fires img.onerror
 // before the first JPEG, or never fires onload. Treat naturalWidth as LIVE,
 // retry once, and send no Referer (the token is in the query).
 export function bindMjpegImg(img, stateEl, url, isCurrent) {
   if (!img || !url) return;
+  stopMjpegImg(img);
   let tries = 0;
   let timer = 0;
   let poll = 0;
-  function alive() { return !isCurrent || isCurrent(); }
+  let stopped = false;
+  function alive() { return !stopped && (!isCurrent || isCurrent()); }
   function stopTimers() {
     if (timer) { clearTimeout(timer); timer = 0; }
     if (poll) { clearInterval(poll); poll = 0; }
   }
+  img.__mjpegStop = function () {
+    stopped = true;
+    stopTimers();
+    img.onload = null;
+    img.onerror = null;
+    img.removeAttribute('src');
+    img.__mjpegStop = null;
+  };
   function markLive() {
     if (!alive() || !stateEl) return;
     stateEl.textContent = 'LIVE';
@@ -129,6 +154,48 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
     armWatch();
   }
   start();
+}
+
+// Start MJPEG only for visible cells, and only up to MAX_LIVE_MJPEG.
+// Hidden cells drop src so Parcel 2/3 can take the browser slots.
+export function syncLiveWallStreams(main, rows, maxN) {
+  if (!main) return;
+  const cap = maxN || MAX_LIVE_MJPEG;
+  const cells = main.querySelectorAll('.quad-cell');
+  const want = [];
+  cells.forEach(function (el) {
+    if (el.classList.contains('off')) return;
+    want.push(Number(el.getAttribute('data-i')));
+  });
+  const live = {};
+  want.slice(0, cap).forEach(function (i) { live[i] = true; });
+  cells.forEach(function (el) {
+    const i = Number(el.getAttribute('data-i'));
+    const img = el.querySelector('img');
+    const st = el.querySelector('.quad-state');
+    const cam = rows[i] && rows[i].cam;
+    if (!img) return;
+    if (!live[i]) {
+      stopMjpegImg(img);
+      if (st && !el.classList.contains('off') && want.length > cap) {
+        st.textContent = 'open parcel';
+        st.classList.add('bad');
+      }
+      return;
+    }
+    if (isLiveOffline(cam)) {
+      stopMjpegImg(img);
+      if (st) { st.textContent = 'offline'; st.classList.add('bad'); }
+      return;
+    }
+    if (!cam || !cam.mjpeg_url) return;
+    if (img.naturalWidth > 0) return;
+    if (img.getAttribute('src')) return;
+    if (st) { st.textContent = 'connecting…'; st.classList.remove('bad'); }
+    bindMjpegImg(img, st, cam.mjpeg_url, function () {
+      return !el.classList.contains('off');
+    });
+  });
 }
 
 export function liveWallGrid(n) {

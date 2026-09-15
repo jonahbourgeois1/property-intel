@@ -792,7 +792,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel } from './js/vyanet-viewer/property.js?v=1.8.22';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.23';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -3088,6 +3088,7 @@ window.closeGwQuad = function () {
 let lmClipList = [];
 let lmClipShown = [];
 let lmGroups = [];
+let lmRows = [];
 let lmParcel = -1;
 let lmPage = 0;
 let lmWallGen = 0;
@@ -3098,7 +3099,7 @@ function lmClearMain() {
   lmWallReady = false;
   lmFocus = -1;
   document.querySelectorAll('#lm-main img').forEach(function (img) {
-    img.onload = null; img.onerror = null; img.src = '';
+    stopMjpegImg(img);
   });
 }
 function lmCloseStreams() {
@@ -3123,15 +3124,14 @@ function lmPaintWall() {
     lmApplyFilter();
     return;
   }
-  const rows = [];
+  lmRows = [];
   lmGroups.forEach(function (g, gi) {
     (g.cameras || []).forEach(function (c) {
-      if (c && c.mjpeg_url) rows.push({ cam: c, parcel: gi });
+      if (c && c.mjpeg_url) lmRows.push({ cam: c, parcel: gi });
     });
   });
   lmClearMain();
-  const gen = lmWallGen;
-  main.innerHTML = rows.map(function (row, i) {
+  main.innerHTML = lmRows.map(function (row, i) {
     const c = row.cam;
     const prefix = lmGroups.length > 1
       ? '<em>' + escHtml(parcelLabel(c)) + '</em>' : '';
@@ -3141,17 +3141,9 @@ function lmPaintWall() {
       '<span class="quad-name">' + prefix + escHtml(c.name || c.mac) + '</span>' +
       '<span class="quad-state" id="lm-state-' + i + '">connecting…</span></div>';
   }).join('');
-  rows.forEach(function (row, i) {
-    const img = document.getElementById('lm-img-' + i);
-    const st = document.getElementById('lm-state-' + i);
-    setTimeout(function () {
-      if (lmWallGen !== gen) return;
-      bindMjpegImg(img, st, row.cam.mjpeg_url, function () { return lmWallGen === gen; });
-    }, i * 350);
-  });
   lmWallReady = true;
   lmApplyFilter();
-  dbg('Live mode: ' + rows.length + ' streams started', 'info');
+  dbg('Live mode: ' + lmRows.length + ' cameras painted', 'info');
 }
 function lmSyncBar() {
   const bar = document.getElementById('lm-bar');
@@ -3204,6 +3196,7 @@ function lmApplyFilter() {
   main.classList.toggle('parcel-filter', lmParcel >= 0);
   main.classList.toggle('feed-focus', lmFocus >= 0);
   lmSyncBar();
+  syncLiveWallStreams(main, lmRows);
 }
 window.lmToggleFeed = function (i) {
   lmFocus = (lmFocus === i) ? -1 : i;
@@ -3258,7 +3251,7 @@ async function openLiveMode() {
     return;
   }
   lmGroups = groupLiveCameras(list);
-  lmParcel = -1;
+  lmParcel = lmGroups.length > 1 ? 0 : -1;
   lmPaintWall();
   setTimeout(function () { renderLmClips(); }, 2500);
 }

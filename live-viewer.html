@@ -200,7 +200,7 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel } from './js/vyanet-viewer/property.js?v=1.8.22';
+import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.23';
 
 const BUILD = '1.1.4';
 const params = new URLSearchParams(window.location.search);
@@ -367,7 +367,7 @@ function lmClearMain() {
   lmWallReady = false;
   lmFocus = -1;
   document.querySelectorAll('#lm-main img').forEach(function (img) {
-    img.onload = null; img.onerror = null; img.src = '';
+    stopMjpegImg(img);
   });
 }
 
@@ -385,6 +385,7 @@ function lmCloseStreams() {
 }
 
 let lmGroups = [];
+let lmRows = [];
 let lmParcel = -1;
 let lmWallGen = 0;
 let lmWallReady = false;
@@ -451,6 +452,7 @@ function lmApplyFilter() {
   main.classList.toggle('parcel-filter', lmParcel >= 0);
   main.classList.toggle('feed-focus', lmFocus >= 0);
   lmSyncBar();
+  syncLiveWallStreams(main, lmRows);
 }
 function lmPaintWall() {
   const main = document.getElementById('lm-main');
@@ -465,10 +467,9 @@ function lmPaintWall() {
     lmApplyFilter();
     return;
   }
-  const rows = lmAllCameras();
+  lmRows = lmAllCameras();
   lmClearMain();
-  const gen = lmWallGen;
-  main.innerHTML = rows.map(function (row, i) {
+  main.innerHTML = lmRows.map(function (row, i) {
     const c = row.cam;
     const prefix = lmGroups.length > 1
       ? '<em>' + escHtml(parcelLabel(c)) + '</em>' : '';
@@ -478,17 +479,9 @@ function lmPaintWall() {
       '<span class="quad-name">' + prefix + escHtml(c.name || c.mac) + '</span>' +
       '<span class="quad-state" id="lm-state-' + i + '">connecting&hellip;</span></div>';
   }).join('');
-  rows.forEach(function (row, i) {
-    const img = document.getElementById('lm-img-' + i);
-    const st = document.getElementById('lm-state-' + i);
-    setTimeout(function () {
-      if (lmWallGen !== gen) return;
-      bindMjpegImg(img, st, row.cam.mjpeg_url, function () { return lmWallGen === gen; });
-    }, i * 350);
-  });
   lmWallReady = true;
   lmApplyFilter();
-  dbg('Live: ' + rows.length + ' streams started', 'ok');
+  dbg('Live: ' + lmRows.length + ' cameras painted', 'ok');
 }
 window.lmToggleFeed = function (i) {
   lmFocus = (lmFocus === i) ? -1 : i;
@@ -610,7 +603,7 @@ async function startLivePage() {
     return;
   }
   lmGroups = groupLiveCameras(list);
-  lmParcel = -1;
+  lmParcel = lmGroups.length > 1 ? 0 : -1;
   lmPaintWall();
   dbg('Live: ' + list.length + ' cameras in ' + lmGroups.length + ' group(s)', 'ok');
   setTimeout(function () { if (liveOpen) renderLmClips(); }, 2500);
