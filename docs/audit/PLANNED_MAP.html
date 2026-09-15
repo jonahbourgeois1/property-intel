@@ -1,0 +1,968 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Property Intel — Planned pipeline (Nearmap-first target design)</title>
+<style>
+ body{font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif;margin:0;color:#111;background:#fff}
+ header{padding:12px 20px 6px;border-bottom:1px solid #e5e5e5}
+ h1{font-size:19px;margin:0 0 4px} h2{font-size:15px;margin:10px 0 4px} h3{font-size:14px;margin:0 0 8px} h4{font-size:12.5px;margin:12px 0 4px}
+ .meta{color:#555;font-size:12px}
+ #layers span{display:inline-block;color:#fff;padding:1px 8px;margin:3px 4px 0 0;border-radius:11px;font-size:11px;font-weight:600}
+ #tabs{padding:6px 20px;border-bottom:1px solid #e5e5e5;background:#fafafa} #tabs button{font-size:12.5px;padding:5px 12px;margin-right:6px;border:1px solid #ccc;background:#fff;border-radius:6px;cursor:pointer} #tabs button.on{background:#111;color:#fff;border-color:#111}
+ #main{display:flex;align-items:flex-start} #views{flex:1;min-width:0;padding:6px 14px 20px} #panel{width:360px;flex:none;border-left:1px solid #e5e5e5;padding:12px 14px;position:sticky;top:0;max-height:100vh;overflow:auto;font-size:12.5px}
+ .toolbar{font-size:12px;color:#444;margin:4px 0 6px} .crumbs{margin-left:10px;font-size:13px} .crumbs a{color:#1565c0;text-decoration:none;font-weight:600} .crumbs a:last-child{color:#111} .toolbar button{font-size:12px;padding:2px 10px;margin-right:6px} .hint{color:#777}
+ .chip{border:1px solid var(--c);color:var(--c);background:#fff;border-radius:12px;padding:2px 10px !important} .chip.on{background:var(--c);color:#fff}
+ .canvas{border:1px solid #ddd;background:#fff;overflow:hidden;clear:both} .toolbar select{max-width:300px;font-size:12px} .canvas svg{display:block;width:100%}
+ .row.dim,.arrow.dim,.b.dim{opacity:.1} #bubble path.dim,#bubble line.dim,#bubble text.dim{opacity:.06} #bubble path.hl{stroke-width:2.8;stroke-opacity:1} .row.hl rect{stroke-width:3} .hdr.hl rect{fill:#1565c0} .arrow.hl line,.arrow.hl path{stroke:#1565c0;stroke-width:3}
+ table.kv{border-collapse:collapse;width:100%} table.kv th{text-align:left;vertical-align:top;color:#666;font-weight:600;padding:3px 6px 3px 0;width:88px} table.kv td{padding:3px 0;border-bottom:1px solid #eee}
+ ol.edges,ol.steps{padding-left:18px;margin:4px 0} ol.path li{margin:0 0 8px;border-left:3px solid #4f83c8;padding-left:8px} ol.path summary{cursor:pointer;list-style:none} ol.path summary::-webkit-details-marker{display:none} ol.path details[open] summary{margin-bottom:6px} ol.edges li,ol.steps li{margin:0 0 6px} .lbl{color:#333;font-size:11.5px} .n{color:#1565c0} .muted{color:#777} code{background:#f3f3f3;padding:0 3px;border-radius:3px;font-size:11.5px}
+ .fallback{margin:10px 14px} .wrap{overflow:auto;border:1px solid #ddd;padding:8px;background:#fafafa} pre.mermaid{margin:0;background:transparent} pre.src{font:11.5px/1.35 Consolas,monospace;white-space:pre-wrap;background:#f6f6f6;padding:8px;border:1px solid #e0e0e0}
+ .legend span{display:inline-block;padding:1px 8px;margin:3px 5px 0 0;border:1px solid;border-radius:4px;font-size:11.5px}
+</style></head><body>
+<header>
+ <h1>Property Intel — Planned pipeline (Nearmap-first target design)</h1>
+ <div class="meta" style="margin-bottom:4px">Maps: <a href="DATA_MAP.html">Current system (as it runs today)</a> · <b>Planned pipeline (Nearmap-first target)</b></div>
+ <div class="meta">Generated 2026-09-15 from <code>docs/audit/PLANNED_MAP.md</code>. <b>Design mock-up — nothing here is built.</b> <b>Home</b>: the 12 processes in stage columns, arrows = hand-offs between them (each a design decision, cited to a planned step). <b>Click a bubble</b>: that process as one line of phases, start to finish; click a stop to list its steps on the right. <b>Receipt</b> (top right): everything that produced or consumed one resource. Mermaid source per process is collapsed at the bottom.</div>
+ <div id="layers"></div>
+ <div class="legend"><span style="border-color:#2e7d32">node border = layer colour · live</span><span style="background:#fdecea;border-color:#c62828">superseded / dead</span><span style="background:#fff8e1;border-color:#f9a825;border-style:dashed">[UNVERIFIED]</span><span style="background:#f3f3f3;border-color:#9e9e9e;border-style:dotted;color:#555">not found / not built</span><span style="border-color:#333">arrow solid = cited</span><span style="border-color:#f9a825;border-style:dashed">arrow dashed = [UNVERIFIED]</span><span style="border-color:#c62828">arrow red = superseded / dead</span></div>
+</header>
+<div id="main">
+  <div id="views"></div>
+  <aside id="panel"><h3>Nothing selected</h3><div class="body"><p class="muted">Hover a bubble, click an arrow, or click a bubble.</p></div></aside>
+</div>
+
+<details class="fallback" data-pid="N01"><summary>Mermaid source — N01 — Nearmap export per property (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_operator[&quot;Operator&quot;]:::planned
+    LC_nearmap_cli[&quot;nearmap CLI: fetch → normalize → lot-clip → publish → register&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_ingest[&quot;property-intel-ingest / nearmap|captures|photos/{id}/raw&quot;]:::planned
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L15[&quot;L15 Vendor / external&quot;]
+    direction LR
+    A15[&quot; &quot;]:::anchor
+    EX_nearmap[&quot;Nearmap API (Vert, obliques, 3D, AI layers)&quot;]:::planned
+  end
+  %% Fetch
+  HUMAN_operator --&gt;|&quot;S01 nearmap fetch --site&quot;| LC_nearmap_cli
+  EX_nearmap --&gt;|&quot;S01 Vert, N/E/S/W, mesh, AI layers&quot;| LC_nearmap_cli
+  LC_nearmap_cli --&gt;|&quot;S01 raw archive&quot;| S3_ingest
+  %% Normalize
+  LC_nearmap_cli --&gt;|&quot;S02 canonical tree: manifest, vert, obliques, model.glb, regions&quot;| LC_nearmap_cli
+  S3_ref --&gt;|&quot;S03 reference/parcels/{county} shards&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S03 parcel ring → vert-lot.jpg, lot.json&quot;| LC_nearmap_cli
+  %% Publish
+  LC_nearmap_cli --&gt;|&quot;S04 put + head_object properties/{hub}/nearmap/{delivery}/&quot;| S3_props
+  LC_nearmap_cli --&gt;|&quot;S04 invalidate /properties/{hub}/nearmap/*&quot;| CF_tiles
+  %% Register
+  LC_nearmap_cli --&gt;|&quot;S05 delivery id, survey date, nearmap: ready&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A09 ~~~ A10 ~~~ A15
+</pre></details>
+<details class="fallback" data-pid="N02"><summary>Mermaid source — N02 — Vyanet capture, drone or plane (planned, supplemental)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_operator[&quot;Operator&quot;]:::planned
+    LC_capture_cli[&quot;capture CLI: ingest → publish (type + parcels_ref) → verify → register&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L05[&quot;L05 API Gateway&quot;]
+    direction LR
+    A05[&quot; &quot;]:::anchor
+    AG_api[&quot;API Gateway: /clip · /review-save · /describe · /publish&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_clip[&quot;plane-parcel-clip (kept)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_captures[&quot;property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L15[&quot;L15 Vendor / external&quot;]
+    direction LR
+    A15[&quot; &quot;]:::anchor
+    EX_terra[&quot;DJI Terra export (OBJ + orthomosaic)&quot;]:::planned
+  end
+  %% Ingest
+  EX_terra --&gt;|&quot;S01 export folder&quot;| LC_capture_cli
+  HUMAN_operator --&gt;|&quot;S01 capture ingest (five gates, tiles, manifest)&quot;| LC_capture_cli
+  %% Publish
+  LC_capture_cli --&gt;|&quot;S02 tiles + model → captures/{id}/&quot;| S3_captures
+  LC_capture_cli --&gt;|&quot;S02 registry entry with type + parcels_ref&quot;| S3_ref
+  S3_captures --&gt;|&quot;S03 serving tiles byte-compare&quot;| LC_capture_cli
+  %% Clip on demand
+  AG_api --&gt;|&quot;S04 POST /clip {hub, taxlot}&quot;| LM_clip
+  CF_tiles --&gt;|&quot;S04 captures registry + parcel shards&quot;| LM_clip
+  LM_clip --&gt;|&quot;S04 clipped.glb&quot;| S3_captures
+  %% Register
+  LC_capture_cli --&gt;|&quot;S05 capture id, capture: ready&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A15
+</pre></details>
+<details class="fallback" data-pid="N03"><summary>Mermaid source — N03 — Technician photos (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_technician[&quot;Technician (phone)&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_photos[&quot;photo-normalize Lambda (S3 event: orientation, heading per photo, cameras.json)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_ingest[&quot;property-intel-ingest / nearmap|captures|photos/{id}/raw&quot;]:::planned
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_intake[&quot;photo-intake.html (Pages)&quot;]:::planned
+  end
+  %% Upload
+  HUMAN_technician --&gt;|&quot;S01 photos + camera names&quot;| GH_intake
+  GH_intake --&gt;|&quot;S02 presigned POST raw JPGs (GPS EXIF kept private)&quot;| S3_ingest
+  %% Normalize
+  S3_ingest --&gt;|&quot;S03 S3 event per photo&quot;| LM_photos
+  LM_photos --&gt;|&quot;S04 cam-NN.jpg + cameras.json&quot;| S3_props
+  LM_photos --&gt;|&quot;S04 invalidate&quot;| CF_tiles
+  LM_photos --&gt;|&quot;S05 photos: ready&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A12
+</pre></details>
+<details class="fallback" data-pid="N04"><summary>Mermaid source — N04 — GIS parcels (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_operator[&quot;Operator&quot;]:::planned
+    LC_parcels_cli[&quot;parcels CLI: fetch → publish → probe&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_viewer[&quot;property-viewer.html + parcels.js (Pages, code only)&quot;]:::planned
+  end
+  subgraph L15[&quot;L15 Vendor / external&quot;]
+    direction LR
+    A15[&quot; &quot;]:::anchor
+    EX_countygis[&quot;County GIS portals (Deschutes, Lane, …)&quot;]:::planned
+  end
+  %% Fetch + publish
+  EX_countygis --&gt;|&quot;S01 county taxlot GeoJSON&quot;| LC_parcels_cli
+  HUMAN_operator --&gt;|&quot;S01 parcels fetch &lt;county&gt;&quot;| LC_parcels_cli
+  LC_parcels_cli --&gt;|&quot;S02 shards + index.json last, backup&quot;| S3_ref
+  LC_parcels_cli --&gt;|&quot;S02 invalidate + probe&quot;| CF_tiles
+  %% One reader
+  S3_ref --&gt;|&quot;S03 index + shards&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S03 parcels.js: taxlot + ring for any lat/lng&quot;| GH_viewer
+  A01 ~~~ A09 ~~~ A10 ~~~ A12 ~~~ A15
+</pre></details>
+<details class="fallback" data-pid="N05"><summary>Mermaid source — N05 — Property registry &amp; intake (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_operator[&quot;Operator&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L03[&quot;L03 Google Apps Script (one project, registry module)&quot;]
+    direction LR
+    A03[&quot; &quot;]:::anchor
+    AS_registry[&quot;registry.gs: intake · links · status&quot;]:::planned
+  end
+  subgraph L04[&quot;L04 Google Maps / other Google APIs&quot;]
+    direction LR
+    A04[&quot; &quot;]:::anchor
+    GG_geocode[&quot;Geocoding API&quot;]:::planned
+  end
+  subgraph L05[&quot;L05 API Gateway&quot;]
+    direction LR
+    A05[&quot; &quot;]:::anchor
+    AG_api[&quot;API Gateway: /clip · /review-save · /describe · /publish&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_intake[&quot;property-intake Lambda (geocode, taxlot, hub id, registry upsert)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  %% Row
+  HUMAN_operator --&gt;|&quot;S01 site_no, name, address, type, HOA&quot;| SH_properties
+  %% Intake
+  SH_properties --&gt;|&quot;S02 selected rows&quot;| AS_registry
+  AS_registry --&gt;|&quot;S02 POST /intake&quot;| AG_api
+  AG_api --&gt;|&quot;S02 proxy&quot;| LM_intake
+  LM_intake --&gt;|&quot;S02 geocode&quot;| GG_geocode
+  CF_tiles --&gt;|&quot;S02 parcel shards → taxlot + county&quot;| LM_intake
+  LM_intake --&gt;|&quot;S03 upsert reference/properties.json[hub]&quot;| S3_ref
+  LM_intake --&gt;|&quot;S04 lat/lng, taxlot, hub&quot;| AS_registry
+  AS_registry --&gt;|&quot;S04 cells + intake: ok&quot;| SH_properties
+  AS_registry --&gt;|&quot;S05 review link ?hub=, viewer link ?hub=&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A03 ~~~ A04 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10
+</pre></details>
+<details class="fallback" data-pid="N06"><summary>Mermaid source — N06 — Region review (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_reviewer[&quot;Reviewer&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L05[&quot;L05 API Gateway&quot;]
+    direction LR
+    A05[&quot; &quot;]:::anchor
+    AG_api[&quot;API Gateway: /clip · /review-save · /describe · /publish&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_review[&quot;review-api Lambda (validate + save regions / pins / descriptions; set flags)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_review[&quot;review.html — stops: Regions → Pins → Descriptions (Pages, code only)&quot;]:::planned
+  end
+  %% Open + load
+  SH_properties --&gt;|&quot;S01 review link ?hub=&quot;| HUMAN_reviewer
+  HUMAN_reviewer --&gt;|&quot;S01 open stop 1 Regions&quot;| GH_review
+  S3_props --&gt;|&quot;S02 vert.jpg + ai/original + ai/edits regions&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S02 nadir, regions, parcel ring&quot;| GH_review
+  %% Edit + save
+  HUMAN_reviewer --&gt;|&quot;S03 edit polygons / classes&quot;| GH_review
+  GH_review --&gt;|&quot;S04 POST /review-save kind regions&quot;| AG_api
+  AG_api --&gt;|&quot;S04 proxy&quot;| LM_review
+  LM_review --&gt;|&quot;S04 properties/{hub}/review/regions.json&quot;| S3_props
+  LM_review --&gt;|&quot;S05 regions: reviewed&quot;| S3_ref
+  LM_review --&gt;|&quot;S05 row flag&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A12
+</pre></details>
+<details class="fallback" data-pid="N07"><summary>Mermaid source — N07 — Pin placement (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_reviewer[&quot;Reviewer&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L05[&quot;L05 API Gateway&quot;]
+    direction LR
+    A05[&quot; &quot;]:::anchor
+    AG_api[&quot;API Gateway: /clip · /review-save · /describe · /publish&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_describe[&quot;describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)&quot;]:::planned
+    LM_review[&quot;review-api Lambda (validate + save regions / pins / descriptions; set flags)&quot;]:::planned
+  end
+  subgraph L07[&quot;L07 AWS Bedrock&quot;]
+    direction LR
+    A07[&quot; &quot;]:::anchor
+    BR_model[&quot;model (Claude on Bedrock)&quot;]:::planned
+    BR_kb[&quot;Knowledge Base (pin standard, concern definitions)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_review[&quot;review.html — stops: Regions → Pins → Descriptions (Pages, code only)&quot;]:::planned
+  end
+  %% Catalog
+  S3_ref --&gt;|&quot;S01 reference/pins-catalog.json&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S01 vocabulary by account type&quot;| GH_review
+  %% AI proposal
+  HUMAN_reviewer --&gt;|&quot;S02 Propose pins (optional)&quot;| GH_review
+  GH_review --&gt;|&quot;S02 POST /describe task pins&quot;| AG_api
+  AG_api --&gt;|&quot;S02 proxy&quot;| LM_describe
+  CF_tiles --&gt;|&quot;S02 nadir + obliques + reviewed regions&quot;| LM_describe
+  LM_describe --&gt;|&quot;S02 KB retrieve&quot;| BR_kb
+  LM_describe --&gt;|&quot;S02 invoke model, restricted vocabulary&quot;| BR_model
+  LM_describe --&gt;|&quot;S02 validated proposal (off-vocabulary / off-parcel refused)&quot;| GH_review
+  %% Human pass + save
+  HUMAN_reviewer --&gt;|&quot;S03 place / move / add / delete → history[]&quot;| GH_review
+  GH_review --&gt;|&quot;S04 POST /review-save kind pins&quot;| AG_api
+  AG_api --&gt;|&quot;S04 proxy&quot;| LM_review
+  LM_review --&gt;|&quot;S04 properties/{hub}/review/pins.json&quot;| S3_props
+  LM_review --&gt;|&quot;S05 pins: approved&quot;| S3_ref
+  LM_review --&gt;|&quot;S05 row flag&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A07 ~~~ A09 ~~~ A10 ~~~ A12
+</pre></details>
+<details class="fallback" data-pid="N08"><summary>Mermaid source — N08 — Descriptive analysis (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_reviewer[&quot;Reviewer&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L05[&quot;L05 API Gateway&quot;]
+    direction LR
+    A05[&quot; &quot;]:::anchor
+    AG_api[&quot;API Gateway: /clip · /review-save · /describe · /publish&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_describe[&quot;describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)&quot;]:::planned
+    LM_review[&quot;review-api Lambda (validate + save regions / pins / descriptions; set flags)&quot;]:::planned
+  end
+  subgraph L07[&quot;L07 AWS Bedrock&quot;]
+    direction LR
+    A07[&quot; &quot;]:::anchor
+    BR_model[&quot;model (Claude on Bedrock)&quot;]:::planned
+    BR_kb[&quot;Knowledge Base (pin standard, concern definitions)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_review[&quot;review.html — stops: Regions → Pins → Descriptions (Pages, code only)&quot;]:::planned
+  end
+  %% Inputs (Nearmap only)
+  HUMAN_reviewer --&gt;|&quot;S01 Generate (gate: pins approved)&quot;| GH_review
+  GH_review --&gt;|&quot;S01 POST /describe task fr+wf&quot;| AG_api
+  AG_api --&gt;|&quot;S01 proxy&quot;| LM_describe
+  S3_props --&gt;|&quot;S01 vert + obliques + review/regions + review/pins&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S01 Nearmap inputs only — no captures, no photos&quot;| LM_describe
+  %% Two halves
+  LM_describe --&gt;|&quot;S02 FR: KB retrieve&quot;| BR_kb
+  LM_describe --&gt;|&quot;S02 FR concerns / considerations / recommendations&quot;| BR_model
+  LM_describe --&gt;|&quot;S03 WF: KB retrieve&quot;| BR_kb
+  LM_describe --&gt;|&quot;S03 WF concerns / considerations / recommendations&quot;| BR_model
+  LM_describe --&gt;|&quot;S03 draft FR + WF blocks&quot;| GH_review
+  %% Approve + save
+  HUMAN_reviewer --&gt;|&quot;S04 edit text, accept concern pins, Approve&quot;| GH_review
+  GH_review --&gt;|&quot;S05 POST /review-save kind descriptions&quot;| AG_api
+  AG_api --&gt;|&quot;S05 proxy&quot;| LM_review
+  LM_review --&gt;|&quot;S05 properties/{hub}/review/descriptions.json&quot;| S3_props
+  LM_review --&gt;|&quot;S05 descriptions: approved&quot;| S3_ref
+  LM_review --&gt;|&quot;S05 row flag&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A07 ~~~ A09 ~~~ A10 ~~~ A12
+</pre></details>
+<details class="fallback" data-pid="N09"><summary>Mermaid source — N09 — Publish property record (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_operator[&quot;Operator&quot;]:::planned
+  end
+  subgraph L02[&quot;L02 Google Sheets (one workbook)&quot;]
+    direction LR
+    A02[&quot; &quot;]:::anchor
+    SH_properties[&quot;tab Properties (the one registry tab)&quot;]:::planned
+  end
+  subgraph L03[&quot;L03 Google Apps Script (one project, registry module)&quot;]
+    direction LR
+    A03[&quot; &quot;]:::anchor
+    AS_registry[&quot;registry.gs: intake · links · status&quot;]:::planned
+  end
+  subgraph L05[&quot;L05 API Gateway&quot;]
+    direction LR
+    A05[&quot; &quot;]:::anchor
+    AG_api[&quot;API Gateway: /clip · /review-save · /describe · /publish&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_publish[&quot;publish Lambda (assemble property.json — the one writer)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+    S3_captures[&quot;property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  %% Gather
+  HUMAN_operator --&gt;|&quot;S01 menu Publish (or all flags set)&quot;| AS_registry
+  AS_registry --&gt;|&quot;S01 POST /publish {hub}&quot;| AG_api
+  AG_api --&gt;|&quot;S01 proxy&quot;| LM_publish
+  S3_ref --&gt;|&quot;S01 registry identity + parcel ring&quot;| LM_publish
+  S3_props --&gt;|&quot;S01 nearmap manifest, cameras.json, review/*.json&quot;| LM_publish
+  S3_captures --&gt;|&quot;S01 capture refs + clipped.glb (if present)&quot;| LM_publish
+  %% Write
+  LM_publish --&gt;|&quot;S02 properties/{hub}/property.json&quot;| S3_props
+  LM_publish --&gt;|&quot;S02 properties.json[hub].published&quot;| S3_ref
+  LM_publish --&gt;|&quot;S03 invalidate /properties/{hub}/property.json&quot;| CF_tiles
+  LM_publish --&gt;|&quot;S04 published + viewer link&quot;| AS_registry
+  AS_registry --&gt;|&quot;S04 row cells&quot;| SH_properties
+  A01 ~~~ A02 ~~~ A03 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10
+</pre></details>
+<details class="fallback" data-pid="N10"><summary>Mermaid source — N10 — CHEKT live link (planned, kept)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_chekt[&quot;chekt-viewer-gateway (kept; hub → site from the registry)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_viewer[&quot;property-viewer.html + parcels.js (Pages, code only)&quot;]:::planned
+  end
+  subgraph L15[&quot;L15 Vendor / external&quot;]
+    direction LR
+    A15[&quot; &quot;]:::anchor
+    EX_chekt[&quot;CHEKT api.chekt.com/ext/v1&quot;]:::planned
+  end
+  %% Resolve
+  S3_ref --&gt;|&quot;S01 properties.json hub → site_no&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S01 site mapping (replaces PROPERTY_MAP env)&quot;| LM_chekt
+  %% Live
+  GH_viewer --&gt;|&quot;S02 GET /live, /clips x-viewer-key&quot;| LM_chekt
+  LM_chekt --&gt;|&quot;S02 /sites/{site}/cameras, activity-logs, events-video-urls&quot;| EX_chekt
+  LM_chekt --&gt;|&quot;S02 mjpeg URLs + clips&quot;| GH_viewer
+  A06 ~~~ A09 ~~~ A10 ~~~ A12 ~~~ A15
+</pre></details>
+<details class="fallback" data-pid="N11"><summary>Mermaid source — N11 — Property viewer (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_responder[&quot;Responder / customer (browser)&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_chekt[&quot;chekt-viewer-gateway (kept; hub → site from the registry)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_props[&quot;property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)&quot;]:::planned
+    S3_captures[&quot;property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)&quot;]:::planned
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_viewer[&quot;property-viewer.html + parcels.js (Pages, code only)&quot;]:::planned
+  end
+  subgraph L15[&quot;L15 Vendor / external&quot;]
+    direction LR
+    A15[&quot; &quot;]:::anchor
+    EX_cdn[&quot;three.js + draco (CDN)&quot;]:::planned
+  end
+  %% Record
+  HUMAN_responder --&gt;|&quot;S01 opens ?hub=&quot;| GH_viewer
+  S3_props --&gt;|&quot;S01 properties/{hub}/property.json&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S01 the one record&quot;| GH_viewer
+  %% Media
+  S3_props --&gt;|&quot;S02 model.glb, vert.jpg, obliques, cam-NN.jpg&quot;| CF_tiles
+  S3_captures --&gt;|&quot;S02 Vyanet GLB / renders if present&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S02 media by URL from the record&quot;| GH_viewer
+  EX_cdn --&gt;|&quot;S02 three.js + draco&quot;| GH_viewer
+  S3_ref --&gt;|&quot;S03 parcel shards&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S03 parcels.js ring + neighbours&quot;| GH_viewer
+  %% Tabs
+  GH_viewer --&gt;|&quot;S04 tabs: 3D · Imagery · Regions · Pins · FR/WF · Cameras · Parcel&quot;| HUMAN_responder
+  GH_viewer --&gt;|&quot;S05 Live tab → /live, /clips&quot;| LM_chekt
+  S3_ref --&gt;|&quot;S06 properties.json filtered by hoa&quot;| CF_tiles
+  CF_tiles --&gt;|&quot;S06 community members&quot;| GH_viewer
+  A01 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A12 ~~~ A15
+</pre></details>
+<details class="fallback" data-pid="N12"><summary>Mermaid source — N12 — Ops (planned)</summary>
+<pre class="src">flowchart TB
+  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;
+  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;
+  subgraph L01[&quot;L01 Local machine (PowerShell / Python / operator CLI)&quot;]
+    direction LR
+    A01[&quot; &quot;]:::anchor
+    HUMAN_operator[&quot;Operator&quot;]:::planned
+    LC_deploy[&quot;deploy CLI (one script per component, SHA-tagged)&quot;]:::planned
+    LC_smoke[&quot;smoke CLI (one known property per component)&quot;]:::planned
+  end
+  subgraph L06[&quot;L06 Lambda&quot;]
+    direction LR
+    A06[&quot; &quot;]:::anchor
+    LM_intake[&quot;property-intake Lambda (geocode, taxlot, hub id, registry upsert)&quot;]:::planned
+    LM_review[&quot;review-api Lambda (validate + save regions / pins / descriptions; set flags)&quot;]:::planned
+    LM_describe[&quot;describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)&quot;]:::planned
+    LM_publish[&quot;publish Lambda (assemble property.json — the one writer)&quot;]:::planned
+  end
+  subgraph L07[&quot;L07 AWS Bedrock&quot;]
+    direction LR
+    A07[&quot; &quot;]:::anchor
+    BR_kb[&quot;Knowledge Base (pin standard, concern definitions)&quot;]:::planned
+  end
+  subgraph L09[&quot;L09 S3 (bucket / prefix)&quot;]
+    direction LR
+    A09[&quot; &quot;]:::anchor
+    S3_ref[&quot;property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)&quot;]:::planned
+  end
+  subgraph L10[&quot;L10 CloudFront&quot;]
+    direction LR
+    A10[&quot; &quot;]:::anchor
+    CF_tiles[&quot;d3fg47bqswi0rr.cloudfront.net (the one CDN)&quot;]:::planned
+  end
+  subgraph L11[&quot;L11 CloudWatch&quot;]
+    direction LR
+    A11[&quot; &quot;]:::anchor
+    CW_logs[&quot;one log group per Lambda + one dashboard&quot;]:::planned
+  end
+  subgraph L12[&quot;L12 GitHub (code only)&quot;]
+    direction LR
+    A12[&quot; &quot;]:::anchor
+    GH_viewer[&quot;property-viewer.html + parcels.js (Pages, code only)&quot;]:::planned
+    GH_review[&quot;review.html — stops: Regions → Pins → Descriptions (Pages, code only)&quot;]:::planned
+  end
+  %% Deploy
+  HUMAN_operator --&gt;|&quot;S01 deploy &lt;component&gt;&quot;| LC_deploy
+  LC_deploy --&gt;|&quot;S01 image / zip by git SHA&quot;| LM_intake
+  LC_deploy --&gt;|&quot;S01 image / zip by git SHA&quot;| LM_review
+  LC_deploy --&gt;|&quot;S01 image / zip by git SHA&quot;| LM_describe
+  LC_deploy --&gt;|&quot;S01 image / zip by git SHA&quot;| LM_publish
+  LC_deploy --&gt;|&quot;S01 git push → Pages&quot;| GH_viewer
+  LC_deploy --&gt;|&quot;S01 git push → Pages&quot;| GH_review
+  %% Smoke
+  LC_smoke --&gt;|&quot;S02 one known property end to end&quot;| CF_tiles
+  %% Vocabularies
+  HUMAN_operator --&gt;|&quot;S03 catalog publish / kb sync + CHANGELOG&quot;| LC_deploy
+  LC_deploy --&gt;|&quot;S03 reference/pins-catalog.json&quot;| S3_ref
+  LC_deploy --&gt;|&quot;S03 KB data source sync&quot;| BR_kb
+  %% Logs
+  LM_publish --&gt;|&quot;S04 request shape + outcome&quot;| CW_logs
+  A01 ~~~ A06 ~~~ A07 ~~~ A09 ~~~ A10 ~~~ A11 ~~~ A12
+</pre></details>
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script>const DATA = {"generated": "2026-09-15", "layers": [["L01", "Local machine", "#6d4c41"], ["L02", "Google Sheets", "#2e7d32"], ["L03", "Apps Script", "#43a047"], ["L04", "Google APIs", "#1e88e5"], ["L05", "API Gateway", "#8e24aa"], ["L06", "Lambda", "#ef6c00"], ["L07", "Bedrock", "#00897b"], ["L08", "OpenSearch", "#00acc1"], ["L09", "S3", "#c62828"], ["L10", "CloudFront", "#ad1457"], ["L11", "CloudWatch", "#d81b60"], ["L12", "GitHub", "#37474f"], ["L13", "Zoho", "#f9a825"], ["L14", "BotPress", "#5d4037"], ["L15", "Vendor / external", "#546e7a"]], "nodes": {"HUMAN_operator": {"id": "HUMAN_operator", "label": "Operator", "cls": "planned", "lane": "L01"}, "LC_nearmap_cli": {"id": "LC_nearmap_cli", "label": "nearmap CLI: fetch → normalize → lot-clip → publish → register", "cls": "planned", "lane": "L01"}, "SH_properties": {"id": "SH_properties", "label": "tab Properties (the one registry tab)", "cls": "planned", "lane": "L02"}, "S3_ingest": {"id": "S3_ingest", "label": "property-intel-ingest / nearmap|captures|photos/{id}/raw", "cls": "planned", "lane": "L09"}, "S3_props": {"id": "S3_props", "label": "property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)", "cls": "planned", "lane": "L09"}, "S3_ref": {"id": "S3_ref", "label": "property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)", "cls": "planned", "lane": "L09"}, "CF_tiles": {"id": "CF_tiles", "label": "d3fg47bqswi0rr.cloudfront.net (the one CDN)", "cls": "planned", "lane": "L10"}, "EX_nearmap": {"id": "EX_nearmap", "label": "Nearmap API (Vert, obliques, 3D, AI layers)", "cls": "planned", "lane": "L15"}, "LC_capture_cli": {"id": "LC_capture_cli", "label": "capture CLI: ingest → publish (type + parcels_ref) → verify → register", "cls": "planned", "lane": "L01"}, "AG_api": {"id": "AG_api", "label": "API Gateway: /clip · /review-save · /describe · /publish", "cls": "planned", "lane": "L05"}, "LM_clip": {"id": "LM_clip", "label": "plane-parcel-clip (kept)", "cls": "planned", "lane": "L06"}, "S3_captures": {"id": "S3_captures", "label": "property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)", "cls": "planned", "lane": "L09"}, "EX_terra": {"id": "EX_terra", "label": "DJI Terra export (OBJ + orthomosaic)", "cls": "planned", "lane": "L15"}, "HUMAN_technician": {"id": "HUMAN_technician", "label": "Technician (phone)", "cls": "planned", "lane": "L01"}, "LM_photos": {"id": "LM_photos", "label": "photo-normalize Lambda (S3 event: orientation, heading per photo, cameras.json)", "cls": "planned", "lane": "L06"}, "GH_intake": {"id": "GH_intake", "label": "photo-intake.html (Pages)", "cls": "planned", "lane": "L12"}, "LC_parcels_cli": {"id": "LC_parcels_cli", "label": "parcels CLI: fetch → publish → probe", "cls": "planned", "lane": "L01"}, "GH_viewer": {"id": "GH_viewer", "label": "property-viewer.html + parcels.js (Pages, code only)", "cls": "planned", "lane": "L12"}, "EX_countygis": {"id": "EX_countygis", "label": "County GIS portals (Deschutes, Lane, …)", "cls": "planned", "lane": "L15"}, "AS_registry": {"id": "AS_registry", "label": "registry.gs: intake · links · status", "cls": "planned", "lane": "L03"}, "GG_geocode": {"id": "GG_geocode", "label": "Geocoding API", "cls": "planned", "lane": "L04"}, "LM_intake": {"id": "LM_intake", "label": "property-intake Lambda (geocode, taxlot, hub id, registry upsert)", "cls": "planned", "lane": "L06"}, "HUMAN_reviewer": {"id": "HUMAN_reviewer", "label": "Reviewer", "cls": "planned", "lane": "L01"}, "LM_review": {"id": "LM_review", "label": "review-api Lambda (validate + save regions / pins / descriptions; set flags)", "cls": "planned", "lane": "L06"}, "GH_review": {"id": "GH_review", "label": "review.html — stops: Regions → Pins → Descriptions (Pages, code only)", "cls": "planned", "lane": "L12"}, "LM_describe": {"id": "LM_describe", "label": "describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)", "cls": "planned", "lane": "L06"}, "BR_model": {"id": "BR_model", "label": "model (Claude on Bedrock)", "cls": "planned", "lane": "L07"}, "BR_kb": {"id": "BR_kb", "label": "Knowledge Base (pin standard, concern definitions)", "cls": "planned", "lane": "L07"}, "LM_publish": {"id": "LM_publish", "label": "publish Lambda (assemble property.json — the one writer)", "cls": "planned", "lane": "L06"}, "LM_chekt": {"id": "LM_chekt", "label": "chekt-viewer-gateway (kept; hub → site from the registry)", "cls": "planned", "lane": "L06"}, "EX_chekt": {"id": "EX_chekt", "label": "CHEKT api.chekt.com/ext/v1", "cls": "planned", "lane": "L15"}, "HUMAN_responder": {"id": "HUMAN_responder", "label": "Responder / customer (browser)", "cls": "planned", "lane": "L01"}, "EX_cdn": {"id": "EX_cdn", "label": "three.js + draco (CDN)", "cls": "planned", "lane": "L15"}, "LC_deploy": {"id": "LC_deploy", "label": "deploy CLI (one script per component, SHA-tagged)", "cls": "planned", "lane": "L01"}, "LC_smoke": {"id": "LC_smoke", "label": "smoke CLI (one known property per component)", "cls": "planned", "lane": "L01"}, "CW_logs": {"id": "CW_logs", "label": "one log group per Lambda + one dashboard", "cls": "planned", "lane": "L11"}}, "processes": [{"id": "N01", "title": "Nearmap export per property", "caption": "N01 — Nearmap export per property (planned)", "nodes": ["HUMAN_operator", "LC_nearmap_cli", "SH_properties", "S3_ingest", "S3_props", "S3_ref", "CF_tiles", "EX_nearmap"], "edges": [{"s": "HUMAN_operator", "t": "LC_nearmap_cli", "label": "S01 nearmap fetch --site", "status": "cited", "step": "S01", "phase": "Fetch"}, {"s": "EX_nearmap", "t": "LC_nearmap_cli", "label": "S01 Vert, N/E/S/W, mesh, AI layers", "status": "cited", "step": "S01", "phase": "Fetch"}, {"s": "LC_nearmap_cli", "t": "S3_ingest", "label": "S01 raw archive", "status": "cited", "step": "S01", "phase": "Fetch"}, {"s": "LC_nearmap_cli", "t": "LC_nearmap_cli", "label": "S02 canonical tree: manifest, vert, obliques, model.glb, regions", "status": "cited", "step": "S02", "phase": "Normalize"}, {"s": "S3_ref", "t": "CF_tiles", "label": "S03 reference/parcels/{county} shards", "status": "cited", "step": "S03", "phase": "Normalize"}, {"s": "CF_tiles", "t": "LC_nearmap_cli", "label": "S03 parcel ring → vert-lot.jpg, lot.json", "status": "cited", "step": "S03", "phase": "Normalize"}, {"s": "LC_nearmap_cli", "t": "S3_props", "label": "S04 put + head_object properties/{hub}/nearmap/{delivery}/", "status": "cited", "step": "S04", "phase": "Publish"}, {"s": "LC_nearmap_cli", "t": "CF_tiles", "label": "S04 invalidate /properties/{hub}/nearmap/*", "status": "cited", "step": "S04", "phase": "Publish"}, {"s": "LC_nearmap_cli", "t": "SH_properties", "label": "S05 delivery id, survey date, nearmap: ready", "status": "cited", "step": "S05", "phase": "Register"}], "steps": [{"id": "S01", "layer": "Vendor → Local", "script": "`nearmap fetch --site <site_no>` — Nearmap API by address/taxlot (Vert, N/E/S/W, 3D mesh, AI layers) → `property-intel-ingest/nearmap/{delivery}/raw/`", "trigger": "operator CLI (or a batch of site_nos)", "io": "API → raw", "source": "design; replaces P19 S01–S02", "status": "planned"}, {"id": "S02", "layer": "Local", "script": "`nearmap normalize` → canonical tree: `manifest.json`, `vert.jpg`, `north/east/south/west.jpg`, `mesh/model.glb` (Draco), `ai/original/regions.json`", "trigger": "S01", "io": "raw → canonical", "source": "design; replaces P19 S03, S05", "status": "planned"}, {"id": "S03", "layer": "CloudFront → Local", "script": "`nearmap lot-clip` — parcel ring from `reference/parcels/{county}` (N04) → `vert-lot.jpg`, `lot.json`", "trigger": "S02", "io": "ring → lot products", "source": "design; replaces P19 S04 (reads shards, not the GitHub grid)", "status": "planned"}, {"id": "S04", "layer": "Local → S3 → CloudFront", "script": "`nearmap publish --hub <hub>` → `properties/{hub}/nearmap/{delivery}/…` (`put + head_object`), seed `ai/edits/regions.json`, invalidate", "trigger": "S03", "io": "canonical → serving", "source": "design; replaces P19 S06", "status": "planned"}, {"id": "S05", "layer": "Local → Sheets", "script": "`nearmap register` → registry row: delivery id, survey date, `nearmap: ready`", "trigger": "S04", "io": "row updated", "source": "design; replaces P19 S08 import", "status": "planned"}], "phases": [{"name": "Fetch", "steps": ["S01"]}, {"name": "Normalize", "steps": ["S02", "S03"]}, {"name": "Publish", "steps": ["S04"]}, {"name": "Register", "steps": ["S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_operator[\"Operator\"]:::planned\n    LC_nearmap_cli[\"nearmap CLI: fetch → normalize → lot-clip → publish → register\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_ingest[\"property-intel-ingest / nearmap|captures|photos/{id}/raw\"]:::planned\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L15[\"L15 Vendor / external\"]\n    direction LR\n    A15[\" \"]:::anchor\n    EX_nearmap[\"Nearmap API (Vert, obliques, 3D, AI layers)\"]:::planned\n  end\n  %% Fetch\n  HUMAN_operator -->|\"S01 nearmap fetch --site\"| LC_nearmap_cli\n  EX_nearmap -->|\"S01 Vert, N/E/S/W, mesh, AI layers\"| LC_nearmap_cli\n  LC_nearmap_cli -->|\"S01 raw archive\"| S3_ingest\n  %% Normalize\n  LC_nearmap_cli -->|\"S02 canonical tree: manifest, vert, obliques, model.glb, regions\"| LC_nearmap_cli\n  S3_ref -->|\"S03 reference/parcels/{county} shards\"| CF_tiles\n  CF_tiles -->|\"S03 parcel ring → vert-lot.jpg, lot.json\"| LC_nearmap_cli\n  %% Publish\n  LC_nearmap_cli -->|\"S04 put + head_object properties/{hub}/nearmap/{delivery}/\"| S3_props\n  LC_nearmap_cli -->|\"S04 invalidate /properties/{hub}/nearmap/*\"| CF_tiles\n  %% Register\n  LC_nearmap_cli -->|\"S05 delivery id, survey date, nearmap: ready\"| SH_properties\n  A01 ~~~ A02 ~~~ A09 ~~~ A10 ~~~ A15\n"}, {"id": "N02", "title": "Vyanet capture, drone or plane", "caption": "N02 — Vyanet capture, drone or plane (planned, supplemental)", "nodes": ["HUMAN_operator", "LC_capture_cli", "SH_properties", "AG_api", "LM_clip", "S3_captures", "S3_ref", "CF_tiles", "EX_terra"], "edges": [{"s": "EX_terra", "t": "LC_capture_cli", "label": "S01 export folder", "status": "cited", "step": "S01", "phase": "Ingest"}, {"s": "HUMAN_operator", "t": "LC_capture_cli", "label": "S01 capture ingest (five gates, tiles, manifest)", "status": "cited", "step": "S01", "phase": "Ingest"}, {"s": "LC_capture_cli", "t": "S3_captures", "label": "S02 tiles + model → captures/{id}/", "status": "cited", "step": "S02", "phase": "Publish"}, {"s": "LC_capture_cli", "t": "S3_ref", "label": "S02 registry entry with type + parcels_ref", "status": "cited", "step": "S02", "phase": "Publish"}, {"s": "S3_captures", "t": "LC_capture_cli", "label": "S03 serving tiles byte-compare", "status": "cited", "step": "S03", "phase": "Publish"}, {"s": "AG_api", "t": "LM_clip", "label": "S04 POST /clip {hub, taxlot}", "status": "cited", "step": "S04", "phase": "Clip on demand"}, {"s": "CF_tiles", "t": "LM_clip", "label": "S04 captures registry + parcel shards", "status": "cited", "step": "S04", "phase": "Clip on demand"}, {"s": "LM_clip", "t": "S3_captures", "label": "S04 clipped.glb", "status": "cited", "step": "S04", "phase": "Clip on demand"}, {"s": "LC_capture_cli", "t": "SH_properties", "label": "S05 capture id, capture: ready", "status": "cited", "step": "S05", "phase": "Register"}], "steps": [{"id": "S01", "layer": "Vendor → Local", "script": "Terra export (OBJ + orthomosaic) → `capture ingest <folder> <id>` — the five gates, tiles, manifest", "trigger": "operator CLI", "io": "export → staging", "source": "design; keeps P01 S02", "status": "planned"}, {"id": "S02", "layer": "Local → S3", "script": "`capture publish <id> --type drone|plane --parcels <county>` → `captures/{id}/tiles`, `model`, registry entry **with** `parcels_ref` + `type`", "trigger": "S01", "io": "staging → serving + `reference/captures.json`", "source": "design; replaces P01 S03–S08 and P10 S03–S05 (no hand edits)", "status": "planned"}, {"id": "S03", "layer": "Local", "script": "`capture verify <id>` — byte-compare + coverage report", "trigger": "S02", "io": "pass / fail", "source": "design; keeps P01 S09", "status": "planned"}, {"id": "S04", "layer": "API GW → Lambda → S3", "script": "`plane-parcel-clip` (kept) → `captures/{id}/parcels/{taxlot}/clipped.glb`, called by publish (N09) when a capture covers the property", "trigger": "N09", "io": "GLB", "source": "design; keeps P05", "status": "planned (kept)"}, {"id": "S05", "layer": "Local → Sheets", "script": "`capture register --hub <hub>` → registry row: capture id, `capture: ready`", "trigger": "S02", "io": "row updated", "source": "design", "status": "planned"}], "phases": [{"name": "Ingest", "steps": ["S01"]}, {"name": "Publish", "steps": ["S02", "S03"]}, {"name": "Clip on demand", "steps": ["S04"]}, {"name": "Register", "steps": ["S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_operator[\"Operator\"]:::planned\n    LC_capture_cli[\"capture CLI: ingest → publish (type + parcels_ref) → verify → register\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L05[\"L05 API Gateway\"]\n    direction LR\n    A05[\" \"]:::anchor\n    AG_api[\"API Gateway: /clip · /review-save · /describe · /publish\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_clip[\"plane-parcel-clip (kept)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_captures[\"property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L15[\"L15 Vendor / external\"]\n    direction LR\n    A15[\" \"]:::anchor\n    EX_terra[\"DJI Terra export (OBJ + orthomosaic)\"]:::planned\n  end\n  %% Ingest\n  EX_terra -->|\"S01 export folder\"| LC_capture_cli\n  HUMAN_operator -->|\"S01 capture ingest (five gates, tiles, manifest)\"| LC_capture_cli\n  %% Publish\n  LC_capture_cli -->|\"S02 tiles + model → captures/{id}/\"| S3_captures\n  LC_capture_cli -->|\"S02 registry entry with type + parcels_ref\"| S3_ref\n  S3_captures -->|\"S03 serving tiles byte-compare\"| LC_capture_cli\n  %% Clip on demand\n  AG_api -->|\"S04 POST /clip {hub, taxlot}\"| LM_clip\n  CF_tiles -->|\"S04 captures registry + parcel shards\"| LM_clip\n  LM_clip -->|\"S04 clipped.glb\"| S3_captures\n  %% Register\n  LC_capture_cli -->|\"S05 capture id, capture: ready\"| SH_properties\n  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A15\n"}, {"id": "N03", "title": "Technician photos", "caption": "N03 — Technician photos (planned)", "nodes": ["HUMAN_technician", "SH_properties", "LM_photos", "S3_ingest", "S3_props", "CF_tiles", "GH_intake"], "edges": [{"s": "HUMAN_technician", "t": "GH_intake", "label": "S01 photos + camera names", "status": "cited", "step": "S01", "phase": "Upload"}, {"s": "GH_intake", "t": "S3_ingest", "label": "S02 presigned POST raw JPGs (GPS EXIF kept private)", "status": "cited", "step": "S02", "phase": "Upload"}, {"s": "S3_ingest", "t": "LM_photos", "label": "S03 S3 event per photo", "status": "cited", "step": "S03", "phase": "Normalize"}, {"s": "LM_photos", "t": "S3_props", "label": "S04 cam-NN.jpg + cameras.json", "status": "cited", "step": "S04", "phase": "Normalize"}, {"s": "LM_photos", "t": "CF_tiles", "label": "S04 invalidate", "status": "cited", "step": "S04", "phase": "Normalize"}, {"s": "LM_photos", "t": "SH_properties", "label": "S05 photos: ready", "status": "cited", "step": "S05", "phase": "Normalize"}], "steps": [{"id": "S01", "layer": "Technician → Pages", "script": "`photo-intake.html?hub=…` — pick photos, camera names", "trigger": "field visit", "io": "photos in the browser", "source": "design; replaces P24 S01–S04 (Zoho / SurveySparrow closed)", "status": "planned"}, {"id": "S02", "layer": "Pages → S3 ingest", "script": "presigned POST (from the intake Lambda) → `property-intel-ingest/photos/{hub}/raw/*.jpg`", "trigger": "S01", "io": "raw with GPS EXIF (never served)", "source": "design; keeps invariant 10", "status": "planned"}, {"id": "S03", "layer": "S3 → Lambda", "script": "`photo-normalize` (S3 event) — `exif_transpose` → Orientation 1, heading branch per photo (T vs M), GPS → camera location, resize", "trigger": "S02", "io": "normalized JPG + location list", "source": "design; keeps invariants 8–9", "status": "planned"}, {"id": "S04", "layer": "Lambda → S3 → CloudFront", "script": "write `properties/{hub}/cameras/cam-NN.jpg` + `cameras.json` (`{name, lat, lng, heading, photo}`), invalidate", "trigger": "S03", "io": "serving", "source": "design; replaces P18 S02–S03, git `data/cameras/`", "status": "planned"}, {"id": "S05", "layer": "Lambda → Sheets", "script": "registry row `photos: ready (N cameras)`", "trigger": "S04", "io": "row updated", "source": "design", "status": "planned"}], "phases": [{"name": "Upload", "steps": ["S01", "S02"]}, {"name": "Normalize", "steps": ["S03", "S04", "S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_technician[\"Technician (phone)\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_photos[\"photo-normalize Lambda (S3 event: orientation, heading per photo, cameras.json)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_ingest[\"property-intel-ingest / nearmap|captures|photos/{id}/raw\"]:::planned\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_intake[\"photo-intake.html (Pages)\"]:::planned\n  end\n  %% Upload\n  HUMAN_technician -->|\"S01 photos + camera names\"| GH_intake\n  GH_intake -->|\"S02 presigned POST raw JPGs (GPS EXIF kept private)\"| S3_ingest\n  %% Normalize\n  S3_ingest -->|\"S03 S3 event per photo\"| LM_photos\n  LM_photos -->|\"S04 cam-NN.jpg + cameras.json\"| S3_props\n  LM_photos -->|\"S04 invalidate\"| CF_tiles\n  LM_photos -->|\"S05 photos: ready\"| SH_properties\n  A01 ~~~ A02 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A12\n"}, {"id": "N04", "title": "GIS parcels", "caption": "N04 — GIS parcels (planned)", "nodes": ["HUMAN_operator", "LC_parcels_cli", "S3_ref", "CF_tiles", "GH_viewer", "EX_countygis"], "edges": [{"s": "EX_countygis", "t": "LC_parcels_cli", "label": "S01 county taxlot GeoJSON", "status": "cited", "step": "S01", "phase": "Fetch + publish"}, {"s": "HUMAN_operator", "t": "LC_parcels_cli", "label": "S01 parcels fetch <county>", "status": "cited", "step": "S01", "phase": "Fetch + publish"}, {"s": "LC_parcels_cli", "t": "S3_ref", "label": "S02 shards + index.json last, backup", "status": "cited", "step": "S02", "phase": "Fetch + publish"}, {"s": "LC_parcels_cli", "t": "CF_tiles", "label": "S02 invalidate + probe", "status": "cited", "step": "S02", "phase": "Fetch + publish"}, {"s": "S3_ref", "t": "CF_tiles", "label": "S03 index + shards", "status": "cited", "step": "S03", "phase": "One reader"}, {"s": "CF_tiles", "t": "GH_viewer", "label": "S03 parcels.js: taxlot + ring for any lat/lng", "status": "cited", "step": "S03", "phase": "One reader"}], "steps": [{"id": "S01", "layer": "Vendor → Local", "script": "`parcels fetch <county>` — county GIS download (Deschutes portal, Lane FeatureServer, …)", "trigger": "operator CLI, on county add / refresh", "io": "GeoJSON", "source": "design; keeps P02 S01", "status": "planned"}, {"id": "S02", "layer": "Local → S3 → CloudFront", "script": "`parcels publish <county>` — shards + index last, backup, invalidate, probe", "trigger": "S01", "io": "`reference/parcels/{county}/index.json` + `shards/`", "source": "design; keeps P02 S04–S07", "status": "planned"}, {"id": "S03", "layer": "CloudFront → everything", "script": "one reader library (`parcels.js` in the browser, `eligibility_check.find_parcel` in Python) used by N01, N02, N05, N06–N08, N11", "trigger": "on demand", "io": "taxlot + ring", "source": "design; retires P03 entirely", "status": "planned"}], "phases": [{"name": "Fetch + publish", "steps": ["S01", "S02"]}, {"name": "One reader", "steps": ["S03"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_operator[\"Operator\"]:::planned\n    LC_parcels_cli[\"parcels CLI: fetch → publish → probe\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_viewer[\"property-viewer.html + parcels.js (Pages, code only)\"]:::planned\n  end\n  subgraph L15[\"L15 Vendor / external\"]\n    direction LR\n    A15[\" \"]:::anchor\n    EX_countygis[\"County GIS portals (Deschutes, Lane, …)\"]:::planned\n  end\n  %% Fetch + publish\n  EX_countygis -->|\"S01 county taxlot GeoJSON\"| LC_parcels_cli\n  HUMAN_operator -->|\"S01 parcels fetch <county>\"| LC_parcels_cli\n  LC_parcels_cli -->|\"S02 shards + index.json last, backup\"| S3_ref\n  LC_parcels_cli -->|\"S02 invalidate + probe\"| CF_tiles\n  %% One reader\n  S3_ref -->|\"S03 index + shards\"| CF_tiles\n  CF_tiles -->|\"S03 parcels.js: taxlot + ring for any lat/lng\"| GH_viewer\n  A01 ~~~ A09 ~~~ A10 ~~~ A12 ~~~ A15\n"}, {"id": "N05", "title": "Property registry & intake", "caption": "N05 — Property registry & intake (planned)", "nodes": ["HUMAN_operator", "SH_properties", "AS_registry", "GG_geocode", "AG_api", "LM_intake", "S3_ref", "CF_tiles"], "edges": [{"s": "HUMAN_operator", "t": "SH_properties", "label": "S01 site_no, name, address, type, HOA", "status": "cited", "step": "S01", "phase": "Row"}, {"s": "SH_properties", "t": "AS_registry", "label": "S02 selected rows", "status": "cited", "step": "S02", "phase": "Intake"}, {"s": "AS_registry", "t": "AG_api", "label": "S02 POST /intake", "status": "cited", "step": "S02", "phase": "Intake"}, {"s": "AG_api", "t": "LM_intake", "label": "S02 proxy", "status": "cited", "step": "S02", "phase": "Intake"}, {"s": "LM_intake", "t": "GG_geocode", "label": "S02 geocode", "status": "cited", "step": "S02", "phase": "Intake"}, {"s": "CF_tiles", "t": "LM_intake", "label": "S02 parcel shards → taxlot + county", "status": "cited", "step": "S02", "phase": "Intake"}, {"s": "LM_intake", "t": "S3_ref", "label": "S03 upsert reference/properties.json[hub]", "status": "cited", "step": "S03", "phase": "Intake"}, {"s": "LM_intake", "t": "AS_registry", "label": "S04 lat/lng, taxlot, hub", "status": "cited", "step": "S04", "phase": "Intake"}, {"s": "AS_registry", "t": "SH_properties", "label": "S04 cells + intake: ok", "status": "cited", "step": "S04", "phase": "Intake"}, {"s": "AS_registry", "t": "SH_properties", "label": "S05 review link ?hub=, viewer link ?hub=", "status": "cited", "step": "S05", "phase": "Intake"}], "steps": [{"id": "S01", "layer": "human → Sheets", "script": "add a row: `site_no`, name, address, account type, HOA", "trigger": "manual", "io": "row", "source": "design; replaces the five tabs (R1)", "status": "planned"}, {"id": "S02", "layer": "Apps Script → API GW → Lambda → Google + CloudFront", "script": "`registry.intake(row)` → `POST /intake` → `property-intake` Lambda: geocode, `find_parcel` (N04), county, `hub = hash(site_no)`", "trigger": "menu \"Intake selected rows\" (or onEdit)", "io": "address → lat/lng, taxlot, county, hub", "source": "design; replaces P04 as intake, P08 S01–S03, P09 S01–S03", "status": "planned"}, {"id": "S03", "layer": "Lambda → S3", "script": "upsert `reference/properties.json[hub]` (identity + coords + taxlot + source flags)", "trigger": "S02", "io": "registry JSON", "source": "design; replaces index files on GitHub + records", "status": "planned"}, {"id": "S04", "layer": "Apps Script → Sheets", "script": "write back lat/lng, taxlot, hub, status `intake: ok`", "trigger": "S02", "io": "cells", "source": "design", "status": "planned"}, {"id": "S05", "layer": "Apps Script → Sheets", "script": "links: review app `?hub=`, viewer `?hub=`; source flags update from N01/N02/N03 registers", "trigger": "S03", "io": "links", "source": "design; replaces FR/WF/Intel links", "status": "planned"}], "phases": [{"name": "Row", "steps": ["S01"]}, {"name": "Intake", "steps": ["S02", "S03", "S04", "S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_operator[\"Operator\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L03[\"L03 Google Apps Script (one project, registry module)\"]\n    direction LR\n    A03[\" \"]:::anchor\n    AS_registry[\"registry.gs: intake · links · status\"]:::planned\n  end\n  subgraph L04[\"L04 Google Maps / other Google APIs\"]\n    direction LR\n    A04[\" \"]:::anchor\n    GG_geocode[\"Geocoding API\"]:::planned\n  end\n  subgraph L05[\"L05 API Gateway\"]\n    direction LR\n    A05[\" \"]:::anchor\n    AG_api[\"API Gateway: /clip · /review-save · /describe · /publish\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_intake[\"property-intake Lambda (geocode, taxlot, hub id, registry upsert)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  %% Row\n  HUMAN_operator -->|\"S01 site_no, name, address, type, HOA\"| SH_properties\n  %% Intake\n  SH_properties -->|\"S02 selected rows\"| AS_registry\n  AS_registry -->|\"S02 POST /intake\"| AG_api\n  AG_api -->|\"S02 proxy\"| LM_intake\n  LM_intake -->|\"S02 geocode\"| GG_geocode\n  CF_tiles -->|\"S02 parcel shards → taxlot + county\"| LM_intake\n  LM_intake -->|\"S03 upsert reference/properties.json[hub]\"| S3_ref\n  LM_intake -->|\"S04 lat/lng, taxlot, hub\"| AS_registry\n  AS_registry -->|\"S04 cells + intake: ok\"| SH_properties\n  AS_registry -->|\"S05 review link ?hub=, viewer link ?hub=\"| SH_properties\n  A01 ~~~ A02 ~~~ A03 ~~~ A04 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10\n"}, {"id": "N06", "title": "Region review", "caption": "N06 — Region review (planned)", "nodes": ["HUMAN_reviewer", "SH_properties", "AG_api", "LM_review", "S3_props", "S3_ref", "CF_tiles", "GH_review"], "edges": [{"s": "SH_properties", "t": "HUMAN_reviewer", "label": "S01 review link ?hub=", "status": "cited", "step": "S01", "phase": "Open + load"}, {"s": "HUMAN_reviewer", "t": "GH_review", "label": "S01 open stop 1 Regions", "status": "cited", "step": "S01", "phase": "Open + load"}, {"s": "S3_props", "t": "CF_tiles", "label": "S02 vert.jpg + ai/original + ai/edits regions", "status": "cited", "step": "S02", "phase": "Open + load"}, {"s": "CF_tiles", "t": "GH_review", "label": "S02 nadir, regions, parcel ring", "status": "cited", "step": "S02", "phase": "Open + load"}, {"s": "HUMAN_reviewer", "t": "GH_review", "label": "S03 edit polygons / classes", "status": "cited", "step": "S03", "phase": "Edit + save"}, {"s": "GH_review", "t": "AG_api", "label": "S04 POST /review-save kind regions", "status": "cited", "step": "S04", "phase": "Edit + save"}, {"s": "AG_api", "t": "LM_review", "label": "S04 proxy", "status": "cited", "step": "S04", "phase": "Edit + save"}, {"s": "LM_review", "t": "S3_props", "label": "S04 properties/{hub}/review/regions.json", "status": "cited", "step": "S04", "phase": "Edit + save"}, {"s": "LM_review", "t": "S3_ref", "label": "S05 regions: reviewed", "status": "cited", "step": "S05", "phase": "Edit + save"}, {"s": "LM_review", "t": "SH_properties", "label": "S05 row flag", "status": "cited", "step": "S05", "phase": "Edit + save"}], "steps": [{"id": "S01", "layer": "human → Pages", "script": "open `review.html?hub=…` from the registry link (stop 1: Regions)", "trigger": "reviewer", "io": "page", "source": "design; replaces nearmap-review `?mode=regions`", "status": "planned"}, {"id": "S02", "layer": "CloudFront → page", "script": "`properties/{hub}/nearmap/{delivery}/vert.jpg`, `ai/original/regions.json`, `ai/edits/regions.json` (if any), parcel ring (N04)", "trigger": "S01", "io": "overlays", "source": "design; keeps P19 S10 loads", "status": "planned"}, {"id": "S03", "layer": "page", "script": "edit polygons / classes", "trigger": "S02", "io": "working FeatureCollection", "source": "design", "status": "planned"}, {"id": "S04", "layer": "page → API GW → Lambda → S3", "script": "Save → `POST /review-save {hub, kind:'regions'}` → `review-api` validates → `properties/{hub}/review/regions.json` (no-cache)", "trigger": "reviewer Save", "io": "S3 object", "source": "design; replaces P19 S11 (`nmSavePins_` SigV4 from Apps Script)", "status": "planned"}, {"id": "S05", "layer": "Lambda → S3 + Sheets", "script": "registry `regions: reviewed` (JSON + row)", "trigger": "S04", "io": "flags", "source": "design", "status": "planned"}], "phases": [{"name": "Open + load", "steps": ["S01", "S02"]}, {"name": "Edit + save", "steps": ["S03", "S04", "S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_reviewer[\"Reviewer\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L05[\"L05 API Gateway\"]\n    direction LR\n    A05[\" \"]:::anchor\n    AG_api[\"API Gateway: /clip · /review-save · /describe · /publish\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_review[\"review-api Lambda (validate + save regions / pins / descriptions; set flags)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_review[\"review.html — stops: Regions → Pins → Descriptions (Pages, code only)\"]:::planned\n  end\n  %% Open + load\n  SH_properties -->|\"S01 review link ?hub=\"| HUMAN_reviewer\n  HUMAN_reviewer -->|\"S01 open stop 1 Regions\"| GH_review\n  S3_props -->|\"S02 vert.jpg + ai/original + ai/edits regions\"| CF_tiles\n  CF_tiles -->|\"S02 nadir, regions, parcel ring\"| GH_review\n  %% Edit + save\n  HUMAN_reviewer -->|\"S03 edit polygons / classes\"| GH_review\n  GH_review -->|\"S04 POST /review-save kind regions\"| AG_api\n  AG_api -->|\"S04 proxy\"| LM_review\n  LM_review -->|\"S04 properties/{hub}/review/regions.json\"| S3_props\n  LM_review -->|\"S05 regions: reviewed\"| S3_ref\n  LM_review -->|\"S05 row flag\"| SH_properties\n  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A12\n"}, {"id": "N07", "title": "Pin placement", "caption": "N07 — Pin placement (planned)", "nodes": ["HUMAN_reviewer", "SH_properties", "AG_api", "LM_describe", "LM_review", "BR_model", "BR_kb", "S3_props", "S3_ref", "CF_tiles", "GH_review"], "edges": [{"s": "S3_ref", "t": "CF_tiles", "label": "S01 reference/pins-catalog.json", "status": "cited", "step": "S01", "phase": "Catalog"}, {"s": "CF_tiles", "t": "GH_review", "label": "S01 vocabulary by account type", "status": "cited", "step": "S01", "phase": "Catalog"}, {"s": "HUMAN_reviewer", "t": "GH_review", "label": "S02 Propose pins (optional)", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "GH_review", "t": "AG_api", "label": "S02 POST /describe task pins", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "AG_api", "t": "LM_describe", "label": "S02 proxy", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "CF_tiles", "t": "LM_describe", "label": "S02 nadir + obliques + reviewed regions", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "LM_describe", "t": "BR_kb", "label": "S02 KB retrieve", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "LM_describe", "t": "BR_model", "label": "S02 invoke model, restricted vocabulary", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "LM_describe", "t": "GH_review", "label": "S02 validated proposal (off-vocabulary / off-parcel refused)", "status": "cited", "step": "S02", "phase": "AI proposal"}, {"s": "HUMAN_reviewer", "t": "GH_review", "label": "S03 place / move / add / delete → history[]", "status": "cited", "step": "S03", "phase": "Human pass + save"}, {"s": "GH_review", "t": "AG_api", "label": "S04 POST /review-save kind pins", "status": "cited", "step": "S04", "phase": "Human pass + save"}, {"s": "AG_api", "t": "LM_review", "label": "S04 proxy", "status": "cited", "step": "S04", "phase": "Human pass + save"}, {"s": "LM_review", "t": "S3_props", "label": "S04 properties/{hub}/review/pins.json", "status": "cited", "step": "S04", "phase": "Human pass + save"}, {"s": "LM_review", "t": "S3_ref", "label": "S05 pins: approved", "status": "cited", "step": "S05", "phase": "Human pass + save"}, {"s": "LM_review", "t": "SH_properties", "label": "S05 row flag", "status": "cited", "step": "S05", "phase": "Human pass + save"}], "steps": [{"id": "S01", "layer": "CloudFront → page", "script": "`reference/pins-catalog.json` (roles, account types, analyses)", "trigger": "stop 2 opens", "io": "vocabulary", "source": "design; keeps the catalog, moves it off GitHub", "status": "planned"}, {"id": "S02", "layer": "page → API GW → Lambda → Bedrock", "script": "\"Propose pins\" → `POST /describe {hub, task:'pins'}` → `describe` Lambda: nadir + obliques + reviewed regions + KB → restricted vocabulary → validator (out-of-vocabulary and off-parcel refused in code)", "trigger": "reviewer (optional)", "io": "proposed pins", "source": "design; replaces P11 S03–S07, P08 S10, P09 Pass 1, sandbox", "status": "planned"}, {"id": "S03", "layer": "page", "script": "reviewer places / moves / adds / deletes pins; each change appended to `history[]`", "trigger": "S02", "io": "pins", "source": "design; replaces element-review + critique web app + Nadir Fixes rerun loop (P12)", "status": "planned"}, {"id": "S04", "layer": "page → API GW → Lambda → S3", "script": "Save → `POST /review-save {hub, kind:'pins'}` → `properties/{hub}/review/pins.json` (`element[]`, `concern[]` placeholder, `history[]`)", "trigger": "reviewer Save", "io": "S3 object", "source": "design", "status": "planned"}, {"id": "S05", "layer": "Lambda → S3 + Sheets", "script": "`pins: approved` when the reviewer ticks Approve", "trigger": "S04", "io": "flags", "source": "design; replaces `Elements Reviewed` columns", "status": "planned"}], "phases": [{"name": "Catalog", "steps": ["S01"]}, {"name": "AI proposal", "steps": ["S02"]}, {"name": "Human pass + save", "steps": ["S03", "S04", "S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_reviewer[\"Reviewer\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L05[\"L05 API Gateway\"]\n    direction LR\n    A05[\" \"]:::anchor\n    AG_api[\"API Gateway: /clip · /review-save · /describe · /publish\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_describe[\"describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)\"]:::planned\n    LM_review[\"review-api Lambda (validate + save regions / pins / descriptions; set flags)\"]:::planned\n  end\n  subgraph L07[\"L07 AWS Bedrock\"]\n    direction LR\n    A07[\" \"]:::anchor\n    BR_model[\"model (Claude on Bedrock)\"]:::planned\n    BR_kb[\"Knowledge Base (pin standard, concern definitions)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_review[\"review.html — stops: Regions → Pins → Descriptions (Pages, code only)\"]:::planned\n  end\n  %% Catalog\n  S3_ref -->|\"S01 reference/pins-catalog.json\"| CF_tiles\n  CF_tiles -->|\"S01 vocabulary by account type\"| GH_review\n  %% AI proposal\n  HUMAN_reviewer -->|\"S02 Propose pins (optional)\"| GH_review\n  GH_review -->|\"S02 POST /describe task pins\"| AG_api\n  AG_api -->|\"S02 proxy\"| LM_describe\n  CF_tiles -->|\"S02 nadir + obliques + reviewed regions\"| LM_describe\n  LM_describe -->|\"S02 KB retrieve\"| BR_kb\n  LM_describe -->|\"S02 invoke model, restricted vocabulary\"| BR_model\n  LM_describe -->|\"S02 validated proposal (off-vocabulary / off-parcel refused)\"| GH_review\n  %% Human pass + save\n  HUMAN_reviewer -->|\"S03 place / move / add / delete → history[]\"| GH_review\n  GH_review -->|\"S04 POST /review-save kind pins\"| AG_api\n  AG_api -->|\"S04 proxy\"| LM_review\n  LM_review -->|\"S04 properties/{hub}/review/pins.json\"| S3_props\n  LM_review -->|\"S05 pins: approved\"| S3_ref\n  LM_review -->|\"S05 row flag\"| SH_properties\n  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A07 ~~~ A09 ~~~ A10 ~~~ A12\n"}, {"id": "N08", "title": "Descriptive analysis", "caption": "N08 — Descriptive analysis (planned)", "nodes": ["HUMAN_reviewer", "SH_properties", "AG_api", "LM_describe", "LM_review", "BR_model", "BR_kb", "S3_props", "S3_ref", "CF_tiles", "GH_review"], "edges": [{"s": "HUMAN_reviewer", "t": "GH_review", "label": "S01 Generate (gate: pins approved)", "status": "cited", "step": "S01", "phase": "Inputs (Nearmap only)"}, {"s": "GH_review", "t": "AG_api", "label": "S01 POST /describe task fr+wf", "status": "cited", "step": "S01", "phase": "Inputs (Nearmap only)"}, {"s": "AG_api", "t": "LM_describe", "label": "S01 proxy", "status": "cited", "step": "S01", "phase": "Inputs (Nearmap only)"}, {"s": "S3_props", "t": "CF_tiles", "label": "S01 vert + obliques + review/regions + review/pins", "status": "cited", "step": "S01", "phase": "Inputs (Nearmap only)"}, {"s": "CF_tiles", "t": "LM_describe", "label": "S01 Nearmap inputs only — no captures, no photos", "status": "cited", "step": "S01", "phase": "Inputs (Nearmap only)"}, {"s": "LM_describe", "t": "BR_kb", "label": "S02 FR: KB retrieve", "status": "cited", "step": "S02", "phase": "Two halves"}, {"s": "LM_describe", "t": "BR_model", "label": "S02 FR concerns / considerations / recommendations", "status": "cited", "step": "S02", "phase": "Two halves"}, {"s": "LM_describe", "t": "BR_kb", "label": "S03 WF: KB retrieve", "status": "cited", "step": "S03", "phase": "Two halves"}, {"s": "LM_describe", "t": "BR_model", "label": "S03 WF concerns / considerations / recommendations", "status": "cited", "step": "S03", "phase": "Two halves"}, {"s": "LM_describe", "t": "GH_review", "label": "S03 draft FR + WF blocks", "status": "cited", "step": "S03", "phase": "Two halves"}, {"s": "HUMAN_reviewer", "t": "GH_review", "label": "S04 edit text, accept concern pins, Approve", "status": "cited", "step": "S04", "phase": "Approve + save"}, {"s": "GH_review", "t": "AG_api", "label": "S05 POST /review-save kind descriptions", "status": "cited", "step": "S05", "phase": "Approve + save"}, {"s": "AG_api", "t": "LM_review", "label": "S05 proxy", "status": "cited", "step": "S05", "phase": "Approve + save"}, {"s": "LM_review", "t": "S3_props", "label": "S05 properties/{hub}/review/descriptions.json", "status": "cited", "step": "S05", "phase": "Approve + save"}, {"s": "LM_review", "t": "S3_ref", "label": "S05 descriptions: approved", "status": "cited", "step": "S05", "phase": "Approve + save"}, {"s": "LM_review", "t": "SH_properties", "label": "S05 row flag", "status": "cited", "step": "S05", "phase": "Approve + save"}], "steps": [{"id": "S01", "layer": "CloudFront → Lambda", "script": "inputs gathered: `vert.jpg`, `north/east/south/west.jpg`, `review/regions.json`, `review/pins.json` (approved) — nothing from captures or photos", "trigger": "stop 3 \"Generate\" (gate: pins approved)", "io": "prompt inputs", "source": "design rule R5; replaces P11 S12, P08 S13, P19 S13", "status": "planned"}, {"id": "S02", "layer": "Lambda → Bedrock", "script": "FR half: concerns (concern-pin vocabulary, validated), considerations, recommendations", "trigger": "S01", "io": "FR block", "source": "design", "status": "planned"}, {"id": "S03", "layer": "Lambda → Bedrock", "script": "WF half: same shape with the wildfire vocabulary and KB query", "trigger": "S02", "io": "WF block", "source": "design", "status": "planned"}, {"id": "S04", "layer": "page", "script": "reviewer edits text, accepts / removes concern pins, ticks Approve", "trigger": "S03", "io": "final text", "source": "design; replaces the Pass 2 columns", "status": "planned"}, {"id": "S05", "layer": "page → API GW → Lambda → S3 + Sheets", "script": "Save → `properties/{hub}/review/descriptions.json`; registry `descriptions: approved`", "trigger": "S04", "io": "S3 object + flags", "source": "design", "status": "planned"}], "phases": [{"name": "Inputs (Nearmap only)", "steps": ["S01"]}, {"name": "Two halves", "steps": ["S02", "S03"]}, {"name": "Approve + save", "steps": ["S04", "S05"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_reviewer[\"Reviewer\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L05[\"L05 API Gateway\"]\n    direction LR\n    A05[\" \"]:::anchor\n    AG_api[\"API Gateway: /clip · /review-save · /describe · /publish\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_describe[\"describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)\"]:::planned\n    LM_review[\"review-api Lambda (validate + save regions / pins / descriptions; set flags)\"]:::planned\n  end\n  subgraph L07[\"L07 AWS Bedrock\"]\n    direction LR\n    A07[\" \"]:::anchor\n    BR_model[\"model (Claude on Bedrock)\"]:::planned\n    BR_kb[\"Knowledge Base (pin standard, concern definitions)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_review[\"review.html — stops: Regions → Pins → Descriptions (Pages, code only)\"]:::planned\n  end\n  %% Inputs (Nearmap only)\n  HUMAN_reviewer -->|\"S01 Generate (gate: pins approved)\"| GH_review\n  GH_review -->|\"S01 POST /describe task fr+wf\"| AG_api\n  AG_api -->|\"S01 proxy\"| LM_describe\n  S3_props -->|\"S01 vert + obliques + review/regions + review/pins\"| CF_tiles\n  CF_tiles -->|\"S01 Nearmap inputs only — no captures, no photos\"| LM_describe\n  %% Two halves\n  LM_describe -->|\"S02 FR: KB retrieve\"| BR_kb\n  LM_describe -->|\"S02 FR concerns / considerations / recommendations\"| BR_model\n  LM_describe -->|\"S03 WF: KB retrieve\"| BR_kb\n  LM_describe -->|\"S03 WF concerns / considerations / recommendations\"| BR_model\n  LM_describe -->|\"S03 draft FR + WF blocks\"| GH_review\n  %% Approve + save\n  HUMAN_reviewer -->|\"S04 edit text, accept concern pins, Approve\"| GH_review\n  GH_review -->|\"S05 POST /review-save kind descriptions\"| AG_api\n  AG_api -->|\"S05 proxy\"| LM_review\n  LM_review -->|\"S05 properties/{hub}/review/descriptions.json\"| S3_props\n  LM_review -->|\"S05 descriptions: approved\"| S3_ref\n  LM_review -->|\"S05 row flag\"| SH_properties\n  A01 ~~~ A02 ~~~ A05 ~~~ A06 ~~~ A07 ~~~ A09 ~~~ A10 ~~~ A12\n"}, {"id": "N09", "title": "Publish property record", "caption": "N09 — Publish property record (planned)", "nodes": ["HUMAN_operator", "SH_properties", "AS_registry", "AG_api", "LM_publish", "S3_props", "S3_captures", "S3_ref", "CF_tiles"], "edges": [{"s": "HUMAN_operator", "t": "AS_registry", "label": "S01 menu Publish (or all flags set)", "status": "cited", "step": "S01", "phase": "Gather"}, {"s": "AS_registry", "t": "AG_api", "label": "S01 POST /publish {hub}", "status": "cited", "step": "S01", "phase": "Gather"}, {"s": "AG_api", "t": "LM_publish", "label": "S01 proxy", "status": "cited", "step": "S01", "phase": "Gather"}, {"s": "S3_ref", "t": "LM_publish", "label": "S01 registry identity + parcel ring", "status": "cited", "step": "S01", "phase": "Gather"}, {"s": "S3_props", "t": "LM_publish", "label": "S01 nearmap manifest, cameras.json, review/*.json", "status": "cited", "step": "S01", "phase": "Gather"}, {"s": "S3_captures", "t": "LM_publish", "label": "S01 capture refs + clipped.glb (if present)", "status": "cited", "step": "S01", "phase": "Gather"}, {"s": "LM_publish", "t": "S3_props", "label": "S02 properties/{hub}/property.json", "status": "cited", "step": "S02", "phase": "Write"}, {"s": "LM_publish", "t": "S3_ref", "label": "S02 properties.json[hub].published", "status": "cited", "step": "S02", "phase": "Write"}, {"s": "LM_publish", "t": "CF_tiles", "label": "S03 invalidate /properties/{hub}/property.json", "status": "cited", "step": "S03", "phase": "Write"}, {"s": "LM_publish", "t": "AS_registry", "label": "S04 published + viewer link", "status": "cited", "step": "S04", "phase": "Write"}, {"s": "AS_registry", "t": "SH_properties", "label": "S04 row cells", "status": "cited", "step": "S04", "phase": "Write"}], "steps": [{"id": "S01", "layer": "CloudFront + S3 → Lambda", "script": "`publish` Lambda gathers: registry identity, Nearmap manifest, capture refs (+ `clipped.glb` via N02 S04 if a capture covers the taxlot), `cameras.json`, `review/regions.json`, `review/pins.json`, `review/descriptions.json`, parcel ring", "trigger": "menu \"Publish\" or all-flags auto", "io": "inputs", "source": "design rule R3; replaces P15, P16, P17, P18", "status": "planned"}, {"id": "S02", "layer": "Lambda → S3", "script": "write `properties/{hub}/property.json` (identity, sources, imagery URLs, mesh URL, regions, pins, descriptions, cameras, parcel, hoa) + `reference/properties.json[hub].published`", "trigger": "S01", "io": "the record", "source": "design", "status": "planned"}, {"id": "S03", "layer": "Lambda → CloudFront", "script": "invalidate `/properties/{hub}/property.json`", "trigger": "S02", "io": "fresh CDN", "source": "design", "status": "planned"}, {"id": "S04", "layer": "Lambda → Sheets", "script": "registry row: `published <date>`, viewer link `property-viewer.html?hub=`", "trigger": "S03", "io": "cells", "source": "design", "status": "planned"}], "phases": [{"name": "Gather", "steps": ["S01"]}, {"name": "Write", "steps": ["S02", "S03", "S04"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_operator[\"Operator\"]:::planned\n  end\n  subgraph L02[\"L02 Google Sheets (one workbook)\"]\n    direction LR\n    A02[\" \"]:::anchor\n    SH_properties[\"tab Properties (the one registry tab)\"]:::planned\n  end\n  subgraph L03[\"L03 Google Apps Script (one project, registry module)\"]\n    direction LR\n    A03[\" \"]:::anchor\n    AS_registry[\"registry.gs: intake · links · status\"]:::planned\n  end\n  subgraph L05[\"L05 API Gateway\"]\n    direction LR\n    A05[\" \"]:::anchor\n    AG_api[\"API Gateway: /clip · /review-save · /describe · /publish\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_publish[\"publish Lambda (assemble property.json — the one writer)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n    S3_captures[\"property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  %% Gather\n  HUMAN_operator -->|\"S01 menu Publish (or all flags set)\"| AS_registry\n  AS_registry -->|\"S01 POST /publish {hub}\"| AG_api\n  AG_api -->|\"S01 proxy\"| LM_publish\n  S3_ref -->|\"S01 registry identity + parcel ring\"| LM_publish\n  S3_props -->|\"S01 nearmap manifest, cameras.json, review/*.json\"| LM_publish\n  S3_captures -->|\"S01 capture refs + clipped.glb (if present)\"| LM_publish\n  %% Write\n  LM_publish -->|\"S02 properties/{hub}/property.json\"| S3_props\n  LM_publish -->|\"S02 properties.json[hub].published\"| S3_ref\n  LM_publish -->|\"S03 invalidate /properties/{hub}/property.json\"| CF_tiles\n  LM_publish -->|\"S04 published + viewer link\"| AS_registry\n  AS_registry -->|\"S04 row cells\"| SH_properties\n  A01 ~~~ A02 ~~~ A03 ~~~ A05 ~~~ A06 ~~~ A09 ~~~ A10\n"}, {"id": "N10", "title": "CHEKT live link", "caption": "N10 — CHEKT live link (planned, kept)", "nodes": ["LM_chekt", "S3_ref", "CF_tiles", "GH_viewer", "EX_chekt"], "edges": [{"s": "S3_ref", "t": "CF_tiles", "label": "S01 properties.json hub → site_no", "status": "cited", "step": "S01", "phase": "Resolve"}, {"s": "CF_tiles", "t": "LM_chekt", "label": "S01 site mapping (replaces PROPERTY_MAP env)", "status": "cited", "step": "S01", "phase": "Resolve"}, {"s": "GH_viewer", "t": "LM_chekt", "label": "S02 GET /live, /clips x-viewer-key", "status": "cited", "step": "S02", "phase": "Live"}, {"s": "LM_chekt", "t": "EX_chekt", "label": "S02 /sites/{site}/cameras, activity-logs, events-video-urls", "status": "cited", "step": "S02", "phase": "Live"}, {"s": "LM_chekt", "t": "GH_viewer", "label": "S02 mjpeg URLs + clips", "status": "cited", "step": "S02", "phase": "Live"}], "steps": [{"id": "S01", "layer": "CloudFront → Lambda", "script": "gateway reads `reference/properties.json` (hub → site_no) instead of `PROPERTY_MAP`", "trigger": "request", "io": "site id", "source": "design; replaces P23 S03 env map", "status": "planned"}, {"id": "S02", "layer": "Lambda → CHEKT → viewer", "script": "`/live`, `/clips` as today (passcode, CORS, rate-limit handling)", "trigger": "viewer request", "io": "cameras + clips", "source": "keeps P23 S02–S07", "status": "planned (kept)"}], "phases": [{"name": "Resolve", "steps": ["S01"]}, {"name": "Live", "steps": ["S02"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_chekt[\"chekt-viewer-gateway (kept; hub → site from the registry)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_viewer[\"property-viewer.html + parcels.js (Pages, code only)\"]:::planned\n  end\n  subgraph L15[\"L15 Vendor / external\"]\n    direction LR\n    A15[\" \"]:::anchor\n    EX_chekt[\"CHEKT api.chekt.com/ext/v1\"]:::planned\n  end\n  %% Resolve\n  S3_ref -->|\"S01 properties.json hub → site_no\"| CF_tiles\n  CF_tiles -->|\"S01 site mapping (replaces PROPERTY_MAP env)\"| LM_chekt\n  %% Live\n  GH_viewer -->|\"S02 GET /live, /clips x-viewer-key\"| LM_chekt\n  LM_chekt -->|\"S02 /sites/{site}/cameras, activity-logs, events-video-urls\"| EX_chekt\n  LM_chekt -->|\"S02 mjpeg URLs + clips\"| GH_viewer\n  A06 ~~~ A09 ~~~ A10 ~~~ A12 ~~~ A15\n"}, {"id": "N11", "title": "Property viewer", "caption": "N11 — Property viewer (planned)", "nodes": ["HUMAN_responder", "LM_chekt", "S3_props", "S3_captures", "S3_ref", "CF_tiles", "GH_viewer", "EX_cdn"], "edges": [{"s": "HUMAN_responder", "t": "GH_viewer", "label": "S01 opens ?hub=", "status": "cited", "step": "S01", "phase": "Record"}, {"s": "S3_props", "t": "CF_tiles", "label": "S01 properties/{hub}/property.json", "status": "cited", "step": "S01", "phase": "Record"}, {"s": "CF_tiles", "t": "GH_viewer", "label": "S01 the one record", "status": "cited", "step": "S01", "phase": "Record"}, {"s": "S3_props", "t": "CF_tiles", "label": "S02 model.glb, vert.jpg, obliques, cam-NN.jpg", "status": "cited", "step": "S02", "phase": "Media"}, {"s": "S3_captures", "t": "CF_tiles", "label": "S02 Vyanet GLB / renders if present", "status": "cited", "step": "S02", "phase": "Media"}, {"s": "CF_tiles", "t": "GH_viewer", "label": "S02 media by URL from the record", "status": "cited", "step": "S02", "phase": "Media"}, {"s": "EX_cdn", "t": "GH_viewer", "label": "S02 three.js + draco", "status": "cited", "step": "S02", "phase": "Media"}, {"s": "S3_ref", "t": "CF_tiles", "label": "S03 parcel shards", "status": "cited", "step": "S03", "phase": "Media"}, {"s": "CF_tiles", "t": "GH_viewer", "label": "S03 parcels.js ring + neighbours", "status": "cited", "step": "S03", "phase": "Media"}, {"s": "GH_viewer", "t": "HUMAN_responder", "label": "S04 tabs: 3D · Imagery · Regions · Pins · FR/WF · Cameras · Parcel", "status": "cited", "step": "S04", "phase": "Tabs"}, {"s": "GH_viewer", "t": "LM_chekt", "label": "S05 Live tab → /live, /clips", "status": "cited", "step": "S05", "phase": "Tabs"}, {"s": "S3_ref", "t": "CF_tiles", "label": "S06 properties.json filtered by hoa", "status": "cited", "step": "S06", "phase": "Tabs"}, {"s": "CF_tiles", "t": "GH_viewer", "label": "S06 community members", "status": "cited", "step": "S06", "phase": "Tabs"}], "steps": [{"id": "S01", "layer": "CloudFront → page", "script": "`property-viewer.html?hub=` → `properties/{hub}/property.json`", "trigger": "responder opens link", "io": "record", "source": "design rule R7; replaces P22 S01–S03 (index + per-view files)", "status": "planned"}, {"id": "S02", "layer": "CloudFront → page", "script": "mesh `model.glb`, `vert.jpg`, obliques, camera stills — URLs from the record", "trigger": "S01", "io": "media", "source": "design", "status": "planned"}, {"id": "S03", "layer": "CloudFront → page", "script": "parcel ring + neighbours via `parcels.js` (N04)", "trigger": "S01", "io": "lot lines", "source": "design; replaces the GitHub grid fetch", "status": "planned"}, {"id": "S04", "layer": "page", "script": "tabs render from the record's blocks; pins + regions overlay the nadir; descriptions beside", "trigger": "S02", "io": "UI", "source": "design", "status": "planned"}, {"id": "S05", "layer": "page → Lambda", "script": "Cameras + Live tab → gateway `/live`, `/clips` (N10)", "trigger": "tab open", "io": "video", "source": "keeps P22 S04", "status": "planned"}, {"id": "S06", "layer": "CloudFront → page", "script": "Community view: HOA members from `reference/properties.json` filtered by `hoa`", "trigger": "HOA link", "io": "community map", "source": "design; replaces `data/hoa/` + hoa-viewer", "status": "planned"}], "phases": [{"name": "Record", "steps": ["S01"]}, {"name": "Media", "steps": ["S02", "S03"]}, {"name": "Tabs", "steps": ["S04", "S05", "S06"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_responder[\"Responder / customer (browser)\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_chekt[\"chekt-viewer-gateway (kept; hub → site from the registry)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_props[\"property-intel-tiles / properties/{hub}/ (nearmap, cameras, review, property.json)\"]:::planned\n    S3_captures[\"property-intel-tiles / captures/{id}/ (tiles, model, parcels/{taxlot}/clipped.glb)\"]:::planned\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_viewer[\"property-viewer.html + parcels.js (Pages, code only)\"]:::planned\n  end\n  subgraph L15[\"L15 Vendor / external\"]\n    direction LR\n    A15[\" \"]:::anchor\n    EX_cdn[\"three.js + draco (CDN)\"]:::planned\n  end\n  %% Record\n  HUMAN_responder -->|\"S01 opens ?hub=\"| GH_viewer\n  S3_props -->|\"S01 properties/{hub}/property.json\"| CF_tiles\n  CF_tiles -->|\"S01 the one record\"| GH_viewer\n  %% Media\n  S3_props -->|\"S02 model.glb, vert.jpg, obliques, cam-NN.jpg\"| CF_tiles\n  S3_captures -->|\"S02 Vyanet GLB / renders if present\"| CF_tiles\n  CF_tiles -->|\"S02 media by URL from the record\"| GH_viewer\n  EX_cdn -->|\"S02 three.js + draco\"| GH_viewer\n  S3_ref -->|\"S03 parcel shards\"| CF_tiles\n  CF_tiles -->|\"S03 parcels.js ring + neighbours\"| GH_viewer\n  %% Tabs\n  GH_viewer -->|\"S04 tabs: 3D · Imagery · Regions · Pins · FR/WF · Cameras · Parcel\"| HUMAN_responder\n  GH_viewer -->|\"S05 Live tab → /live, /clips\"| LM_chekt\n  S3_ref -->|\"S06 properties.json filtered by hoa\"| CF_tiles\n  CF_tiles -->|\"S06 community members\"| GH_viewer\n  A01 ~~~ A06 ~~~ A09 ~~~ A10 ~~~ A12 ~~~ A15\n"}, {"id": "N12", "title": "Ops", "caption": "N12 — Ops (planned)", "nodes": ["HUMAN_operator", "LC_deploy", "LC_smoke", "LM_intake", "LM_review", "LM_describe", "LM_publish", "BR_kb", "S3_ref", "CF_tiles", "CW_logs", "GH_viewer", "GH_review"], "edges": [{"s": "HUMAN_operator", "t": "LC_deploy", "label": "S01 deploy <component>", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_deploy", "t": "LM_intake", "label": "S01 image / zip by git SHA", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_deploy", "t": "LM_review", "label": "S01 image / zip by git SHA", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_deploy", "t": "LM_describe", "label": "S01 image / zip by git SHA", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_deploy", "t": "LM_publish", "label": "S01 image / zip by git SHA", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_deploy", "t": "GH_viewer", "label": "S01 git push → Pages", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_deploy", "t": "GH_review", "label": "S01 git push → Pages", "status": "cited", "step": "S01", "phase": "Deploy"}, {"s": "LC_smoke", "t": "CF_tiles", "label": "S02 one known property end to end", "status": "cited", "step": "S02", "phase": "Smoke"}, {"s": "HUMAN_operator", "t": "LC_deploy", "label": "S03 catalog publish / kb sync + CHANGELOG", "status": "cited", "step": "S03", "phase": "Vocabularies"}, {"s": "LC_deploy", "t": "S3_ref", "label": "S03 reference/pins-catalog.json", "status": "cited", "step": "S03", "phase": "Vocabularies"}, {"s": "LC_deploy", "t": "BR_kb", "label": "S03 KB data source sync", "status": "cited", "step": "S03", "phase": "Vocabularies"}, {"s": "LM_publish", "t": "CW_logs", "label": "S04 request shape + outcome", "status": "cited", "step": "S04", "phase": "Logs"}], "steps": [{"id": "S01", "layer": "Local → Lambda / Pages", "script": "`deploy <component>` for `intake`, `review-api`, `describe`, `publish`, `photo-normalize`, `clip`, `chekt-gateway`; viewer + review pages via git push", "trigger": "manual, after a change", "io": "code → running", "source": "design; generalizes P30 S01 to every component; retires the \"paste into the editor\" step for everything except `registry.gs`", "status": "planned"}, {"id": "S02", "layer": "Local → CloudFront", "script": "`smoke <component>` — one known property end to end (the row-3 oracle pattern)", "trigger": "after deploy", "io": "pass / fail", "source": "design; keeps P31 S05", "status": "planned"}, {"id": "S03", "layer": "Local → S3", "script": "`catalog publish` / `kb sync` → `reference/pins-catalog.json`, KB data source; CHANGELOG entry", "trigger": "manual", "io": "vocabularies", "source": "design; moves the catalog off GitHub, defines the KB ingest that P21 lacked", "status": "planned"}, {"id": "S04", "layer": "Lambda → CloudWatch", "script": "every Lambda logs request shape + outcome; one dashboard", "trigger": "side effect", "io": "logs", "source": "design", "status": "planned"}], "phases": [{"name": "Deploy", "steps": ["S01"]}, {"name": "Smoke", "steps": ["S02"]}, {"name": "Vocabularies", "steps": ["S03"]}, {"name": "Logs", "steps": ["S04"]}], "mermaid": "flowchart TB\n  classDef planned fill:#e8f0fb,stroke:#2a4d7f,color:#111;\n  classDef anchor fill:none,stroke:none,color:transparent,font-size:1px;\n  subgraph L01[\"L01 Local machine (PowerShell / Python / operator CLI)\"]\n    direction LR\n    A01[\" \"]:::anchor\n    HUMAN_operator[\"Operator\"]:::planned\n    LC_deploy[\"deploy CLI (one script per component, SHA-tagged)\"]:::planned\n    LC_smoke[\"smoke CLI (one known property per component)\"]:::planned\n  end\n  subgraph L06[\"L06 Lambda\"]\n    direction LR\n    A06[\" \"]:::anchor\n    LM_intake[\"property-intake Lambda (geocode, taxlot, hub id, registry upsert)\"]:::planned\n    LM_review[\"review-api Lambda (validate + save regions / pins / descriptions; set flags)\"]:::planned\n    LM_describe[\"describe Lambda (Bedrock: pin proposal, FR + WF text; Nearmap inputs only; validator in code)\"]:::planned\n    LM_publish[\"publish Lambda (assemble property.json — the one writer)\"]:::planned\n  end\n  subgraph L07[\"L07 AWS Bedrock\"]\n    direction LR\n    A07[\" \"]:::anchor\n    BR_kb[\"Knowledge Base (pin standard, concern definitions)\"]:::planned\n  end\n  subgraph L09[\"L09 S3 (bucket / prefix)\"]\n    direction LR\n    A09[\" \"]:::anchor\n    S3_ref[\"property-intel-tiles / reference/ (properties.json, parcels/{county}, pins-catalog.json)\"]:::planned\n  end\n  subgraph L10[\"L10 CloudFront\"]\n    direction LR\n    A10[\" \"]:::anchor\n    CF_tiles[\"d3fg47bqswi0rr.cloudfront.net (the one CDN)\"]:::planned\n  end\n  subgraph L11[\"L11 CloudWatch\"]\n    direction LR\n    A11[\" \"]:::anchor\n    CW_logs[\"one log group per Lambda + one dashboard\"]:::planned\n  end\n  subgraph L12[\"L12 GitHub (code only)\"]\n    direction LR\n    A12[\" \"]:::anchor\n    GH_viewer[\"property-viewer.html + parcels.js (Pages, code only)\"]:::planned\n    GH_review[\"review.html — stops: Regions → Pins → Descriptions (Pages, code only)\"]:::planned\n  end\n  %% Deploy\n  HUMAN_operator -->|\"S01 deploy <component>\"| LC_deploy\n  LC_deploy -->|\"S01 image / zip by git SHA\"| LM_intake\n  LC_deploy -->|\"S01 image / zip by git SHA\"| LM_review\n  LC_deploy -->|\"S01 image / zip by git SHA\"| LM_describe\n  LC_deploy -->|\"S01 image / zip by git SHA\"| LM_publish\n  LC_deploy -->|\"S01 git push → Pages\"| GH_viewer\n  LC_deploy -->|\"S01 git push → Pages\"| GH_review\n  %% Smoke\n  LC_smoke -->|\"S02 one known property end to end\"| CF_tiles\n  %% Vocabularies\n  HUMAN_operator -->|\"S03 catalog publish / kb sync + CHANGELOG\"| LC_deploy\n  LC_deploy -->|\"S03 reference/pins-catalog.json\"| S3_ref\n  LC_deploy -->|\"S03 KB data source sync\"| BR_kb\n  %% Logs\n  LM_publish -->|\"S04 request shape + outcome\"| CW_logs\n  A01 ~~~ A06 ~~~ A07 ~~~ A09 ~~~ A10 ~~~ A11 ~~~ A12\n"}], "inventory": [{"id": "N01", "name": "Nearmap export per property", "status": "planned", "where": "Sources", "notes": "P19 S01–S06"}, {"id": "N02", "name": "Vyanet capture", "status": "planned", "where": "Sources", "notes": "P01, P10, P05, P06, P07"}, {"id": "N03", "name": "Technician photos", "status": "planned", "where": "Sources", "notes": "P24, P18 (cameras)"}, {"id": "N04", "name": "GIS parcels", "status": "planned", "where": "Sources", "notes": "P02, P03"}, {"id": "N05", "name": "Property registry & intake", "status": "planned", "where": "Registry", "notes": "P08 S01–S03, P09 S01–S03, P11 S01, P04 (as a service), P17"}, {"id": "N06", "name": "Region review", "status": "planned", "where": "Review", "notes": "P19 S09–S11"}, {"id": "N07", "name": "Pin placement", "status": "planned", "where": "Review", "notes": "P11 S03–S11, P08 S10–S12, P09 Pass 1, P12, P13, P14"}, {"id": "N08", "name": "Descriptive analysis", "status": "planned", "where": "Review", "notes": "P11 S12, P08 S13, P19 S13, P21 (as a service)"}, {"id": "N09", "name": "Publish property record", "status": "planned", "where": "Publish", "notes": "P15, P16, P17, P18"}, {"id": "N10", "name": "CHEKT live link", "status": "planned (kept)", "where": "Publish", "notes": "P23"}, {"id": "N11", "name": "Property viewer", "status": "planned", "where": "Serve", "notes": "P22, P26, P33"}, {"id": "N12", "name": "Ops", "status": "planned", "where": "Ops", "notes": "P30, P31, P27"}], "stages": [{"n": 1, "name": "Sources", "meaning": "four inputs, each with its own CLI", "procs": ["N01", "N02", "N03", "N04"]}, {"n": 2, "name": "Registry", "meaning": "the one place a property is created and tracked", "procs": ["N05"]}, {"n": 3, "name": "Review", "meaning": "the Nearmap review app, three stops in order", "procs": ["N06", "N07", "N08"]}, {"n": 4, "name": "Publish", "meaning": "assemble the record; live-video mapping", "procs": ["N09", "N10"]}, {"n": 5, "name": "Serve", "meaning": "the one viewer", "procs": ["N11"]}, {"n": 6, "name": "Ops", "meaning": "deploy, test, maintain", "procs": ["N12"]}], "handoffs": [{"s": "N04", "t": "N01", "what": "parcel ring for the lot clip (vert-lot, lot.json)", "cite": "N01 S03", "status": "cited"}, {"s": "N04", "t": "N05", "what": "taxlot lookup at intake", "cite": "N05 S02", "status": "cited"}, {"s": "N04", "t": "N11", "what": "lot lines on every tab", "cite": "N11 S03", "status": "cited"}, {"s": "N04", "t": "N02", "what": "parcel polygon for the clipped GLB", "cite": "N02 S04", "status": "cited"}, {"s": "N01", "t": "N05", "what": "delivery id + survey date → registry row", "cite": "N01 S05", "status": "cited"}, {"s": "N02", "t": "N05", "what": "capture id → registry row (optional)", "cite": "N02 S05", "status": "cited"}, {"s": "N03", "t": "N05", "what": "photos-ready flag → registry row", "cite": "N03 S05", "status": "cited"}, {"s": "N05", "t": "N06", "what": "hub id + delivery id open the review app", "cite": "N05 S05, N06 S01", "status": "cited"}, {"s": "N01", "t": "N06", "what": "nadir + `ai/original/regions.json`", "cite": "N06 S02", "status": "cited"}, {"s": "N06", "t": "N07", "what": "reviewed regions as context", "cite": "N07 S02", "status": "cited"}, {"s": "N01", "t": "N07", "what": "nadir + obliques for the AI proposal and the human pass", "cite": "N07 S02–S03", "status": "cited"}, {"s": "N07", "t": "N08", "what": "approved pins (the only element truth)", "cite": "N08 S01", "status": "cited"}, {"s": "N06", "t": "N08", "what": "reviewed regions", "cite": "N08 S01", "status": "cited"}, {"s": "N01", "t": "N08", "what": "Nearmap imagery — the only description source", "cite": "N08 S01", "status": "cited"}, {"s": "N05", "t": "N09", "what": "identity (name, address, type, HOA, site_no)", "cite": "N09 S01", "status": "cited"}, {"s": "N01", "t": "N09", "what": "manifest: mesh, nadir, obliques URLs", "cite": "N09 S01", "status": "cited"}, {"s": "N02", "t": "N09", "what": "capture refs: tiles, GLB, renders (if present)", "cite": "N09 S01", "status": "cited"}, {"s": "N03", "t": "N09", "what": "`cameras.json` + stills", "cite": "N09 S01", "status": "cited"}, {"s": "N06", "t": "N09", "what": "`regions.json` (edits)", "cite": "N09 S01", "status": "cited"}, {"s": "N07", "t": "N09", "what": "`pins.json`", "cite": "N09 S01", "status": "cited"}, {"s": "N08", "t": "N09", "what": "`descriptions.json` (FR + WF)", "cite": "N09 S01", "status": "cited"}, {"s": "N09", "t": "N05", "what": "published flag + viewer link back to the row", "cite": "N09 S04", "status": "cited"}, {"s": "N09", "t": "N11", "what": "`properties/{hub}/property.json` via CloudFront", "cite": "N11 S01", "status": "cited"}, {"s": "N05", "t": "N10", "what": "hub → CHEKT site (site_no) from the registry", "cite": "N10 S01", "status": "cited"}, {"s": "N10", "t": "N11", "what": "`/live`, `/clips` with the viewer key", "cite": "N11 S05", "status": "cited"}, {"s": "N12", "t": "N06", "what": "review app + review API deploys", "cite": "N12 S01", "status": "cited"}, {"s": "N12", "t": "N09", "what": "publish Lambda deploy", "cite": "N12 S01", "status": "cited"}, {"s": "N12", "t": "N11", "what": "viewer deploy (Pages, code only)", "cite": "N12 S01", "status": "cited"}, {"s": "N12", "t": "N07", "what": "pin catalog + KB upkeep", "cite": "N12 S03", "status": "cited"}], "mode": "planned", "title": "Property Intel — Planned pipeline (Nearmap-first target design)", "source": "PLANNED_MAP.md"};</script>
+<script>
+const L = Object.fromEntries(DATA.layers.map(([id,name,color],i)=>[id,{id,name,color,idx:i}]));
+const PCOLORS = ["#1565c0","#c62828","#2e7d32","#6a1b9a","#ef6c00","#00838f","#ad1457","#5d4037","#37474f","#f9a825"];
+const procs = DATA.processes.filter(p=>p.id!=="P00");
+const skeleton = DATA.processes.find(p=>p.id==="P00");
+const nodeOf = id => DATA.nodes[id] || {id, label:id, lane:null, cls:"live"};
+const statusStroke = s => s==="dead"?"#c62828":s==="unverified"?"#f9a825":"#333";
+const $ = s => document.querySelector(s);
+const panel = $("#panel"), panelTitle = $("#panel h3"), panelBody = $("#panel .body");
+function setPanel(title, htmlBody){ panelTitle.textContent = title; panelBody.innerHTML = htmlBody; }
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const md = s => esc(s).replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\*\*([^*]+)\*\*/g,"<b>$1</b>");
+function wrap(text, width, maxLines){ const words=String(text).split(/\s+/), lines=[]; let cur=""; for (const w of words){ if ((cur+" "+w).trim().length>width && cur){ lines.push(cur); cur=w; } else cur=(cur+" "+w).trim(); } if (cur) lines.push(cur); if (lines.length>maxLines){ lines.length=maxLines; lines[maxLines-1]=lines[maxLines-1].slice(0,width-1)+"…"; } return lines; }
+function laneOrder(a,b){ const la=nodeOf(a).lane, lb=nodeOf(b).lane; return (L[la]?.idx??99)-(L[lb]?.idx??99) || a.localeCompare(b); }
+function zoomable(svg, g){ const z = d3.zoom().scaleExtent([0.15,3]).on("zoom", ev=>g.attr("transform", ev.transform)); svg.call(z).on("dblclick.zoom", null); return z; }
+function fitTo(svg, g, z, W, H){ const b=g.node().getBBox(); const k=Math.min(W/(b.width+60), H/(b.height+60), 1.4); svg.call(z.transform, d3.zoomIdentity.translate(30 - b.x*k + (W-(b.width+60)*k)/2, 30 - b.y*k).scale(k)); }
+
+
+
+// ------------------------------------------------------------------ BUBBLE MAP — applications per role, drill-down on click
+// Application groups: layers rolled up to the platform a person would name.
+const APPS = [
+  {id:"operator", name:"Operator", lanes:["L01"], color:"#6d4c41"},
+  {id:"google",   name:"Google (Sheets · Apps Script · Maps)", lanes:["L02","L03","L04"], color:"#2e7d32"},
+  {id:"lambda",   name:"AWS Lambda (+ API Gateway)", lanes:["L05","L06"], color:"#ef6c00"},
+  {id:"bedrock",  name:"AWS Bedrock (+ OpenSearch)", lanes:["L07","L08"], color:"#00897b"},
+  {id:"s3",       name:"AWS S3 (+ CloudFront)", lanes:["L09","L10"], color:"#c62828"},
+  {id:"cw",       name:"CloudWatch", lanes:["L11"], color:"#d81b60"},
+  {id:"github",   name:"GitHub (repo · Pages viewers)", lanes:["L12"], color:"#37474f"},
+  {id:"zoho",     name:"Zoho", lanes:["L13"], color:"#f9a825"},
+  {id:"botpress", name:"BotPress", lanes:["L14"], color:"#5d4037"},
+  {id:"vendor",   name:"Vendors / external", lanes:["L15"], color:"#546e7a"}
+];
+const APP_OF_LANE = {}; APPS.forEach(a=>a.lanes.forEach(l=>APP_OF_LANE[l]=a.id));
+const APP = Object.fromEntries(APPS.map(a=>[a.id,a]));
+const appOfNode = id => APP_OF_LANE[nodeOf(id).lane] || "vendor";
+
+// map a "Layer" cell fragment (e.g. "Apps Script", "API GW", "S3 records") onto an application group
+function appOfLayerText(t){ const s=t.toLowerCase();
+  if (/human|operator|reviewer|local/.test(s)) return "operator";
+  if (/sheet|apps script|web app|google|maps|geocod|direction/.test(s)) return "google";
+  if (/api gw|gateway|lambda|secrets/.test(s)) return "lambda";
+  if (/bedrock|kb|opensearch/.test(s)) return "bedrock";
+  if (/s3|cloudfront|records|tiles/.test(s)) return "s3";
+  if (/cloudwatch/.test(s)) return "cw";
+  if (/github|pages|viewer|browser/.test(s)) return "github";
+  if (/zoho/.test(s)) return "zoho"; if (/botpress/.test(s)) return "botpress";
+  if (/cdn|vendor|chekt|external/.test(s)) return "vendor";
+  return null; }
+
+function buildBubble(){
+  const view = document.createElement("div"); view.className="view"; view.id="bubble";
+  view.innerHTML = `<h2>Process map — click a bubble for its route, a stop for its steps</h2>
+    <div class="toolbar"><button data-act="back">← Back</button><button data-act="home">Home</button><button data-act="fit">Fit</button>
+      <span class="crumbs"></span>
+      <span style="float:right">Receipt for a resource: <select data-act="find"><option value="">choose…</option></select></span></div>
+    <div class="canvas"><svg></svg></div>`;
+  $("#views").appendChild(view);
+  const svg = d3.select(view.querySelector("svg"));
+  const W = view.querySelector(".canvas").clientWidth, H = Math.max(620, window.innerHeight-200);
+  svg.attr("width",W).attr("height",H);
+  const defs = svg.append("defs");
+  const grad = (id,c1,c2)=>{ const g=defs.append("radialGradient").attr("id",id).attr("cx","35%").attr("cy","30%"); g.append("stop").attr("offset","0%").attr("stop-color",c1); g.append("stop").attr("offset","100%").attr("stop-color",c2); };
+  grad("g-main","#d0d0d0","#7a7a7a"); grad("g-topic","#dbe9fb","#4f83c8"); grad("g-topic-off","#f0f0f0","#b8b8b8"); grad("g-phase","#e3ecf7","#5b7fae");
+  APPS.forEach(a=>grad("g-app-"+a.id, d3.color(a.color).brighter(1.8).formatHex(), a.color));
+  DATA.layers.forEach(([id,,c])=>grad("g-"+id, d3.color(c).brighter(1.7).formatHex(), c));
+  for (const [k,c] of [["cited","#2a4d7f"],["unverified","#f9a825"],["dead","#c62828"]])
+    defs.append("marker").attr("id","ra-"+k).attr("viewBox","0 -5 10 10").attr("refX",9).attr("markerWidth",8).attr("markerHeight",8).attr("orient","auto").append("path").attr("d","M0,-4L10,0L0,4Z").attr("fill",c);
+  const g = svg.append("g"); const z = zoomable(svg, g);
+  const crumbs = view.querySelector(".crumbs");
+  const inv = id => DATA.inventory.find(i=>i.id===id);
+  const proc = id => procs.find(p=>p.id===id);
+  const appShort = a => APP[a].name.replace(/ \(.*$/,"");
+  const shortRes = s => s.replace(/^property-intel-(tiles|records|ingest) \/ /,"$1/ ").replace(/^…\//,"").replace(/ \(.*$/,"").replace(/^tab /,"");
+  const stepOf = (pid, sid) => (proc(pid).steps.find(s=>s.id===sid) || {id:sid});
+  const stepRow = s => `<table class="kv"><tr><th>Layer</th><td>${md(s.layer||"")}</td></tr><tr><th>Script / function</th><td>${md(s.script||"")}</td></tr><tr><th>Trigger</th><td>${md(s.trigger||"")}</td></tr><tr><th>Input → Output</th><td>${md(s.io||"")}</td></tr><tr><th>Source</th><td>${md(s.source||"")}</td></tr><tr><th>Status</th><td>${md(s.status||"")}</td></tr></table>`;
+  const firstCode = s => { const m=String(s||"").match(/`([^`]+)`/); return m? m[1].replace(/\(.*$/,"") : String(s||"").slice(0,26); };
+  const edgeItem = (e, pid, n) => `<li><b>${esc(e.step||"")}</b> <span class="muted">${esc(pid)}</span> ${n ? (e.s===n?`→ <span class="n">${esc(nodeOf(e.t).label)}</span>`:`← <span class="n">${esc(nodeOf(e.s).label)}</span>`) : `<span class="n">${esc(nodeOf(e.s).label)}</span> → <span class="n">${esc(nodeOf(e.t).label)}</span>`}<div class="lbl">${esc(e.label)}</div></li>`;
+
+  // resource finder → receipt
+  const sel = view.querySelector("[data-act=find]");
+  [...new Set(procs.flatMap(p=>p.nodes))].sort(laneOrder).forEach(n=>{ const o=document.createElement("option"); o.value=n; o.textContent=`${nodeOf(n).lane} · ${shortRes(nodeOf(n).label)}`; sel.appendChild(o); });
+  sel.onchange = ()=>{ if(sel.value) receiptPanel(sel.value); sel.value=""; };
+
+  // ---------- navigation
+  let state = {level:0}; const history = [];
+  function go(next){ history.push(state); state = next; render(); }
+  function back(){ if (history.length){ state = history.pop(); render(); } }
+
+  // ---------- drawing helpers (linear)
+  function bubble(sel){
+    sel.attr("transform",d=>`translate(${d.x},${d.y})`).style("cursor",d=>d.onClick?"pointer":"default");
+    sel.filter(d=>d.shape==="pill").append("rect").attr("x",d=>-d.w/2).attr("y",-16).attr("width",d=>d.w).attr("height",32).attr("rx",16).attr("fill",d=>d.fill).attr("stroke","#fff").attr("stroke-width",2);
+    sel.filter(d=>d.shape!=="pill").append("circle").attr("r",d=>d.r).attr("fill",d=>d.fill).attr("stroke",d=>d.stroke||"#fff").attr("stroke-width",d=>d.strokeWidth||2.5).attr("stroke-dasharray",d=>d.dash||null);
+    sel.append("text").attr("text-anchor","middle").attr("font-size",d=>d.fontSize||11).attr("font-weight",d=>d.bold?700:500).attr("fill",d=>d.color||"#111")
+      .attr("paint-order",d=>d.inside?null:"stroke").attr("stroke",d=>d.inside?null:"#fff").attr("stroke-width",d=>d.inside?null:3.5)
+      .selectAll("tspan").data(d=>d.lines.map((l,i)=>({l,i,n:d.lines.length,d}))).join("tspan").attr("x",0)
+      .attr("y",t=>t.d.inside ? (t.i-(t.n-1)/2)*(t.d.fontSize||11)*1.15+4 : (t.d.r||16)+14+t.i*12).text(t=>t.l);
+    // sub-chips under the bubble (application tags)
+    sel.filter(d=>d.chips&&d.chips.length).each(function(d){ const gg=d3.select(this).append("g"); const y0=(d.r||16)+14+(d.lines.length)*12+2;
+      d.chips.forEach((c,i)=>{ const y=y0+i*16; const w=c.text.length*5.6+12; gg.append("rect").attr("x",-w/2).attr("y",y-8).attr("width",w).attr("height",14).attr("rx",7).attr("fill",APP[c.app].color).attr("opacity",0.9); gg.append("text").attr("x",0).attr("y",y+3).attr("text-anchor","middle").attr("font-size",8.5).attr("font-weight",700).attr("fill","#fff").text(c.text); }); });
+    sel.append("title").text(d=>d.title||"");
+    sel.on("click",(ev,d)=>{ ev.stopPropagation(); if (d.onClick) d.onClick(d); });
+  }
+  function link(a, b, label, status="cited", onClick){ // straight arrow a → b (left to right or top to bottom), optional label box mid-way
+    const ax = a.x + (a.shape==="pill"? a.w/2 : a.r), bx = b.x - (b.shape==="pill"? b.w/2 : b.r) - 4;
+    const vertical = Math.abs(b.y-a.y) > 1 && Math.abs(b.x-a.x) < 1;
+    const p = g.append("g").style("cursor",onClick?"pointer":"default");
+    if (vertical){ const ay=a.y+(a.r||16), by=b.y-(b.r||16)-4; p.append("line").attr("x1",a.x).attr("y1",ay).attr("x2",b.x).attr("y2",by).attr("stroke",statusStroke(status)==="#333"?"#2a4d7f":statusStroke(status)).attr("stroke-width",2.2).attr("stroke-dasharray",status==="unverified"?"6 4":null).attr("marker-end",`url(#ra-${status})`); }
+    else p.append("line").attr("x1",ax).attr("y1",a.y).attr("x2",bx).attr("y2",b.y).attr("stroke",status==="cited"?"#2a4d7f":statusStroke(status)).attr("stroke-width",2.2).attr("stroke-dasharray",status==="unverified"?"6 4":null).attr("marker-end",`url(#ra-${status})`);
+    if (label){ const mx=(ax+bx)/2, my=(a.y+b.y)/2; const w=String(label).length*6.6+14; p.append("rect").attr("x",mx-w/2).attr("y",my-24).attr("width",w).attr("height",18).attr("rx",8).attr("fill","#fff").attr("stroke","#2a4d7f").attr("stroke-width",1); p.append("text").attr("x",mx).attr("y",my-11).attr("text-anchor","middle").attr("font-size",10).attr("font-weight",700).attr("fill","#1b2f4a").text(label); }
+    if (onClick) p.on("click",(ev)=>{ ev.stopPropagation(); onClick(); });
+    return p;
+  }
+  const pill = (x, text, fill) => ({x, y:0, shape:"pill", w:text.length*8+30, fill, lines:[text], inside:true, bold:true, color:"#fff", fontSize:12});
+  function chainLayout(items, x0, gap){ items.forEach((it,i)=>{ it.x = x0 + i*gap; it.y = 0; }); }
+  function caption(text, y=-120){ g.append("text").attr("x",0).attr("y",y).attr("font-size",13).attr("fill","#555").text(text); }
+
+  // ---------- levels
+  function render(){
+    g.selectAll("*").remove();
+    const crumb = [{t:"Property Intel", s:{level:0}}];
+    if (state.level>=1 && state.level<=3) crumb.push({t:state.pid+" "+(inv(state.pid)||{}).name, s:{level:1,pid:state.pid}});
+    if (state.level>=2 && state.level<=3) crumb.push({t:state.phase, s:{level:2,pid:state.pid,phase:state.phase}});
+    if (state.level===3) crumb.push({t:state.step, s:state});
+    if (state.level===4) crumb.push({t:"Receipt: "+shortRes(nodeOf(state.node).label), s:state});
+    crumbs.innerHTML = crumb.map((c,i)=>`<a href="#" data-i="${i}">${esc(c.t)}</a>`).join(" › ");
+    crumbs.querySelectorAll("a").forEach((a,i)=>a.onclick=ev=>{ ev.preventDefault(); if (i<crumb.length-1){ history.push(state); state=crumb[i].s; render(); } });
+    if (state.level===0) return home();
+    if (state.level===1) return processRoute(state.pid);
+    if (state.level===2) return phaseRoute(state.pid, state.phase);
+    if (state.level===3) return stepDetail(state.pid, state.step);
+    if (state.level===4) return receipt(state.node);
+  }
+
+  // ---------- HOME: processes as bubbles in stage columns, arrows = hand-offs (section 1b of the .md)
+  const HO_COLOR = {cited:"#2a4d7f", unverified:"#f9a825", dead:"#c62828", noreader:"#9e9e9e"};
+  const PLANNED = DATA.mode==="planned";
+  const HO_LABEL = {cited: PLANNED ? "planned (designed)" : "cited", unverified:"[UNVERIFIED]", dead:"superseded / dead", noreader:"no reader"};
+  for (const [k,c] of Object.entries(HO_COLOR)) defs.append("marker").attr("id","ho-"+k).attr("viewBox","0 -5 10 10").attr("refX",9).attr("markerWidth",7).attr("markerHeight",7).attr("orient","auto").append("path").attr("d","M0,-4L10,0L0,4Z").attr("fill",c);
+  function home(){
+    const gapX = 390, gapY = 136, R = 54;   // column gap leaves ~280 px between bubble edges for 2-line labels (≤ ~165 px wide)
+    const pos = {};
+    const bubbles = [];
+    let pinned = null, clickT = null;   // pinned = process id whose hand-offs are frozen on screen (single click), or "edge"
+    DATA.stages.forEach((st,ci)=>{
+      const n = st.procs.length, y0 = -((n-1)*gapY)/2;
+      g.append("text").attr("x",ci*gapX).attr("y",y0-R-58).attr("text-anchor","middle").attr("font-size",13).attr("font-weight",700).attr("fill","#1b2f4a").text(`${st.n}. ${st.name}`);
+      g.append("text").attr("x",ci*gapX).attr("y",y0-R-42).attr("text-anchor","middle").attr("font-size",10.5).attr("fill","#777").text(st.meaning);
+      st.procs.forEach((pid,ri)=>{
+        const i = inv(pid) || {id:pid,name:pid,status:"",where:"",notes:""}; const mapped = !!proc(pid);
+        const dead = /dead|superseded|not runnable|not found/i.test(i.status) && !/live/i.test(i.status);
+        const unver = /UNVERIFIED|blocked|not built/i.test(i.status) && !dead;
+        const b = {pid, x:ci*gapX, y:y0+ri*gapY, r:R, fill: dead?"url(#g-topic-off)":"url(#g-topic)", stroke: dead?"#c62828":unver?"#f9a825":"#fff", strokeWidth: dead||unver?3.5:2.5, dash: unver?"6 4":null,
+          lines:[pid,...wrap(i.name,15,3)], fontSize:11, inside:true, bold:true, color: dead?"#444":"#14304f",
+          title:`${pid} ${i.name}\n${i.status}\nhover: show its hand-offs · click: pin them · double-click: open the route`,
+          mapped, inv:i,
+          onClick: d=>{ clearTimeout(clickT); clickT = setTimeout(()=>{ if (pinned===d.pid){ pinned=null; highlight(null); homePanel(); } else { pinned=d.pid; highlight(d.pid); showProcHandoffs(d.pid); } }, 230); }};
+        pos[pid] = b; bubbles.push(b);
+      });
+    });
+    // arrows: cubic left→right (or a loop-back when the target column is left of / same as the source)
+    const eg = g.append("g").attr("class","ho");
+    const arrows = DATA.handoffs.filter(h=>pos[h.s]&&pos[h.t]).map((h,k)=>{
+      const a=pos[h.s], b=pos[h.t]; const fwd = b.x > a.x; const same = Math.abs(b.x-a.x)<1;
+      let d;
+      if (same){ const dir = b.y>a.y?1:-1; const x1=a.x+R, y1=a.y+dir*R*0.6, x2=b.x+R, y2=b.y-dir*R*0.6-dir*4; d=`M${x1},${y1} C${x1+90},${y1} ${x2+90},${y2} ${x2},${y2}`; }
+      else if (fwd){ const x1=a.x+R, x2=b.x-R-4, mx=(x1+x2)/2; d=`M${x1},${a.y} C${mx},${a.y} ${mx},${b.y} ${x2},${b.y}`; }
+      else { const x1=a.x-R, x2=b.x+R+4, mx=(x1+x2)/2; d=`M${x1},${a.y} C${mx},${a.y} ${mx},${b.y} ${x2},${b.y}`; }
+      const c = HO_COLOR[h.status];
+      const p = eg.append("path").attr("d",d).attr("fill","none").attr("stroke",c).attr("stroke-width",h.status==="cited"?1.6:1.8).attr("stroke-opacity",0.45)
+        .attr("stroke-dasharray", h.status==="unverified"||h.status==="noreader" ? "6 4" : null).attr("marker-end",`url(#ho-${h.status})`).style("cursor","pointer");
+      p.append("title").text(`${h.s} → ${h.t}\n${h.what}\n${h.cite} · ${HO_LABEL[h.status]}`);
+      p.on("click",(ev)=>{ ev.stopPropagation(); pinned="edge"; showHandoff(h); highlight(null, h); });
+      return Object.assign({path:p, k}, h);
+    });
+    const hoRow = (h, dir) => { const other = dir==="out" ? h.t : h.s; const oi = inv(other)||{}; return `<li><a href="#" data-ho="${h.k}"><span style="color:${HO_COLOR[h.status]};font-weight:700">${dir==="out"?"→":"←"}</span> <b>${esc(other)}</b> ${esc(oi.name||"")}</a><div class="lbl">${md(h.what)}</div><div class="lbl muted">${esc(h.cite)} · ${esc(HO_LABEL[h.status])}</div></li>`; };
+    function showProcHandoffs(pid){
+      const i = inv(pid)||{}; const outs = arrows.filter(a=>a.s===pid), ins = arrows.filter(a=>a.t===pid);
+      setPanel(`${pid} — ${i.name||""}`, `<p class="muted">${md(i.status||"")}</p>${i.notes ? `<p class="lbl"><b>${PLANNED?"Replaces (current map)":"Notes"}:</b> ${md(i.notes)}</p>` : ""}
+        <p><b>Pinned.</b> Click the bubble again or the empty canvas to release. <a href="#" data-open="${esc(pid)}"><b>Double-click the bubble (or click here) to open the route →</b></a></p>
+        <h4>Feeds into (${outs.length})</h4><ol class="edges">${outs.map(h=>hoRow(h,"out")).join("")||"<li class='muted'>nothing — its outputs are not consumed by another process</li>"}</ol>
+        <h4>Fed by (${ins.length})</h4><ol class="edges">${ins.map(h=>hoRow(h,"in")).join("")||"<li class='muted'>nothing — it starts from a human or a vendor</li>"}</ol>
+        <p class="muted">Click a hand-off for its citation.</p>`);
+      panelBody.querySelectorAll("a[data-ho]").forEach(a=>a.onclick=ev=>{ ev.preventDefault(); const h=arrows[+a.dataset.ho]; pinned="edge"; showHandoff(h); highlight(null,h); });
+      const op = panelBody.querySelector("a[data-open]"); if (op) op.onclick=ev=>{ ev.preventDefault(); go({level:1,pid}); };
+    }
+    function showHandoff(h){
+      const si=inv(h.s)||{}, ti=inv(h.t)||{};
+      setPanel(`${h.s} → ${h.t}`, `<p><b>${esc(si.name||h.s)}</b> → <b>${esc(ti.name||h.t)}</b></p><table class="kv"><tr><th>What moves</th><td>${md(h.what)}</td></tr><tr><th>Cited step</th><td>${md(h.cite)}</td></tr><tr><th>Status</th><td><span style="color:${HO_COLOR[h.status]};font-weight:700">${esc(HO_LABEL[h.status])}</span></td></tr></table><p class="muted">Open either process (click its bubble) and find the cited step in its route for the full receipt.</p>`);
+    }
+    // hover / focus a bubble: dim everything not connected, show labels on its arrows.
+    // Labels are drawn ABOVE the bubbles (lblG is appended after bsel) and placed so they never sit on a
+    // bubble or on another label: slide along the arrow first, then nudge upward.
+    let lblG = null;
+    const circleHitsRect = (cx,cy,r,x,y,w,h) => { const nx=Math.max(x,Math.min(cx,x+w)), ny=Math.max(y,Math.min(cy,y+h)); return (cx-nx)**2+(cy-ny)**2 < r*r; };
+    function placeLabel(path, w, h, placed){
+      const node = path.node(), L = node.getTotalLength();
+      const clear = (x,y) => !bubbles.some(b=>circleHitsRect(b.x,b.y,R+6,x-w/2,y-h/2,w,h)) && !placed.some(p=>Math.abs(p.x-x)*2 < p.w+w+6 && Math.abs(p.y-y)*2 < p.h+h+4);
+      // 1) slide along the arrow, nearest the middle first
+      const ts = []; for (let k=0;k<=18;k++){ const d=k*0.025; if (k===0) ts.push(0.5); else ts.push(0.5-d, 0.5+d); }
+      for (const t of ts){ const m=node.getPointAtLength(L*t); if (clear(m.x,m.y)) return {x:m.x,y:m.y}; }
+      // 2) search a ring of offsets around the midpoint (sideways into the column gap, then up/down)
+      const m = node.getPointAtLength(L*0.5);
+      for (let ring=1; ring<=12; ring++){
+        for (const [dx,dy] of [[0,-ring],[0,ring],[-ring,0],[ring,0],[-ring,-ring],[ring,-ring],[-ring,ring],[ring,ring]]){
+          const x=m.x+dx*22, y=m.y+dy*(h+4); if (clear(x,y)) return {x,y}; } }
+      return {x:m.x, y:m.y-(R+h)};
+    }
+    function highlight(pid, one){
+      lblG.selectAll("*").remove();
+      const keep = one ? new Set([one.s,one.t]) : pid ? new Set([pid, ...arrows.filter(a=>a.s===pid||a.t===pid).flatMap(a=>[a.s,a.t])]) : null;
+      const placed = [];
+      arrows.forEach(a=>{ const on = one ? a===one : pid ? (a.s===pid||a.t===pid) : true;
+        a.path.attr("stroke-opacity", on ? (keep?0.95:0.45) : 0.06).attr("stroke-width", on&&keep ? 2.6 : (a.status==="cited"?1.6:1.8));
+        if (on && keep){ const lines = wrap(a.what, 26, 2); const w = Math.max(...lines.map(l=>l.length))*5.7+14, h = lines.length*12+7;
+          const m = placeLabel(a.path, w, h, placed); placed.push({x:m.x,y:m.y,w,h});
+          const t = lblG.append("g").style("cursor","pointer").on("click",(ev)=>{ ev.stopPropagation(); pinned="edge"; showHandoff(a); highlight(null,a); });
+          t.append("rect").attr("x",m.x-w/2).attr("y",m.y-h/2).attr("width",w).attr("height",h).attr("rx",8).attr("fill","#fff").attr("stroke",HO_COLOR[a.status]).attr("stroke-width",1.2);
+          t.append("text").attr("text-anchor","middle").attr("font-size",9.5).attr("font-weight",600).attr("fill","#1b2f4a")
+            .selectAll("tspan").data(lines).join("tspan").attr("x",m.x).attr("y",(l,i)=>m.y-h/2+12+i*12).text(l=>l);
+          t.append("title").text(`${a.s} → ${a.t}\n${a.what}\n${a.cite} · ${HO_LABEL[a.status]}`); } });
+      bsel.attr("opacity", d => keep ? (keep.has(d.pid)?1:0.18) : 1);
+      bsel.select("circle").attr("stroke", d => d.pid===pinned ? "#111" : d.stroke).attr("stroke-width", d => d.pid===pinned ? 5 : d.strokeWidth);
+    }
+    const bsel = g.append("g").selectAll("g").data(bubbles).join("g").attr("class","proc");
+    bubble(bsel);
+    lblG = g.append("g").attr("class","ho-labels");   // after the bubbles → labels render on top
+    bsel.on("mouseenter",(ev,d)=>{ if (!pinned) highlight(d.pid); }).on("mouseleave",()=>{ if (!pinned) highlight(null); });
+    bsel.on("dblclick",(ev,d)=>{ ev.stopPropagation(); clearTimeout(clickT); if (d.mapped) go({level:1,pid:d.pid}); else setPanel(`${d.pid} ${d.inv.name}`, `<table class="kv"><tr><th>Status</th><td>${md(d.inv.status)}</td></tr><tr><th>Where found</th><td>${md(d.inv.where)}</td></tr><tr><th>Notes</th><td>${md(d.inv.notes)}</td></tr></table>`); });
+    svg.on("click", ()=>{ pinned=null; highlight(null); homePanel(); });
+    const counts = {cited:0,unverified:0,dead:0,noreader:0}; DATA.handoffs.forEach(h=>counts[h.status]++);
+    function homePanel(){ setPanel(PLANNED ? "Home — the planned pipeline (design mock-up)" : "Home — how the processes feed each other", `<p>${PLANNED
+        ? `<b>Nothing here is built.</b> Columns are the planned stages, left to right: the four sources → the one registry → the three review stops → publish → the one viewer → ops. Each arrow is a designed hand-off, cited to a planned step in <code>${esc(DATA.source)}</code>. The <i>Replaces</i> line on each bubble names the current processes it retires (see the current map).`
+        : `Columns are stages, left to right: where data enters → the AWS services → the sheet pipelines → review → publish → what responders load → ops. Each arrow is one hand-off read from a step in the tables (§1b of the .md).`}</p>
+      <p><b>Hover</b> a bubble to see only its hand-offs with what moves. <b>Click</b> a bubble to pin that view and list its hand-offs here. <b>Double-click</b> a bubble to open that process's route. <b>Click an arrow</b> for its citation.</p>
+      <table class="kv"><tr><th style="color:${HO_COLOR.cited}">solid</th><td>${counts.cited} ${PLANNED?"planned":"cited"} hand-offs</td></tr><tr><th style="color:${HO_COLOR.unverified}">dashed</th><td>${counts.unverified} [UNVERIFIED]</td></tr><tr><th style="color:${HO_COLOR.dead}">red</th><td>${counts.dead} superseded / dead</td></tr><tr><th style="color:${HO_COLOR.noreader}">grey dashed</th><td>${counts.noreader} output with no reader</td></tr></table>
+      <p class="muted">Bubble border: red = dead / one-shot, dashed amber = [UNVERIFIED] or not built.</p>
+      <h4>Stages</h4><ol>${DATA.stages.map(s=>`<li><b>${esc(s.name)}</b> <span class="muted">${esc(s.meaning)}</span><div class="lbl">${s.procs.map(p=>esc(p)).join(", ")}</div></li>`).join("")}</ol>`); }
+    homePanel();
+    fitTo(svg,g,z,W,H);
+  }
+
+  function processRoute(pid){
+    const p = proc(pid), i = inv(pid);
+    const stops = p.phases.filter(ph=>ph.steps.length).map(ph=>{ const es=p.edges.filter(e=>(e.phase||"All steps")===ph.name); const apps=[]; es.forEach(e=>[e.s,e.t].forEach(n=>{ const a=appOfNode(n); if(!apps.includes(a)) apps.push(a); }));
+      const rng = ph.steps.length>1 ? `${ph.steps[0]}–${ph.steps[ph.steps.length-1]}` : ph.steps[0];
+      return {name:ph.name, r:56, fill:"url(#g-phase)", lines:wrap(ph.name,16,3), inside:true, bold:true, color:"#fff", fontSize:11, chips:apps.map(a=>({app:a,text:appShort(a)})), sub:rng, title:`${ph.name}\nsteps ${rng}\nclick to list the steps on the right`, onClick:d=>showPhase(d), steps:ph.steps, edges:es}; });
+    function showPhase(d){
+      g.selectAll("g.stop").select("circle").attr("stroke","#fff").attr("stroke-width",2.5);
+      g.selectAll("g.stop").filter(x=>x===d).select("circle").attr("stroke","#111").attr("stroke-width",4);
+      const items = d.steps.map(sid=>{ const s=stepOf(pid,sid); const es=p.edges.filter(e=>e.step===sid);
+        return `<li><details><summary><b>${esc(sid)}</b> <code>${esc(firstCode(s.script))}</code><div class="lbl muted">${md(s.layer||"")}</div></summary>
+          <table class="kv"><tr><th>Runs</th><td>${md(s.script||"")}</td></tr><tr><th>Trigger</th><td>${md(s.trigger||"")}</td></tr><tr><th>In → Out</th><td>${md(s.io||"")}</td></tr><tr><th>Source</th><td>${md(s.source||"")}</td></tr><tr><th>Status</th><td>${md(s.status||"")}</td></tr>${es.length?`<tr><th>Moves</th><td><ol class="edges">${es.map(e=>`<li><span class="n">${esc(shortRes(nodeOf(e.s).label))}</span> → <span class="n">${esc(shortRes(nodeOf(e.t).label))}</span><div class="lbl">${esc(e.label.replace(/^S\d\d\s*/,""))}</div></li>`).join("")}</ol></td></tr>`:""}</table></details></li>`; }).join("");
+      setPanel(`${d.name} — ${d.sub}`, `<p class="muted">${esc(pid)} · ${d.steps.length} step(s), in order. Applications: ${d.chips.map(c=>esc(c.text)).join(" → ")}</p><ol class="steps path">${items}</ol><p class="muted">Click a step to open its details.</p>`);
+    }
+    const start = pill(0,"START",""+"#111"), finish = pill(0,"FINISH","#111");
+    chainLayout([start,...stops,finish], 0, 230);
+    caption(`${pid} — ${i.name}: ${stops.length} phases, ${p.steps.length} steps, left to right`, -110);
+    // step range under each phase bubble (above the chips)
+    stops.forEach(s=>{ g.append("text").attr("x",s.x).attr("y",s.y+s.r+12).attr("text-anchor","middle").attr("font-size",10).attr("fill","#555").text(s.sub); });
+    const seq=[start,...stops,finish];
+    for (let k=0;k<seq.length-1;k++){ const a=seq[k], b=seq[k+1]; const lbl = b.steps ? `${b.steps.length} step${b.steps.length===1?"":"s"}` : ""; link(a,b,lbl); }
+    bubble(g.append("g").selectAll("g").data(seq).join("g").attr("class","stop"));
+    setPanel(`${pid} — ${i.name}`, `<p>The route runs left to right. Each stop is a phase; under it the step range and the applications it touches, in order.</p><ol>${stops.map(s=>`<li><b>${esc(s.name)}</b> <span class="muted">${esc(s.sub)}</span><div class="lbl">${s.chips.map(c=>esc(c.text)).join(" → ")}</div></li>`).join("")}</ol><p class="muted">Click a stop to list its steps (functions / prompts / scripts) here.</p>`);
+    fitTo(svg,g,z,W,H);
+  }
+
+  // receipt as a panel list (no canvas change): producers, then consumers, in step order
+  function receiptPanel(node){
+    const n = nodeOf(node); const items=[]; procs.forEach(p=>p.edges.forEach(e=>{ if(e.s===node||e.t===node) items.push(Object.assign({pid:p.id},e)); }));
+    items.sort((a,b)=>a.pid.localeCompare(b.pid)||(a.step||"").localeCompare(b.step||""));
+    const inc=items.filter(e=>e.t===node&&e.s!==node), outg=items.filter(e=>e.s===node&&e.t!==node);
+    const row = (e,dir) => `<li><b>${esc(e.step)}</b> <span class="muted">${esc(e.pid)}</span> ${dir==="in"?"←":"→"} <a href="#" data-node="${esc(dir==="in"?e.s:e.t)}" class="n">${esc(shortRes(nodeOf(dir==="in"?e.s:e.t).label))}</a><div class="lbl">${esc(e.label.replace(/^S\d\d\s*/,""))}</div><div class="lbl muted"><code>${esc(firstCode(stepOf(e.pid,e.step).script))}</code></div></li>`;
+    setPanel(`Receipt — ${shortRes(n.label)}`, `<p class="muted">${esc(n.label)} · layer ${esc(n.lane)} · ${esc(n.cls)}</p><h4>Produced / fed by (${inc.length})</h4><ol class="edges">${inc.map(e=>row(e,"in")).join("")||"<li class='muted'>nothing in the mapped processes</li>"}</ol><h4>Consumed / read by (${outg.length})</h4><ol class="edges">${outg.map(e=>row(e,"out")).join("")||"<li class='muted'>nothing in the mapped processes</li>"}</ol><p class="muted">Click a name to follow the chain.</p>`);
+    panelBody.querySelectorAll("a[data-node]").forEach(a=>a.onclick=ev=>{ ev.preventDefault(); receiptPanel(a.dataset.node); });
+  }
+
+  view.querySelector("[data-act=back]").onclick = back;
+  view.querySelector("[data-act=home]").onclick = ()=>{ history.push(state); state={level:0}; render(); };
+  view.querySelector("[data-act=fit]").onclick = ()=>fitTo(svg,g,z,W,H);
+  render();
+}
+buildBubble();
+
+const lg = document.querySelector("#layers"); for (const [id,name,color] of DATA.layers) { const s=document.createElement("span"); s.style.background=color; s.textContent=id+" "+name; lg.appendChild(s); }
+</script>
+</body></html>

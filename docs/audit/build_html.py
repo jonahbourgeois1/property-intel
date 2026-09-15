@@ -9,12 +9,16 @@ table that precedes it, emits one JSON payload, and renders:
                              path, click a node to isolate its connections.
 Mermaid source stays the truth (also kept as collapsible fallback render).
 Run: python build_html.py   (prints the table<->edge reconciliation per diagram)"""
-import re, io, os, json, html, datetime
+import re, io, os, sys, json, html, datetime
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _DOCS = _HERE if os.path.exists(os.path.join(_HERE, "DATA_MAP.md")) else r"C:\dev\property-intel\docs\audit"
-MD = os.path.join(_DOCS, "DATA_MAP.md")
-OUT = os.path.join(_DOCS, "DATA_MAP.html")
+# usage: python build_html.py [DATA_MAP.md | PLANNED_MAP.md]   (default DATA_MAP.md; output = same name .html)
+_MDNAME = os.path.basename(sys.argv[1]) if len(sys.argv) > 1 else "DATA_MAP.md"
+MD = os.path.join(_DOCS, _MDNAME)
+OUT = os.path.join(_DOCS, os.path.splitext(_MDNAME)[0] + ".html")
+# the two maps link to each other
+MAPS = [["DATA_MAP.html", "Current system (as it runs today)"], ["PLANNED_MAP.html", "Planned pipeline (Nearmap-first target)"]]
 
 LAYERS = [
   ["L01","Local machine","#6d4c41"], ["L02","Google Sheets","#2e7d32"], ["L03","Apps Script","#43a047"],
@@ -69,7 +73,7 @@ for m in re.finditer(r"```mermaid\n(.*?)```", md, re.S):
     before = md[:m.start()]
     h2s = list(re.finditer(r"^## .+$", before, re.M))
     cap = h2s[-1].group(0)[3:].strip() if h2s else "diagram"
-    pid_m = re.search(r"\b(P\d\d)\b", cap)
+    pid_m = re.search(r"\b([PN]\d\d)\b", cap)
     pid = pid_m.group(1) if pid_m else "P00"
     sect = md[h2s[-1].start():m.start()] if h2s else ""
     steps = []
@@ -81,7 +85,7 @@ for m in re.finditer(r"```mermaid\n(.*?)```", md, re.S):
     nodes, edges = parse_block(m.group(1))
     for nid, n in nodes.items():
         all_nodes.setdefault(nid, n)
-    title_m = re.search(r"^## (P\d\d) — (.+?) \(", md[h2s[-1].start():] if h2s else "", re.M)
+    title_m = re.search(r"^## ([PN]\d\d) — (.+?) \(", md[h2s[-1].start():] if h2s else "", re.M)
     # phases in first-appearance order; each step belongs to the phase of its first edge
     phases, seen_ph = [], set()
     for e in edges:
@@ -103,23 +107,38 @@ for m in re.finditer(r"```mermaid\n(.*?)```", md, re.S):
 for c in checks:
     print(f"[check] {c[0][:60]!r}: nodes={c[1]} edges={c[2]} table_steps={c[3]} table_only={c[4]} edge_only={c[5]} undefined_nodes={c[6]}")
 
-# process inventory (section 1 table): id, name, status -> topic bubbles for processes not yet mapped
+# process inventory (section 1 table). Columns are read by header name so the current map
+# (Id | Process | Where found | Status | Notes) and the planned map (Id | Process | Stage | Replaces | Status) both work.
 inventory = []
-for row in re.findall(r"^\| (P\d\d) \| (.*?) \| (.*?) \| (.*?) \| (.*?) \|$", md, re.M):
-    pid, name, where, status, notes = row
-    name = re.sub(r"\*\*", "", name)
-    name = re.sub(r"\s*\(.*$", "", name).strip()
-    inventory.append({"id": pid, "name": name, "status": re.sub(r"\*\*", "", status).strip(), "where": where, "notes": notes})
+sect1 = re.search(r"^## 1\. .*?(?=^## 1b\.)", md, re.M | re.S)
+if sect1:
+    rows = [l for l in sect1.group(0).split("\n") if l.startswith("| ")]
+    hdr = [c.strip().lower() for c in rows[0].strip().strip("|").split("|")] if rows else []
+    def col(cells, *names):
+        for n in names:
+            if n in hdr and hdr.index(n) < len(cells): return cells[hdr.index(n)]
+        return ""
+    for l in rows[1:]:
+        cells = [c.strip() for c in l.strip().strip("|").split("|")]
+        if not re.match(r"^[PN]\d\d$", cells[0]): continue
+        name = re.sub(r"\*\*", "", col(cells, "process"))
+        name = re.sub(r"\s*\(.*$", "", name).split(" — ")[0].strip()
+        inventory.append({"id": cells[0], "name": name, "status": re.sub(r"\*\*", "", col(cells, "status")).strip(),
+                          "where": col(cells, "where found (proof)", "where found", "stage"),
+                          "notes": col(cells, "notes / why it is on the list", "notes", "replaces (current)", "replaces")})
+
+MODE = "planned" if "<!-- map-mode: planned -->" in md else "current"
+TITLE = re.search(r"^# (.+)$", md, re.M).group(1).strip()
 
 # section 1b: stages (home columns) and process hand-offs (home arrows)
 stages, handoffs = [], []
-sect1b = re.search(r"^## 1b\..*?(?=^## 2\.)", md, re.M | re.S)
+sect1b = re.search(r"^## 1b\..*?(?=^## 2\.|^---)", md, re.M | re.S)
 if sect1b:
     s = sect1b.group(0)
     for row in re.findall(r"^\| (\d) ([^|]+?) \| ([^|]*?) \| ([^|]*?) \|$", s, re.M):
         stages.append({"n": int(row[0]), "name": row[1].strip(), "meaning": row[2].strip(),
-                       "procs": re.findall(r"P\d\d", row[3])})
-    for row in re.findall(r"^\| (P\d\d) \| (P\d\d) \| (.*?) \| (.*?) \| (cited|unverified|dead|no reader) \|$", s, re.M):
+                       "procs": re.findall(r"[PN]\d\d", row[3])})
+    for row in re.findall(r"^\| ([PN]\d\d) \| ([PN]\d\d) \| (.*?) \| (.*?) \| (cited|unverified|dead|no reader) \|$", s, re.M):
         handoffs.append({"s": row[0], "t": row[1], "what": row[2].strip(), "cite": row[3].strip(),
                          "status": {"no reader": "noreader"}.get(row[4], row[4])})
 placed = {p for st in stages for p in st["procs"]}
@@ -128,7 +147,8 @@ bad_ho = [(h["s"], h["t"]) for h in handoffs if h["s"] not in placed or h["t"] n
 print(f"[check] home map: stages={len(stages)} handoffs={len(handoffs)} processes_without_stage={missing_stage} handoffs_to_unknown={bad_ho}")
 
 DATA = {"generated": datetime.date.today().isoformat(), "layers": LAYERS, "nodes": all_nodes, "processes": processes,
-        "inventory": inventory, "stages": stages, "handoffs": handoffs}
+        "inventory": inventory, "stages": stages, "handoffs": handoffs, "mode": MODE, "title": TITLE, "source": _MDNAME}
+nav = " · ".join(f"<b>{html.escape(lbl)}</b>" if f == os.path.basename(OUT) else f'<a href="{f}">{html.escape(lbl)}</a>' for f, lbl in MAPS)
 
 fallbacks = "".join(f"""
 <details class="fallback" data-pid="{p['id']}"><summary>Mermaid source — {html.escape(p['caption'])}</summary>
@@ -271,7 +291,8 @@ function buildBubble(){
 
   // ---------- HOME: processes as bubbles in stage columns, arrows = hand-offs (section 1b of the .md)
   const HO_COLOR = {cited:"#2a4d7f", unverified:"#f9a825", dead:"#c62828", noreader:"#9e9e9e"};
-  const HO_LABEL = {cited:"cited", unverified:"[UNVERIFIED]", dead:"superseded / dead", noreader:"no reader"};
+  const PLANNED = DATA.mode==="planned";
+  const HO_LABEL = {cited: PLANNED ? "planned (designed)" : "cited", unverified:"[UNVERIFIED]", dead:"superseded / dead", noreader:"no reader"};
   for (const [k,c] of Object.entries(HO_COLOR)) defs.append("marker").attr("id","ho-"+k).attr("viewBox","0 -5 10 10").attr("refX",9).attr("markerWidth",7).attr("markerHeight",7).attr("orient","auto").append("path").attr("d","M0,-4L10,0L0,4Z").attr("fill",c);
   function home(){
     const gapX = 390, gapY = 136, R = 54;   // column gap leaves ~280 px between bubble edges for 2-line labels (≤ ~165 px wide)
@@ -312,7 +333,7 @@ function buildBubble(){
     const hoRow = (h, dir) => { const other = dir==="out" ? h.t : h.s; const oi = inv(other)||{}; return `<li><a href="#" data-ho="${h.k}"><span style="color:${HO_COLOR[h.status]};font-weight:700">${dir==="out"?"→":"←"}</span> <b>${esc(other)}</b> ${esc(oi.name||"")}</a><div class="lbl">${md(h.what)}</div><div class="lbl muted">${esc(h.cite)} · ${esc(HO_LABEL[h.status])}</div></li>`; };
     function showProcHandoffs(pid){
       const i = inv(pid)||{}; const outs = arrows.filter(a=>a.s===pid), ins = arrows.filter(a=>a.t===pid);
-      setPanel(`${pid} — ${i.name||""}`, `<p class="muted">${md(i.status||"")}</p>
+      setPanel(`${pid} — ${i.name||""}`, `<p class="muted">${md(i.status||"")}</p>${i.notes ? `<p class="lbl"><b>${PLANNED?"Replaces (current map)":"Notes"}:</b> ${md(i.notes)}</p>` : ""}
         <p><b>Pinned.</b> Click the bubble again or the empty canvas to release. <a href="#" data-open="${esc(pid)}"><b>Double-click the bubble (or click here) to open the route →</b></a></p>
         <h4>Feeds into (${outs.length})</h4><ol class="edges">${outs.map(h=>hoRow(h,"out")).join("")||"<li class='muted'>nothing — its outputs are not consumed by another process</li>"}</ol>
         <h4>Fed by (${ins.length})</h4><ol class="edges">${ins.map(h=>hoRow(h,"in")).join("")||"<li class='muted'>nothing — it starts from a human or a vendor</li>"}</ol>
@@ -365,9 +386,11 @@ function buildBubble(){
     bsel.on("dblclick",(ev,d)=>{ ev.stopPropagation(); clearTimeout(clickT); if (d.mapped) go({level:1,pid:d.pid}); else setPanel(`${d.pid} ${d.inv.name}`, `<table class="kv"><tr><th>Status</th><td>${md(d.inv.status)}</td></tr><tr><th>Where found</th><td>${md(d.inv.where)}</td></tr><tr><th>Notes</th><td>${md(d.inv.notes)}</td></tr></table>`); });
     svg.on("click", ()=>{ pinned=null; highlight(null); homePanel(); });
     const counts = {cited:0,unverified:0,dead:0,noreader:0}; DATA.handoffs.forEach(h=>counts[h.status]++);
-    function homePanel(){ setPanel("Home — how the processes feed each other", `<p>Columns are stages, left to right: where data enters → the AWS services → the sheet pipelines → review → publish → what responders load → ops. Each arrow is one hand-off read from a step in the tables (§1b of the .md).</p>
+    function homePanel(){ setPanel(PLANNED ? "Home — the planned pipeline (design mock-up)" : "Home — how the processes feed each other", `<p>${PLANNED
+        ? `<b>Nothing here is built.</b> Columns are the planned stages, left to right: the four sources → the one registry → the three review stops → publish → the one viewer → ops. Each arrow is a designed hand-off, cited to a planned step in <code>${esc(DATA.source)}</code>. The <i>Replaces</i> line on each bubble names the current processes it retires (see the current map).`
+        : `Columns are stages, left to right: where data enters → the AWS services → the sheet pipelines → review → publish → what responders load → ops. Each arrow is one hand-off read from a step in the tables (§1b of the .md).`}</p>
       <p><b>Hover</b> a bubble to see only its hand-offs with what moves. <b>Click</b> a bubble to pin that view and list its hand-offs here. <b>Double-click</b> a bubble to open that process's route. <b>Click an arrow</b> for its citation.</p>
-      <table class="kv"><tr><th style="color:${HO_COLOR.cited}">solid</th><td>${counts.cited} cited hand-offs</td></tr><tr><th style="color:${HO_COLOR.unverified}">dashed</th><td>${counts.unverified} [UNVERIFIED]</td></tr><tr><th style="color:${HO_COLOR.dead}">red</th><td>${counts.dead} superseded / dead</td></tr><tr><th style="color:${HO_COLOR.noreader}">grey dashed</th><td>${counts.noreader} output with no reader</td></tr></table>
+      <table class="kv"><tr><th style="color:${HO_COLOR.cited}">solid</th><td>${counts.cited} ${PLANNED?"planned":"cited"} hand-offs</td></tr><tr><th style="color:${HO_COLOR.unverified}">dashed</th><td>${counts.unverified} [UNVERIFIED]</td></tr><tr><th style="color:${HO_COLOR.dead}">red</th><td>${counts.dead} superseded / dead</td></tr><tr><th style="color:${HO_COLOR.noreader}">grey dashed</th><td>${counts.noreader} output with no reader</td></tr></table>
       <p class="muted">Bubble border: red = dead / one-shot, dashed amber = [UNVERIFIED] or not built.</p>
       <h4>Stages</h4><ol>${DATA.stages.map(s=>`<li><b>${esc(s.name)}</b> <span class="muted">${esc(s.meaning)}</span><div class="lbl">${s.procs.map(p=>esc(p)).join(", ")}</div></li>`).join("")}</ol>`); }
     homePanel();
@@ -419,7 +442,7 @@ buildBubble();
 
 page = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
-<title>Property Intel — Data Map</title>
+<title>{html.escape(TITLE)}</title>
 <style>
  body{{font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif;margin:0;color:#111;background:#fff}}
  header{{padding:12px 20px 6px;border-bottom:1px solid #e5e5e5}}
@@ -438,8 +461,9 @@ page = f"""<!doctype html>
  .legend span{{display:inline-block;padding:1px 8px;margin:3px 5px 0 0;border:1px solid;border-radius:4px;font-size:11.5px}}
 </style></head><body>
 <header>
- <h1>Property Intel — Data Map</h1>
- <div class="meta">Generated {DATA['generated']} from <code>docs/audit/DATA_MAP.md</code>. <b>Home</b>: the 33 processes in stage columns, arrows = hand-offs between them (each cited to a step). <b>Click a bubble</b>: that process as one line of phases, start to finish; click a stop to list its steps on the right. <b>Receipt</b> (top right): everything that produced or consumed one resource. Mermaid source per process is collapsed at the bottom.</div>
+ <h1>{html.escape(TITLE)}</h1>
+ <div class="meta" style="margin-bottom:4px">Maps: {nav}</div>
+ <div class="meta">Generated {DATA['generated']} from <code>docs/audit/{_MDNAME}</code>. {"<b>Design mock-up — nothing here is built.</b> " if MODE=="planned" else ""}<b>Home</b>: the {len(inventory)} processes in stage columns, arrows = hand-offs between them ({"each a design decision, cited to a planned step" if MODE=="planned" else "each cited to a step"}). <b>Click a bubble</b>: that process as one line of phases, start to finish; click a stop to list its steps on the right. <b>Receipt</b> (top right): everything that produced or consumed one resource. Mermaid source per process is collapsed at the bottom.</div>
  <div id="layers"></div>
  <div class="legend"><span style="border-color:#2e7d32">node border = layer colour · live</span><span style="background:#fdecea;border-color:#c62828">superseded / dead</span><span style="background:#fff8e1;border-color:#f9a825;border-style:dashed">[UNVERIFIED]</span><span style="background:#f3f3f3;border-color:#9e9e9e;border-style:dotted;color:#555">not found / not built</span><span style="border-color:#333">arrow solid = cited</span><span style="border-color:#f9a825;border-style:dashed">arrow dashed = [UNVERIFIED]</span><span style="border-color:#c62828">arrow red = superseded / dead</span></div>
 </header>
