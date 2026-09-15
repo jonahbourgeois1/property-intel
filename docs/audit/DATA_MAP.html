@@ -2665,7 +2665,7 @@ function buildBubble(){
   const HO_LABEL = {cited:"cited", unverified:"[UNVERIFIED]", dead:"superseded / dead", noreader:"no reader"};
   for (const [k,c] of Object.entries(HO_COLOR)) defs.append("marker").attr("id","ho-"+k).attr("viewBox","0 -5 10 10").attr("refX",9).attr("markerWidth",7).attr("markerHeight",7).attr("orient","auto").append("path").attr("d","M0,-4L10,0L0,4Z").attr("fill",c);
   function home(){
-    const gapX = 330, gapY = 128, R = 54;
+    const gapX = 390, gapY = 136, R = 54;   // column gap leaves ~280 px between bubble edges for 2-line labels (≤ ~165 px wide)
     const pos = {};
     const bubbles = [];
     let pinned = null, clickT = null;   // pinned = process id whose hand-offs are frozen on screen (single click), or "edge"
@@ -2715,21 +2715,43 @@ function buildBubble(){
       const si=inv(h.s)||{}, ti=inv(h.t)||{};
       setPanel(`${h.s} → ${h.t}`, `<p><b>${esc(si.name||h.s)}</b> → <b>${esc(ti.name||h.t)}</b></p><table class="kv"><tr><th>What moves</th><td>${md(h.what)}</td></tr><tr><th>Cited step</th><td>${md(h.cite)}</td></tr><tr><th>Status</th><td><span style="color:${HO_COLOR[h.status]};font-weight:700">${esc(HO_LABEL[h.status])}</span></td></tr></table><p class="muted">Open either process (click its bubble) and find the cited step in its route for the full receipt.</p>`);
     }
-    // hover / focus a bubble: dim everything not connected, show labels on its arrows
-    const lblG = g.append("g").attr("class","ho-labels");
+    // hover / focus a bubble: dim everything not connected, show labels on its arrows.
+    // Labels are drawn ABOVE the bubbles (lblG is appended after bsel) and placed so they never sit on a
+    // bubble or on another label: slide along the arrow first, then nudge upward.
+    let lblG = null;
+    const circleHitsRect = (cx,cy,r,x,y,w,h) => { const nx=Math.max(x,Math.min(cx,x+w)), ny=Math.max(y,Math.min(cy,y+h)); return (cx-nx)**2+(cy-ny)**2 < r*r; };
+    function placeLabel(path, w, h, placed){
+      const node = path.node(), L = node.getTotalLength();
+      const clear = (x,y) => !bubbles.some(b=>circleHitsRect(b.x,b.y,R+6,x-w/2,y-h/2,w,h)) && !placed.some(p=>Math.abs(p.x-x)*2 < p.w+w+6 && Math.abs(p.y-y)*2 < p.h+h+4);
+      // 1) slide along the arrow, nearest the middle first
+      const ts = []; for (let k=0;k<=18;k++){ const d=k*0.025; if (k===0) ts.push(0.5); else ts.push(0.5-d, 0.5+d); }
+      for (const t of ts){ const m=node.getPointAtLength(L*t); if (clear(m.x,m.y)) return {x:m.x,y:m.y}; }
+      // 2) search a ring of offsets around the midpoint (sideways into the column gap, then up/down)
+      const m = node.getPointAtLength(L*0.5);
+      for (let ring=1; ring<=12; ring++){
+        for (const [dx,dy] of [[0,-ring],[0,ring],[-ring,0],[ring,0],[-ring,-ring],[ring,-ring],[-ring,ring],[ring,ring]]){
+          const x=m.x+dx*22, y=m.y+dy*(h+4); if (clear(x,y)) return {x,y}; } }
+      return {x:m.x, y:m.y-(R+h)};
+    }
     function highlight(pid, one){
       lblG.selectAll("*").remove();
       const keep = one ? new Set([one.s,one.t]) : pid ? new Set([pid, ...arrows.filter(a=>a.s===pid||a.t===pid).flatMap(a=>[a.s,a.t])]) : null;
+      const placed = [];
       arrows.forEach(a=>{ const on = one ? a===one : pid ? (a.s===pid||a.t===pid) : true;
         a.path.attr("stroke-opacity", on ? (keep?0.95:0.45) : 0.06).attr("stroke-width", on&&keep ? 2.6 : (a.status==="cited"?1.6:1.8));
-        if (on && keep){ const L = a.path.node().getTotalLength(), m = a.path.node().getPointAtLength(L*0.5); const txt = a.what.length>46 ? a.what.slice(0,45)+"…" : a.what; const w = txt.length*5.9+12;
-          const t = lblG.append("g"); t.append("rect").attr("x",m.x-w/2).attr("y",m.y-9).attr("width",w).attr("height",17).attr("rx",8).attr("fill","#fff").attr("stroke",HO_COLOR[a.status]).attr("stroke-width",1);
-          t.append("text").attr("x",m.x).attr("y",m.y+3.5).attr("text-anchor","middle").attr("font-size",9.5).attr("fill","#1b2f4a").text(txt); } });
+        if (on && keep){ const lines = wrap(a.what, 26, 2); const w = Math.max(...lines.map(l=>l.length))*5.7+14, h = lines.length*12+7;
+          const m = placeLabel(a.path, w, h, placed); placed.push({x:m.x,y:m.y,w,h});
+          const t = lblG.append("g").style("cursor","pointer").on("click",(ev)=>{ ev.stopPropagation(); pinned="edge"; showHandoff(a); highlight(null,a); });
+          t.append("rect").attr("x",m.x-w/2).attr("y",m.y-h/2).attr("width",w).attr("height",h).attr("rx",8).attr("fill","#fff").attr("stroke",HO_COLOR[a.status]).attr("stroke-width",1.2);
+          t.append("text").attr("text-anchor","middle").attr("font-size",9.5).attr("font-weight",600).attr("fill","#1b2f4a")
+            .selectAll("tspan").data(lines).join("tspan").attr("x",m.x).attr("y",(l,i)=>m.y-h/2+12+i*12).text(l=>l);
+          t.append("title").text(`${a.s} → ${a.t}\n${a.what}\n${a.cite} · ${HO_LABEL[a.status]}`); } });
       bsel.attr("opacity", d => keep ? (keep.has(d.pid)?1:0.18) : 1);
       bsel.select("circle").attr("stroke", d => d.pid===pinned ? "#111" : d.stroke).attr("stroke-width", d => d.pid===pinned ? 5 : d.strokeWidth);
     }
     const bsel = g.append("g").selectAll("g").data(bubbles).join("g").attr("class","proc");
     bubble(bsel);
+    lblG = g.append("g").attr("class","ho-labels");   // after the bubbles → labels render on top
     bsel.on("mouseenter",(ev,d)=>{ if (!pinned) highlight(d.pid); }).on("mouseleave",()=>{ if (!pinned) highlight(null); });
     bsel.on("dblclick",(ev,d)=>{ ev.stopPropagation(); clearTimeout(clickT); if (d.mapped) go({level:1,pid:d.pid}); else setPanel(`${d.pid} ${d.inv.name}`, `<table class="kv"><tr><th>Status</th><td>${md(d.inv.status)}</td></tr><tr><th>Where found</th><td>${md(d.inv.where)}</td></tr><tr><th>Notes</th><td>${md(d.inv.notes)}</td></tr></table>`); });
     svg.on("click", ()=>{ pinned=null; highlight(null); homePanel(); });
