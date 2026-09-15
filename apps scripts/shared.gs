@@ -30,6 +30,8 @@
 // an existing file is source: "3d". Merge pins_source onto the index.
 // v5.29: property-level GIS facts. Canonical PUT: data/gis/{hubId}.json
 // (gisFileForSync_). Private rail "Property Facts" is the reader.
+// v5.37: pushAllToGitHub trampolines to S3. Drone view JSON
+// (data/responder-drone/, data/drone/) also GitHub-pushes this repo.
 // ============================================================
 
 // ── AWS SigV4 helpers ────────────────────────────────────────────────────────
@@ -147,8 +149,12 @@ function fetchImageAsBase64(url) {
 
 // ── GitHub helpers ───────────────────────────────────────────────────────────
 
-function pushAllToGitHub(files, label) {
+function pushGithubDataFiles_(files, label) {
   const creds = getCredentials();
+  if (!creds.githubToken) {
+    Logger.log('pushGithubDataFiles_: GITHUB_TOKEN not set');
+    return false;
+  }
   const headers = {
     'Authorization': 'token ' + creds.githubToken,
     'Accept': 'application/vnd.github.v3+json',
@@ -160,7 +166,7 @@ function pushAllToGitHub(files, label) {
     const latestSha   = JSON.parse(refRes.getContentText()).object.sha;
     const commitRes   = UrlFetchApp.fetch(base + '/git/commits/' + latestSha, { method: 'GET', headers, muteHttpExceptions: true });
     const baseTreeSha = JSON.parse(commitRes.getContentText()).tree.sha;
-    const treeItems   = files.map(f => {
+    const treeItems   = files.map(function (f) {
       const blobRes = UrlFetchApp.fetch(base + '/git/blobs', { method: 'POST', headers, payload: JSON.stringify({ content: f.content, encoding: 'utf-8' }), muteHttpExceptions: true });
       return { path: f.path, mode: '100644', type: 'blob', sha: JSON.parse(blobRes.getContentText()).sha };
     });
@@ -170,11 +176,50 @@ function pushAllToGitHub(files, label) {
     const newCommitSha = JSON.parse(commitRes2.getContentText()).sha;
     const updateRes    = UrlFetchApp.fetch(base + '/git/refs/heads/' + GITHUB_BRANCH, { method: 'PATCH', headers, payload: JSON.stringify({ sha: newCommitSha, force: false }), muteHttpExceptions: true });
     if (updateRes.getResponseCode() !== 200) {
-      Logger.log('Push failed. Status: ' + updateRes.getResponseCode() + ' — ' + updateRes.getContentText());
+      Logger.log('GitHub push failed. Status: ' + updateRes.getResponseCode() + ' — ' + updateRes.getContentText());
       return false;
     }
     return true;
-  } catch(e) { Logger.log('pushAllToGitHub error: ' + e.message); return false; }
+  } catch (e) {
+    Logger.log('pushGithubDataFiles_ error: ' + e.message);
+    return false;
+  }
+}
+
+function recordsIsDroneGithubPath_(path) {
+  return /^data\/(responder-drone|drone)\/[A-Za-z0-9]+\.json$/.test(String(path || ''));
+}
+
+// Live Pages still reads GitHub data/. Drone-test 3D (GLB in viewer360)
+// is unused unless the hub index and the view JSON land there too.
+function recordsIsPagesGithubPath_(path, label) {
+  if (recordsIsDroneGithubPath_(path)) return true;
+  if (String(label || '') !== 'drone-test') return false;
+  return /^data\/(drone-test|index)\/[A-Za-z0-9]+\.json$/.test(String(path || ''));
+}
+
+function pushAllToGitHub(files, label) {
+  // Sheet sync publishes to s3://property-intel-records.
+  // GitHub Pages dual-write: drone (responder-intel.html links) and
+  // drone-test view JSON + that row's index file (vyanet-viewer 3D).
+  // Not cameras/pins/satellite/plane/nearmap.
+  if (typeof pushAllToRecords_ !== 'function') {
+    Logger.log('pushAllToGitHub: records.gs is not in this project — cannot publish to S3');
+    return false;
+  }
+  try {
+    pushAllToRecords_(files, label);
+  } catch (e) {
+    Logger.log('pushAllToGitHub → records: ' + e.message);
+    return false;
+  }
+  const pagesFiles = (files || []).filter(function (f) {
+    return f && recordsIsPagesGithubPath_(f.path, label);
+  });
+  if (!pagesFiles.length) return true;
+  Logger.log('pushAllToGitHub: also GitHub ' + pagesFiles.length +
+             ' file(s) (' + (label || '') + ')');
+  return pushGithubDataFiles_(pagesFiles, label);
 }
 
 // (v5.24: fetchIndex() removed — the monolithic data/index.json no longer
@@ -215,7 +260,7 @@ function mergeIndexEntry_(existing, patch) {
   const base = existing ? JSON.parse(JSON.stringify(existing)) : {};
   if (!base.views || typeof base.views !== 'object') base.views = {};
   patch = patch || {};
-  ['id', 'name', 'address', 'hoa', 'account_type'].forEach(function (k) {
+  ['id', 'name', 'address', 'hoa', 'account_type', 'site_no'].forEach(function (k) {
     if (patch[k] !== undefined && patch[k] !== null && patch[k] !== '') base[k] = patch[k];
   });
   if (patch.has_nadir !== undefined) base.has_nadir = patch.has_nadir;
@@ -323,7 +368,8 @@ const CAMERAS_JSON_DIR = 'data/cameras/json';
 // Eugene stills and cameras JSON live on the name-hash hub. The site_no hub
 // must not publish a second copy — viewers walk CAMERA_HUB_SIBLINGS.
 const CAMERAS_JSON_CANONICAL = {
-  '8eea64e5c09dc806f667b079e111a38d': '4a484f8c273abef3c02cf91e274f9e2f'
+  '8eea64e5c09dc806f667b079e111a38d': '4a484f8c273abef3c02cf91e274f9e2f',
+  'd9f759d7351db3886c79dd689c41e3c0': '6de88883bfd4a8349a901c54611ed9d7'
 };
 function camerasCanonicalId_(propertyId) {
   return CAMERAS_JSON_CANONICAL[propertyId] || propertyId;
@@ -437,7 +483,11 @@ const PINS_JSON_DIR = 'data/pins';
 function pinsFileForSync_(propertyId, rec) {
   if (!propertyId || !rec || typeof rec !== 'object') return null;
   const incoming = rec.source === '3d' ? '3d' : 'satellite';
-  const existing = githubGetDecodedJson_(PINS_JSON_DIR + '/' + propertyId + '.json');
+  let existing = null;
+  if (typeof recordsFetchJson_ === 'function') {
+    try { existing = recordsFetchJson_('pins/' + propertyId + '.json'); } catch (e1) { existing = null; }
+  }
+  if (!existing) existing = githubGetDecodedJson_(PINS_JSON_DIR + '/' + propertyId + '.json');
   if (incoming === 'satellite' && existing && existing.source === '3d') {
     Logger.log('pinsFileForSync_: keep 3d pins for ' + propertyId);
     return null;

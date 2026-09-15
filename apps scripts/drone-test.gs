@@ -13,7 +13,8 @@
 //   6. Stage B — property images (/render)
 //   7. Approach record (plane.gs calls this 'storyboard')
 //   8. Pass 1 — element pins, review link, rerun from Nadir Fixes
-//   9. Pass 2 — concern pins + oblique descriptions + considerations
+//   9. Pass 2 — FR half (concerns + obliques + FR considerations/recs) then
+//      WF half (wildfire concerns + considerations + recommendations)
 //  10. GitHub sync -> data/drone-test/{viewId}.json (carries the reviewed
 //      responder directions inline; routes live in responder-directions.gs)
 //      PLUS data/cameras/json/{hubId}.json when a cameras file
@@ -70,7 +71,7 @@
 //     .addItem('Backfill Nadir Bounds (This Row)',     'backfillNadirBoundsForActiveRowDT')
 //     .addItem('Rerun Pins from Fixes (This Row)',    'rerunElementPinsForActiveRowDT')
 //     .addItem('Rerun Pins from Fixes (Flagged)',     'rerunElementPinsBatchDT')
-//     .addItem('Pass 2 — Concerns + Descriptions',    'generatePass2DT')
+//     .addItem('Pass 2 — FR + Wildfire',              'generatePass2DT')
 //     .addItem('Pass 2 (This Row)',                   'generatePass2ForActiveRowDT')
 //     .addItem('Check Job Status',                    'checkDroneTestJobStatus')
 //     .addItem('Cancel Jobs',                         'cancelDroneTestJobs')
@@ -85,9 +86,12 @@ const DT_SHEET = 'drone-test';
 // E Capture · F Capture Check · G Taxlot · H Lat · I Lng · J Upload Date
 // K Nadir URL · L Nadir Bounds · M Alpha URL · N Bravo URL · O Charlie URL
 // P Delta URL · Q 360 View URL · R Nadir Elements · S Elements Reviewed ☑
-// T Nadir Fixes · U Nadir Concerns · V Alpha Desc · W Bravo Desc
-// X Charlie Desc · Y Delta Desc · Z Responder Considerations
+// T Nadir Fixes · U FR Concerns · V Alpha Desc · W Bravo Desc
+// X Charlie Desc · Y Delta Desc · Z FR Considerations
 // AA Information Needing Clarification · AB FR Link · AC Status · AD Approach
+// AE Nadir Local · AF Site No · AG FR Recommendations
+// AH WF Concerns · AI WF Considerations · AJ WF Recommendations
+// Columns after AF are APPEND-ONLY — do not insert.
 const DT_COL_ACCOUNT_TYPE  = 1;   // A
 const DT_COL_ACCOUNT       = 2;   // B
 const DT_COL_ADDRESS       = 3;   // C
@@ -108,28 +112,33 @@ const DT_COL_VIEWER360     = 17;  // Q
 const DT_COL_ELEMENTS      = 18;  // R — element pins JSON (Pass 1)
 const DT_COL_REVIEWED      = 19;  // S — Elements Reviewed checkbox (Pass 2 gate)
 const DT_COL_FIXES         = 20;  // T — Nadir Fixes free text (rerun input)
-const DT_COL_CONCERNS      = 21;  // U — concern pins JSON (Pass 2)
+const DT_COL_CONCERNS      = 21;  // U — FR concern pins JSON (Pass 2 FR half)
 const DT_COL_ALPHA_DESC    = 22;  // V
 const DT_COL_BRAVO_DESC    = 23;  // W
 const DT_COL_CHARLIE_DESC  = 24;  // X
 const DT_COL_DELTA_DESC    = 25;  // Y
-const DT_COL_CONSIDER      = 26;  // Z
+const DT_COL_CONSIDER      = 26;  // Z — FR considerations
 const DT_COL_CLARIFY       = 27;  // AA
 const DT_COL_FR_LINK       = 28;  // AB
 const DT_COL_STATUS        = 29;  // AC
 const DT_COL_APPROACH    = 30;  // AD
 const DT_COL_NADIR_LOCAL = 31;  // AE — nadir crop corners in local model metres
 const DT_COL_SITE_NO     = 32;  // AF — optional. Satellite site_no so this row merges onto the production hub instead of hashing Property Name. Append-only; do not insert.
+const DT_COL_FR_REC      = 33;  // AG — FR recommendations (Pass 2 FR half)
+const DT_COL_WF_CONCERNS = 34;  // AH — wildfire concern pins JSON
+const DT_COL_WF_CONSIDER = 35;  // AI — wildfire considerations
+const DT_COL_WF_REC      = 36;  // AJ — wildfire recommendations
 
 const DT_HEADERS = [
   'Account Type', 'Property Name', 'Property Address', 'HOA',
   'Capture', 'Capture Check', 'Taxlot', 'Lat', 'Lng', 'Upload Date',
   'Nadir URL', 'Nadir Bounds', 'Alpha URL', 'Bravo URL', 'Charlie URL',
   'Delta URL', '360 View URL', 'Nadir Elements', 'Elements Reviewed',
-  'Nadir Fixes', 'Nadir Concerns', 'Alpha Description', 'Bravo Description',
-  'Charlie Description', 'Delta Description', 'Responder Considerations',
+  'Nadir Fixes', 'FR Concerns', 'Alpha Description', 'Bravo Description',
+  'Charlie Description', 'Delta Description', 'FR Considerations',
   'Information Needing Clarification', 'FR Link', 'Status', 'Approach',
-  'Nadir Local', 'Site No'
+  'Nadir Local', 'Site No', 'FR Recommendations',
+  'WF Concerns', 'WF Considerations', 'WF Recommendations'
 ];
 
 const DT_IMG_COLS = {
@@ -171,7 +180,7 @@ function setupDroneTestSheet() {
 
   ui.alert('Drone Test',
     (created ? 'Created the "' + DT_SHEET + '" tab.' : 'Updated the "' + DT_SHEET + '" header row.') +
-    '\n\n' + DT_HEADERS.length + ' columns, A..AF. Enter Account Type, Property Name, ' +
+    '\n\n' + DT_HEADERS.length + ' columns, A..AJ. Enter Account Type, Property Name, ' +
     'Property Address, HOA, expected Capture (column E), and Site No (AF, the satellite ' +
     'site_no so this row joins the production index). Then run "Generate 3D Models".',
     ui.ButtonSet.OK);
@@ -179,10 +188,13 @@ function setupDroneTestSheet() {
 
 // Fill any blank header cell without disturbing existing ones.
 function ensureDtHeaders_(sheet) {
-  for (let i = 0; i < DT_HEADERS.length; i++) {
-    const cell = sheet.getRange(1, i + 1);
-    if (!String(cell.getValue() || '').trim()) cell.setValue(DT_HEADERS[i]);
+  if (sheet.getMaxColumns() < DT_HEADERS.length) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), DT_HEADERS.length - sheet.getMaxColumns());
   }
+  sheet.getRange(1, 1, 1, DT_HEADERS.length).setValues([DT_HEADERS]).setFontWeight('bold');
+}
+function dtSheetWidth_(sheet) {
+  return Math.max(sheet.getLastColumn(), DT_COL_WF_REC);
 }
 
 // Returns the active data row on `expectedName`, or null after alerting with a
@@ -318,7 +330,7 @@ function generate3DModelsDT_(onlyRows) {
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
-  const width = Math.max(sheet.getLastColumn(), DT_COL_APPROACH);
+  const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const rows = [], needTaxlot = [], byRow = {};
@@ -509,7 +521,7 @@ function generateImagesDT_(onlyRows) {
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
-  const width = Math.max(sheet.getLastColumn(), DT_COL_APPROACH);
+  const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const items = [];
@@ -698,7 +710,7 @@ function generateApproachDT() {
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
-  const width = Math.max(sheet.getLastColumn(), DT_COL_APPROACH);
+  const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const readyRows = [];
@@ -881,7 +893,7 @@ function generateElementPinsDT() {
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
-  const width = Math.max(sheet.getLastColumn(), DT_COL_APPROACH);
+  const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const readyRows = [];
@@ -1121,7 +1133,7 @@ function rerunElementPinsBatchDT() {
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
-  const width = Math.max(sheet.getLastColumn(), DT_COL_APPROACH);
+  const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const flagged = [];
@@ -1267,7 +1279,7 @@ function generatePass2DT() {
 
   const lastRow = sheet.getLastRow();
   if (lastRow < 2) { SpreadsheetApp.getUi().alert(DT_SHEET + ' is empty.'); return; }
-  const width = Math.max(sheet.getLastColumn(), DT_COL_APPROACH);
+  const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const readyRows = [];
@@ -1527,7 +1539,7 @@ function processDroneTestRows_(onlySheetRow) {
     const baseKey = accountName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const viewId  = hashId(baseKey + '-drone-test', creds.hashSalt);
     const hubId   = droneTestHubId_({
-      siteNo: row[DT_COL_SITE_NO - 1],
+      siteNo: (typeof DT_COL_SITE_NO === 'number') ? row[DT_COL_SITE_NO - 1] : '',
       accountName: accountName,
       address: address,
       salt: creds.hashSalt
@@ -1582,13 +1594,19 @@ function processDroneTestRows_(onlySheetRow) {
       };
       patch.views['drone-test'] = viewId;
       if (!isNaN(lat) && !isNaN(lng)) { patch.lat = lat; patch.lng = lng; }
+      if (elementPins.length || concernPins.length) patch.pins_source = '3d';
       const up = upsertIndexEntry_(hubId, patch);
       files.push(up.file);
       const camFile = camerasFileForSync_(hubId, DT_DATA_DIR + '/' + viewId + '.json');
       if (camFile) files.push(camFile);
+      const pinFile = pinsFileForSync_(hubId, {
+        property: hubId, source: '3d',
+        element: elementPins, concern: concernPins
+      });
+      if (pinFile) files.push(pinFile);
     } else {
       Logger.log('drone-test sync: could not resolve an index hub for "' + accountName +
-                 '" — published ' + DT_DATA_DIR + '/' + viewId + '.json, skipped index.');
+                 '" — published drone-test view, skipped index. Set Site No.');
     }
 
     updates.push({ rowIndex: i, id: hubId, viewId: viewId, accountName: accountName });
@@ -1610,7 +1628,7 @@ function processDroneTestRows_(onlySheetRow) {
   }
 
   if (!pushAllToGitHub(files, 'drone-test')) {
-    SpreadsheetApp.getActiveSpreadsheet().toast('drone-test sync: GitHub push FAILED — see execution logs.');
+    SpreadsheetApp.getActiveSpreadsheet().toast('drone-test sync: records publish FAILED — see execution logs.');
     return;
   }
 
