@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Live Feed</title>
 <style>
@@ -11,9 +12,26 @@
   #live-mode {
     display: flex; position: fixed; inset: 0; background: #0a0c0f;
   }
+  #lm-stage {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  }
+  #lm-bar {
+    display: none; flex-shrink: 0; align-items: center; gap: 8px;
+    padding: 10px 16px 0; flex-wrap: wrap;
+  }
+  #lm-bar.on { display: flex; }
+  #lm-parcels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lm-tab {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 6px;
+    cursor: pointer; background: #12161b; color: #8a93a2;
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+  .lm-tab.on { color: #f0f2f5; border-color: #ef4444; background: rgba(239,68,68,0.16); }
   #lm-main {
-    flex: 1; display: grid; gap: 10px; padding: 16px;
-    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 0;
+    position: relative;
+    flex: 1; display: grid; gap: 8px; padding: 12px 16px 16px;
+    min-width: 0; min-height: 0; overflow: auto;
   }
   #lm-side {
     width: 320px; flex-shrink: 0; background: #12161b;
@@ -61,13 +79,30 @@
   }
   .quad-cell {
     position: relative; background: #000; border-radius: 10px; overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.14); min-height: 0;
+    border: 1px solid rgba(255,255,255,0.14); min-height: 120px;
   }
+  /* Keep MJPEG connected. display:none cancels multipart streams in Chrome. */
+  #lm-main .quad-cell.off {
+    position: absolute; width: 8px; height: 8px; overflow: hidden;
+    opacity: 0.02; pointer-events: none;
+  }
+  #lm-main:not(.feed-focus) .quad-cell:not(.off) { cursor: pointer; }
+  #lm-main:not(.feed-focus) .quad-cell:not(.off):hover {
+    border-color: rgba(239,68,68,0.75);
+  }
+  #lm-main.feed-focus { overflow: hidden; }
+  #lm-main.feed-focus .quad-cell.focus {
+    cursor: pointer; min-height: 0; border-color: rgba(239,68,68,0.55);
+  }
+  #lm-main.parcel-filter .quad-name em { display: none; }
   .quad-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .quad-name {
     position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
     background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  .quad-name em {
+    font-style: normal; font-weight: 500; opacity: 0.72; margin-right: 5px;
   }
   .quad-state {
     position: absolute; right: 8px; top: 8px; padding: 2px 7px; border-radius: 4px;
@@ -137,7 +172,12 @@
 </head>
 <body>
 <div id="live-mode">
-  <div id="lm-main"><div class="rd-note">Waiting to start live feed&hellip;</div></div>
+  <div id="lm-stage">
+    <div id="lm-bar">
+      <div id="lm-parcels"></div>
+    </div>
+    <div id="lm-main"><div class="rd-note">Waiting to start live feed&hellip;</div></div>
+  </div>
   <div id="lm-side">
     <div class="dp-head">
       <div class="dp-title">Recent clips</div>
@@ -160,16 +200,16 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig } from './js/vyanet-viewer/property.js?v=1.7.3';
+import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel } from './js/vyanet-viewer/property.js?v=1.8.22';
 
-const BUILD = '1.0.0';
+const BUILD = '1.1.4';
 const params = new URLSearchParams(window.location.search);
 const propertyId = (params.get('property') || '').trim();
 const embedded = params.get('embed') === '1';
 const debugOn = params.get('debug') === '1';
 const root = dataRoot();
 const gw = gwConfig();
-const LM_PRELOAD = 10;
+const LM_PRELOAD = 3;
 
 if (debugOn) document.getElementById('debug-panel').classList.add('on');
 
@@ -298,18 +338,17 @@ async function gwGetForProperty(makePath, interactive) {
 }
 
 let gwLiveMap = null, gwLiveAt = 0, gwClipsCache = null, gwClipsAt = 0;
+let gwLiveCameras = [];
 async function gwEnsureLive(interactive) {
   if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
   const j = await gwGetForProperty(function (id, idx) {
     return '/live?' + gwLiveQuery(id, idx);
   }, interactive !== false);
-  const m = {};
-  (j.cameras || []).forEach(function (c) {
-    if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
-  });
-  gwLiveMap = m; gwLiveAt = Date.now();
-  dbg('Gateway: ' + Object.keys(m).length + ' live camera(s)', 'ok');
-  return m;
+  gwLiveCameras = j.cameras || [];
+  gwLiveMap = indexLiveRoster(gwLiveCameras);
+  gwLiveAt = Date.now();
+  dbg('Gateway: ' + (j.cameras || []).length + ' live camera(s)', 'ok');
+  return gwLiveMap;
 }
 async function ensureClips(force, interactive) {
   if (!force && gwClipsCache && (Date.now() - gwClipsAt) < 50 * 60 * 1000) {
@@ -323,12 +362,21 @@ async function ensureClips(force, interactive) {
   return gwClipsCache;
 }
 
-function lmCloseStreams() {
+function lmClearMain() {
+  lmWallGen++;
+  lmWallReady = false;
+  lmFocus = -1;
   document.querySelectorAll('#lm-main img').forEach(function (img) {
     img.onload = null; img.onerror = null; img.src = '';
   });
+}
+
+function lmCloseStreams() {
+  lmClearMain();
   document.getElementById('lm-main').innerHTML =
     '<div class="rd-note">Live feed paused</div>';
+  const bar = document.getElementById('lm-bar');
+  if (bar) bar.classList.remove('on');
   document.querySelectorAll('#lm-clips video').forEach(function (v) {
     try { v.pause(); } catch (e) {}
     v.removeAttribute('src');
@@ -336,7 +384,164 @@ function lmCloseStreams() {
   });
 }
 
+let lmGroups = [];
+let lmParcel = -1;
+let lmWallGen = 0;
+let lmWallReady = false;
+let lmFocus = -1;
+let lmClipShown = [];
+
+function lmAllCameras() {
+  const out = [];
+  lmGroups.forEach(function (g, gi) {
+    (g.cameras || []).forEach(function (c) {
+      if (c && c.mjpeg_url) out.push({ cam: c, parcel: gi });
+    });
+  });
+  return out;
+}
+function lmSyncBar() {
+  const bar = document.getElementById('lm-bar');
+  const parcels = document.getElementById('lm-parcels');
+  const showBar = lmGroups.length > 1 || lmFocus >= 0;
+  if (bar) bar.classList.toggle('on', showBar);
+  if (!parcels) return;
+  const tabs = lmGroups.length > 1
+    ? '<button type="button" class="lm-tab' + (lmParcel < 0 ? ' on' : '') +
+      '" onclick="lmPickParcel(-1)">All</button>' +
+      lmGroups.map(function (g, i) {
+        return '<button type="button" class="lm-tab' + (i === lmParcel ? ' on' : '') +
+          '" onclick="lmPickParcel(' + i + ')">' + escHtml(g.label) + '</button>';
+      }).join('')
+    : '';
+  const gridBtn = lmFocus >= 0
+    ? '<button type="button" class="lm-tab" onclick="lmCollapseFeed()">Grid</button>'
+    : '';
+  parcels.innerHTML = tabs + gridBtn;
+}
+function lmApplyFilter() {
+  const main = document.getElementById('lm-main');
+  if (!main) return;
+  if (lmParcel >= lmGroups.length) lmParcel = -1;
+  const cells = main.querySelectorAll('.quad-cell');
+  if (lmFocus >= 0) {
+    const focused = main.querySelector('.quad-cell[data-i="' + lmFocus + '"]');
+    const inParcel = focused &&
+      (lmParcel < 0 || Number(focused.getAttribute('data-parcel')) === lmParcel);
+    if (!inParcel) lmFocus = -1;
+  }
+  let n = 0;
+  cells.forEach(function (el) {
+    const i = Number(el.getAttribute('data-i'));
+    const inParcel = lmParcel < 0 || Number(el.getAttribute('data-parcel')) === lmParcel;
+    const on = inParcel && (lmFocus < 0 || i === lmFocus);
+    el.classList.toggle('off', !on);
+    el.classList.toggle('focus', !!(on && lmFocus >= 0));
+    el.title = on ? (lmFocus >= 0 ? 'Click to return to grid' : 'Click to expand') : '';
+    if (on) n++;
+  });
+  if (lmFocus >= 0) {
+    main.style.gridTemplateColumns = 'minmax(0, 1fr)';
+    main.style.gridTemplateRows = 'minmax(0, 1fr)';
+  } else {
+    const grid = liveWallGrid(n);
+    main.style.gridTemplateColumns = 'repeat(' + grid.cols + ', minmax(0, 1fr))';
+    main.style.gridTemplateRows = 'repeat(' + grid.rows + ', minmax(120px, 1fr))';
+  }
+  main.classList.toggle('parcel-filter', lmParcel >= 0);
+  main.classList.toggle('feed-focus', lmFocus >= 0);
+  lmSyncBar();
+}
+function lmPaintWall() {
+  const main = document.getElementById('lm-main');
+  const bar = document.getElementById('lm-bar');
+  if (!lmGroups.length) {
+    main.innerHTML = '<div class="rd-note">no cameras online</div>';
+    if (bar) bar.classList.remove('on');
+    lmWallReady = false;
+    return;
+  }
+  if (lmWallReady && main.querySelector('.quad-cell')) {
+    lmApplyFilter();
+    return;
+  }
+  const rows = lmAllCameras();
+  lmClearMain();
+  const gen = lmWallGen;
+  main.innerHTML = rows.map(function (row, i) {
+    const c = row.cam;
+    const prefix = lmGroups.length > 1
+      ? '<em>' + escHtml(parcelLabel(c)) + '</em>' : '';
+    return '<div class="quad-cell" data-i="' + i + '" data-parcel="' + row.parcel +
+      '" onclick="lmToggleFeed(' + i + ')">' +
+      '<img id="lm-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
+      '<span class="quad-name">' + prefix + escHtml(c.name || c.mac) + '</span>' +
+      '<span class="quad-state" id="lm-state-' + i + '">connecting&hellip;</span></div>';
+  }).join('');
+  rows.forEach(function (row, i) {
+    const img = document.getElementById('lm-img-' + i);
+    const st = document.getElementById('lm-state-' + i);
+    setTimeout(function () {
+      if (lmWallGen !== gen) return;
+      bindMjpegImg(img, st, row.cam.mjpeg_url, function () { return lmWallGen === gen; });
+    }, i * 350);
+  });
+  lmWallReady = true;
+  lmApplyFilter();
+  dbg('Live: ' + rows.length + ' streams started', 'ok');
+}
+window.lmToggleFeed = function (i) {
+  lmFocus = (lmFocus === i) ? -1 : i;
+  lmApplyFilter();
+};
+window.lmCollapseFeed = function () {
+  if (lmFocus < 0) return;
+  lmFocus = -1;
+  lmApplyFilter();
+};
+window.lmPickParcel = function (i) {
+  lmParcel = i;
+  lmApplyFilter();
+  paintLmClipRail();
+};
+
 let lmClipList = [];
+function lmFilteredClips() {
+  if (lmParcel < 0) return lmClipList;
+  const names = {};
+  flattenLiveGroups(lmGroups, lmParcel).forEach(function (c) {
+    if (c && c.name) names[c.name] = true;
+  });
+  return lmClipList.filter(function (e) { return names[e.device_name]; });
+}
+function paintLmClipRail() {
+  const div = document.getElementById('lm-clips');
+  const sub = document.getElementById('lm-sub');
+  if (!div) return;
+  lmClipShown = lmFilteredClips();
+  if (sub) {
+    const where = lmParcel < 0 ? 'all parcels' :
+      ((lmGroups[lmParcel] && lmGroups[lmParcel].label) || 'parcel');
+    sub.textContent = where + ' · last 7 days';
+  }
+  const head = lmClipShown.slice(0, LM_PRELOAD);
+  const tail = lmClipShown.slice(LM_PRELOAD);
+  div.innerHTML = lmClipShown.length
+    ? head.map(function (e, i) { return lmClipCard(e, i); }).join('') +
+      (tail.length
+        ? '<div class="lm-older">Older clips (' + tail.length + ')</div>' +
+          tail.map(function (e, j) {
+            const i = j + LM_PRELOAD;
+            return '<div class="lm-clip lm-lite" id="lm-clip-' + i + '"' +
+              ' onclick="expandLmClip(' + i + ')">' +
+              '<span class="lm-lite-play">&#9654;</span>' +
+              '<span class="lm-lite-name">' + escHtml(e.device_name || 'Camera') + '</span>' +
+              '<span class="lm-lite-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
+              '</div>';
+          }).join('')
+        : '')
+    : '<div class="rd-note">no video events in the last 7 days</div>';
+}
 function lmClipCard(e, i) {
   return '<div class="lm-clip" id="lm-clip-' + i + '">' +
     (e.mp4 ? '<video controls playsinline preload="metadata"' +
@@ -348,7 +553,7 @@ function lmClipCard(e, i) {
     '</div></div>';
 }
 window.expandLmClip = function (i) {
-  const e = lmClipList[i];
+  const e = lmClipShown[i];
   const row = document.getElementById('lm-clip-' + i);
   if (!e || !e.mp4 || !row) return;
   row.outerHTML = lmClipCard(e, i);
@@ -361,23 +566,7 @@ async function renderLmClips() {
   div.innerHTML = '<div class="rd-note">loading clips&hellip;</div>';
   try {
     lmClipList = await ensureClips(true);
-    const head = lmClipList.slice(0, LM_PRELOAD);
-    const tail = lmClipList.slice(LM_PRELOAD);
-    div.innerHTML = lmClipList.length
-      ? head.map(function (e, i) { return lmClipCard(e, i); }).join('') +
-        (tail.length
-          ? '<div class="lm-older">Older clips (' + tail.length + ')</div>' +
-            tail.map(function (e, j) {
-              const i = j + LM_PRELOAD;
-              return '<div class="lm-clip lm-lite" id="lm-clip-' + i + '"' +
-                ' onclick="expandLmClip(' + i + ')">' +
-                '<span class="lm-lite-play">&#9654;</span>' +
-                '<span class="lm-lite-name">' + escHtml(e.device_name || 'Camera') + '</span>' +
-                '<span class="lm-lite-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
-                '</div>';
-            }).join('')
-          : '')
-      : '<div class="rd-note">no video events in the last 7 days</div>';
+    paintLmClipRail();
     if (!div.dataset.playHook) {
       div.dataset.playHook = '1';
       div.addEventListener('play', function (ev) {
@@ -413,41 +602,18 @@ async function startLivePage() {
     renderLmClips();
     return;
   }
-  const list = Object.keys(m).map(function (k) { return m[k]; })
+  const list = (gwLiveCameras.length ? gwLiveCameras : Object.keys(m).map(function (k) { return m[k]; }))
     .filter(function (c) { return c && c.mjpeg_url; });
   if (!list.length) {
     main.innerHTML = '<div class="rd-note">no cameras online</div>';
     renderLmClips();
     return;
   }
-  main.style.gridTemplateColumns = list.length <= 2
-    ? '1fr '.repeat(list.length).trim() : '1fr 1fr';
-  main.style.gridTemplateRows = list.length <= 2 ? '1fr' : '1fr 1fr';
-  main.innerHTML = list.map(function (c, i) {
-    return '<div class="quad-cell">' +
-      '<img id="lm-img-' + i + '" alt="">' +
-      '<span class="quad-name">' + escHtml(c.name || c.mac) + '</span>' +
-      '<span class="quad-state" id="lm-state-' + i + '">connecting&hellip;</span></div>';
-  }).join('');
-  list.forEach(function (c, i) {
-    const img = document.getElementById('lm-img-' + i);
-    const st = document.getElementById('lm-state-' + i);
-    let done = false;
-    img.onload = function () {
-      done = true;
-      if (st) { st.textContent = 'LIVE'; st.classList.remove('bad'); }
-    };
-    img.onerror = function () {
-      done = true;
-      if (st) { st.textContent = 'no stream'; st.classList.add('bad'); }
-    };
-    setTimeout(function () {
-      if (!done && st) { st.textContent = 'no stream'; st.classList.add('bad'); }
-    }, 12000);
-    img.src = c.mjpeg_url;
-  });
-  dbg('Live: ' + list.length + ' streams', 'ok');
-  renderLmClips();
+  lmGroups = groupLiveCameras(list);
+  lmParcel = -1;
+  lmPaintWall();
+  dbg('Live: ' + list.length + ' cameras in ' + lmGroups.length + ' group(s)', 'ok');
+  setTimeout(function () { if (liveOpen) renderLmClips(); }, 2500);
 }
 function stopLivePage() {
   if (!liveOpen) return;
@@ -463,12 +629,17 @@ window.addEventListener('message', function (e) {
     startLivePage();
   } else {
     wantLive = false;
-    stopLivePage();
   }
 });
 document.addEventListener('visibilitychange', function () {
   if (document.hidden) stopLivePage();
   else if (wantLive) startLivePage();
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && lmFocus >= 0) {
+    e.preventDefault();
+    window.lmCollapseFeed();
+  }
 });
 
 dbg('live-viewer ' + BUILD + (embedded ? ' embed' : ' standalone'), 'info');

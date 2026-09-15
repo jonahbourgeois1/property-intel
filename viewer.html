@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.8';
+const VERSION     = 'v2.10.9';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -596,7 +596,8 @@ const PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-
 const GEOCODE_KEY = (typeof CONFIG !== 'undefined') ? CONFIG.GEOCODE_KEY : '';
 const PARCEL_COUNTIES = [
   { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
-  { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 }
+  { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 },
+  { name: 'josephine', lat0: 41.90, lng0: -124.20, step: 0.07 }
 ];
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
@@ -631,6 +632,7 @@ let cameraMarkers = [], pendingCameras = null, camList = [];
 let cameraWedges_ = [];
 let camFlashOn_ = true, camFlashTimer_ = null;
 let gwLiveMap = null, gwPassWait = null, gwPassResolve = null;
+let gwLiveCameras = [];
 let gwClipsCache = null, gwClipsAt = 0;
 let camPopupIdx = -1, camPopupEvents = [];
 let liveTimer = null, liveSeq = 0, liveIdx = -1, liveBusy = false,
@@ -1362,22 +1364,51 @@ function camJoinKeys_(cam) {
   });
   return keys;
 }
+function liveCamKey_(c) {
+  if (!c) return '';
+  if (c.device_id != null && c.device_id !== '') return String(c.device_id).toUpperCase();
+  return String(c.mac || '').toUpperCase();
+}
+function indexLiveRoster_(cameras) {
+  const m = {};
+  const macCount = {};
+  (cameras || []).forEach(function (c) {
+    const mac = String((c && c.mac) || '').toUpperCase();
+    if (mac) macCount[mac] = (macCount[mac] || 0) + 1;
+  });
+  (cameras || []).forEach(function (c) {
+    if (!c) return;
+    const id = liveCamKey_(c);
+    if (id) m[id] = c;
+    const mac = String(c.mac || '').toUpperCase();
+    if (mac && macCount[mac] === 1) m[mac] = c;
+  });
+  return m;
+}
+function markLiveTaken_(taken, g) {
+  const k = liveCamKey_(g);
+  if (k) taken[k] = true;
+}
 function applyJoinHit_(cam, g, taken) {
   cam.live = cam.live || {};
-  cam.live.device = String(g.mac).toUpperCase();
+  cam.live.device = liveCamKey_(g);
   if (cam.live.channel === undefined || cam.live.channel === null) {
     cam.live.channel = g.channel != null ? g.channel : 0;
   }
   if (!cam.live.name && g.name) cam.live.name = g.name;
-  taken[cam.live.device] = true;
+  markLiveTaken_(taken, g);
 }
 function joinLiveToPins_() {
   if (!gwLiveMap || !camList.length) return 0;
-  const roster = Object.keys(gwLiveMap).map(function (k) { return gwLiveMap[k]; });
+  const roster = gwLiveCameras.length ? gwLiveCameras
+    : Object.keys(gwLiveMap).map(function (k) { return gwLiveMap[k]; });
   const taken = {};
   camList.forEach(function (cam) {
     const d = cam.live && cam.live.device;
-    if (d) taken[String(d).toUpperCase()] = true;
+    if (!d) return;
+    const u = String(d).toUpperCase();
+    taken[u] = true;
+    if (gwLiveMap[u]) markLiveTaken_(taken, gwLiveMap[u]);
   });
   function free(cam) { return !(cam.live && cam.live.device); }
   let n = 0;
@@ -1385,23 +1416,23 @@ function joinLiveToPins_() {
     if (!free(cam)) return;
     const keys = camJoinKeys_(cam);
     const hits = roster.filter(function (g) {
-      const mac = String(g.mac || '').toUpperCase();
-      if (!mac || taken[mac]) return false;
+      const k = liveCamKey_(g);
+      if (!k || taken[k]) return false;
       const gn = normCamKey_(g.name);
-      return keys.indexOf(gn) !== -1 || keys.indexOf(normCamKey_(mac)) !== -1;
+      return keys.indexOf(gn) !== -1 || keys.indexOf(normCamKey_(g.mac)) !== -1;
     });
     if (hits.length !== 1) return;
     applyJoinHit_(cam, hits[0], taken);
     n++;
   });
   roster.forEach(function (g) {
-    const mac = String(g.mac || '').toUpperCase();
-    if (!mac || taken[mac]) return;
+    const k = liveCamKey_(g);
+    if (!k || taken[k]) return;
     const gn = normCamKey_(g.name);
     if (gn.length < 8) return;
     const cands = camList.filter(function (cam) {
       if (!free(cam)) return false;
-      return camJoinKeys_(cam).some(function (k) { return k.indexOf(gn) !== -1; });
+      return camJoinKeys_(cam).some(function (ck) { return ck.indexOf(gn) !== -1; });
     });
     if (cands.length !== 1) return;
     applyJoinHit_(cands[0], g, taken);
@@ -1498,16 +1529,13 @@ async function prefetchLiveJoin_(interactive) {
       if (r.status === 404) continue;
       if (!r.ok) return;
       const j = await r.json();
-      const m = {};
-      (j.cameras || []).forEach(function (c) {
-        if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
-      });
-      gwLiveMap = m;
+      gwLiveCameras = j.cameras || [];
+      gwLiveMap = indexLiveRoster_(gwLiveCameras);
       joinLiveToPins_();
       restyleCameraMarkers_();
       populateFeatureTabs(currentViewData || {}, currentViewSuffix_());
       paintCamThumbs_();
-      dbg('Gateway: ' + Object.keys(m).length + ' live camera(s) joined to 2D pins', 'ok');
+      dbg('Gateway: ' + gwLiveCameras.length + ' live camera(s) joined to 2D pins', 'ok');
       try { await ensureClips(false, false); } catch (e2) {}
       return;
     } catch (e) { return; }
@@ -1615,7 +1643,7 @@ async function loadNearmapLotCover(lat, lng) {
   if (!pid || !isFinite(lat) || !isFinite(lng)) return;
   let prop, lotMod;
   try {
-    prop = await import('./js/vyanet-viewer/property.js?v=1.8.17');
+    prop = await import('./js/vyanet-viewer/property.js?v=1.8.22');
     lotMod = await import('./js/vyanet-viewer/nearmap-lot.js?v=1.8.17');
   } catch (e) { return; }
   nmCoverMod = lotMod;

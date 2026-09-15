@@ -59,7 +59,100 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.17';
+export const HUB_BUILD = '1.8.22';
+export const LIVE_PAGE_SIZE = 4;
+
+// CHEKT MJPEG is multipart/x-mixed-replace. Chrome often fires img.onerror
+// before the first JPEG, or never fires onload. Treat naturalWidth as LIVE,
+// retry once, and send no Referer (the token is in the query).
+export function bindMjpegImg(img, stateEl, url, isCurrent) {
+  if (!img || !url) return;
+  let tries = 0;
+  let timer = 0;
+  let poll = 0;
+  function alive() { return !isCurrent || isCurrent(); }
+  function stopTimers() {
+    if (timer) { clearTimeout(timer); timer = 0; }
+    if (poll) { clearInterval(poll); poll = 0; }
+  }
+  function markLive() {
+    if (!alive() || !stateEl) return;
+    stateEl.textContent = 'LIVE';
+    stateEl.classList.remove('bad');
+  }
+  function markDead() {
+    if (!alive() || !stateEl) return;
+    stateEl.textContent = 'no stream';
+    stateEl.classList.add('bad');
+  }
+  function sawFrame() { return img.naturalWidth > 0; }
+  function armWatch() {
+    stopTimers();
+    poll = setInterval(function () {
+      if (!alive()) { stopTimers(); return; }
+      if (sawFrame()) { stopTimers(); markLive(); }
+    }, 400);
+    timer = setTimeout(function () {
+      if (!alive()) return;
+      stopTimers();
+      if (sawFrame()) { markLive(); return; }
+      if (tries < 1) {
+        tries++;
+        retry();
+        return;
+      }
+      markDead();
+    }, 18000);
+  }
+  function retry() {
+    if (!alive()) return;
+    stopTimers();
+    img.onload = null;
+    img.onerror = null;
+    img.removeAttribute('src');
+    setTimeout(function () { if (alive()) start(); }, 600);
+  }
+  function start() {
+    if (!alive()) return;
+    img.referrerPolicy = 'no-referrer';
+    img.onload = function () {
+      if (alive() && sawFrame()) { stopTimers(); markLive(); }
+    };
+    img.onerror = function () {
+      if (!alive() || sawFrame()) return;
+      if (tries < 1) {
+        tries++;
+        retry();
+      }
+    };
+    img.src = url;
+    armWatch();
+  }
+  start();
+}
+
+export function liveWallGrid(n) {
+  const count = Math.max(0, n | 0);
+  let cols = 1;
+  if (count <= 1) cols = 1;
+  else if (count <= 4) cols = 2;
+  else if (count <= 6) cols = 3;
+  else cols = 4;
+  return { cols: cols, rows: Math.max(1, Math.ceil(count / cols) || 1) };
+}
+
+export function flattenLiveGroups(groups, parcelIdx) {
+  const out = [];
+  if (parcelIdx == null || parcelIdx < 0) {
+    (groups || []).forEach(function (g) {
+      (g.cameras || []).forEach(function (c) { out.push(c); });
+    });
+  } else {
+    const g = (groups || [])[parcelIdx];
+    ((g && g.cameras) || []).forEach(function (c) { out.push(c); });
+  }
+  return out.filter(function (c) { return c && c.mjpeg_url; });
+}
 
 // Same default as model-viewer.html; ?gw= overrides, ?gw=0 disables.
 export const GW_DEFAULT = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
@@ -330,6 +423,58 @@ export function gwLiveQuery(id, idx) {
   if (idx && idx.name) q.set('name', String(idx.name));
   if (idx && idx.site_no) q.set('site_no', String(idx.site_no));
   return q.toString();
+}
+
+// Unique key for a CHEKT camera. device_id is unique even when several
+// channels share a bridge MAC (Gud Cultures parcels 2 and 3). Fall back
+// to MAC for older Jones/Eugene rows that only have that.
+export function liveCamKey(c) {
+  if (!c) return '';
+  if (c.device_id != null && c.device_id !== '') return String(c.device_id).toUpperCase();
+  return String(c.mac || '').toUpperCase();
+}
+
+// Index /live cameras by device_id. Also index unique MACs so Jones pins
+// that still store live.device as a MAC keep resolving.
+export function indexLiveRoster(cameras) {
+  const m = {};
+  const macCount = {};
+  (cameras || []).forEach(function (c) {
+    const mac = String((c && c.mac) || '').toUpperCase();
+    if (mac) macCount[mac] = (macCount[mac] || 0) + 1;
+  });
+  (cameras || []).forEach(function (c) {
+    if (!c) return;
+    const id = liveCamKey(c);
+    if (id) m[id] = c;
+    const mac = String(c.mac || '').toUpperCase();
+    if (mac && macCount[mac] === 1) m[mac] = c;
+  });
+  return m;
+}
+
+export function parcelLabel(c) {
+  const n = String((c && c.site_name) || '');
+  const m = n.match(/PARCEL\s+(\d+)/i);
+  if (m) return 'Parcel ' + m[1];
+  if (n) return n.replace(/^VSO\s*-\s*/i, '').trim() || n;
+  if (c && c.site_id != null && c.site_id !== '') return 'Site ' + c.site_id;
+  return 'Cameras';
+}
+
+export function groupLiveCameras(list) {
+  const groups = [];
+  const byKey = {};
+  (list || []).forEach(function (c) {
+    const k = (c && c.site_id != null && c.site_id !== '')
+      ? String(c.site_id) : parcelLabel(c);
+    if (!byKey[k]) {
+      byKey[k] = { key: k, label: parcelLabel(c), cameras: [] };
+      groups.push(byKey[k]);
+    }
+    byKey[k].cameras.push(c);
+  });
+  return groups;
 }
 
 // Ask the gateway whether it accepts this key. Walk the alias ids the same

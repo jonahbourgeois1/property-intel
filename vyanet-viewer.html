@@ -461,7 +461,7 @@
   <div class="bar-inner">
     <span class="name" id="nm">Vyanet</span>
     <span class="addr" id="addr"></span>
-    <span class="build" id="build">hub 1.8.17</span>
+    <span class="build" id="build">hub 1.8.22</span>
     <button id="btn-home" disabled onclick="showHome()">HOME</button>
     <button id="btn-private" disabled onclick="showPrivate()" aria-label="PRIVATE">PRIV<span class="bar-full">ATE</span></button>
     <button id="btn-public" disabled onclick="showPublic()" aria-label="COMMUNITY">COMM<span class="bar-full">UNITY</span></button>
@@ -589,7 +589,7 @@
 import { fetchJson, dataRoot, framesFromIndex, validateViewerKey,
          liveAliasIds, gwConfig, findNadir, detectCameras, ROLES, HUB_BUILD,
          PLUGINS, NEARMAP_DELIVERY_HUB
-       } from './js/vyanet-viewer/property.js?v=1.8.17';
+       } from './js/vyanet-viewer/property.js?v=1.8.22';
 import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.17';
 
 const BUILD = HUB_BUILD;
@@ -855,8 +855,8 @@ window.heroGo = function () {
 // Passcode lives on the gate. If they skipped it, this popup asks before
 // the live stage is shown. The live iframe posts {type:'vyanet-ready'}
 // when its listener is up; a click that lands earlier is queued. Streams
-// start only on {type:'vyanet-stage', stage:'live'} so a hidden iframe
-// behind home does not pull MJPEG.
+// start the first time Live is shown and stay connected while swapping
+// 3D / 2D / Live. The browser tab hiding still pauses them.
 function goLiveNow() {
   const spec = state.spec;
   if (!spec || !state.entered || !spec.hasLive) return;

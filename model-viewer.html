@@ -244,13 +244,29 @@
   #cam-quad.open { display: grid; }
   .quad-cell {
     position: relative; background: #000; border-radius: 10px; overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.14); min-height: 0;
+    border: 1px solid rgba(255,255,255,0.14); min-height: 120px;
   }
+  #lm-main .quad-cell.off {
+    position: absolute; width: 8px; height: 8px; overflow: hidden;
+    opacity: 0.02; pointer-events: none;
+  }
+  #lm-main:not(.feed-focus) .quad-cell:not(.off) { cursor: pointer; }
+  #lm-main:not(.feed-focus) .quad-cell:not(.off):hover {
+    border-color: rgba(239,68,68,0.75);
+  }
+  #lm-main.feed-focus { overflow: hidden; }
+  #lm-main.feed-focus .quad-cell.focus {
+    cursor: pointer; min-height: 0; border-color: rgba(239,68,68,0.55);
+  }
+  #lm-main.parcel-filter .quad-name em { display: none; }
   .quad-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
   .quad-name {
     position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
     background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
     font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  .quad-name em {
+    font-style: normal; font-weight: 500; opacity: 0.72; margin-right: 5px;
   }
   .quad-state {
     position: absolute; right: 8px; top: 8px; padding: 2px 7px; border-radius: 4px;
@@ -283,9 +299,26 @@
     background: #0a0c0f;
   }
   #live-mode.open { display: flex; }
+  #lm-stage {
+    flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  }
+  #lm-bar {
+    display: none; flex-shrink: 0; align-items: center; gap: 8px;
+    padding: 10px 16px 0; flex-wrap: wrap;
+  }
+  #lm-bar.on { display: flex; }
+  #lm-parcels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .lm-tab {
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 6px;
+    cursor: pointer; background: #12161b; color: #8a93a2;
+    border: 1px solid rgba(255,255,255,0.14);
+  }
+  .lm-tab.on { color: #f0f2f5; border-color: #ef4444; background: rgba(239,68,68,0.16); }
   #lm-main {
-    flex: 1; display: grid; gap: 10px; padding: 16px;
-    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; min-width: 0;
+    position: relative;
+    flex: 1; display: grid; gap: 8px; padding: 12px 16px 16px;
+    min-width: 0; min-height: 0; overflow: auto;
   }
   #lm-side {
     width: 320px; flex-shrink: 0; background: #12161b;
@@ -680,7 +713,12 @@
   </div>
 </div>
 <div id="live-mode">
-  <div id="lm-main"></div>
+  <div id="lm-stage">
+    <div id="lm-bar">
+      <div id="lm-parcels"></div>
+    </div>
+    <div id="lm-main"></div>
+  </div>
   <div id="lm-side">
     <div class="dp-head">
       <div>
@@ -754,7 +792,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery } from './js/vyanet-viewer/property.js?v=1.8.14';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel } from './js/vyanet-viewer/property.js?v=1.8.22';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -2471,19 +2509,17 @@ async function gwGetForProperty(makePath, interactive) {
 }
 // The camera list is cached for 50 minutes - the embedded stream tokens live
 // for 60, so a refetch always lands before the URLs in hand go stale.
-let gwLiveMap = null, gwLiveAt = 0;
+let gwLiveMap = null, gwLiveAt = 0, gwLiveCameras = [];
 async function gwEnsureLive(interactive) {
   if (gwLiveMap && (Date.now() - gwLiveAt) < 50 * 60 * 1000) return gwLiveMap;
   const j = await gwGetForProperty(function (id, idx) {
     return '/live?' + gwLiveQuery(id, idx);
   }, interactive !== false);
-  const m = {};
-  (j.cameras || []).forEach(function (c) {
-    if (c && c.mac) m[String(c.mac).toUpperCase()] = c;
-  });
-  gwLiveMap = m; gwLiveAt = Date.now();
-  dbg('Gateway: ' + Object.keys(m).length + ' live camera(s) for this property', 'ok');
-  return m;
+  gwLiveCameras = j.cameras || [];
+  gwLiveMap = indexLiveRoster(gwLiveCameras);
+  gwLiveAt = Date.now();
+  dbg('Gateway: ' + gwLiveCameras.length + ' live camera(s) for this property', 'ok');
+  return gwLiveMap;
 }
 // Background prefetch at page open: roster first (it is the name<->mac join),
 // then the clips week. ensureClips repaints the amber dots when it lands, so
@@ -2647,6 +2683,7 @@ function startMjpeg(idx, url) {
   liveMode = 'mjpeg';
   const img = liveImgEl();
   if (!img) return;
+  img.referrerPolicy = 'no-referrer';
   img.onload = function () {
     if (liveIdx === idx && liveMode === 'mjpeg') {
       liveFrames++;
@@ -2758,26 +2795,36 @@ function camJoinKeys(cam) {
   });
   return keys;
 }
+function markLiveTaken(taken, g) {
+  const k = liveCamKey(g);
+  if (k) taken[k] = true;
+}
 function applyJoinHit(cam, g, taken) {
   cam.live = cam.live || {};
-  cam.live.device = String(g.mac).toUpperCase();
+  cam.live.device = liveCamKey(g);
   if (cam.live.channel === undefined || cam.live.channel === null) {
     cam.live.channel = g.channel != null ? g.channel : 0;
   }
   if (!cam.live.name && g.name) cam.live.name = g.name;
-  taken[cam.live.device] = true;
+  markLiveTaken(taken, g);
 }
 // live.device on the JSON wins. Else unique exact live.name / label / id
 // against the /live roster. Then a CHEKT name may attach if it appears in
 // exactly one remaining pin (so "DRIVEWAY" does not steal the first of two
 // driveway pins). Never pair leftover cameras by file order.
+// taken[] is device_id (and unique-MAC aliases via gwLiveMap). Shared MACs
+// are never reserved — several Gud Cultures cameras share one bridge MAC.
 function joinLiveToPins() {
   if (!gwLiveMap || !camList.length) return 0;
-  const roster = Object.keys(gwLiveMap).map(function (k) { return gwLiveMap[k]; });
+  const roster = gwLiveCameras.length ? gwLiveCameras
+    : Object.keys(gwLiveMap).map(function (k) { return gwLiveMap[k]; });
   const taken = {};
   camList.forEach(function (cam) {
     const d = cam.live && cam.live.device;
-    if (d) taken[String(d).toUpperCase()] = true;
+    if (!d) return;
+    const u = String(d).toUpperCase();
+    taken[u] = true;
+    if (gwLiveMap[u]) markLiveTaken(taken, gwLiveMap[u]);
   });
   function free(cam) { return !(cam.live && cam.live.device); }
   let n = 0;
@@ -2785,23 +2832,23 @@ function joinLiveToPins() {
     if (!free(cam)) return;
     const keys = camJoinKeys(cam);
     const hits = roster.filter(function (g) {
-      const mac = String(g.mac || '').toUpperCase();
-      if (!mac || taken[mac]) return false;
+      const k = liveCamKey(g);
+      if (!k || taken[k]) return false;
       const gn = normCamKey(g.name);
-      return keys.indexOf(gn) !== -1 || keys.indexOf(normCamKey(mac)) !== -1;
+      return keys.indexOf(gn) !== -1 || keys.indexOf(normCamKey(g.mac)) !== -1;
     });
     if (hits.length !== 1) return;
     applyJoinHit(cam, hits[0], taken);
     n++;
   });
   roster.forEach(function (g) {
-    const mac = String(g.mac || '').toUpperCase();
-    if (!mac || taken[mac]) return;
+    const k = liveCamKey(g);
+    if (!k || taken[k]) return;
     const gn = normCamKey(g.name);
     if (gn.length < 8) return;
     const cands = camList.filter(function (cam) {
       if (!free(cam)) return false;
-      return camJoinKeys(cam).some(function (k) { return k.indexOf(gn) !== -1; });
+      return camJoinKeys(cam).some(function (ck) { return ck.indexOf(gn) !== -1; });
     });
     if (cands.length !== 1) return;
     applyJoinHit(cands[0], g, taken);
@@ -2912,10 +2959,11 @@ window.loadGwSections = async function () {
   if (btn) btn.textContent = 'Loading…';
   try {
     const m = await gwEnsureLive();
-    gwLiveList = Object.keys(m).map(function (k) { return m[k]; });
+    gwLiveList = gwLiveCameras.length ? gwLiveCameras.slice()
+      : Object.keys(m).map(function (k) { return m[k]; });
     liveDiv.innerHTML = '<div class="gw-row" style="padding:0">' +
         '<span class="pin-group-label" style="margin:10px 0 6px">Live cameras</span>' +
-        (gwLiveList.length > 1
+        (gwLiveList.length > 1 && gwLiveList.length <= LIVE_PAGE_SIZE
           ? '<button class="gw-watch" onclick="watchGwQuad()">Watch all</button>' : '') +
       '</div>' +
       (gwLiveList.length ? gwLiveList.map(function (c, i) {
@@ -2993,8 +3041,9 @@ window.watchGwQuad = async function () {
   let m;
   try { m = await gwEnsureLive(); }
   catch (e) { dbg('Quad view unavailable: ' + e.message, 'warn'); return; }
-  const list = Object.keys(m).map(function (k) { return m[k]; })
-    .filter(function (c) { return c && c.mjpeg_url; });
+  const list = (gwLiveCameras.length ? gwLiveCameras : Object.keys(m).map(function (k) { return m[k]; }))
+    .filter(function (c) { return c && c.mjpeg_url; })
+    .slice(0, LIVE_PAGE_SIZE);
   if (!list.length) return;
   stopLive();
   hideCameraPopup();
@@ -3004,26 +3053,26 @@ window.watchGwQuad = async function () {
                                                     : '1fr 1fr';
   quad.innerHTML = list.map(function (c, i) {
     return '<div class="quad-cell">' +
-      '<img id="quad-img-' + i + '" alt="">' +
+      '<img id="quad-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
       '<span class="quad-name">' + escHtml(c.name || c.mac) + '</span>' +
       '<span class="quad-state" id="quad-state-' + i + '">connecting…</span></div>';
   }).join('');
   quad.classList.add('open');
   document.getElementById('cam-quad-close').classList.add('open');
+  window.__quadGen = (window.__quadGen || 0) + 1;
+  const gen = window.__quadGen;
   list.forEach(function (c, i) {
     const img = document.getElementById('quad-img-' + i);
     const st  = document.getElementById('quad-state-' + i);
-    let done = false;
-    img.onload  = function () { done = true; if (st) { st.textContent = 'LIVE'; st.classList.remove('bad'); } };
-    img.onerror = function () { done = true; if (st) { st.textContent = 'no stream'; st.classList.add('bad'); } };
     setTimeout(function () {
-      if (!done && st) { st.textContent = 'no stream'; st.classList.add('bad'); }
-    }, 12000);
-    img.src = c.mjpeg_url;
+      if (window.__quadGen !== gen) return;
+      bindMjpegImg(img, st, c.mjpeg_url, function () { return window.__quadGen === gen; });
+    }, i * 450);
   });
   dbg('Quad view: ' + list.length + ' streams opened', 'info');
 };
 window.closeGwQuad = function () {
+  window.__quadGen = (window.__quadGen || 0) + 1;
   const quad = document.getElementById('cam-quad');
   // Clearing src is what actually closes each stream connection - a hidden
   // MJPEG <img> keeps downloading forever otherwise.
@@ -3037,15 +3086,139 @@ window.closeGwQuad = function () {
 
 // ── Live feed mode: streams as the whole screen, clips down the side ──
 let lmClipList = [];
-function lmCloseStreams() {
+let lmClipShown = [];
+let lmGroups = [];
+let lmParcel = -1;
+let lmPage = 0;
+let lmWallGen = 0;
+let lmWallReady = false;
+let lmFocus = -1;
+function lmClearMain() {
+  lmWallGen++;
+  lmWallReady = false;
+  lmFocus = -1;
   document.querySelectorAll('#lm-main img').forEach(function (img) {
     img.onload = null; img.onerror = null; img.src = '';
   });
+}
+function lmCloseStreams() {
+  lmClearMain();
   document.getElementById('lm-main').innerHTML = '';
+  const bar = document.getElementById('lm-bar');
+  if (bar) bar.classList.remove('on');
   document.querySelectorAll('#lm-clips video').forEach(function (v) {
     try { v.pause(); } catch (e) {}
   });
 }
+function lmPaintWall() {
+  const main = document.getElementById('lm-main');
+  const bar = document.getElementById('lm-bar');
+  if (!lmGroups.length) {
+    main.innerHTML = '<div class="rd-note" style="margin:auto">no cameras online</div>';
+    if (bar) bar.classList.remove('on');
+    lmWallReady = false;
+    return;
+  }
+  if (lmWallReady && main.querySelector('.quad-cell')) {
+    lmApplyFilter();
+    return;
+  }
+  const rows = [];
+  lmGroups.forEach(function (g, gi) {
+    (g.cameras || []).forEach(function (c) {
+      if (c && c.mjpeg_url) rows.push({ cam: c, parcel: gi });
+    });
+  });
+  lmClearMain();
+  const gen = lmWallGen;
+  main.innerHTML = rows.map(function (row, i) {
+    const c = row.cam;
+    const prefix = lmGroups.length > 1
+      ? '<em>' + escHtml(parcelLabel(c)) + '</em>' : '';
+    return '<div class="quad-cell" data-i="' + i + '" data-parcel="' + row.parcel +
+      '" onclick="lmToggleFeed(' + i + ')">' +
+      '<img id="lm-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
+      '<span class="quad-name">' + prefix + escHtml(c.name || c.mac) + '</span>' +
+      '<span class="quad-state" id="lm-state-' + i + '">connecting…</span></div>';
+  }).join('');
+  rows.forEach(function (row, i) {
+    const img = document.getElementById('lm-img-' + i);
+    const st = document.getElementById('lm-state-' + i);
+    setTimeout(function () {
+      if (lmWallGen !== gen) return;
+      bindMjpegImg(img, st, row.cam.mjpeg_url, function () { return lmWallGen === gen; });
+    }, i * 350);
+  });
+  lmWallReady = true;
+  lmApplyFilter();
+  dbg('Live mode: ' + rows.length + ' streams started', 'info');
+}
+function lmSyncBar() {
+  const bar = document.getElementById('lm-bar');
+  const parcels = document.getElementById('lm-parcels');
+  const showBar = lmGroups.length > 1 || lmFocus >= 0;
+  if (bar) bar.classList.toggle('on', showBar);
+  if (!parcels) return;
+  const tabs = lmGroups.length > 1
+    ? '<button type="button" class="lm-tab' + (lmParcel < 0 ? ' on' : '') +
+      '" onclick="lmPickParcel(-1)">All</button>' +
+      lmGroups.map(function (g, i) {
+        return '<button type="button" class="lm-tab' + (i === lmParcel ? ' on' : '') +
+          '" onclick="lmPickParcel(' + i + ')">' + escHtml(g.label) + '</button>';
+      }).join('')
+    : '';
+  const gridBtn = lmFocus >= 0
+    ? '<button type="button" class="lm-tab" onclick="lmCollapseFeed()">Grid</button>'
+    : '';
+  parcels.innerHTML = tabs + gridBtn;
+}
+function lmApplyFilter() {
+  const main = document.getElementById('lm-main');
+  if (!main) return;
+  if (lmParcel >= lmGroups.length) lmParcel = -1;
+  const cells = main.querySelectorAll('.quad-cell');
+  if (lmFocus >= 0) {
+    const focused = main.querySelector('.quad-cell[data-i="' + lmFocus + '"]');
+    const inParcel = focused &&
+      (lmParcel < 0 || Number(focused.getAttribute('data-parcel')) === lmParcel);
+    if (!inParcel) lmFocus = -1;
+  }
+  let n = 0;
+  cells.forEach(function (el) {
+    const i = Number(el.getAttribute('data-i'));
+    const inParcel = lmParcel < 0 || Number(el.getAttribute('data-parcel')) === lmParcel;
+    const on = inParcel && (lmFocus < 0 || i === lmFocus);
+    el.classList.toggle('off', !on);
+    el.classList.toggle('focus', !!(on && lmFocus >= 0));
+    el.title = on ? (lmFocus >= 0 ? 'Click to return to grid' : 'Click to expand') : '';
+    if (on) n++;
+  });
+  if (lmFocus >= 0) {
+    main.style.gridTemplateColumns = 'minmax(0, 1fr)';
+    main.style.gridTemplateRows = 'minmax(0, 1fr)';
+  } else {
+    const grid = liveWallGrid(n);
+    main.style.gridTemplateColumns = 'repeat(' + grid.cols + ', minmax(0, 1fr))';
+    main.style.gridTemplateRows = 'repeat(' + grid.rows + ', minmax(120px, 1fr))';
+  }
+  main.classList.toggle('parcel-filter', lmParcel >= 0);
+  main.classList.toggle('feed-focus', lmFocus >= 0);
+  lmSyncBar();
+}
+window.lmToggleFeed = function (i) {
+  lmFocus = (lmFocus === i) ? -1 : i;
+  lmApplyFilter();
+};
+window.lmCollapseFeed = function () {
+  if (lmFocus < 0) return;
+  lmFocus = -1;
+  lmApplyFilter();
+};
+window.lmPickParcel = function (i) {
+  lmParcel = i;
+  lmApplyFilter();
+  paintLmClipRail();
+};
 window.toggleLiveMode = function () {
   const lm = document.getElementById('live-mode');
   if (lm.classList.contains('open')) { closeLiveMode(); return; }
@@ -3077,34 +3250,53 @@ async function openLiveMode() {
     renderLmClips();
     return;
   }
-  const list = Object.keys(m).map(function (k) { return m[k]; })
+  const list = (gwLiveCameras.length ? gwLiveCameras : Object.keys(m).map(function (k) { return m[k]; }))
     .filter(function (c) { return c && c.mjpeg_url; });
   if (!list.length) {
     main.innerHTML = '<div class="rd-note" style="margin:auto">no cameras online</div>';
     renderLmClips();
     return;
   }
-  main.style.gridTemplateColumns = list.length <= 2 ? '1fr '.repeat(list.length).trim() : '1fr 1fr';
-  main.style.gridTemplateRows = list.length <= 2 ? '1fr' : '1fr 1fr';
-  main.innerHTML = list.map(function (c, i) {
-    return '<div class="quad-cell">' +
-      '<img id="lm-img-' + i + '" alt="">' +
-      '<span class="quad-name">' + escHtml(c.name || c.mac) + '</span>' +
-      '<span class="quad-state" id="lm-state-' + i + '">connecting…</span></div>';
-  }).join('');
-  list.forEach(function (c, i) {
-    const img = document.getElementById('lm-img-' + i);
-    const st  = document.getElementById('lm-state-' + i);
-    let done = false;
-    img.onload  = function () { done = true; if (st) { st.textContent = 'LIVE'; st.classList.remove('bad'); } };
-    img.onerror = function () { done = true; if (st) { st.textContent = 'no stream'; st.classList.add('bad'); } };
-    setTimeout(function () {
-      if (!done && st) { st.textContent = 'no stream'; st.classList.add('bad'); }
-    }, 12000);
-    img.src = c.mjpeg_url;
+  lmGroups = groupLiveCameras(list);
+  lmParcel = -1;
+  lmPaintWall();
+  setTimeout(function () { renderLmClips(); }, 2500);
+}
+function lmFilteredClips() {
+  if (lmParcel < 0) return lmClipList;
+  const names = {};
+  flattenLiveGroups(lmGroups, lmParcel).forEach(function (c) {
+    if (c && c.name) names[c.name] = true;
   });
-  dbg('Live mode: ' + list.length + ' streams', 'info');
-  renderLmClips();
+  return lmClipList.filter(function (e) { return names[e.device_name]; });
+}
+function paintLmClipRail() {
+  const div = document.getElementById('lm-clips');
+  const sub = document.getElementById('lm-sub');
+  if (!div) return;
+  lmClipShown = lmFilteredClips();
+  if (sub) {
+    const where = lmParcel < 0 ? 'all parcels' :
+      ((lmGroups[lmParcel] && lmGroups[lmParcel].label) || 'parcel');
+    sub.textContent = where + ' · last 7 days';
+  }
+  const head = lmClipShown.slice(0, LM_PRELOAD);
+  const tail = lmClipShown.slice(LM_PRELOAD);
+  div.innerHTML = lmClipShown.length
+    ? head.map(function (e, i) { return lmClipCard(e, i); }).join('') +
+      (tail.length
+        ? '<div class="lm-older">Older clips (' + tail.length + ')</div>' +
+          tail.map(function (e, j) {
+            const i = j + LM_PRELOAD;
+            return '<div class="lm-clip lm-lite" id="lm-clip-' + i + '"' +
+              ' onclick="expandLmClip(' + i + ')">' +
+              '<span class="lm-lite-play">&#9654;</span>' +
+              '<span class="lm-lite-name">' + escHtml(e.device_name || 'Camera') + '</span>' +
+              '<span class="lm-lite-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
+              '</div>';
+          }).join('')
+        : '')
+    : '<div class="rd-note">no video events in the last 7 days</div>';
 }
 // A full clip card: inline player, poster = event thumbnail, metadata under.
 // preload="metadata" keeps a card from downloading its whole mp4 up front.
@@ -3120,7 +3312,7 @@ function lmClipCard(e, i) {
 }
 // A tap on an older row swaps it in place for a real card and starts it.
 window.expandLmClip = function (i) {
-  const e = lmClipList[i];
+  const e = lmClipShown[i];
   const row = document.getElementById('lm-clip-' + i);
   if (!e || !e.mp4 || !row) return;
   row.outerHTML = lmClipCard(e, i);
@@ -3129,33 +3321,13 @@ window.expandLmClip = function (i) {
   if (v) v.play().catch(function () {});
   dbg('Clip expanded: ' + (e.device_name || '') + ' ' + wxTime(e.event_time), 'info');
 };
-const LM_PRELOAD = 10;   // newest N open as players; the rest expand on tap
+const LM_PRELOAD = 3;   // newest N open as players; the rest expand on tap
 async function renderLmClips() {
   const div = document.getElementById('lm-clips');
   div.innerHTML = '<div class="rd-note">loading clips&hellip;</div>';
   try {
     lmClipList = await ensureClips(true);
-    // The whole week is in the rail, but only the newest LM_PRELOAD clips are
-    // real <video> elements (posters + metadata load per card). Everything
-    // older is a one-line row under an "Older clips" divider that becomes a
-    // player the moment it is tapped - so 60 clips cost 10 clips' bandwidth.
-    const head = lmClipList.slice(0, LM_PRELOAD);
-    const tail = lmClipList.slice(LM_PRELOAD);
-    div.innerHTML = lmClipList.length
-      ? head.map(function (e, i) { return lmClipCard(e, i); }).join('') +
-        (tail.length
-          ? '<div class="lm-older">Older clips (' + tail.length + ')</div>' +
-            tail.map(function (e, j) {
-              const i = j + LM_PRELOAD;
-              return '<div class="lm-clip lm-lite" id="lm-clip-' + i + '"' +
-                ' onclick="expandLmClip(' + i + ')">' +
-                '<span class="lm-lite-play">&#9654;</span>' +
-                '<span class="lm-lite-name">' + escHtml(e.device_name || 'Camera') + '</span>' +
-                '<span class="lm-lite-time">' + escHtml(wxTime(e.event_time)) + '</span>' +
-                '</div>';
-            }).join('')
-          : '')
-      : '<div class="rd-note">no video events in the last 7 days</div>';
+    paintLmClipRail();
     // One recording at a time: starting a clip pauses any other that is playing.
     if (!div.dataset.playHook) {
       div.dataset.playHook = '1';
@@ -3173,7 +3345,7 @@ async function renderLmClips() {
 // The clip player is the existing lightbox, which sits ABOVE live mode, so the
 // streams keep running behind the recording being reviewed.
 window.playLmClip = function (i) {
-  const e = lmClipList[i];
+  const e = lmClipShown[i] || lmClipList[i];
   if (!e || !e.mp4) return;
   lbStandaloneLive = false;
   lbShowVideo(e.mp4);
@@ -3321,7 +3493,11 @@ document.addEventListener('keydown', function (e) {
   const lb = document.getElementById('cam-lightbox');
   if (lb && lb.classList.contains('open')) { closeCameraPhoto(); return; }
   const lm = document.getElementById('live-mode');
-  if (lm && lm.classList.contains('open')) { closeLiveMode(); return; }
+  if (lm && lm.classList.contains('open')) {
+    if (lmFocus >= 0) { window.lmCollapseFeed(); return; }
+    closeLiveMode();
+    return;
+  }
   hideCameraPopup();
 });
 // ── Weather ───────────────────────────────────────────────────────────
