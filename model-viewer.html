@@ -792,7 +792,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.23';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.24';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -3251,7 +3251,7 @@ async function openLiveMode() {
     return;
   }
   lmGroups = groupLiveCameras(list);
-  lmParcel = lmGroups.length > 1 ? 0 : -1;
+  lmParcel = -1;
   lmPaintWall();
   setTimeout(function () { renderLmClips(); }, 2500);
 }

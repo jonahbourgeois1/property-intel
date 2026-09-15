@@ -59,10 +59,11 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.23';
+export const HUB_BUILD = '1.8.24';
 export const LIVE_PAGE_SIZE = 4;
-// Chrome + CHEKT together hold about this many concurrent MJPEGs.
-// Gud Parcel 1 is 8; opening 15 at once leaves parcels 2/3 on "no stream".
+// Chrome + CHEKT hold a handful of MJPEGs at once. Skip offline cameras
+// (they still occupy a socket if we bind them) so the online remainder
+// can start on All.
 export const MAX_LIVE_MJPEG = 8;
 
 export function isLiveOffline(c) {
@@ -79,7 +80,7 @@ export function stopMjpegImg(img) {
 
 // CHEKT MJPEG is multipart/x-mixed-replace. Chrome often fires img.onerror
 // before the first JPEG, or never fires onload. Treat naturalWidth as LIVE,
-// retry once, and send no Referer (the token is in the query).
+// retry a few times, and send no Referer (the token is in the query).
 export function bindMjpegImg(img, stateEl, url, isCurrent) {
   if (!img || !url) return;
   stopMjpegImg(img);
@@ -121,13 +122,13 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
       if (!alive()) return;
       stopTimers();
       if (sawFrame()) { markLive(); return; }
-      if (tries < 1) {
+      if (tries < 3) {
         tries++;
         retry();
         return;
       }
       markDead();
-    }, 18000);
+    }, 14000);
   }
   function retry() {
     if (!alive()) return;
@@ -135,7 +136,7 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
     img.onload = null;
     img.onerror = null;
     img.removeAttribute('src');
-    setTimeout(function () { if (alive()) start(); }, 600);
+    setTimeout(function () { if (alive()) start(); }, 700);
   }
   function start() {
     if (!alive()) return;
@@ -145,7 +146,7 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
     };
     img.onerror = function () {
       if (!alive() || sawFrame()) return;
-      if (tries < 1) {
+      if (tries < 3) {
         tries++;
         retry();
       }
@@ -156,31 +157,21 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
   start();
 }
 
-// Start MJPEG only for visible cells, and only up to MAX_LIVE_MJPEG.
-// Hidden cells drop src so Parcel 2/3 can take the browser slots.
+// Visible cells stream. Hidden cells drop src. Offline cameras never bind
+// (a hung MJPEG steals a slot from an online camera on All).
 export function syncLiveWallStreams(main, rows, maxN) {
   if (!main) return;
-  const cap = maxN || MAX_LIVE_MJPEG;
+  const gen = (main.__streamGen || 0) + 1;
+  main.__streamGen = gen;
   const cells = main.querySelectorAll('.quad-cell');
   const want = [];
-  cells.forEach(function (el) {
-    if (el.classList.contains('off')) return;
-    want.push(Number(el.getAttribute('data-i')));
-  });
-  const live = {};
-  want.slice(0, cap).forEach(function (i) { live[i] = true; });
   cells.forEach(function (el) {
     const i = Number(el.getAttribute('data-i'));
     const img = el.querySelector('img');
     const st = el.querySelector('.quad-state');
     const cam = rows[i] && rows[i].cam;
-    if (!img) return;
-    if (!live[i]) {
+    if (el.classList.contains('off')) {
       stopMjpegImg(img);
-      if (st && !el.classList.contains('off') && want.length > cap) {
-        st.textContent = 'open parcel';
-        st.classList.add('bad');
-      }
       return;
     }
     if (isLiveOffline(cam)) {
@@ -188,13 +179,20 @@ export function syncLiveWallStreams(main, rows, maxN) {
       if (st) { st.textContent = 'offline'; st.classList.add('bad'); }
       return;
     }
-    if (!cam || !cam.mjpeg_url) return;
-    if (img.naturalWidth > 0) return;
-    if (img.getAttribute('src')) return;
-    if (st) { st.textContent = 'connecting…'; st.classList.remove('bad'); }
-    bindMjpegImg(img, st, cam.mjpeg_url, function () {
-      return !el.classList.contains('off');
-    });
+    if (!cam || !cam.mjpeg_url || !img) return;
+    want.push({ el: el, i: i, img: img, st: st, cam: cam });
+  });
+  want.forEach(function (job, n) {
+    if (job.img.naturalWidth > 0) return;
+    if (job.img.getAttribute('src') && !job.img.__still) return;
+    if (job.st) { job.st.textContent = 'connecting…'; job.st.classList.remove('bad'); }
+    setTimeout(function () {
+      if (main.__streamGen !== gen) return;
+      if (job.el.classList.contains('off')) return;
+      bindMjpegImg(job.img, job.st, job.cam.mjpeg_url, function () {
+        return main.__streamGen === gen && !job.el.classList.contains('off');
+      });
+    }, n * 180);
   });
 }
 

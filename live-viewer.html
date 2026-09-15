@@ -200,7 +200,7 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.23';
+import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.24';
 
 const BUILD = '1.1.4';
 const params = new URLSearchParams(window.location.search);
@@ -603,7 +603,7 @@ async function startLivePage() {
     return;
   }
   lmGroups = groupLiveCameras(list);
-  lmParcel = lmGroups.length > 1 ? 0 : -1;
+  lmParcel = -1;
   lmPaintWall();
   dbg('Live: ' + list.length + ' cameras in ' + lmGroups.length + ' group(s)', 'ok');
   setTimeout(function () { if (liveOpen) renderLmClips(); }, 2500);
