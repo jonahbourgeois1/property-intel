@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.24';
+export const HUB_BUILD = '1.8.25';
 export const LIVE_PAGE_SIZE = 4;
 // Chrome + CHEKT hold a handful of MJPEGs at once. Skip offline cameras
 // (they still occupy a socket if we bind them) so the online remainder
@@ -76,6 +76,12 @@ export function stopMjpegImg(img) {
   img.onload = null;
   img.onerror = null;
   img.removeAttribute('src');
+}
+
+// Tear down the wall (leave Live / rebuild). Parcel tabs must not call this.
+export function invalidateLiveWall(main) {
+  if (!main) return;
+  main.__streamGen = (main.__streamGen || 0) + 1;
 }
 
 // CHEKT MJPEG is multipart/x-mixed-replace. Chrome often fires img.onerror
@@ -157,12 +163,13 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
   start();
 }
 
-// Visible cells stream. Hidden cells drop src. Offline cameras never bind
-// (a hung MJPEG steals a slot from an online camera on All).
+// Every online camera keeps its MJPEG bound. Parcel / focus .off only
+// hides the cell — dropping src forced a reconnect on every tab click.
+// Offline cameras never bind (a hung MJPEG steals a slot on All).
 export function syncLiveWallStreams(main, rows, maxN) {
   if (!main) return;
-  const gen = (main.__streamGen || 0) + 1;
-  main.__streamGen = gen;
+  if (!main.__streamGen) main.__streamGen = 1;
+  const gen = main.__streamGen;
   const cells = main.querySelectorAll('.quad-cell');
   const want = [];
   cells.forEach(function (el) {
@@ -170,10 +177,6 @@ export function syncLiveWallStreams(main, rows, maxN) {
     const img = el.querySelector('img');
     const st = el.querySelector('.quad-state');
     const cam = rows[i] && rows[i].cam;
-    if (el.classList.contains('off')) {
-      stopMjpegImg(img);
-      return;
-    }
     if (isLiveOffline(cam)) {
       stopMjpegImg(img);
       if (st) { st.textContent = 'offline'; st.classList.add('bad'); }
@@ -188,9 +191,8 @@ export function syncLiveWallStreams(main, rows, maxN) {
     if (job.st) { job.st.textContent = 'connecting…'; job.st.classList.remove('bad'); }
     setTimeout(function () {
       if (main.__streamGen !== gen) return;
-      if (job.el.classList.contains('off')) return;
       bindMjpegImg(job.img, job.st, job.cam.mjpeg_url, function () {
-        return main.__streamGen === gen && !job.el.classList.contains('off');
+        return main.__streamGen === gen;
       });
     }, n * 180);
   });

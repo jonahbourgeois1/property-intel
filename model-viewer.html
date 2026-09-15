@@ -246,9 +246,10 @@
     position: relative; background: #000; border-radius: 10px; overflow: hidden;
     border: 1px solid rgba(255,255,255,0.14); min-height: 120px;
   }
+  /* Park hidden cells on-screen so Chrome does not cancel MJPEG. */
   #lm-main .quad-cell.off {
-    position: absolute; width: 8px; height: 8px; overflow: hidden;
-    opacity: 0.02; pointer-events: none;
+    position: absolute; left: 8px; top: 8px; width: 16px; height: 16px;
+    overflow: hidden; opacity: 0.01; pointer-events: none; z-index: 0;
   }
   #lm-main:not(.feed-focus) .quad-cell:not(.off) { cursor: pointer; }
   #lm-main:not(.feed-focus) .quad-cell:not(.off):hover {
@@ -792,7 +793,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg } from './js/vyanet-viewer/property.js?v=1.8.24';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall } from './js/vyanet-viewer/property.js?v=1.8.25';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -3098,6 +3099,7 @@ function lmClearMain() {
   lmWallGen++;
   lmWallReady = false;
   lmFocus = -1;
+  invalidateLiveWall(document.getElementById('lm-main'));
   document.querySelectorAll('#lm-main img').forEach(function (img) {
     stopMjpegImg(img);
   });
