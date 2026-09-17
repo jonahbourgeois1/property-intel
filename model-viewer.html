@@ -265,7 +265,9 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: contain; z-index: 0; pointer-events: none;
   }
-  #lm-main .quad-cell.has-poster img.quad-mjpeg:not(.on) { opacity: 0; }
+  #lm-main .quad-cell img.quad-mjpeg { position: relative; z-index: 1; }
+  #lm-main .quad-cell img.quad-mjpeg:not(.on) { opacity: 0; }
+  #lm-main .quad-name, #lm-main .quad-state { z-index: 2; }
   .quad-name {
     position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
     background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
@@ -798,7 +800,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.28';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.31';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -3103,7 +3105,12 @@ function lmClearMain() {
   lmWallGen++;
   lmWallReady = false;
   lmFocus = -1;
-  invalidateLiveWall(document.getElementById('lm-main'));
+  const main = document.getElementById('lm-main');
+  if (main && main.__posterTimer) {
+    clearInterval(main.__posterTimer);
+    main.__posterTimer = 0;
+  }
+  invalidateLiveWall(main);
   document.querySelectorAll('#lm-main img.quad-mjpeg, #lm-main img:not(.quad-poster)').forEach(function (img) {
     if (img.classList.contains('quad-poster')) return;
     stopMjpegImg(img);
@@ -3151,6 +3158,11 @@ function lmPaintWall() {
   }).join('');
   lmWallReady = true;
   lmApplyFilter();
+  if (main && !main.__posterTimer) {
+    main.__posterTimer = setInterval(function () {
+      applyClipPosters(main, lmRows, lmClipList);
+    }, 1200);
+  }
   dbg('Live mode: ' + lmRows.length + ' cameras painted', 'info');
 }
 function lmSyncBar() {
@@ -3261,7 +3273,7 @@ async function openLiveMode() {
   lmGroups = groupLiveCameras(list);
   lmParcel = -1;
   lmPaintWall();
-  setTimeout(function () { renderLmClips(); }, 2500);
+  renderLmClips();
 }
 function lmFilteredClips() {
   if (lmParcel < 0) return lmClipList;

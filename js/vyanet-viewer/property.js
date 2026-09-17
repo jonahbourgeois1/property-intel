@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.28';
+export const HUB_BUILD = '1.8.31';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -77,23 +77,65 @@ export function invalidateLiveWall(main) {
   main.__streamGen = (main.__streamGen || 0) + 1;
 }
 
+function jwtPayload_(token) {
+  const b64 = String(token || '').split('.')[1] || '';
+  const norm = b64.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = norm + '==='.slice((norm.length + 3) % 4);
+  return JSON.parse(atob(pad));
+}
+
+// CHEKT portal tiles are snapshot JPEGs, not MJPEG. Same access_token as
+// /api/v1/mjpeg. Gud Cultures Parcel 3 (site 11788) hangs forever on
+// multipart MJPEG but can still serve /api/v1/snapshots/{mac}/{channel}.
+export function snapshotUrlsFromMjpeg(mjpegUrl, cam) {
+  try {
+    const token = new URL(mjpegUrl).searchParams.get('access_token');
+    if (!token) return [];
+    const p = jwtPayload_(token);
+    const mac = String((cam && cam.mac) || p.sub || '').replace(/:/g, '').toUpperCase();
+    if (!mac) return [];
+    const chans = [];
+    function add(ch) {
+      if (ch == null || ch === '') return;
+      const n = Number(ch);
+      const s = isFinite(n) ? String(n) : String(ch);
+      if (chans.indexOf(s) === -1) chans.push(s);
+    }
+    add(cam && cam.channel);
+    add(p.channel);
+    add(p.group_channel);
+    if (!chans.length) add(0);
+    return chans.map(function (ch) {
+      return 'https://api.chekt.com/api/v1/snapshots/' + encodeURIComponent(mac) +
+        '/' + encodeURIComponent(ch) + '?access_token=' + encodeURIComponent(token);
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
 // CHEKT MJPEG is multipart/x-mixed-replace. Chrome often fires img.onerror
-// before the first JPEG, or never fires onload. Treat naturalWidth as LIVE,
-// retry a few times, and send no Referer (the token is in the query).
+// before the first JPEG, or never fires onload. Treat naturalWidth as LIVE.
+// If the stream never sends a frame, poll snapshot JPEGs with the same token.
 export function bindMjpegImg(img, stateEl, url, isCurrent, opts) {
   if (!img || !url) return;
   stopMjpegImg(img);
   const maxTries = (opts && opts.maxTries != null) ? opts.maxTries : 3;
-  const watchMs = (opts && opts.watchMs != null) ? opts.watchMs : 14000;
+  const watchMs = (opts && opts.watchMs != null) ? opts.watchMs : 10000;
   const deadLabel = (opts && opts.deadLabel) || 'no stream';
+  const snapUrls = snapshotUrlsFromMjpeg(url, opts && opts.cam);
   let tries = 0;
   let timer = 0;
   let poll = 0;
+  let snapTimer = 0;
+  let snapBusy = false;
+  let snapIdx = 0;
   let stopped = false;
   function alive() { return !stopped && (!isCurrent || isCurrent()); }
   function stopTimers() {
     if (timer) { clearTimeout(timer); timer = 0; }
     if (poll) { clearInterval(poll); poll = 0; }
+    if (snapTimer) { clearInterval(snapTimer); snapTimer = 0; }
   }
   img.__mjpegStop = function () {
     stopped = true;
@@ -117,6 +159,65 @@ export function bindMjpegImg(img, stateEl, url, isCurrent, opts) {
     stateEl.classList.add('bad');
   }
   function sawFrame() { return img.naturalWidth > 0; }
+  function paintJpeg(data) {
+    if (!alive() || !data) return false;
+    const src = String(data).indexOf('data:') === 0 ? String(data)
+      : ('data:image/jpeg;base64,' + data);
+    img.onload = function () {
+      if (alive() && sawFrame()) markLive();
+    };
+    img.onerror = null;
+    img.src = src;
+    return true;
+  }
+  function tickSnap() {
+    if (!alive() || snapBusy || !snapUrls.length) return;
+    snapBusy = true;
+    const snapUrl = snapUrls[snapIdx];
+    fetch(snapUrl, { mode: 'cors', cache: 'no-store', referrerPolicy: 'no-referrer' })
+      .then(function (r) {
+        if (!alive()) return null;
+        if (r.status === 401) {
+          markDead();
+          stopTimers();
+          return { __stop: true };
+        }
+        if (r.status === 403) {
+          snapIdx = (snapIdx + 1) % snapUrls.length;
+          return null;
+        }
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then(function (j) {
+        if (!alive() || !j || j.__stop || j.data == null || j.data === '') return;
+        if (j.base64Encoded === false) {
+          img.onload = function () { if (alive() && sawFrame()) markLive(); };
+          img.onerror = null;
+          img.src = String(j.data);
+          return;
+        }
+        paintJpeg(j.data);
+      })
+      .catch(function () {
+        if (!alive()) return;
+        snapIdx = (snapIdx + 1) % snapUrls.length;
+      })
+      .then(function () { snapBusy = false; });
+  }
+  function startSnapshotPoll() {
+    if (!alive() || !snapUrls.length) { markDead(); return; }
+    stopTimers();
+    img.onload = null;
+    img.onerror = null;
+    img.removeAttribute('src');
+    if (stateEl) {
+      stateEl.textContent = 'connecting…';
+      stateEl.classList.remove('bad');
+    }
+    tickSnap();
+    snapTimer = setInterval(tickSnap, 2000);
+  }
   function armWatch() {
     stopTimers();
     poll = setInterval(function () {
@@ -127,6 +228,10 @@ export function bindMjpegImg(img, stateEl, url, isCurrent, opts) {
       if (!alive()) return;
       stopTimers();
       if (sawFrame()) { markLive(); return; }
+      if (snapUrls.length) {
+        startSnapshotPoll();
+        return;
+      }
       if (tries < maxTries) {
         tries++;
         retry();
@@ -154,6 +259,8 @@ export function bindMjpegImg(img, stateEl, url, isCurrent, opts) {
       if (tries < maxTries) {
         tries++;
         retry();
+      } else if (snapUrls.length) {
+        startSnapshotPoll();
       }
     };
     img.src = url;
@@ -206,35 +313,41 @@ export function syncLiveWallStreams(main, rows, maxN) {
   });
   weaveByParcel_(want).forEach(function (job, n) {
     if (job.img.naturalWidth > 0) return;
+    if (typeof job.img.__mjpegStop === 'function') return;
     if (job.img.getAttribute('src') && !job.img.__still) return;
     if (job.st) { job.st.textContent = 'connecting…'; job.st.classList.remove('bad'); }
     setTimeout(function () {
       if (main.__streamGen !== gen) return;
       bindMjpegImg(job.img, job.st, job.cam.mjpeg_url, function () {
         return main.__streamGen === gen;
-      });
+      }, { cam: job.cam });
     }, n * 180);
   });
 }
 
-// Newest clip thumbnail under a hung MJPEG. CHEKT can report a camera
-// `online` while /api/v1/mjpeg never sends a first byte (Gud Cultures
-// Parcel 3 / site 11788). The still is not LIVE.
+// Newest clip thumbnail behind a hung MJPEG. Never stamp it onto a
+// cell that already has a live frame — that swapped daytime LIVE to
+// last-night stills (hub 1.8.28). CHEKT can report `online` while
+// /api/v1/mjpeg never sends a first byte (Gud Cultures Parcel 3).
 export function applyClipPosters(main, rows, clips) {
   if (!main) return;
   const byName = {};
   (clips || []).forEach(function (e) {
-    if (e && e.device_name && e.thumbnail && !byName[e.device_name]) {
-      byName[e.device_name] = e.thumbnail;
-    }
+    const n = e && e.device_name && String(e.device_name).trim();
+    if (n && e.thumbnail && !byName[n]) byName[n] = e.thumbnail;
   });
   main.querySelectorAll('.quad-cell').forEach(function (el) {
     const i = Number(el.getAttribute('data-i'));
     const row = rows && rows[i];
-    const name = row && row.cam && row.cam.name;
-    const url = name && byName[name];
-    if (!url) return;
+    const mjpeg = el.querySelector('img.quad-mjpeg') || el.querySelector('img:not(.quad-poster)');
+    const live = !!(mjpeg && (mjpeg.classList.contains('on') || mjpeg.naturalWidth > 0));
+    const name = row && row.cam && String(row.cam.name || '').trim();
+    const url = (!live && name && byName[name]) || '';
     let poster = el.querySelector('img.quad-poster');
+    if (!url) {
+      el.classList.remove('has-poster');
+      return;
+    }
     if (!poster) {
       poster = document.createElement('img');
       poster.className = 'quad-poster';

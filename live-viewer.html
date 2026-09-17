@@ -101,7 +101,9 @@
     position: absolute; inset: 0; width: 100%; height: 100%;
     object-fit: contain; z-index: 0; pointer-events: none;
   }
-  .quad-cell.has-poster img.quad-mjpeg:not(.on) { opacity: 0; }
+  .quad-cell img.quad-mjpeg { position: relative; z-index: 1; }
+  .quad-cell img.quad-mjpeg:not(.on) { opacity: 0; }
+  .quad-name, .quad-state { z-index: 2; }
   .quad-name {
     position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
     background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
@@ -206,9 +208,9 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.28';
+import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.31';
 
-const BUILD = '1.1.8';
+const BUILD = '1.1.11';
 const params = new URLSearchParams(window.location.search);
 const propertyId = (params.get('property') || '').trim();
 const embedded = params.get('embed') === '1';
@@ -372,7 +374,12 @@ function lmClearMain() {
   lmWallGen++;
   lmWallReady = false;
   lmFocus = -1;
-  invalidateLiveWall(document.getElementById('lm-main'));
+  const main = document.getElementById('lm-main');
+  if (main && main.__posterTimer) {
+    clearInterval(main.__posterTimer);
+    main.__posterTimer = 0;
+  }
+  invalidateLiveWall(main);
   document.querySelectorAll('#lm-main img.quad-mjpeg, #lm-main img:not(.quad-poster)').forEach(function (img) {
     if (img.classList.contains('quad-poster')) return;
     stopMjpegImg(img);
@@ -490,6 +497,11 @@ function lmPaintWall() {
   }).join('');
   lmWallReady = true;
   lmApplyFilter();
+  if (main && !main.__posterTimer) {
+    main.__posterTimer = setInterval(function () {
+      applyClipPosters(main, lmRows, lmClipList);
+    }, 1200);
+  }
   dbg('Live: ' + lmRows.length + ' cameras painted', 'ok');
 }
 window.lmToggleFeed = function (i) {
@@ -616,7 +628,7 @@ async function startLivePage() {
   lmParcel = -1;
   lmPaintWall();
   dbg('Live: ' + list.length + ' cameras in ' + lmGroups.length + ' group(s)', 'ok');
-  setTimeout(function () { if (liveOpen) renderLmClips(); }, 2500);
+  renderLmClips();
 }
 function stopLivePage() {
   if (!liveOpen) return;
