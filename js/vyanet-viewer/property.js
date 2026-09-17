@@ -59,22 +59,15 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.25';
+export const HUB_BUILD = '1.8.28';
 export const LIVE_PAGE_SIZE = 4;
-// Chrome + CHEKT hold a handful of MJPEGs at once. Skip offline cameras
-// (they still occupy a socket if we bind them) so the online remainder
-// can start on All.
-export const MAX_LIVE_MJPEG = 8;
-
-export function isLiveOffline(c) {
-  return String((c && c.status) || '').toLowerCase() === 'offline';
-}
 
 export function stopMjpegImg(img) {
   if (!img) return;
   if (typeof img.__mjpegStop === 'function') img.__mjpegStop();
   img.onload = null;
   img.onerror = null;
+  img.classList.remove('on');
   img.removeAttribute('src');
 }
 
@@ -87,9 +80,12 @@ export function invalidateLiveWall(main) {
 // CHEKT MJPEG is multipart/x-mixed-replace. Chrome often fires img.onerror
 // before the first JPEG, or never fires onload. Treat naturalWidth as LIVE,
 // retry a few times, and send no Referer (the token is in the query).
-export function bindMjpegImg(img, stateEl, url, isCurrent) {
+export function bindMjpegImg(img, stateEl, url, isCurrent, opts) {
   if (!img || !url) return;
   stopMjpegImg(img);
+  const maxTries = (opts && opts.maxTries != null) ? opts.maxTries : 3;
+  const watchMs = (opts && opts.watchMs != null) ? opts.watchMs : 14000;
+  const deadLabel = (opts && opts.deadLabel) || 'no stream';
   let tries = 0;
   let timer = 0;
   let poll = 0;
@@ -104,17 +100,20 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
     stopTimers();
     img.onload = null;
     img.onerror = null;
+    img.classList.remove('on');
     img.removeAttribute('src');
     img.__mjpegStop = null;
   };
   function markLive() {
     if (!alive() || !stateEl) return;
+    img.classList.add('on');
     stateEl.textContent = 'LIVE';
     stateEl.classList.remove('bad');
   }
   function markDead() {
     if (!alive() || !stateEl) return;
-    stateEl.textContent = 'no stream';
+    img.classList.remove('on');
+    stateEl.textContent = deadLabel;
     stateEl.classList.add('bad');
   }
   function sawFrame() { return img.naturalWidth > 0; }
@@ -128,13 +127,13 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
       if (!alive()) return;
       stopTimers();
       if (sawFrame()) { markLive(); return; }
-      if (tries < 3) {
+      if (tries < maxTries) {
         tries++;
         retry();
         return;
       }
       markDead();
-    }, 14000);
+    }, watchMs);
   }
   function retry() {
     if (!alive()) return;
@@ -152,7 +151,7 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
     };
     img.onerror = function () {
       if (!alive() || sawFrame()) return;
-      if (tries < 3) {
+      if (tries < maxTries) {
         tries++;
         retry();
       }
@@ -163,9 +162,31 @@ export function bindMjpegImg(img, stateEl, url, isCurrent) {
   start();
 }
 
-// Every online camera keeps its MJPEG bound. Parcel / focus .off only
-// hides the cell — dropping src forced a reconnect on every tab click.
-// Offline cameras never bind (a hung MJPEG steals a slot on All).
+function weaveByParcel_(list) {
+  const buckets = {};
+  const keys = [];
+  (list || []).forEach(function (j) {
+    const k = String(j.parcel);
+    if (!buckets[k]) { buckets[k] = []; keys.push(k); }
+    buckets[k].push(j);
+  });
+  const out = [];
+  let n = 0;
+  let more = true;
+  while (more) {
+    more = false;
+    keys.forEach(function (k) {
+      if (buckets[k][n]) { out.push(buckets[k][n]); more = true; }
+    });
+    n++;
+  }
+  return out;
+}
+
+// Start every camera that has an MJPEG URL. Do not cap, do not skip CHEKT
+// `offline` (Gud Cultures Parcel 3 was LIVE on All while status said
+// offline), do not drop src on parcel tabs. Stagger round-robin across
+// parcels so Parcel 2/3 start in the first wave, not after Parcel 1.
 export function syncLiveWallStreams(main, rows, maxN) {
   if (!main) return;
   if (!main.__streamGen) main.__streamGen = 1;
@@ -174,18 +195,16 @@ export function syncLiveWallStreams(main, rows, maxN) {
   const want = [];
   cells.forEach(function (el) {
     const i = Number(el.getAttribute('data-i'));
-    const img = el.querySelector('img');
+    const img = el.querySelector('img.quad-mjpeg') || el.querySelector('img');
     const st = el.querySelector('.quad-state');
     const cam = rows[i] && rows[i].cam;
-    if (isLiveOffline(cam)) {
-      stopMjpegImg(img);
-      if (st) { st.textContent = 'offline'; st.classList.add('bad'); }
-      return;
-    }
     if (!cam || !cam.mjpeg_url || !img) return;
-    want.push({ el: el, i: i, img: img, st: st, cam: cam });
+    want.push({
+      el: el, i: i, img: img, st: st, cam: cam,
+      parcel: el.getAttribute('data-parcel') || '0'
+    });
   });
-  want.forEach(function (job, n) {
+  weaveByParcel_(want).forEach(function (job, n) {
     if (job.img.naturalWidth > 0) return;
     if (job.img.getAttribute('src') && !job.img.__still) return;
     if (job.st) { job.st.textContent = 'connecting…'; job.st.classList.remove('bad'); }
@@ -195,6 +214,36 @@ export function syncLiveWallStreams(main, rows, maxN) {
         return main.__streamGen === gen;
       });
     }, n * 180);
+  });
+}
+
+// Newest clip thumbnail under a hung MJPEG. CHEKT can report a camera
+// `online` while /api/v1/mjpeg never sends a first byte (Gud Cultures
+// Parcel 3 / site 11788). The still is not LIVE.
+export function applyClipPosters(main, rows, clips) {
+  if (!main) return;
+  const byName = {};
+  (clips || []).forEach(function (e) {
+    if (e && e.device_name && e.thumbnail && !byName[e.device_name]) {
+      byName[e.device_name] = e.thumbnail;
+    }
+  });
+  main.querySelectorAll('.quad-cell').forEach(function (el) {
+    const i = Number(el.getAttribute('data-i'));
+    const row = rows && rows[i];
+    const name = row && row.cam && row.cam.name;
+    const url = name && byName[name];
+    if (!url) return;
+    let poster = el.querySelector('img.quad-poster');
+    if (!poster) {
+      poster = document.createElement('img');
+      poster.className = 'quad-poster';
+      poster.alt = '';
+      el.insertBefore(poster, el.firstChild);
+    }
+    poster.referrerPolicy = 'no-referrer';
+    if (poster.getAttribute('src') !== url) poster.src = url;
+    el.classList.add('has-poster');
   });
 }
 

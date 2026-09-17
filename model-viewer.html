@@ -261,6 +261,11 @@
   }
   #lm-main.parcel-filter .quad-name em { display: none; }
   .quad-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .quad-poster {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; z-index: 0; pointer-events: none;
+  }
+  #lm-main .quad-cell.has-poster img.quad-mjpeg:not(.on) { opacity: 0; }
   .quad-name {
     position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
     background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
@@ -793,7 +798,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall } from './js/vyanet-viewer/property.js?v=1.8.25';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.28';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -3091,7 +3096,6 @@ let lmClipShown = [];
 let lmGroups = [];
 let lmRows = [];
 let lmParcel = -1;
-let lmPage = 0;
 let lmWallGen = 0;
 let lmWallReady = false;
 let lmFocus = -1;
@@ -3100,7 +3104,8 @@ function lmClearMain() {
   lmWallReady = false;
   lmFocus = -1;
   invalidateLiveWall(document.getElementById('lm-main'));
-  document.querySelectorAll('#lm-main img').forEach(function (img) {
+  document.querySelectorAll('#lm-main img.quad-mjpeg, #lm-main img:not(.quad-poster)').forEach(function (img) {
+    if (img.classList.contains('quad-poster')) return;
     stopMjpegImg(img);
   });
 }
@@ -3139,7 +3144,8 @@ function lmPaintWall() {
       ? '<em>' + escHtml(parcelLabel(c)) + '</em>' : '';
     return '<div class="quad-cell" data-i="' + i + '" data-parcel="' + row.parcel +
       '" onclick="lmToggleFeed(' + i + ')">' +
-      '<img id="lm-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
+      '<img class="quad-poster" alt="">' +
+      '<img class="quad-mjpeg" id="lm-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
       '<span class="quad-name">' + prefix + escHtml(c.name || c.mac) + '</span>' +
       '<span class="quad-state" id="lm-state-' + i + '">connecting…</span></div>';
   }).join('');
@@ -3292,6 +3298,7 @@ function paintLmClipRail() {
           }).join('')
         : '')
     : '<div class="rd-note">no video events in the last 7 days</div>';
+  applyClipPosters(document.getElementById('lm-main'), lmRows, lmClipList);
 }
 // A full clip card: inline player, poster = event thumbnail, metadata under.
 // preload="metadata" keeps a card from downloading its whole mp4 up front.

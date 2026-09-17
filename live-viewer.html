@@ -97,6 +97,11 @@
   }
   #lm-main.parcel-filter .quad-name em { display: none; }
   .quad-cell img { width: 100%; height: 100%; object-fit: contain; display: block; }
+  .quad-poster {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; z-index: 0; pointer-events: none;
+  }
+  .quad-cell.has-poster img.quad-mjpeg:not(.on) { opacity: 0; }
   .quad-name {
     position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 5px;
     background: rgba(10,12,15,0.8); color: #f0f2f5; font-size: 11px; font-weight: 600;
@@ -201,9 +206,9 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall } from './js/vyanet-viewer/property.js?v=1.8.25';
+import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.28';
 
-const BUILD = '1.1.5';
+const BUILD = '1.1.8';
 const params = new URLSearchParams(window.location.search);
 const propertyId = (params.get('property') || '').trim();
 const embedded = params.get('embed') === '1';
@@ -368,7 +373,8 @@ function lmClearMain() {
   lmWallReady = false;
   lmFocus = -1;
   invalidateLiveWall(document.getElementById('lm-main'));
-  document.querySelectorAll('#lm-main img').forEach(function (img) {
+  document.querySelectorAll('#lm-main img.quad-mjpeg, #lm-main img:not(.quad-poster)').forEach(function (img) {
+    if (img.classList.contains('quad-poster')) return;
     stopMjpegImg(img);
   });
 }
@@ -477,7 +483,8 @@ function lmPaintWall() {
       ? '<em>' + escHtml(parcelLabel(c)) + '</em>' : '';
     return '<div class="quad-cell" data-i="' + i + '" data-parcel="' + row.parcel +
       '" onclick="lmToggleFeed(' + i + ')">' +
-      '<img id="lm-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
+      '<img class="quad-poster" alt="">' +
+      '<img class="quad-mjpeg" id="lm-img-' + i + '" alt="" referrerpolicy="no-referrer">' +
       '<span class="quad-name">' + prefix + escHtml(c.name || c.mac) + '</span>' +
       '<span class="quad-state" id="lm-state-' + i + '">connecting&hellip;</span></div>';
   }).join('');
@@ -536,6 +543,7 @@ function paintLmClipRail() {
           }).join('')
         : '')
     : '<div class="rd-note">no video events in the last 7 days</div>';
+  applyClipPosters(document.getElementById('lm-main'), lmRows, lmClipList);
 }
 function lmClipCard(e, i) {
   return '<div class="lm-clip" id="lm-clip-' + i + '">' +
