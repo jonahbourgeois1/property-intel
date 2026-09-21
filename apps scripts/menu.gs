@@ -34,10 +34,10 @@
 // Does not touch satellite Pass 1/2, VIEW_ORDER, or Sync Now (All).
 // Top-level Sync This Row stays satellite.
 //
-// v5.39 (2026-09-21): Drone Test sync is two row actions. Sync (model)
-// publishes name, address, and the 360 View URL. Sync (analysis + model)
-// still requires images, pins, and descriptions. Both write FR Link as
-// vyanet-viewer.html?property={hub}.
+// v5.39 (2026-09-21): Drone Test sync. Sync (model) and Sync all (model)
+// publish name, address, and the 360 View URL. Sync (analysis + model)
+// and Sync all (analysis + model) still require images, pins, and
+// descriptions. Every sync writes FR Link as vyanet-viewer.html?property={hub}&live=1.
 // v5.38 (2026-09-18): Drone Test splits Stage A — Generate 3D Models writes
 // the unclipped capture mesh (`keep_all` → full.glb); Clip Parcel (This Row)
 // is the taxlot cut (`clipped.glb`). Batch Generate 3D skips rows that
@@ -131,6 +131,7 @@ function onOpen() {
     .addItem('Check Job Status',                    'checkDroneTestJobStatus')
     .addItem('Cancel Jobs',                         'cancelDroneTestJobs')
     .addItem('Sync (model)',                 'syncDroneTestBeforeAnalysisDT')
+    .addItem('Sync all (model)',          'syncAllDroneTestModelsDT')
     .addItem('Sync (analysis + model)',   'processDroneTestForActiveRowDT')
     .addItem('Sync all (analysis + model)', 'processDroneTestSheet'))
   .addSubMenu(SpreadsheetApp.getUi().createMenu('Responder Directions')

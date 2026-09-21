@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.33';
+export const HUB_BUILD = '1.8.34';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -496,10 +496,20 @@ function sessionRole() {
   try { return sessionStorage.getItem('vyRole') || ''; } catch (e) { return ''; }
 }
 
+// live=1 is the customer link that must not show Nearmap yet.
+// live=0, and a URL with no live param, keep Nearmap on.
+export function nearmapVisible() {
+  try {
+    return new URLSearchParams(window.location.search).get('live') !== '1';
+  } catch (e) {
+    return true;
+  }
+}
+
 function childQuery(extra) {
   const src = new URLSearchParams(window.location.search);
   const out = new URLSearchParams();
-  ['property', 'gw', 'chekt', 'debug', 'dataRoot', 'chektdev', 'chektch', 'livems'].forEach(function (k) {
+  ['property', 'gw', 'chekt', 'debug', 'dataRoot', 'chektdev', 'chektch', 'livems', 'live'].forEach(function (k) {
     const v = src.get(k);
     if (v) out.set(k, v);
   });
@@ -522,7 +532,7 @@ export function framesFromIndex(idx, nm) {
   if (!delivery) delivery = NEARMAP_HUB_DELIVERY[hubId] || '';
   const siteNo = String((nm && nm.siteNo) || '').trim();
   const tiles = String((nm && nm.tiles) || '').trim();
-  const hasNearmap = !!(delivery || views.nearmap);
+  const hasNearmap = nearmapVisible() && !!(delivery || views.nearmap);
   return {
     name: (idx && idx.name) || '',
     address: (idx && idx.address) || '',
@@ -561,7 +571,7 @@ export function framesFromIndex(idx, nm) {
 export async function findNadir(root, idx, nm) {
   const hubId = String((idx && idx.id) || (nm && nm.propertyId) || '').trim();
   const delivery = String((nm && nm.delivery) || '').trim() || NEARMAP_HUB_DELIVERY[hubId] || '';
-  if (delivery) {
+  if (delivery && nearmapVisible()) {
     const tiles = String((nm && nm.tiles) || CF_NEARMAP).replace(/\/?$/, '/');
     return tiles + delivery + '/vert.jpg';
   }

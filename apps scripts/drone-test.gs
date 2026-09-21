@@ -78,6 +78,7 @@
 //     .addItem('Check Job Status',                    'checkDroneTestJobStatus')
 //     .addItem('Cancel Jobs',                         'cancelDroneTestJobs')
 //     .addItem('Sync (model)',                 'syncDroneTestBeforeAnalysisDT')
+//     .addItem('Sync all (model)',          'syncAllDroneTestModelsDT')
 //     .addItem('Sync (analysis + model)',   'processDroneTestForActiveRowDT')
 //     .addItem('Sync all (analysis + model)', 'processDroneTestSheet'))
 // ============================================================
@@ -1491,9 +1492,11 @@ function generatePass2ForActiveRowDT() {
 // four oblique descriptions. A row that has had Pass 1 but not Pass 2 is
 // intentionally skipped — the viewer has nothing to say about it yet.
 //
-// Sync (model) is the exception: name, address, and the 360 View URL are
-// enough. Blank pin/description cells do not erase fields already published.
-// Both syncs write FR Link to vyanet-viewer.html?property={hub}.
+// Sync (model) and Sync all (model) are the exception: name, address, and
+// the 360 View URL are enough. A blank image or description cell keeps the
+// published value. Nadir Elements and Nadir Concerns follow the sheet: an
+// empty cell clears that pin list. Every sync writes FR Link to
+// vyanet-viewer.html?property={hub}&live=1 (Nearmap stays hidden).
 // ============================================================
 
 // ── Nadir percentage -> local model metres ───────────────────────────────────
@@ -1536,12 +1539,12 @@ function dtAttachLocalXY_(directions, corners) {
 }
 
 // FR Link (column AB) opens the property in the hub. The 360 View URL stays
-// the model-viewer link with the GLB. Both Sync (model) and Sync (analysis +
-// model) write this same hub URL.
+// the model-viewer link with the GLB. Every drone-test sync writes this
+// same hub URL. live=1 hides Nearmap; live=0 on a hand-edited link shows it.
 const DT_HUB_PAGE = 'https://responder-intel.vyanet.com/vyanet-viewer.html';
 
 function dtHubLink_(propertyId) {
-  return DT_HUB_PAGE + '?property=' + encodeURIComponent(propertyId);
+  return DT_HUB_PAGE + '?property=' + encodeURIComponent(propertyId) + '&live=1';
 }
 
 const DT_DATA_DIR = 'data/drone-test';
@@ -1550,13 +1553,18 @@ function processDroneTestSheet() {
   processDroneTestRows_(null, false);
 }
 
+function syncAllDroneTestModelsDT() {
+  processDroneTestRows_(null, true);
+}
+
 function processDroneTestForActiveRowDT() {
   const row = dtActiveRow_(DT_SHEET);
   if (!row) return;
   processDroneTestRows_(row, false);
 }
 
-// Sync (model). Name, address, and 360 View URL. Does not relax Sync (analysis + model).
+// Sync (model), this row. Name, address, and 360 View URL.
+// Does not relax Sync (analysis + model).
 function syncDroneTestBeforeAnalysisDT() {
   const row = dtActiveRow_(DT_SHEET);
   if (!row) return;
@@ -1586,8 +1594,9 @@ function dtExistingView_(viewId) {
   return gh || s3;
 }
 
-// Sheet cells that are blank keep the published url, description, and pins.
-// A filled cell replaces that field. viewer360 from the sheet always wins.
+// Blank image and description cells keep the published value. Nadir
+// Elements and Nadir Concerns follow the sheet, including an empty cell,
+// which clears that list. viewer360 from the sheet always wins.
 function dtMergeEarlyView_(fresh, existing) {
   if (!existing || typeof existing !== 'object') return fresh;
   const out = JSON.parse(JSON.stringify(existing));
@@ -1606,15 +1615,9 @@ function dtMergeEarlyView_(fresh, existing) {
   if (fn.url) out.nadir.url = fn.url;
   if (fn.bounds) out.nadir.bounds = fn.bounds;
   if (fn.local) out.nadir.local = fn.local;
-  if (Array.isArray(fn.element_pins) && fn.element_pins.length) {
-    out.nadir.element_pins = fn.element_pins;
-  }
-  if (Array.isArray(fn.concern_pins) && fn.concern_pins.length) {
-    out.nadir.concern_pins = fn.concern_pins;
-  }
-  const el = Array.isArray(out.nadir.element_pins) ? out.nadir.element_pins : [];
-  const co = Array.isArray(out.nadir.concern_pins) ? out.nadir.concern_pins : [];
-  if (el.length || co.length) out.nadir.pins = el.concat(co);
+  out.nadir.element_pins = Array.isArray(fn.element_pins) ? fn.element_pins : [];
+  out.nadir.concern_pins = Array.isArray(fn.concern_pins) ? fn.concern_pins : [];
+  out.nadir.pins = out.nadir.element_pins.concat(out.nadir.concern_pins);
 
   ['alpha', 'bravo', 'charlie', 'delta'].forEach(function (k) {
     const f = fresh[k] || {};
@@ -1626,6 +1629,37 @@ function dtMergeEarlyView_(fresh, existing) {
   if (String(fresh.clarifications || '').trim()) out.clarifications = fresh.clarifications;
   if (fresh.directions && fresh.directions.length) out.directions = fresh.directions;
   return out;
+}
+
+// The viewer reads data/pins/{hub}.json before the view record. Write that
+// file from the merged pin lists. An empty pair overwrites a file that
+// already exists so a cleared Nadir Elements cell actually drops the pins.
+// Do not create a pins file for a property that never had one.
+function dtPinsFileForSync_(hubId, propertyData) {
+  if (!hubId || !propertyData || !propertyData.nadir) return null;
+  const n = propertyData.nadir;
+  const element = Array.isArray(n.element_pins) ? n.element_pins : [];
+  const concern = Array.isArray(n.concern_pins) ? n.concern_pins : [];
+  if (!element.length && !concern.length) {
+    let existing = null;
+    if (typeof recordsFetchJson_ === 'function') {
+      try { existing = recordsFetchJson_('pins/' + hubId + '.json'); } catch (e) { existing = null; }
+    }
+    if (!existing && typeof githubGetDecodedJson_ === 'function') {
+      existing = githubGetDecodedJson_(PINS_JSON_DIR + '/' + hubId + '.json');
+    }
+    if (!existing) return null;
+  }
+  return {
+    path: PINS_JSON_DIR + '/' + hubId + '.json',
+    content: JSON.stringify({
+      property: hubId,
+      source: '3d',
+      element: element,
+      concern: concern,
+      poi: []
+    }, null, 2)
+  };
 }
 
 function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
@@ -1685,12 +1719,12 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
         skipReason = 'need a 360 View URL (Generate 3D first)';
         continue;
       }
-    } else if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
+    } else if (!nadirUrl || !alphaUrl || !alphaDesc ||
         !bravoUrl || !bravoDesc || !charlieUrl || !charlieDesc ||
         !deltaUrl || !deltaDesc) {
       Logger.log('drone-test sync skipping (incomplete): ' + accountName);
       skipped++;
-      skipReason = 'incomplete — need images, element pins, and all four descriptions';
+      skipReason = 'incomplete — need images and all four descriptions';
       continue;
     }
     if (!beforeAnalysis && alphaDesc.indexOf('ERROR:') === 0) {
@@ -1708,10 +1742,6 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
         skipReason = 'Nadir Elements is not valid JSON';
         continue;
       }
-    } else if (!beforeAnalysis) {
-      skipped++;
-      skipReason = 'incomplete — need images, element pins, and all four descriptions';
-      continue;
     }
     if (concernsRaw) {
       try { concernPins = JSON.parse(concernsRaw) || []; } catch (e) {
@@ -1784,6 +1814,9 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
         name: accountName, address: address, hoa: hoaSlug || '',
         account_type: accountType, views: {}
       };
+      const siteNo = (typeof satValidSiteNo_ === 'function')
+        ? satValidSiteNo_(row[DT_COL_SITE_NO - 1]) : '';
+      if (siteNo) patch.site_no = siteNo;
       patch.views['drone-test'] = viewId;
       if (!isNaN(lat) && !isNaN(lng)) { patch.lat = lat; patch.lng = lng; }
       if (elementPins.length || concernPins.length) patch.pins_source = '3d';
@@ -1791,10 +1824,7 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
       files.push(up.file);
       const camFile = camerasFileForSync_(hubId, DT_DATA_DIR + '/' + viewId + '.json');
       if (camFile) files.push(camFile);
-      const pinFile = pinsFileForSync_(hubId, {
-        property: hubId, source: '3d',
-        element: elementPins, concern: concernPins
-      });
+      const pinFile = dtPinsFileForSync_(hubId, propertyData);
       if (pinFile) files.push(pinFile);
     } else {
       Logger.log('drone-test sync: could not resolve an index hub for "' + accountName +
@@ -1805,7 +1835,9 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
     processed++;
   }
 
-  const syncTitle = beforeAnalysis ? 'Sync (model)' : 'Sync (analysis + model)';
+  const syncTitle = beforeAnalysis
+    ? (onlySheetRow ? 'Sync (model)' : 'Sync all (model)')
+    : (onlySheetRow ? 'Sync (analysis + model)' : 'Sync all (analysis + model)');
   if (!files.length) {
     Logger.log('Nothing to push for: ' + DT_SHEET);
     if (onlySheetRow) {
@@ -1814,10 +1846,12 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
         (skipReason ? ':\n' + skipReason : '.') +
         (beforeAnalysis
           ? '\n\nNeed Property Name, Address, and a 360 View URL.'
-          : '\n\nFinish images, Pass 1, and Pass 2 on this row, then sync it again.'),
+          : '\n\nFinish images and the four descriptions on this row, then sync it again.'),
         SpreadsheetApp.getUi().ButtonSet.OK);
     } else {
-      SpreadsheetApp.getActiveSpreadsheet().toast('drone-test sync: no complete rows to push.');
+      SpreadsheetApp.getActiveSpreadsheet().toast(beforeAnalysis
+        ? 'Sync all (model): no rows with a name, address, and 360 View URL.'
+        : 'drone-test sync: no complete rows to push.');
     }
     return;
   }
@@ -1840,7 +1874,7 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
     '\n\nResponder directions published: ' + directionsTotal +
     '\nDirections skipped (unreviewed or empty): ' + directionsSkipped +
     (directionsSkipped ? '\n\nUnreviewed directions are never published — tick "Route Reviewed" first.' : '') +
-    '\n\nFR Link opens this property in the Vyanet viewer.' +
+    '\n\nFR Link opens the Vyanet viewer with Nearmap hidden.' +
     (beforeAnalysis ? '\nPins and descriptions were not required.' : ''),
     SpreadsheetApp.getUi().ButtonSet.OK);
 }

@@ -4,6 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Nearmap Viewer</title>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (q.get('live') !== '1') return;
+  var u = new URL('vyanet-viewer.html', location.href);
+  ['property', 'delivery', 'site_no', 'tiles', 'gw', 'chekt', 'debug', 'dataRoot', 'role', 'live'].forEach(function (k) {
+    var v = q.get(k);
+    if (v) u.searchParams.set(k, v);
+  });
+  location.replace(u.href);
+})();
+</script>
 <!--
   nearmap-viewer.html — Nearmap substrate for vyanet-viewer (v1.1.16, 2026-09-14)
   Standalone ?delivery= on a known trial property redirects into vyanet-viewer

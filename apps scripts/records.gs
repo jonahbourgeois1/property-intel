@@ -1398,7 +1398,7 @@ function recordsPublishDroneTestSheetRow_(row, creds, beforeAnalysis) {
   const viewer360 = String(row[DT_COL_VIEWER360 - 1] || '').trim();
   if (beforeAnalysis) {
     if (!viewer360) return { kind: 'skip', reason: 'need 360 View URL [' + accountName + ']' };
-  } else if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
+  } else if (!nadirUrl || !alphaUrl || !alphaDesc ||
       !bravoUrl || !bravoDesc || !charlieUrl || !charlieDesc ||
       !deltaUrl || !deltaDesc) {
     return { kind: 'skip', reason: 'incomplete [' + accountName + ']' };
@@ -1411,8 +1411,6 @@ function recordsPublishDroneTestSheetRow_(row, creds, beforeAnalysis) {
     try { elementPins = JSON.parse(elementsRaw) || []; } catch (e) {
       return { kind: 'skip', reason: 'bad Nadir Elements JSON [' + accountName + ']' };
     }
-  } else if (!beforeAnalysis) {
-    return { kind: 'skip', reason: 'incomplete [' + accountName + ']' };
   }
   const concernsRaw = String(row[DT_COL_CONCERNS - 1] || '').trim();
   if (concernsRaw) {

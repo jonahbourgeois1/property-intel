@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.11</div>
+    <div id="version-badge">v2.10.12</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.11';
+const VERSION     = 'v2.10.12';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -1639,7 +1639,9 @@ window.toggleNmCover = function () {
   if (legend) legend.classList.toggle('on', nmCoverOn && !!nmCoverFacts);
 };
 async function loadNearmapLotCover(lat, lng) {
-  const pid = (new URLSearchParams(window.location.search)).get('property') || '';
+  const q = new URLSearchParams(window.location.search);
+  if (q.get('live') === '1') return;
+  const pid = q.get('property') || '';
   if (!pid || !isFinite(lat) || !isFinite(lng)) return;
   let prop, lotMod;
   try {
