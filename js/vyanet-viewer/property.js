@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.39';
+export const HUB_BUILD = '1.8.40';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -661,6 +661,10 @@ export function gwLiveQuery(id, idx) {
   const q = new URLSearchParams();
   const prop = String((idx && idx.id) || id || '').trim();
   if (prop) q.set('property', prop);
+  const sites = idx && idx.chekt_sites;
+  if (Array.isArray(sites) && sites.length) {
+    q.set('site', sites.map(function (s) { return String(s); }).join('+'));
+  }
   return q.toString();
 }
 

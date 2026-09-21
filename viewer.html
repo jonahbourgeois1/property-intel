@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.18</div>
+    <div id="version-badge">v2.10.19</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.18';
+const VERSION     = 'v2.10.19';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -1344,6 +1344,10 @@ function gwLiveQuery_(id, idx) {
   const q = new URLSearchParams();
   const prop = String((idx && idx.id) || id || '').trim();
   if (prop) q.set('property', prop);
+  const sites = idx && idx.chekt_sites;
+  if (Array.isArray(sites) && sites.length) {
+    q.set('site', sites.map(function (s) { return String(s); }).join('+'));
+  }
   return q.toString();
 }
 function normCamKey_(s) {
