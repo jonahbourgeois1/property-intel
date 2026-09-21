@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.38';
+export const HUB_BUILD = '1.8.39';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -603,17 +603,6 @@ const CAMERA_HUB_SIBLINGS = {
   '6de88883bfd4a8349a901c54611ed9d7': ['2dce25a3643b86a7d8a1551228c3306f']
 };
 
-// King residence cameras (CHEKT 4802 / account 11820) are filed at
-// 410 SW Columbia, which is also Vyanet Bend's address. They belong on
-// the Matt King hub only. Omit the hub AND its view ids: liveAliasIds
-// retries the drone-test and drone view ids, and those requests were
-// still sending this address.
-const LIVE_QUERY_OMIT = {
-  '744a3639be95ce309192dc69b5a8e9f6': true,
-  '03fdd28710932a121ad531eb28da332c': true,
-  'fab2853d061b99c7242ec8cfcd368588': true
-};
-
 export function liveAliasIds(idx, propertyId) {
   const ids = [];
   function add(x) {
@@ -670,13 +659,8 @@ export async function detectCameras(root, idx, _spec, propertyId) {
 
 export function gwLiveQuery(id, idx) {
   const q = new URLSearchParams();
-  if (LIVE_QUERY_OMIT[String(id || '')] || LIVE_QUERY_OMIT[String((idx && idx.id) || '')]) {
-    return q.toString();
-  }
-  q.set('property', String(id || ''));
-  if (idx && idx.address) q.set('address', String(idx.address));
-  if (idx && idx.name) q.set('name', String(idx.name));
-  if (idx && idx.site_no) q.set('site_no', String(idx.site_no));
+  const prop = String((idx && idx.id) || id || '').trim();
+  if (prop) q.set('property', prop);
   return q.toString();
 }
 
@@ -735,9 +719,9 @@ export function groupLiveCameras(list) {
 // Ask the gateway whether it accepts this key. Walk the alias ids the same
 // way model-viewer does: 200 = accepted and this property has live cameras;
 // 401 = key rejected (stop — the gateway checks the key before the
-// property); 404 = key fine, property unknown under that id, try the next.
-// Address/name from the index let the gateway resolve CHEKT sites that are
-// not in PROPERTY_MAP. Anything else (429, 5xx, network) is inconclusive:
+// property); 404 = this property id has no CHEKT sites, try the next.
+// The query is only the property id. The gateway does not match address,
+// name, or site_no. Anything else (429, 5xx, network) is inconclusive:
 // accept the key and let model-viewer's own 401-retry loop sort it out.
 export async function validateViewerKey(key, ids, gw, idx) {
   if (gw.off) return { ok: true, live: false };

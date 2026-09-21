@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.17</div>
+    <div id="version-badge">v2.10.18</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.17';
+const VERSION     = 'v2.10.18';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -1342,19 +1342,8 @@ function restyleCameraMarkers_() {
 }
 function gwLiveQuery_(id, idx) {
   const q = new URLSearchParams();
-  // Keep in step with property.js LIVE_QUERY_OMIT. Bend must not send its
-  // id either: the gateway map is checked before the address, and that
-  // address is the King residence.
-  if (String(id || '') === '744a3639be95ce309192dc69b5a8e9f6' ||
-      String(id || '') === '03fdd28710932a121ad531eb28da332c' ||
-      String(id || '') === 'fab2853d061b99c7242ec8cfcd368588' ||
-      String((idx && idx.id) || '') === '744a3639be95ce309192dc69b5a8e9f6') {
-    return q.toString();
-  }
-  q.set('property', String(id || ''));
-  if (idx && idx.address) q.set('address', String(idx.address));
-  if (idx && idx.name) q.set('name', String(idx.name));
-  if (idx && idx.site_no) q.set('site_no', String(idx.site_no));
+  const prop = String((idx && idx.id) || id || '').trim();
+  if (prop) q.set('property', prop);
   return q.toString();
 }
 function normCamKey_(s) {
