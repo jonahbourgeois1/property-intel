@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.34';
+export const HUB_BUILD = '1.8.35';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -598,7 +598,9 @@ export async function findNadir(root, idx, nm) {
 // either hub must find that file until the two indexes are merged.
 const CAMERA_HUB_SIBLINGS = {
   '8eea64e5c09dc806f667b079e111a38d': ['4a484f8c273abef3c02cf91e274f9e2f'],
-  '4a484f8c273abef3c02cf91e274f9e2f': ['8eea64e5c09dc806f667b079e111a38d']
+  '4a484f8c273abef3c02cf91e274f9e2f': ['8eea64e5c09dc806f667b079e111a38d'],
+  '2dce25a3643b86a7d8a1551228c3306f': ['6de88883bfd4a8349a901c54611ed9d7'],
+  '6de88883bfd4a8349a901c54611ed9d7': ['2dce25a3643b86a7d8a1551228c3306f']
 };
 
 export function liveAliasIds(idx, propertyId) {
