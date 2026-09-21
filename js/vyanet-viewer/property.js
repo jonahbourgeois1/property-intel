@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.35';
+export const HUB_BUILD = '1.8.36';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -603,6 +603,14 @@ const CAMERA_HUB_SIBLINGS = {
   '6de88883bfd4a8349a901c54611ed9d7': ['2dce25a3643b86a7d8a1551228c3306f']
 };
 
+// King residence cameras (CHEKT 4802 / account 11820) are filed at
+// 410 SW Columbia, which is also Vyanet Bend's address. They belong on
+// the Matt King hub only. Sending address or site_no from this hub opens
+// those cameras here. Name alone does not match that site.
+const LIVE_QUERY_OMIT = {
+  '744a3639be95ce309192dc69b5a8e9f6': true
+};
+
 export function liveAliasIds(idx, propertyId) {
   const ids = [];
   function add(x) {
@@ -660,6 +668,7 @@ export async function detectCameras(root, idx, _spec, propertyId) {
 export function gwLiveQuery(id, idx) {
   const q = new URLSearchParams();
   q.set('property', String(id || ''));
+  if (LIVE_QUERY_OMIT[String(id || '')]) return q.toString();
   if (idx && idx.address) q.set('address', String(idx.address));
   if (idx && idx.name) q.set('name', String(idx.name));
   if (idx && idx.site_no) q.set('site_no', String(idx.site_no));
