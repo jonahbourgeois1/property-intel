@@ -52,15 +52,17 @@
 // drone-test run write its clip and render results onto the Plane sheet.
 //
 // ISOLATION IS SHEET-LEVEL, NOT S3-LEVEL
-// The GLB and renders are keyed by (capture, taxlot), not by which sheet
-// asked, so drone-test shares those artifacts with the Plane sheet whenever
-// both point at the same parcel and capture.
+// Parcel clips are keyed by (capture, taxlot). Full-mesh GLBs are keyed by
+// capture only (`full.glb`). Drone-test shares parcel clips with the Plane
+// sheet whenever both point at the same parcel and capture. Full mesh does
+// not overwrite clipped.glb.
 //
 // MENU (add to menu.gs, before .addToUi())
 //   .addSubMenu(SpreadsheetApp.getUi().createMenu('Drone Test')
 //     .addItem('Set Up drone-test Sheet',             'setupDroneTestSheet')
-//     .addItem('Generate 3D Models',                  'generate3DModelsDT')
+//     .addItem('Generate 3D Models (All Rows Without Models)', 'generate3DModelsDT')
 //     .addItem('Generate 3D Models (This Row)',       'generate3DModelsForActiveRowDT')
+//     .addItem('Clip Parcel (This Row)',              'clipParcelForActiveRowDT')
 //     .addItem('Generate Property Images',            'generateImagesDT')
 //     .addItem('Generate Property Images (This Row)', 'generateImagesForActiveRowDT')
 //     .addItem('Generate Approach',                   'generateApproachDT')
@@ -75,8 +77,9 @@
 //     .addItem('Pass 2 (This Row)',                   'generatePass2ForActiveRowDT')
 //     .addItem('Check Job Status',                    'checkDroneTestJobStatus')
 //     .addItem('Cancel Jobs',                         'cancelDroneTestJobs')
-//     .addItem('Sync This Row to GitHub',             'processDroneTestForActiveRowDT')
-//     .addItem('Sync drone-test to GitHub',           'processDroneTestSheet'))
+//     .addItem('Sync (model)',                 'syncDroneTestBeforeAnalysisDT')
+//     .addItem('Sync (analysis + model)',   'processDroneTestForActiveRowDT')
+//     .addItem('Sync all (analysis + model)', 'processDroneTestSheet'))
 // ============================================================
 
 const DT_SHEET = 'drone-test';
@@ -182,7 +185,7 @@ function setupDroneTestSheet() {
     (created ? 'Created the "' + DT_SHEET + '" tab.' : 'Updated the "' + DT_SHEET + '" header row.') +
     '\n\n' + DT_HEADERS.length + ' columns, A..AJ. Enter Account Type, Property Name, ' +
     'Property Address, HOA, expected Capture (column E), and Site No (AF, the satellite ' +
-    'site_no so this row joins the production index). Then run "Generate 3D Models".',
+    'site_no so this row joins the production index). Then run "Generate 3D Models (All Rows Without Models)".',
     ui.ButtonSet.OK);
 }
 
@@ -273,7 +276,10 @@ function checkDroneTestJobStatus() {
   if (clip) {
     const j = JSON.parse(clip);
     lines.push('3D Models: generating (' + j.batch.properties.length +
-               ' rows, poll ' + j.polls + '/' + V2_MAX_POLLS + ')');
+               ' rows, poll ' + j.polls + '/' + V2_MAX_POLLS +
+               (j.batch && j.batch.keep_all ? ', full mesh'
+                 : (j.batch && j.batch.force_parcel ? ', parcel clip'
+                    : ', site clip')) + ')');
   } else lines.push('3D Models: no job running');
   if (img) {
     const j = JSON.parse(img);
@@ -289,11 +295,16 @@ function checkDroneTestJobStatus() {
 // ── STAGE A — 3D MODELS (/clip) ──────────────────────────────────────────────
 // Resolves taxlot + coords for rows that lack them (batched /eligibility, with
 // a geocode fallback for coords), then convergent-polls /clip until every
-// parcel's GLB is cached. Writes the model-viewer link to Q and the capture
+// requested GLB is cached. Writes the model-viewer link to Q and the capture
 // check to F.
+//
+// keepAll=true  → whole capture mesh at captures/plane/{id}/full.glb (slow)
+// keepAll=false → site-scale clip for small captures, else one taxlot
+// forceParcel   → always one taxlot (Clip Parcel menu)
+// Batch Generate 3D skips rows that already have Q.
 
 function generate3DModelsDT() {
-  generate3DModelsDT_(null);
+  generate3DModelsDT_(null, false, false);
 }
 
 function generate3DModelsForActiveRowDT() {
@@ -308,18 +319,40 @@ function generate3DModelsForActiveRowDT() {
   }
   const existing = String(sheet.getRange(row, DT_COL_VIEWER360).getValue() || '').trim();
   if (existing) {
-    const ans = SpreadsheetApp.getUi().alert('Regenerate?',
-      'Row ' + row + ' already has a 3D viewer URL.\nQueue clip again for:\n' + address + '?',
+    const ans = SpreadsheetApp.getUi().alert('Regenerate 3D model?',
+      'Row ' + row + ' already has a 3D viewer URL.\nQueue a site/parcel clip for:\n' + address + '?',
       SpreadsheetApp.getUi().ButtonSet.YES_NO);
     if (ans !== SpreadsheetApp.getUi().Button.YES) return;
   }
-  generate3DModelsDT_([row]);
+  generate3DModelsDT_([row], false, false);
 }
 
-function generate3DModelsDT_(onlyRows) {
+function clipParcelForActiveRowDT() {
+  const sheet = dtSheet_();
+  if (!sheet) return;
+  const row = dtActiveRow_(DT_SHEET);
+  if (!row) return;
+  const address = String(sheet.getRange(row, DT_COL_ADDRESS).getValue() || '').trim();
+  if (!address) {
+    SpreadsheetApp.getUi().alert('Row ' + row + ' has no Property Address.');
+    return;
+  }
+  const taxlot = String(sheet.getRange(row, DT_COL_TAXLOT).getValue() || '').trim();
+  const existing = String(sheet.getRange(row, DT_COL_VIEWER360).getValue() || '').trim();
+  const ans = SpreadsheetApp.getUi().alert('Clip parcel?',
+    'Cut the 3D model to taxlot ' + (taxlot || '(lookup on run)') +
+    ' only (not the whole flight) for:\n' + address,
+    SpreadsheetApp.getUi().ButtonSet.YES_NO);
+  if (ans !== SpreadsheetApp.getUi().Button.YES) return;
+  generate3DModelsDT_([row], false, true);
+}
+
+function generate3DModelsDT_(onlyRows, keepAll, forceParcel) {
   const sheet = dtSheet_();
   if (!sheet) return;
   ensureDtHeaders_(sheet);
+  keepAll = !!keepAll;
+  forceParcel = !!forceParcel;
 
   if (PropertiesService.getScriptProperties().getProperty(DT_CLIP_JOB_KEY)) {
     SpreadsheetApp.getUi().alert('drone-test 3D Models',
@@ -334,11 +367,16 @@ function generate3DModelsDT_(onlyRows) {
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
   const rows = [], needTaxlot = [], byRow = {};
+  let skippedHaveModel = 0;
   data.forEach(function (r, i) {
     const address = String(r[DT_COL_ADDRESS - 1] || '').trim();
     if (!address) return;
     const row  = i + 2;
     if (onlyRows && onlyRows.indexOf(row) === -1) return;
+    if (!onlyRows) {
+      const existing = String(r[DT_COL_VIEWER360 - 1] || '').trim();
+      if (existing) { skippedHaveModel++; return; }
+    }
     const item = { row: row, address: address,
                    taxlot: String(r[DT_COL_TAXLOT - 1] || '').trim() };
     rows.push(item);
@@ -348,7 +386,9 @@ function generate3DModelsDT_(onlyRows) {
   if (!rows.length) {
     SpreadsheetApp.getUi().alert(onlyRows
       ? 'Row ' + onlyRows[0] + ' has no Property Address.'
-      : 'No ' + DT_SHEET + ' rows with an address.');
+      : (skippedHaveModel
+          ? 'Every addressed row already has a 3D viewer URL. Use This Row to regenerate.'
+          : 'No ' + DT_SHEET + ' rows with an address.'));
     return;
   }
 
@@ -374,15 +414,16 @@ function generate3DModelsDT_(onlyRows) {
     results.forEach(function (res) {
       const r = byRow[res.rowIndex];
       if (!r) return;
-      if (res.eligible && res.taxlot) {
+      if (res.lat && res.lng) {
+        sheet.getRange(r.row, DT_COL_LAT).setValue(res.lat);
+        sheet.getRange(r.row, DT_COL_LNG).setValue(res.lng);
+      }
+      // Keep a found taxlot even when tile coverage is <80%. That gate is
+      // for Plane render, not drone-test site-scale clip. Roseburg 60.7% /
+      // Myrtle Creek 66.4% still have Terra meshes.
+      if (res.taxlot) {
         r.taxlot = String(res.taxlot);
         sheet.getRange(r.row, DT_COL_TAXLOT).setValue(r.taxlot);
-        if (res.lat && res.lng) {
-          sheet.getRange(r.row, DT_COL_LAT).setValue(res.lat);
-          sheet.getRange(r.row, DT_COL_LNG).setValue(res.lng);
-        }
-        // Eligibility reports the TILE capture — an early signal only; the
-        // authoritative check is the GLB capture from /clip below.
         if (res.capture) dtCaptureCheck_(sheet, r.row, res.capture);
       } else {
         writePlainCell(sheet, r.row, DT_COL_STATUS, 'not eligible: ' + (res.reason || '?'));
@@ -390,14 +431,22 @@ function generate3DModelsDT_(onlyRows) {
     });
   }
 
-  // Geocode fallback — Stage B needs coordinates.
+  // Geocode fallback — Stage B needs coordinates. Jackson has no published
+  // parcel layer; key the site-scale GLB as DT{row} so clip can still run.
   rows.forEach(function (r) {
-    if (!r.taxlot) return;
-    if (!isNaN(parseFloat(sheet.getRange(r.row, DT_COL_LAT).getValue()))) return;
-    const c = geocodeAddress(r.address);
-    if (c) {
-      sheet.getRange(r.row, DT_COL_LAT).setValue(c.lat);
-      sheet.getRange(r.row, DT_COL_LNG).setValue(c.lng);
+    if (isNaN(parseFloat(sheet.getRange(r.row, DT_COL_LAT).getValue()))) {
+      const c = geocodeAddress(r.address);
+      if (c) {
+        sheet.getRange(r.row, DT_COL_LAT).setValue(c.lat);
+        sheet.getRange(r.row, DT_COL_LNG).setValue(c.lng);
+      }
+    }
+    if (!r.taxlot) {
+      const lat = parseFloat(sheet.getRange(r.row, DT_COL_LAT).getValue());
+      const lng = parseFloat(sheet.getRange(r.row, DT_COL_LNG).getValue());
+      if (isNaN(lat) || isNaN(lng)) return;
+      r.taxlot = 'DT' + r.row;
+      sheet.getRange(r.row, DT_COL_TAXLOT).setValue(r.taxlot);
     }
   });
 
@@ -415,22 +464,24 @@ function generate3DModelsDT_(onlyRows) {
     return;
   }
 
-  const batch = { properties: props };
+  const batch = { properties: props, keep_all: keepAll, force_parcel: forceParcel };
+  const kind  = keepAll ? 'full mesh' : (forceParcel ? 'parcel clip' : 'site clip');
   const res = callV2_('/clip', batch);
   if (res.code === 200 && res.body && res.body.results) {
     writeClipResultsDT_(sheet, res.body.results);
     SpreadsheetApp.getActiveSpreadsheet().toast(
-      '3D models: complete (' + res.body.results.length + ' rows).');
+      '3D models (' + kind + '): complete (' + res.body.results.length + ' rows).');
     return;
   }
   PropertiesService.getScriptProperties()
     .setProperty(DT_CLIP_JOB_KEY, JSON.stringify({ batch: batch, polls: 0 }));
   dtSetTrigger_(DT_CLIP_HANDLER);
   props.forEach(function (p) {
-    writePlainCell(sheet, p.rowIndex, DT_COL_STATUS, 'generating 3D model...');
+    writePlainCell(sheet, p.rowIndex, DT_COL_STATUS,
+      keepAll ? 'generating full 3D model...' : 'generating 3D model...');
   });
   SpreadsheetApp.getActiveSpreadsheet().toast(
-    '3D models: generating ' + props.length + ' — checking every minute.');
+    '3D models (' + kind + '): generating ' + props.length + ' — checking every minute.');
 }
 
 function pollClipDT_() {
@@ -441,7 +492,10 @@ function pollClipDT_() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(DT_SHEET);
   if (!sheet) { dtClearTrigger_(DT_CLIP_HANDLER); return; }
 
-  const res = callV2_('/clip', job.batch);
+  const probe = {};
+  Object.keys(job.batch).forEach(function (k) { probe[k] = job.batch[k]; });
+  probe.probe = true;
+  const res = callV2_('/clip', probe);
   if (res.code === 200 && res.body && res.body.results) {
     writeClipResultsDT_(sheet, res.body.results);
     propsSvc.deleteProperty(DT_CLIP_JOB_KEY);
@@ -468,8 +522,10 @@ function writeClipResultsDT_(sheet, results) {
     if (r.ok) {
       sheet.getRange(r.rowIndex, DT_COL_VIEWER360).setValue(V2_VIEWER_BASE + r.glb_url);
       const ok = dtCaptureCheck_(sheet, r.rowIndex, r.capture);
+      const kind = r.mode === 'full' ? 'full mesh'
+                 : (r.mode === 'site' ? 'site clip' : 'parcel clip');
       writePlainCell(sheet, r.rowIndex, DT_COL_STATUS,
-        '3D model ' + r.status + ' (' + (r.capture || '') + ')' +
+        '3D model ' + r.status + ' ' + kind + ' (' + (r.capture || '') + ')' +
         (ok ? '' : ' — CAPTURE MISMATCH, see column F'));
     } else {
       writePlainCell(sheet, r.rowIndex, DT_COL_STATUS, '3D model FAILED: ' + (r.reason || '?'));
@@ -524,8 +580,8 @@ function generateImagesDT_(onlyRows) {
   const width = dtSheetWidth_(sheet);
   const data  = sheet.getRange(2, 1, lastRow - 1, width).getValues();
 
-  const items = [];
-  let skipped = 0;
+    const items = [];
+  let skipped = 0, alreadyDone = 0;
   data.forEach(function (r, i) {
     const address = String(r[DT_COL_ADDRESS - 1] || '').trim();
     if (!address) return;
@@ -535,23 +591,48 @@ function generateImagesDT_(onlyRows) {
     const lat = parseFloat(r[DT_COL_LAT - 1]);
     const lng = parseFloat(r[DT_COL_LNG - 1]);
     if (!taxlot || isNaN(lat) || isNaN(lng)) { skipped++; return; }
+    if (!onlyRows && String(r[DT_COL_NADIR_URL - 1] || '').trim()) { alreadyDone++; return; }
     items.push({ row: row, taxlot: taxlot, lat: lat, lng: lng,
                  address: address, state: 'pending', polls: 0 });
   });
   if (!items.length) {
     SpreadsheetApp.getUi().alert(onlyRows
-      ? 'Row ' + onlyRows[0] + ' is not ready. Run "Generate 3D Models (This Row)" first' +
-        (skipped ? ' (missing taxlot/coords).' : '.')
-      : 'No rows ready. Run "Generate 3D Models" first' +
-        (skipped ? ' (' + skipped + ' rows missing taxlot/coords).' : '.'));
+      ? 'Row ' + onlyRows[0] + ' is not ready. Run "Clip Parcel (This Row)" first' +
+        (skipped ? ' (missing taxlot/coords — Generate 3D Models fills those).' : ' (render needs the parcel GLB).')
+      : (alreadyDone
+          ? 'Every ready row already has image URLs. Use Generate Property Images (This Row) to replace one.'
+          : 'No rows ready. Run "Clip Parcel (This Row)" first' +
+            (skipped ? ' (' + skipped + ' rows missing taxlot/coords).' : ' (render needs the parcel GLB).')));
     return;
   }
   PropertiesService.getScriptProperties()
     .setProperty(DT_IMG_JOB_KEY, JSON.stringify({ items: items }));
   dtSetTrigger_(DT_IMG_HANDLER);
   SpreadsheetApp.getActiveSpreadsheet().toast(
-    'Images: queued ' + items.length + ' (' + V2_FIRE_PER_TICK + '/minute).');
+    'Images: queued ' + items.length + ' (max ' + V2_FIRE_PER_TICK + ' in flight).');
   imagesTickDT_();
+}
+
+function dtWriteImagesFromProbe_(sheet, row, body) {
+  if (!body || !body.images) return '';
+  Object.keys(DT_IMG_COLS).forEach(function (v) {
+    if (body.images[v]) sheet.getRange(row, DT_IMG_COLS[v]).setValue(body.images[v]);
+  });
+  if (body.nadir_bounds) {
+    writePlainCell(sheet, row, DT_COL_NADIR_BOUNDS, JSON.stringify(body.nadir_bounds));
+  }
+  if (body.nadir_local) {
+    writePlainCell(sheet, row, DT_COL_NADIR_LOCAL, JSON.stringify(body.nadir_local));
+  }
+  const ok = dtCaptureCheck_(sheet, row, body.capture_3d);
+  let extra = '';
+  if (!body.nadir_bounds) {
+    extra = ' — Nadir Bounds empty (nadir-meta.json missing; run Backfill Nadir Bounds after the render Lambda writes it)';
+  }
+  writePlainCell(sheet, row, DT_COL_STATUS,
+    'images done (' + (body.capture_3d || '') + ')' +
+    (ok ? '' : ' — CAPTURE MISMATCH, see column F') + extra);
+  return extra;
 }
 
 function imagesTickDT_() {
@@ -562,56 +643,48 @@ function imagesTickDT_() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(DT_SHEET);
   if (!sheet) { dtClearTrigger_(DT_IMG_HANDLER); return; }
 
-  let fired = 0;
+  // Probe in-flight first so a completion frees a slot this same tick.
   job.items.forEach(function (it) {
-    if (it.state === 'pending' && fired < V2_FIRE_PER_TICK) {
-      const res = callV2_('/render', { taxlot: it.taxlot, lat: it.lat, lng: it.lng,
-                                       address: it.address, rowIndex: it.row, async: true });
-      if (res.code === 202 || (res.body && res.body.dispatched)) {
-        it.state = 'fired'; fired += 1;
-        writePlainCell(sheet, it.row, DT_COL_STATUS, 'rendering images...');
-      } else {
-        it.state = 'error';
-        writePlainCell(sheet, it.row, DT_COL_STATUS,
-          'render DISPATCH FAILED: ' + ((res.body && res.body.reason) || res.code));
-      }
-    } else if (it.state === 'fired') {
-      const p = callV2_('/render', { taxlot: it.taxlot, probe: true });
-      it.polls += 1;
-      // nadir_local only exists once a POST-PATCH render has completed, so it
-      // doubles as the "this is the NEW render, not the old artifacts" signal.
-      // A re-render's images always look complete instantly (same S3 keys), so
-      // without this the poll declares done before the fresh render lands.
-      // polls >= 8 is the escape hatch (~8 min) so a genuinely stuck meta
-      // can't wedge the job forever.
-      if (p.body && p.body.complete && p.body.images &&
-          (p.body.nadir_local || it.polls >= 8)) {
-        Object.keys(DT_IMG_COLS).forEach(function (v) {
-          if (p.body.images[v]) sheet.getRange(it.row, DT_IMG_COLS[v]).setValue(p.body.images[v]);
-        });
-        if (p.body.nadir_bounds) {
-          writePlainCell(sheet, it.row, DT_COL_NADIR_BOUNDS, JSON.stringify(p.body.nadir_bounds));
-        }
-        if (p.body.nadir_local) {
-          writePlainCell(sheet, it.row, DT_COL_NADIR_LOCAL, JSON.stringify(p.body.nadir_local));
-        }
-        const ok = dtCaptureCheck_(sheet, it.row, p.body.capture_3d);
-        let extra = '';
-        if (!p.body.nadir_bounds) {
-          extra = ' — Nadir Bounds empty (nadir-meta.json missing; run Backfill Nadir Bounds after the render Lambda writes it)';
-        }
-        writePlainCell(sheet, it.row, DT_COL_STATUS,
-          'images done (' + (p.body.capture_3d || '') + ')' +
-          (ok ? '' : ' — CAPTURE MISMATCH, see column F') + extra);
-        it.state = 'done';
-      } else if (p.body && p.body.note && p.body.note.indexOf('no cached 3D model') !== -1) {
-        writePlainCell(sheet, it.row, DT_COL_STATUS, 'NEEDS 3D MODEL — run Generate 3D Models');
-        it.state = 'error';
-      } else if (it.polls >= V2_MAX_POLLS) {
-        writePlainCell(sheet, it.row, DT_COL_STATUS,
-          'render TIMED OUT — check CloudWatch (plane-parcel-render)');
-        it.state = 'error';
-      }
+    if (it.state !== 'fired') return;
+    const p = callV2_('/render', { taxlot: it.taxlot, probe: true });
+    it.polls += 1;
+    // nadir_local only exists once a POST-PATCH render has completed, so it
+    // doubles as the "this is the NEW render, not the old artifacts" signal.
+    // A re-render's images always look complete instantly (same S3 keys), so
+    // without this the poll declares done before the fresh render lands.
+    // polls >= 8 is the escape hatch (~8 min) so a genuinely stuck meta
+    // can't wedge the job forever.
+    if (p.body && p.body.complete && p.body.images &&
+        (p.body.nadir_local || it.polls >= 8)) {
+      dtWriteImagesFromProbe_(sheet, it.row, p.body);
+      it.state = 'done';
+    } else if (p.body && p.body.note && p.body.note.indexOf('no cached 3D model') !== -1) {
+      writePlainCell(sheet, it.row, DT_COL_STATUS, 'NEEDS PARCEL GLB — run Clip Parcel (This Row)');
+      it.state = 'error';
+    } else if (it.polls >= V2_MAX_POLLS) {
+      writePlainCell(sheet, it.row, DT_COL_STATUS,
+        'render TIMED OUT — Lambda may still finish; run Collect Finished Images');
+      it.state = 'error';
+    }
+  });
+
+  const inFlight = job.items.filter(function (it) { return it.state === 'fired'; }).length;
+  let dispatched = 0;
+  const slots = Math.max(0, V2_FIRE_PER_TICK - inFlight);
+  job.items.forEach(function (it) {
+    if (it.state !== 'pending' || dispatched >= slots) return;
+    const res = callV2_('/render', { taxlot: it.taxlot, lat: it.lat, lng: it.lng,
+                                     address: it.address, rowIndex: it.row, async: true });
+    if (res.code === 202 || (res.body && res.body.dispatched)) {
+      it.state = 'fired'; dispatched += 1;
+      writePlainCell(sheet, it.row, DT_COL_STATUS, 'rendering images...');
+    } else if (res.code === 429 || res.code === 500 || res.code === 502 || res.code === 503) {
+      // Leave pending — render Lambda is full (self-dispatch + reserved
+      // concurrency 1 throttles the next Event invoke).
+    } else {
+      it.state = 'error';
+      writePlainCell(sheet, it.row, DT_COL_STATUS,
+        'render DISPATCH FAILED: ' + ((res.body && res.body.reason) || res.code));
     }
   });
 
@@ -627,6 +700,41 @@ function imagesTickDT_() {
   } else {
     propsSvc.setProperty(DT_IMG_JOB_KEY, JSON.stringify(job));
   }
+}
+
+function collectImageResultsDT() {
+  const sheet = dtSheet_();
+  if (!sheet) return;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return;
+  const width = dtSheetWidth_(sheet);
+  const data = sheet.getRange(2, 1, lastRow - 1, width).getValues();
+  let filled = 0, pending = 0, skipped = 0;
+  const notes = [];
+  data.forEach(function (r, i) {
+    const row = i + 2;
+    const taxlot = String(r[DT_COL_TAXLOT - 1] || '').trim();
+    const nadir = String(r[DT_COL_NADIR_URL - 1] || '').trim();
+    const status = String(r[DT_COL_STATUS - 1] || '');
+    if (!taxlot) { skipped++; return; }
+    const want = !nadir || /TIMED OUT|rendering images/i.test(status);
+    if (!want) { skipped++; return; }
+    const p = callV2_('/render', { taxlot: taxlot, probe: true });
+    if (p.body && p.body.complete && p.body.images) {
+      dtWriteImagesFromProbe_(sheet, row, p.body);
+      filled++;
+    } else {
+      pending++;
+      const why = (p.body && (p.body.note || p.body.reason)) || ('HTTP ' + p.code);
+      notes.push('Row ' + row + ' (' + taxlot + '): ' + why);
+    }
+  });
+  SpreadsheetApp.getUi().alert('drone-test Collect Images',
+    'Wrote URLs for ' + filled + ' row(s).\nStill rendering or missing: ' +
+    pending + '.\nSkipped (already done / no taxlot): ' + skipped +
+    (notes.length ? '\n\n' + notes.slice(0, 12).join('\n') : '') +
+    '.\n\nIf every note is "missing alpha" (or another view), those stills were never written — deploy the render image, then Generate Property Images (skips rows that already have a nadir).',
+    SpreadsheetApp.getUi().ButtonSet.OK);
 }
 
 // ============================================================
@@ -1382,6 +1490,10 @@ function generatePass2ForActiveRowDT() {
 // COMPLETENESS GATE (same as plane): five image URLs, element pins, and all
 // four oblique descriptions. A row that has had Pass 1 but not Pass 2 is
 // intentionally skipped — the viewer has nothing to say about it yet.
+//
+// Sync (model) is the exception: name, address, and the 360 View URL are
+// enough. Blank pin/description cells do not erase fields already published.
+// Both syncs write FR Link to vyanet-viewer.html?property={hub}.
 // ============================================================
 
 // ── Nadir percentage -> local model metres ───────────────────────────────────
@@ -1423,37 +1535,100 @@ function dtAttachLocalXY_(directions, corners) {
   return n;
 }
 
-// ── 360 View URL page ────────────────────────────────────────────────────────
-// Rewrites only the PAGE of whatever URL the Plane builders produced; their
-// query string is carried across verbatim. Keeps drone-test on model-viewer.html
-// without touching config.gs or plane.gs.
-const DT_VIEWER_PAGE = 'https://responder-intel.vyanet.com/model-viewer.html';
+// FR Link (column AB) opens the property in the hub. The 360 View URL stays
+// the model-viewer link with the GLB. Both Sync (model) and Sync (analysis +
+// model) write this same hub URL.
+const DT_HUB_PAGE = 'https://responder-intel.vyanet.com/vyanet-viewer.html';
 
-function dtRebaseViewer_(url, propertyId) {
-  let s = String(url || '').trim();
-  if (!s) return '';
-  const q = s.indexOf('?');
-  s = q === -1 ? DT_VIEWER_PAGE : DT_VIEWER_PAGE + s.substring(q);
-  if (propertyId && s.indexOf('property=') === -1) {
-    s += (s.indexOf('?') === -1 ? '?' : '&') +
-         'property=' + encodeURIComponent(propertyId) + '&view=drone-test';
-  }
-  return s;
+function dtHubLink_(propertyId) {
+  return DT_HUB_PAGE + '?property=' + encodeURIComponent(propertyId);
 }
 
 const DT_DATA_DIR = 'data/drone-test';
 
 function processDroneTestSheet() {
-  processDroneTestRows_(null);
+  processDroneTestRows_(null, false);
 }
 
 function processDroneTestForActiveRowDT() {
   const row = dtActiveRow_(DT_SHEET);
   if (!row) return;
-  processDroneTestRows_(row);
+  processDroneTestRows_(row, false);
 }
 
-function processDroneTestRows_(onlySheetRow) {
+// Sync (model). Name, address, and 360 View URL. Does not relax Sync (analysis + model).
+function syncDroneTestBeforeAnalysisDT() {
+  const row = dtActiveRow_(DT_SHEET);
+  if (!row) return;
+  processDroneTestRows_(row, true);
+}
+
+function dtViewHasPins_(rec) {
+  const n = rec && rec.nadir;
+  if (!n || typeof n !== 'object') return false;
+  if (Array.isArray(n.element_pins) && n.element_pins.length) return true;
+  if (Array.isArray(n.concern_pins) && n.concern_pins.length) return true;
+  return Array.isArray(n.pins) && n.pins.length > 0;
+}
+
+function dtExistingView_(viewId) {
+  let gh = null;
+  try { gh = githubGetDecodedJson_(DT_DATA_DIR + '/' + viewId + '.json'); }
+  catch (e) { gh = null; }
+  let s3 = null;
+  try {
+    if (typeof recordsFetchJson_ === 'function' && typeof RECORDS_FILES_PREFIX === 'object') {
+      s3 = recordsFetchJson_(RECORDS_FILES_PREFIX['drone-test'] + viewId + '.json');
+    }
+  } catch (e) { s3 = null; }
+  if (dtViewHasPins_(gh)) return gh;
+  if (dtViewHasPins_(s3)) return s3;
+  return gh || s3;
+}
+
+// Sheet cells that are blank keep the published url, description, and pins.
+// A filled cell replaces that field. viewer360 from the sheet always wins.
+function dtMergeEarlyView_(fresh, existing) {
+  if (!existing || typeof existing !== 'object') return fresh;
+  const out = JSON.parse(JSON.stringify(existing));
+  out.name = fresh.name;
+  out.address = fresh.address;
+  out.view = 'drone-test';
+  if (fresh.hoa) out.hoa = fresh.hoa;
+  if (fresh.account_type) out.account_type = fresh.account_type;
+  if (fresh.capture) out.capture = fresh.capture;
+  if (fresh.viewer360) out.viewer360 = fresh.viewer360;
+  if (typeof fresh.lat === 'number' && !isNaN(fresh.lat)) out.lat = fresh.lat;
+  if (typeof fresh.lng === 'number' && !isNaN(fresh.lng)) out.lng = fresh.lng;
+
+  out.nadir = (out.nadir && typeof out.nadir === 'object') ? out.nadir : {};
+  const fn = fresh.nadir || {};
+  if (fn.url) out.nadir.url = fn.url;
+  if (fn.bounds) out.nadir.bounds = fn.bounds;
+  if (fn.local) out.nadir.local = fn.local;
+  if (Array.isArray(fn.element_pins) && fn.element_pins.length) {
+    out.nadir.element_pins = fn.element_pins;
+  }
+  if (Array.isArray(fn.concern_pins) && fn.concern_pins.length) {
+    out.nadir.concern_pins = fn.concern_pins;
+  }
+  const el = Array.isArray(out.nadir.element_pins) ? out.nadir.element_pins : [];
+  const co = Array.isArray(out.nadir.concern_pins) ? out.nadir.concern_pins : [];
+  if (el.length || co.length) out.nadir.pins = el.concat(co);
+
+  ['alpha', 'bravo', 'charlie', 'delta'].forEach(function (k) {
+    const f = fresh[k] || {};
+    out[k] = (out[k] && typeof out[k] === 'object') ? out[k] : {};
+    if (f.url) out[k].url = f.url;
+    if (f.desc && String(f.desc).replace(/<[^>]+>/g, '').trim()) out[k].desc = f.desc;
+  });
+  if (String(fresh.considerations || '').trim()) out.considerations = fresh.considerations;
+  if (String(fresh.clarifications || '').trim()) out.clarifications = fresh.clarifications;
+  if (fresh.directions && fresh.directions.length) out.directions = fresh.directions;
+  return out;
+}
+
+function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
   const creds = getCredentials();
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(DT_SHEET);
   if (!sheet) { Logger.log('Sheet not found: ' + DT_SHEET); return; }
@@ -1496,13 +1671,21 @@ function processDroneTestRows_(onlySheetRow) {
     const deltaDesc   = String(row[DT_COL_DELTA_DESC - 1] || '').trim();
     const lat         = parseFloat(row[DT_COL_LAT - 1]);
     const lng         = parseFloat(row[DT_COL_LNG - 1]);
+    const viewer360   = String(row[DT_COL_VIEWER360 - 1] || '').trim();
 
     if (!accountName || !address) {
       skipped++;
       skipReason = 'missing Property Name or Address';
       continue;
     }
-    if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
+    if (beforeAnalysis) {
+      if (!viewer360) {
+        Logger.log('drone-test early sync skipping (no 360 View URL): ' + accountName);
+        skipped++;
+        skipReason = 'need a 360 View URL (Generate 3D first)';
+        continue;
+      }
+    } else if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
         !bravoUrl || !bravoDesc || !charlieUrl || !charlieDesc ||
         !deltaUrl || !deltaDesc) {
       Logger.log('drone-test sync skipping (incomplete): ' + accountName);
@@ -1510,7 +1693,7 @@ function processDroneTestRows_(onlySheetRow) {
       skipReason = 'incomplete — need images, element pins, and all four descriptions';
       continue;
     }
-    if (alphaDesc.indexOf('ERROR:') === 0) {
+    if (!beforeAnalysis && alphaDesc.indexOf('ERROR:') === 0) {
       Logger.log('drone-test sync skipping (errored descriptions): ' + accountName);
       skipped++;
       skipReason = 'errored descriptions in Alpha';
@@ -1518,10 +1701,16 @@ function processDroneTestRows_(onlySheetRow) {
     }
 
     let elementPins = [], concernPins = [], bounds = null;
-    try { elementPins = JSON.parse(elementsRaw) || []; } catch (e) {
-      Logger.log('drone-test sync skipping (bad Nadir Elements JSON): ' + accountName);
+    if (elementsRaw) {
+      try { elementPins = JSON.parse(elementsRaw) || []; } catch (e) {
+        Logger.log('drone-test sync skipping (bad Nadir Elements JSON): ' + accountName);
+        skipped++;
+        skipReason = 'Nadir Elements is not valid JSON';
+        continue;
+      }
+    } else if (!beforeAnalysis) {
       skipped++;
-      skipReason = 'Nadir Elements is not valid JSON';
+      skipReason = 'incomplete — need images, element pins, and all four descriptions';
       continue;
     }
     if (concernsRaw) {
@@ -1560,7 +1749,7 @@ function processDroneTestRows_(onlySheetRow) {
     // Cameras are property-level (data/cameras/json/{hubId}.json).
     // Do not put cameras[] on this view record — a later sync would own
     // the drop. camerasFileForSync_ PUTs the cameras file separately.
-    const propertyData = {
+    let propertyData = {
       name:           accountName,
       address:        address,
       view:           'drone-test',
@@ -1579,10 +1768,13 @@ function processDroneTestRows_(onlySheetRow) {
       delta:          { url: deltaUrl,   desc: toBullets(deltaDesc)   },
       considerations: String(row[DT_COL_CONSIDER - 1] || ''),
       clarifications: String(row[DT_COL_CLARIFY - 1] || ''),
-      viewer360:      String(row[DT_COL_VIEWER360 - 1] || ''),
+      viewer360:      viewer360,
       directions:     dir.directions
     };
     if (!isNaN(lat) && !isNaN(lng)) { propertyData.lat = lat; propertyData.lng = lng; }
+    if (beforeAnalysis) {
+      propertyData = dtMergeEarlyView_(propertyData, dtExistingView_(viewId));
+    }
 
     files.push({ path: DT_DATA_DIR + '/' + viewId + '.json',
                  content: JSON.stringify(propertyData, null, 2) });
@@ -1613,13 +1805,16 @@ function processDroneTestRows_(onlySheetRow) {
     processed++;
   }
 
+  const syncTitle = beforeAnalysis ? 'Sync (model)' : 'Sync (analysis + model)';
   if (!files.length) {
     Logger.log('Nothing to push for: ' + DT_SHEET);
     if (onlySheetRow) {
-      SpreadsheetApp.getUi().alert('drone-test Sync',
+      SpreadsheetApp.getUi().alert(syncTitle,
         'Row ' + onlySheetRow + ' was not published' +
         (skipReason ? ':\n' + skipReason : '.') +
-        '\n\nFinish images, Pass 1, and Pass 2 on this row, then sync it again.',
+        (beforeAnalysis
+          ? '\n\nNeed Property Name, Address, and a 360 View URL.'
+          : '\n\nFinish images, Pass 1, and Pass 2 on this row, then sync it again.'),
         SpreadsheetApp.getUi().ButtonSet.OK);
     } else {
       SpreadsheetApp.getActiveSpreadsheet().toast('drone-test sync: no complete rows to push.');
@@ -1634,19 +1829,18 @@ function processDroneTestRows_(onlySheetRow) {
 
   updates.forEach(function (u) {
     if (!u.id) return;
-    const q = String(data[u.rowIndex][DT_COL_VIEWER360 - 1] || '').trim();
-    sheet.getRange(u.rowIndex + 1, DT_COL_FR_LINK).setValue(
-      q ? dtRebaseViewer_(q, u.id)
-        : (VIEWER_BASE_URL + '?property=' + u.id + '&tab=drone-test'));
+    sheet.getRange(u.rowIndex + 1, DT_COL_FR_LINK).setValue(dtHubLink_(u.id));
     sheet.getRange(u.rowIndex + 1, DT_COL_UPLOAD_DATE).setValue(new Date().toLocaleString());
   });
 
   Logger.log('Done [drone-test]. Processed: ' + processed + ' | Skipped: ' + skipped +
              ' | Directions published: ' + directionsTotal + ' | Directions skipped: ' + directionsSkipped);
-  SpreadsheetApp.getUi().alert('drone-test Sync',
+  SpreadsheetApp.getUi().alert(syncTitle,
     'Properties published: ' + processed + '\nProperties skipped (incomplete): ' + skipped +
     '\n\nResponder directions published: ' + directionsTotal +
     '\nDirections skipped (unreviewed or empty): ' + directionsSkipped +
-    (directionsSkipped ? '\n\nUnreviewed directions are never published — tick "Route Reviewed" first.' : ''),
+    (directionsSkipped ? '\n\nUnreviewed directions are never published — tick "Route Reviewed" first.' : '') +
+    '\n\nFR Link opens this property in the Vyanet viewer.' +
+    (beforeAnalysis ? '\nPins and descriptions were not required.' : ''),
     SpreadsheetApp.getUi().ButtonSet.OK);
 }

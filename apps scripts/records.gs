@@ -1381,7 +1381,7 @@ function recordsPublishDroneSheetRow_(row, creds) {
   return { kind: 'ok', hubId: hubId, viewId: viewId, name: accountName };
 }
 
-function recordsPublishDroneTestSheetRow_(row, creds) {
+function recordsPublishDroneTestSheetRow_(row, creds, beforeAnalysis) {
   const accountName = String(row[DT_COL_ACCOUNT - 1] || '').trim();
   const address = String(row[DT_COL_ADDRESS - 1] || '').trim();
   if (!accountName || !address) return { kind: 'skip', reason: 'no name/address' };
@@ -1395,17 +1395,24 @@ function recordsPublishDroneTestSheetRow_(row, creds) {
   const charlieDesc = String(row[DT_COL_CHARLIE_DESC - 1] || '').trim();
   const deltaUrl = String(row[DT_COL_DELTA_URL - 1] || '').trim();
   const deltaDesc = String(row[DT_COL_DELTA_DESC - 1] || '').trim();
-  if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
+  const viewer360 = String(row[DT_COL_VIEWER360 - 1] || '').trim();
+  if (beforeAnalysis) {
+    if (!viewer360) return { kind: 'skip', reason: 'need 360 View URL [' + accountName + ']' };
+  } else if (!nadirUrl || !elementsRaw || !alphaUrl || !alphaDesc ||
       !bravoUrl || !bravoDesc || !charlieUrl || !charlieDesc ||
       !deltaUrl || !deltaDesc) {
     return { kind: 'skip', reason: 'incomplete [' + accountName + ']' };
   }
-  if (alphaDesc.indexOf('ERROR:') === 0) {
+  if (!beforeAnalysis && alphaDesc.indexOf('ERROR:') === 0) {
     return { kind: 'skip', reason: 'errored descriptions [' + accountName + ']' };
   }
   let elementPins = [], concernPins = [], bounds = null, localCorners = null;
-  try { elementPins = JSON.parse(elementsRaw) || []; } catch (e) {
-    return { kind: 'skip', reason: 'bad Nadir Elements JSON [' + accountName + ']' };
+  if (elementsRaw) {
+    try { elementPins = JSON.parse(elementsRaw) || []; } catch (e) {
+      return { kind: 'skip', reason: 'bad Nadir Elements JSON [' + accountName + ']' };
+    }
+  } else if (!beforeAnalysis) {
+    return { kind: 'skip', reason: 'incomplete [' + accountName + ']' };
   }
   const concernsRaw = String(row[DT_COL_CONCERNS - 1] || '').trim();
   if (concernsRaw) {
@@ -1441,7 +1448,7 @@ function recordsPublishDroneTestSheetRow_(row, creds) {
   }
   const lat = parseFloat(row[DT_COL_LAT - 1]);
   const lng = parseFloat(row[DT_COL_LNG - 1]);
-  const propertyData = {
+  let propertyData = {
     name: accountName,
     address: address,
     view: 'drone-test',
@@ -1462,10 +1469,13 @@ function recordsPublishDroneTestSheetRow_(row, creds) {
     delta: { url: deltaUrl, desc: toBullets(deltaDesc) },
     considerations: String(row[DT_COL_CONSIDER - 1] || ''),
     clarifications: String(row[DT_COL_CLARIFY - 1] || ''),
-    viewer360: String(row[DT_COL_VIEWER360 - 1] || ''),
+    viewer360: viewer360,
     directions: directions
   };
   if (!isNaN(lat) && !isNaN(lng)) { propertyData.lat = lat; propertyData.lng = lng; }
+  if (beforeAnalysis && typeof dtMergeEarlyView_ === 'function') {
+    propertyData = dtMergeEarlyView_(propertyData, dtExistingView_(viewId));
+  }
   recordsPutJson_(loc.s3Key, propertyData);
 
   const patch = { files: loc.files, views: loc.views };

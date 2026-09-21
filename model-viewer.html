@@ -800,7 +800,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.31';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.33';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -1020,19 +1020,20 @@ async function resolveViaIndex(hash, view) {
   if (!idx || !idx.views || !idx.views[view]) return null;
   return await fetchJson(DATA_ROOT + view + '/' + idx.views[view] + '.json');
 }
-// Same resolution order responder-intel.html uses, so any link form works.
+// loadProperty keeps the same resolution order responder-intel.html uses.
+// The Drone sheet is a separate rail tab, not a replacement of these pictures.
 async function loadProperty() {
   if (!propertyId || autocapture) return null;
   if (wantView) {
-    const byView = await resolveViaIndex(propertyId, wantView);
-    if (byView) return byView;
+    const rec = await resolveViaIndex(propertyId, wantView);
+    if (rec) return rec;
   }
   for (let i = 0; i < MODEL_VIEWS.length; i++) {
     const rec = await resolveViaIndex(propertyId, MODEL_VIEWS[i]);
     if (rec) return rec;
   }
-  const direct = await fetchJson(DATA_ROOT + DT_VIEW + '/' + propertyId + '.json');
-  if (direct) return direct;
+  let rec = await fetchJson(DATA_ROOT + DT_VIEW + '/' + propertyId + '.json');
+  if (rec) return rec;
   return await fetchJson(DATA_ROOT + 'responder-drone/' + propertyId + '.json');
 }
 const propertyPromise = loadProperty().catch(function (e) {
@@ -1795,9 +1796,11 @@ function startDirections(rec) {
     rec._frPinSets = pair[0] || null;
     hubGisRec = pair[1];
     initDirections(rec);
+    fillDroneSheetTab_();
   }).catch(function (e) {
     dbg('FR pin load failed: ' + (e && e.message ? e.message : e), 'warn');
     initDirections(rec);
+    fillDroneSheetTab_();
   });
 }
 function refreshPinsIfStale() {
@@ -2077,8 +2080,67 @@ const PROP_TABS = [
   { id: 'pins',     label: 'Pins',                accent: '#22c55e' },
   { id: 'cams',     label: 'Cameras',             accent: '#38bdf8' },
   { id: 'analysis', label: 'Property Analysis',   accent: '#3b82f6' },
+  { id: 'drone',    label: 'Drone',               accent: '#8b5cf6' },
   { id: 'routes',   label: 'Response Directions', accent: '#f59e0b' }
 ];
+// The Drone sheet is its own rail tab. It does not replace the mapping
+// pictures on Property Analysis. Hidden when this hub has no views.drone.
+function droneSheetHtml_(d) {
+  const views = [
+    { label: 'Overhead View', badge: 'N', cls: ' nadir', data: d.nadir },
+    { label: 'Alpha Side',    badge: 'A', cls: '', data: d.alpha },
+    { label: 'Bravo Side',    badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie Side',  badge: 'C', cls: '', data: d.charlie },
+    { label: 'Delta Side',    badge: 'D', cls: '', data: d.delta }
+  ].filter(function (v) { return v.data && v.data.url; });
+  let html = '';
+  if (views.length) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" ' +
+            'style="background:#8b5cf6;color:#fff">D</div><div class="rd-titles">' +
+            '<div class="rd-name">Drone sheet</div><div class="rd-meta">' + views.length +
+            ' view' + (views.length === 1 ? '' : 's') + '</div></div></div><div class="rd-body">' +
+            views.map(function (v) {
+              const bullets = String(v.data.desc || '').split('|')
+                .map(function (t) { return t.trim(); })
+                .filter(function (t) { return t.length > 2; });
+              return '<div class="vw-section">' +
+                '<div class="vw-head"><div class="vw-badge' + v.cls + '">' + v.badge +
+                '</div><div class="vw-label">' + escHtml(v.label) + '</div></div>' +
+                '<img class="vw-img" src="' + escHtml(v.data.url) + '" alt="' + escHtml(v.label) +
+                '" loading="lazy" onclick="window.open(this.src, \'_blank\')" ' +
+                'onerror="this.style.display=\'none\'">' +
+                (bullets.length ? '<ul class="vw-bullets">' + bullets.map(function (b) {
+                  return '<li>' + escHtml(b) + '</li>'; }).join('') + '</ul>' : '') +
+                '</div>';
+            }).join('') + '</div></div>';
+  }
+  if (d.considerations && !customerView) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" ' +
+            'style="background:#8b5cf6;color:#fff">R</div><div class="rd-titles">' +
+            '<div class="rd-name">Responder Considerations</div></div></div>' +
+            '<div class="rd-body"><div class="rd-trigger">' +
+            escHtml(String(d.considerations)) + '</div></div></div>';
+  }
+  return html;
+}
+function fillDroneSheetTab_() {
+  const btn = document.getElementById('pp-btn-drone');
+  if (!btn || !propertyId) return;
+  btn.style.display = 'none';
+  fetchJson(DATA_ROOT + 'index/' + propertyId + '.json').then(function (idx) {
+    if (!idx || !idx.views || !idx.views.drone) return null;
+    return fetchJson(DATA_ROOT + 'drone/' + idx.views.drone + '.json');
+  }).then(function (rec) {
+    if (!rec) return;
+    const html = droneSheetHtml_(rec);
+    if (!html) return;
+    const body = document.getElementById('pp-body-drone');
+    const sub = document.getElementById('pp-sub-drone');
+    if (body) body.innerHTML = html;
+    if (sub) sub.textContent = rec.name || '';
+    btn.style.display = 'block';
+  }).catch(function () {});
+}
 function buildPropertyUi() {
   const rail = document.getElementById('tab-rail');
   const before = document.getElementById('wx-toggle');

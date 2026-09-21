@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.7</div>
+    <div id="version-badge">v2.10.11</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.9';
+const VERSION     = 'v2.10.11';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -602,9 +602,9 @@ const PARCEL_COUNTIES = [
 const ELEMENT_LABELS = ['1','2','3','4','5','6','7','8','9','0'];
 const CONCERN_LABELS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const VIEW_ORDER  = EMBEDDED
-  ? ['drone-test']
+  ? ['drone-test', 'drone']
   : ['security','wildfire','plane','drone','drone-test','tour'];
-const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone', 'drone-test': EMBEDDED ? 'Drone' : 'Drone Test' };
+const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', plane:'Plane', drone:'Drone', 'drone-test': EMBEDDED ? 'Mapping' : 'Drone Test' };
 const GW_URL = (_qs.get('gw') || 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws').replace(/\/+$/, '');
 const GW_OFF = _qs.get('gw') === '0';
 const propertyId = (_qs.get('property') || '').trim();
@@ -1643,7 +1643,7 @@ async function loadNearmapLotCover(lat, lng) {
   if (!pid || !isFinite(lat) || !isFinite(lng)) return;
   let prop, lotMod;
   try {
-    prop = await import('./js/vyanet-viewer/property.js?v=1.8.31');
+    prop = await import('./js/vyanet-viewer/property.js?v=1.8.33');
     lotMod = await import('./js/vyanet-viewer/nearmap-lot.js?v=1.8.17');
   } catch (e) { return; }
   nmCoverMod = lotMod;
@@ -2704,8 +2704,8 @@ async function loadPropertyData() {
     document.getElementById('panel-address').textContent = (entry.address || '').replace(/^\s+/, '');
     if (frMode) document.getElementById('view-tabs').style.display = 'none';
     dbg('Available views: ' + Object.keys(views).join(', '), 'info');
-    // embed=1 hides Security/Wildfire chrome (VIEW_ORDER is drone-test only) but
-    // the hub still passes tab=security for satellite-only properties.
+    // embed=1 shows Mapping (drone-test) and Drone. The hub still passes
+    // tab=security for satellite-only properties.
     if (tabParam && VIEW_ORDER.indexOf(tabParam) === -1 && !(EMBEDDED && views[tabParam])) {
       tabParam = '';
     }

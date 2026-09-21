@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.31';
+export const HUB_BUILD = '1.8.33';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -554,10 +554,10 @@ export function framesFromIndex(idx, nm) {
   };
 }
 
-// The best available nadir render for this property, for the home hero.
-// Walks the model views first (drone-test/plane/drone renders are the
-// highest-caliber imagery), then the satellite views. Stops at the first
-// record carrying nadir.url; returns '' when none do.
+// The best available nadir for the home hero. Nearmap vert.jpg wins when
+// this hub has a trial delivery. Otherwise the first record in
+// model-then-satellite order that has nadir.url. The Drone sheet is a
+// tab on 2D and 3D, not a replacement for this image.
 export async function findNadir(root, idx, nm) {
   const hubId = String((idx && idx.id) || (nm && nm.propertyId) || '').trim();
   const delivery = String((nm && nm.delivery) || '').trim() || NEARMAP_HUB_DELIVERY[hubId] || '';
