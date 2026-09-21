@@ -1881,7 +1881,13 @@ function initDirections(d) {
                  .filter(function (c) { return !!camLocal(c) || !!c.photo; });
   const nPins = pinSets.element.length + pinSets.concern.length;
   const hFacts = gisFactsHtml(hubGisRec, escHtml);
-  if (!dirList.length && !nPins && !camList.length && !hFacts) { dbg('Record has no pins, cameras, directions or GIS facts', 'warn'); return; }
+  const hasViews = ['nadir', 'alpha', 'bravo', 'charlie', 'delta'].some(function (k) {
+    return d[k] && d[k].url;
+  });
+  if (!dirList.length && !nPins && !camList.length && !hFacts && !hasViews) {
+    dbg('Record has no pins, cameras, directions, views, or GIS facts', 'warn');
+    return;
+  }
   if (camList.length) dbg('Cameras in record: ' + camList.length + ' placeable', 'ok');
   dbg('Record: ' + (d.name || '(unnamed)') + ' — ' + dirList.length + ' route(s), ' +
       pinSets.element.length + ' element pin(s), ' + pinSets.concern.length + ' concern pin(s)' +
@@ -1891,7 +1897,7 @@ function initDirections(d) {
   // Five independent bodies. A tab with nothing to say is left hidden rather
   // than shown empty, so the rail reflects what this property actually has.
   let hPins = '', hCams = '', hAna = '', hRoutes = '';
-  if (!dirCorners) {
+  if (!dirCorners && nPins) {
     hPins += '<div class="dp-note">This record has no <code>nadir.local</code>, so nothing ' +
              'can be placed in the 3D model — deploy the render patch, re-run Generate ' +
              'Property Images, then sync again. The 2D previews below work either way.</div>';
@@ -2031,6 +2037,7 @@ function initDirections(d) {
   });
   const filled = { facts: hFacts, pins: hPins, cams: hCams, analysis: hAna, routes: hRoutes };
   PROP_TABS.forEach(function (t) {
+    if (t.id === 'drone') return;
     const body = document.getElementById('pp-body-' + t.id);
     const btn  = document.getElementById('pp-btn-' + t.id);
     const sub  = document.getElementById('pp-sub-' + t.id);
@@ -2139,6 +2146,7 @@ function fillDroneSheetTab_() {
     if (body) body.innerHTML = html;
     if (sub) sub.textContent = rec.name || '';
     btn.style.display = 'block';
+    if (!document.querySelector('.hz-panel.open')) window.togglePropTab('drone');
   }).catch(function () {});
 }
 function buildPropertyUi() {
@@ -2152,6 +2160,7 @@ function buildPropertyUi() {
     b.style.color = t.accent;
     b.style.borderColor = t.accent;
     b.onclick = function () { togglePropTab(t.id); };
+    if (t.id === 'drone') b.style.display = 'none';
     rail.insertBefore(b, before);          // property tabs sit above Weather
 
     const p = document.createElement('div');

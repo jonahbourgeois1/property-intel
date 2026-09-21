@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.12</div>
+    <div id="version-badge">v2.10.13</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.12';
+const VERSION     = 'v2.10.13';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -2096,6 +2096,7 @@ const PROP_TABS = [
   { id: 'pins',     label: 'Pins',                accent: '#22c55e' },
   { id: 'cams',     label: 'Cameras',             accent: '#38bdf8' },
   { id: 'analysis', label: 'Property Analysis',   accent: '#3b82f6' },
+  { id: 'drone',    label: 'Drone',               accent: '#8b5cf6' },
   { id: 'routes',   label: 'Response Directions', accent: '#f59e0b' }
 ];
 function buildPropertyUi() {
@@ -2109,6 +2110,7 @@ function buildPropertyUi() {
     b.style.color = t.accent;
     b.style.borderColor = t.accent;
     b.onclick = function () { togglePropTab(t.id); };
+    if (t.id === 'drone') b.style.display = 'none';
     rail.appendChild(b);
     const p = document.createElement('div');
     p.id = 'pp-panel-' + t.id;
@@ -2222,6 +2224,65 @@ function camsTabHtml_() {
   }
   return html + '</div></div>';
 }
+// Same Drone sheet as the 3D rail. Property Analysis stays the mapping
+// renders. Hidden until this hub has a views.drone record.
+let droneSheetReady = false;
+function droneSheetHtml_(d) {
+  const views = [
+    { label: 'Overhead View', badge: 'N', cls: ' nadir', data: d.nadir },
+    { label: 'Alpha Side',    badge: 'A', cls: '', data: d.alpha },
+    { label: 'Bravo Side',    badge: 'B', cls: '', data: d.bravo },
+    { label: 'Charlie Side',  badge: 'C', cls: '', data: d.charlie },
+    { label: 'Delta Side',    badge: 'D', cls: '', data: d.delta }
+  ].filter(function (v) { return v.data && v.data.url; });
+  let html = '';
+  if (views.length) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#8b5cf6;color:#fff">D</div>' +
+      '<div class="rd-titles"><div class="rd-name">Drone sheet</div><div class="rd-meta">' +
+      views.length + ' view' + (views.length === 1 ? '' : 's') + '</div></div></div><div class="rd-body">';
+    views.forEach(function (v) {
+      const bullets = formatDesc(v.data.desc || '');
+      html += '<div class="vw-section"><div class="vw-head"><div class="vw-badge' + v.cls + '">' + v.badge +
+        '</div><div class="vw-label">' + escHtml_(v.label) + '</div></div>' +
+        '<img class="vw-img" src="' + escHtml_(v.data.url) + '" alt="' + escHtml_(v.label) +
+        '" loading="lazy" onclick="window.open(this.src,\'_blank\')">' +
+        (bullets.length ? '<ul class="vw-bullets">' + bullets.map(function (b) {
+          return '<li>' + escHtml_(b) + '</li>';
+        }).join('') + '</ul>' : '') + '</div>';
+    });
+    html += '</div></div>';
+  }
+  if (d.considerations && !customerView) {
+    html += '<div class="rd-card"><div class="rd-head"><div class="rd-num" style="background:#8b5cf6;color:#fff">R</div>' +
+      '<div class="rd-titles"><div class="rd-name">Responder Considerations</div></div></div>' +
+      '<div class="rd-body"><div class="rd-trigger">' + escHtml_(String(d.considerations)) + '</div></div></div>';
+  }
+  return html;
+}
+function fillDroneSheetTab_() {
+  const btn = document.getElementById('pp-btn-drone');
+  if (!btn || !propertyId || droneSheetReady) return;
+  fetch(DATA_ROOT + 'index/' + propertyId + '.json', { cache: 'no-store' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (idx) {
+      if (!idx || !idx.views || !idx.views.drone) return null;
+      return fetch(DATA_ROOT + 'drone/' + idx.views.drone + '.json', { cache: 'no-store' })
+        .then(function (r) { return r.ok ? r.json() : null; });
+    })
+    .then(function (rec) {
+      if (!rec) return;
+      const html = droneSheetHtml_(rec);
+      if (!html) return;
+      const body = document.getElementById('pp-body-drone');
+      const sub = document.getElementById('pp-sub-drone');
+      if (body) body.innerHTML = html;
+      if (sub) sub.textContent = rec.name || '';
+      btn.style.display = 'block';
+      droneSheetReady = true;
+      if (!document.querySelector('.hz-panel.open')) window.togglePropTab('drone');
+    })
+    .catch(function () {});
+}
 function analysisTabHtml_(d, viewSuffix) {
   let html = '';
   const views = [
@@ -2329,6 +2390,7 @@ function populateFeatureTabs(d, viewSuffix) {
     routes: routesTabHtml_(d)
   };
   PROP_TABS.forEach(function (t) {
+    if (t.id === 'drone') return;
     const body = document.getElementById('pp-body-' + t.id);
     const btn = document.getElementById('pp-btn-' + t.id);
     const sub = document.getElementById('pp-sub-' + t.id);
@@ -2350,6 +2412,7 @@ function populateFeatureTabs(d, viewSuffix) {
     factsAutoOpened = true;
     togglePropTab('facts');
   }
+  fillDroneSheetTab_();
 }
 function buildPinnedNadirSection(v, idx) {
   const sets = nadirPinSets_(v.data);
