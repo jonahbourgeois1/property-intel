@@ -1,5 +1,5 @@
-// Hub logic only. vyanet-viewer.html does not render 3D, maps, or live
-// video — it reads the index and points at the existing viewer pages.
+﻿// Hub logic only. vyanet-viewer.html does not render 3D, maps, or live
+// video â€” it reads the index and points at the existing viewer pages.
 // This module owns routing (which pages to iframe) and the gate's data
 // questions (does this property have cameras; is this viewer key accepted).
 
@@ -9,7 +9,7 @@ export const LIVE_PAGE = 'live-viewer.html';
 export const HOA_PAGE = 'hoa-viewer.html';
 export const NEARMAP_PAGE = 'nearmap-viewer.html';
 export const CF_NEARMAP = 'https://d3fg47bqswi0rr.cloudfront.net/nearmap/';
-// Trial join: Nearmap delivery_id → existing index hub. Do not hash site_no
+// Trial join: Nearmap delivery_id â†’ existing index hub. Do not hash site_no
 // (Jones is name-keyed 6de88883, not hash(14725)). Promotion later writes
 // views.nearmap onto that same hub; this table is the trial stand-in.
 export const NEARMAP_DELIVERY_HUB = {
@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.41';
+export const HUB_BUILD = '1.8.42';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -212,7 +212,7 @@ export function bindMjpegImg(img, stateEl, url, isCurrent, opts) {
     img.onerror = null;
     img.removeAttribute('src');
     if (stateEl) {
-      stateEl.textContent = 'connecting…';
+      stateEl.textContent = 'connectingâ€¦';
       stateEl.classList.remove('bad');
     }
     tickSnap();
@@ -315,7 +315,7 @@ export function syncLiveWallStreams(main, rows, maxN) {
     if (job.img.naturalWidth > 0) return;
     if (typeof job.img.__mjpegStop === 'function') return;
     if (job.img.getAttribute('src') && !job.img.__still) return;
-    if (job.st) { job.st.textContent = 'connecting…'; job.st.classList.remove('bad'); }
+    if (job.st) { job.st.textContent = 'connectingâ€¦'; job.st.classList.remove('bad'); }
     setTimeout(function () {
       if (main.__streamGen !== gen) return;
       bindMjpegImg(job.img, job.st, job.cam.mjpeg_url, function () {
@@ -326,7 +326,7 @@ export function syncLiveWallStreams(main, rows, maxN) {
 }
 
 // Newest clip thumbnail behind a hung MJPEG. Never stamp it onto a
-// cell that already has a live frame — that swapped daytime LIVE to
+// cell that already has a live frame â€” that swapped daytime LIVE to
 // last-night stills (hub 1.8.28). CHEKT can report `online` while
 // /api/v1/mjpeg never sends a first byte (Gud Cultures Parcel 3).
 export function applyClipPosters(main, rows, clips) {
@@ -544,7 +544,7 @@ export function framesFromIndex(idx, nm) {
     hasPrivate: !!(modelView || satView || hasNearmap),
     hasHoa: !!hoa,
     // hasLive is filled by the hub after detectCameras (cameras file / any
-    // view-record cameras array) OR when hasModel is true — Jones has live
+    // view-record cameras array) OR when hasModel is true â€” Jones has live
     // via the CHEKT gateway with no cameras file yet.
     hasLive: false,
     delivery: delivery,
@@ -564,6 +564,17 @@ export function framesFromIndex(idx, nm) {
   };
 }
 
+// Hubs whose home hero comes from the drone-sheet overhead (views.drone)
+// instead of the parcel render. Checked 2026-09-21 by measuring the black
+// fraction of a 2.5:1 cover crop: render vs sheet â€” PPS strip vs 9%,
+// Bend 58% vs 26%, Roseburg 52% vs 26%, Myrtle Creek 55% vs 13%.
+export const HERO_SHEET_HUBS = [
+  '135df629a0d634d16324320a6f02f329', // PPS Industries
+  '744a3639be95ce309192dc69b5a8e9f6', // Vyanet Bend
+  'a06c4a93e36cf6473c153f88ac51113a', // Lauren Young Tire (Roseburg)
+  '6d70b38ed1ad99d5a2f10f4e31921054'  // Lauren Young Tire (Myrtle Creek)
+];
+
 // The best available nadir for the home hero. Nearmap vert.jpg wins when
 // this hub has a trial delivery. Otherwise the first record in
 // model-then-satellite order that has nadir.url. The Drone sheet is a
@@ -576,10 +587,11 @@ export async function findNadir(root, idx, nm) {
     return tiles + delivery + '/vert.jpg';
   }
   const views = (idx && idx.views) || {};
-  // PPS's parcel render is a tall strip of empty frame. Cover-cropping it
-  // shows only a corner of the site. The drone-sheet overhead is the
-  // framed property photo.
-  if (hubId === '135df629a0d634d16324320a6f02f329' && views.drone) {
+  // These parcel renders are mostly empty frame (PPS is a tall strip; Bend,
+  // Roseburg, and Myrtle Creek are over half black). Cover-cropping them
+  // shows a corner of the site or a black card. Their drone-sheet overhead
+  // is the framed property photo. The other hubs' renders fill the crop.
+  if (HERO_SHEET_HUBS.indexOf(hubId) !== -1 && views.drone) {
     try {
       const sheet = await fetchJson(root + 'drone/' + views.drone + '.json');
       if (sheet && sheet.nadir && sheet.nadir.url) return String(sheet.nadir.url);
@@ -599,7 +611,7 @@ export async function findNadir(root, idx, nm) {
   return '';
 }
 
-// Property ids the live gateway might key this property under — same walk
+// Property ids the live gateway might key this property under â€” same walk
 // order as model-viewer.html (the allowlist may predate the site_no hub id).
 // Eugene currently has two index files for the same building: the site_no
 // hub (8eea64e5, satellite + drone-test) and the name-hash hub (4a484f8c,
@@ -636,7 +648,7 @@ export function liveAliasIds(idx, propertyId) {
 // Does this property have cameras? Sources the gate can read without a key:
 // data/cameras/json/{idx.id|propertyId}.json (flat cameras/{id}.json and
 // images/json/ are fallbacks), and a non-empty cameras
-// array on ANY view record (not only the 3D view — live feed is its own
+// array on ANY view record (not only the 3D view â€” live feed is its own
 // plugin and must work without a GLB). The gateway allowlist is NOT
 // probeable keylessly (it 401s before looking at ?property=), so it cannot
 // answer this question pre-gate. Any fetch error counts as "no cameras".
@@ -731,7 +743,7 @@ export function groupLiveCameras(list) {
 
 // Ask the gateway whether it accepts this key. Walk the alias ids the same
 // way model-viewer does: 200 = accepted and this property has live cameras;
-// 401 = key rejected (stop — the gateway checks the key before the
+// 401 = key rejected (stop â€” the gateway checks the key before the
 // property); 404 = this property id has no CHEKT sites, try the next.
 // The query is only the property id. The gateway does not match address,
 // name, or site_no. Anything else (429, 5xx, network) is inconclusive:
