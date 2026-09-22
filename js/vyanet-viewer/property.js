@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.40';
+export const HUB_BUILD = '1.8.41';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -576,6 +576,15 @@ export async function findNadir(root, idx, nm) {
     return tiles + delivery + '/vert.jpg';
   }
   const views = (idx && idx.views) || {};
+  // PPS's parcel render is a tall strip of empty frame. Cover-cropping it
+  // shows only a corner of the site. The drone-sheet overhead is the
+  // framed property photo.
+  if (hubId === '135df629a0d634d16324320a6f02f329' && views.drone) {
+    try {
+      const sheet = await fetchJson(root + 'drone/' + views.drone + '.json');
+      if (sheet && sheet.nadir && sheet.nadir.url) return String(sheet.nadir.url);
+    } catch (e) {}
+  }
   const seen = [];
   const order = MODEL_VIEWS.concat(SAT_VIEWS);
   for (let i = 0; i < order.length; i++) {
