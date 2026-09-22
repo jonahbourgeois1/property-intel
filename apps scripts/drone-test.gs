@@ -1802,8 +1802,15 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
       directions:     dir.directions
     };
     if (!isNaN(lat) && !isNaN(lng)) { propertyData.lat = lat; propertyData.lng = lng; }
+    // A stored parcel_ring is the outline the 2D map draws. The sheet
+    // geocode can land in a neighboring taxlot (Butler: dirt lot 4400,
+    // house on 4500). Keep the published ring on a full sync. Early sync
+    // already keeps it, because dtMergeEarlyView_ copies the existing file.
+    const prevView = dtExistingView_(viewId);
     if (beforeAnalysis) {
-      propertyData = dtMergeEarlyView_(propertyData, dtExistingView_(viewId));
+      propertyData = dtMergeEarlyView_(propertyData, prevView);
+    } else if (prevView && Array.isArray(prevView.parcel_ring) && prevView.parcel_ring.length >= 3) {
+      propertyData.parcel_ring = prevView.parcel_ring;
     }
 
     files.push({ path: DT_DATA_DIR + '/' + viewId + '.json',
