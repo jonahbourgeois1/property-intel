@@ -1,0 +1,121 @@
+{
+  "id": "clear-creek-co",
+  "state": "CO",
+  "county": "Clear Creek",
+  "portfolio_sites": 33,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Clear Creek'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Colorado Public Parcel Composite (statewide). Owner/situs/value fields stripped from outFields. No clear written grant for CDN redistribution or commercial product use; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:50:25Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "parcel_id",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "countyName",
+      "countyFips",
+      "parcel_id",
+      "account",
+      "landSqft",
+      "landAcres",
+      "block",
+      "lot",
+      "subCode",
+      "subName",
+      "zoningCode",
+      "zoningDesc",
+      "landUseCde",
+      "landUseDsc",
+      "URL",
+      "dateReceived"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/clear-creek-co",
+    "raw_file": "/workspace/parcel-staging/scratch/clear-creek-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/clear-creek-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/clear-creek-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 26844,
+    "content_hash": "5354c6642da1a20133c6add09e2461ef1f522fc35c1d44cfbc58367b7accdee8",
+    "shard_manifest_sha256": "28e39d0108b714ee2d95246184a0fe085de97f9dc3c355af1f338df4e295c442",
+    "shard_count": 26
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Clear Creek, CO \u2192 33 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:50:25Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0 layer=Colorado_Public_Parcels FeatureServer/0 where countyName='Clear Creek' join=parcel_id where=\"countyName='Clear Creek'\""
+    },
+    {
+      "at": "2026-09-25T00:50:25Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:50:25Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0; where=\"countyName='Clear Creek'\"; outFields=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:50:47Z",
+      "action": "staging_download_complete",
+      "detail": "features=26844 sha256=6e6af7f6f9afcca2d021d4a3e0882f713a4ea32759d5d9c57aa4a1f5f5e98c16 bytes=26483009 pages=14 file=/workspace/parcel-staging/scratch/clear-creek-co/raw.ndjson format=ndjson where=\"countyName='Clear Creek'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:50:47Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/clear-creek-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:50:47Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/clear-creek-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:50:49Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=26844 shards=26 max_shard_bytes=3999035 index_sha256=5354c6642da1a20133c6add09e2461ef1f522fc35c1d44cfbc58367b7accdee8 dir=/workspace/parcel-staging/scratch/clear-creek-co/normalized sum_counts=26844 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: CO statewide public parcel fabric filtered to Clear Creek County (clear-creek-co). Owner/situs/value stripped. No AWS/CDN/Grant B."
+}

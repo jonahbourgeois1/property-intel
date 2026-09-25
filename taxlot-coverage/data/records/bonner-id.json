@@ -1,0 +1,109 @@
+{
+  "id": "bonner-id",
+  "state": "ID",
+  "county": "Bonner",
+  "portfolio_sites": 62,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "source_layer": "IDWR Reference/Parcels FeatureServer/0 where COUNTY='Bonner'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Idaho IDWR statewide Reference/Parcels FeatureServer. OWNER field present on service but stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:36:28Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PIN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PIN",
+      "COUNTY",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/bonner-id",
+    "raw_file": "/workspace/parcel-staging/scratch/bonner-id/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/bonner-id/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/bonner-id/normalized"
+  },
+  "metrics": {
+    "feature_count": 45558,
+    "content_hash": "1c67ee7c2cd8ce62074d77c966a78c1bc907ce764f590b5202868d4d04b6b742",
+    "shard_manifest_sha256": "9ad83a2b163b2c6f57248bea23d56775c130b5093a76442d8f9b9ac11e072c4c",
+    "shard_count": 144
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Bonner, ID \u2192 62 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:36:28Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0 layer=IDWR Reference/Parcels FeatureServer/0 where COUNTY='Bonner' join=PIN where=\"COUNTY='Bonner'\""
+    },
+    {
+      "at": "2026-09-25T00:36:28Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:36:28Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0; where=\"COUNTY='Bonner'\"; outFields=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:37:19Z",
+      "action": "staging_download_complete",
+      "detail": "features=45558 sha256=bfb2a155599fe0019199b1a38d683961a0ecae8e06d3d79aa7491ffa8bcaafe3 bytes=32779322 pages=23 file=/workspace/parcel-staging/scratch/bonner-id/raw.ndjson format=ndjson where=\"COUNTY='Bonner'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:37:19Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/bonner-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:37:19Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/bonner-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:37:23Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=45558 shards=144 max_shard_bytes=2630677 index_sha256=1c67ee7c2cd8ce62074d77c966a78c1bc907ce764f590b5202868d4d04b6b742 dir=/workspace/parcel-staging/scratch/bonner-id/normalized sum_counts=45558 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Idaho statewide IDWR parcels filtered to Bonner County (bonner-id). OWNER stripped. No AWS/CDN/Grant B."
+}

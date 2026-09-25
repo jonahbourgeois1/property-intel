@@ -1,0 +1,113 @@
+{
+  "id": "whitman-wa",
+  "state": "WA",
+  "county": "Whitman",
+  "portfolio_sites": 20,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Whitman'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:29:40Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/whitman-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/whitman-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/whitman-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/whitman-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 34997,
+    "content_hash": "ec9280dfdce25f885d3595293c56a41b31830f7ba81673fe830fcd38e524936e",
+    "shard_manifest_sha256": "ee3c1047be2bc2f8270bac73554232c0b6f1c2c71a766922540e609bafd3fb99",
+    "shard_count": 162
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Whitman, WA \u2192 20 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:29:40Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Whitman' join=PARCEL_ID_NR where=\"COUNTY_NM='Whitman'\""
+    },
+    {
+      "at": "2026-09-25T01:29:40Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:29:40Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Whitman'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:30:13Z",
+      "action": "staging_download_complete",
+      "detail": "features=34998 sha256=af8324d7b1fd380aa9efe5b2fa870ce9af7434b5908c7610e86d4670124c4fa9 bytes=28992998 pages=9 file=/workspace/parcel-staging/scratch/whitman-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Whitman'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:30:13Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/whitman-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:30:13Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/whitman-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:30:15Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=34997 shards=162 max_shard_bytes=3598483 index_sha256=ec9280dfdce25f885d3595293c56a41b31830f7ba81673fe830fcd38e524936e dir=/workspace/parcel-staging/scratch/whitman-wa/normalized sum_counts=34997 pct_delta_vs_metrics=0.003% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Whitman County (whitman-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

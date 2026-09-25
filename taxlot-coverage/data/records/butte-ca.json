@@ -1,0 +1,121 @@
+{
+  "id": "butte-ca",
+  "state": "CA",
+  "county": "Butte",
+  "portfolio_sites": 558,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gisportal.buttecounty.net/arcgis/rest/services/Parcels/FeatureServer/0",
+  "source_layer": "Butte County Parcels FeatureServer/0 Base_Parcels",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gisportal.buttecounty.net/arcgis/rest/services/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Butte County Base_Parcels FeatureServer. Owner/mailing/situs/value/exemption fields stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Butte County Base_Parcels FeatureServer. Owner/mailing/situs/value/exemption fields stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "reviewed_at": "2026-09-24T21:22:12Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "APN_BLDG_F",
+      "ParentAPN",
+      "ALT_ID",
+      "Jurisdictn",
+      "Zone",
+      "GP",
+      "SupDist",
+      "Updated",
+      "Lt_Acre",
+      "Lt_SqFt",
+      "TaxCode",
+      "Ag_Pres",
+      "Tim_Pre",
+      "Use_Code",
+      "GlobalID"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/butte-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/butte-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/butte-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/butte-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 96236,
+    "content_hash": "539b249242e9925f463df5d4a3af38d7c52eac8e1120261da4eac38d7c20888a",
+    "shard_manifest_sha256": "46f43b8d5b67d4ad106ed3d959d786b321c8ad4699d420ab569e580516a93827",
+    "shard_count": 127
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Butte, CA \u2192 558 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:22:12Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://gisportal.buttecounty.net/arcgis/rest/services/Parcels/FeatureServer/0 layer=Butte County Parcels FeatureServer/0 Base_Parcels join=APN"
+    },
+    {
+      "at": "2026-09-24T21:22:12Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:22:12Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gisportal.buttecounty.net/arcgis/rest/services/Parcels/FeatureServer/0; where='1=1'; outFields=OBJECTID,APN,APN_BLDG_F,ParentAPN,ALT_ID,Jurisdictn,Zone,GP,SupDist,Updated,Lt_Acre,Lt_SqFt,TaxCode,Ag_Pres,Tim_Pre,Use_Code,GlobalID; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:23:44Z",
+      "action": "staging_download_complete",
+      "detail": "features=96236 sha256=95217eb7a03e4815f90c8101dd3f7a6745c683812a485d89f004df25a0fd4b93 bytes=109415980 pages=49 file=/workspace/parcel-staging/scratch/butte-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:23:44Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/butte-ca/raw.ndjson; keep=OBJECTID,APN,APN_BLDG_F,ParentAPN,ALT_ID,Jurisdictn,Zone,GP,SupDist,Updated,Lt_Acre,Lt_SqFt,TaxCode,Ag_Pres,Tim_Pre,Use_Code,GlobalID; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:23:45Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/butte-ca/raw.ndjson; keep=OBJECTID,APN,APN_BLDG_F,ParentAPN,ALT_ID,Jurisdictn,Zone,GP,SupDist,Updated,Lt_Acre,Lt_SqFt,TaxCode,Ag_Pres,Tim_Pre,Use_Code,GlobalID; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:23:55Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=96236 shards=127 max_shard_bytes=3644354 index_sha256=539b249242e9925f463df5d4a3af38d7c52eac8e1120261da4eac38d7c20888a dir=/workspace/parcel-staging/scratch/butte-ca/normalized sum_counts=96236 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: Butte CA Base_Parcels; stripped Owner/Own2/Care_Of/mailing/situs/Land_Vl/Impr_Vl/Hmewnr_Exe. No AWS/CDN/Grant B."
+}

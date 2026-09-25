@@ -1,0 +1,121 @@
+{
+  "id": "siskiyou-ca",
+  "state": "CA",
+  "county": "Siskiyou",
+  "portfolio_sites": 101,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services3.arcgis.com/JmPiYilyU1x5zuxM/arcgis/rest/services/Siskiyou_Parcels_Public/FeatureServer/0",
+  "source_layer": "Siskiyou_Parcels_Public FeatureServer/0",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services3.arcgis.com/JmPiYilyU1x5zuxM/arcgis/rest/services/Siskiyou_Parcels_Public/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Siskiyou County public parcels FeatureServer. No owner/mailing/value on layer. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:05:53Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "Asmt",
+      "APN",
+      "FeeParcel",
+      "TRA",
+      "Zoning1",
+      "LandUse1",
+      "NeighborhoodCode",
+      "Acres",
+      "Section",
+      "Township",
+      "Range",
+      "RollYear",
+      "TimberPreserve",
+      "AgPreserve",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/siskiyou-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/siskiyou-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/siskiyou-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/siskiyou-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 53720,
+    "content_hash": "ef03a10f1e3ca5b89c6662d5f88c50723d8f24b7e5d953014cfba3a7295d2b3e",
+    "shard_manifest_sha256": "d623fed3422034cf3b21f21ec4248cf8f594fadcff46202dcd36af975c53e26c",
+    "shard_count": 347
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Siskiyou, CA \u2192 101 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:05:53Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://services3.arcgis.com/JmPiYilyU1x5zuxM/arcgis/rest/services/Siskiyou_Parcels_Public/FeatureServer/0 layer=Siskiyou_Parcels_Public FeatureServer/0 join=APN"
+    },
+    {
+      "at": "2026-09-25T00:05:53Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:05:53Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services3.arcgis.com/JmPiYilyU1x5zuxM/arcgis/rest/services/Siskiyou_Parcels_Public/FeatureServer/0; where='1=1'; outFields=OBJECTID,Asmt,APN,FeeParcel,TRA,Zoning1,LandUse1,NeighborhoodCode,Acres,Section,Township,Range,RollYear,TimberPreserve,AgPreserve,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:06:21Z",
+      "action": "staging_download_complete",
+      "detail": "features=53720 sha256=b87c65d7783053898d7d706d04d5d1da46288a8987e8c3a5c4b07eb106d7383c bytes=45072974 pages=27 file=/workspace/parcel-staging/scratch/siskiyou-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:06:21Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/siskiyou-ca/raw.ndjson; keep=OBJECTID,Asmt,APN,FeeParcel,TRA,Zoning1,LandUse1,NeighborhoodCode,Acres,Section,Township,Range,RollYear,TimberPreserve,AgPreserve,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:06:22Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/siskiyou-ca/raw.ndjson; keep=OBJECTID,Asmt,APN,FeeParcel,TRA,Zoning1,LandUse1,NeighborhoodCode,Acres,Section,Township,Range,RollYear,TimberPreserve,AgPreserve,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:06:25Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=53720 shards=347 max_shard_bytes=2622922 index_sha256=ef03a10f1e3ca5b89c6662d5f88c50723d8f24b7e5d953014cfba3a7295d2b3e dir=/workspace/parcel-staging/scratch/siskiyou-ca/normalized sum_counts=53720 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Siskiyou CA public parcels AGOL. No AWS/CDN/Grant B."
+}

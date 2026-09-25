@@ -1,0 +1,117 @@
+{
+  "id": "sutter-ca",
+  "state": "CA",
+  "county": "Sutter",
+  "portfolio_sites": 107,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.suttercounty.org/server/rest/services/Aumentum/Aumentum_Public_Portal/MapServer/4",
+  "source_layer": "Sutter Aumentum_Public_Portal MapServer/4 Tax Parcels",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gis.suttercounty.org/server/rest/services/Aumentum/Aumentum_Public_Portal/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Sutter County Aumentum public Tax Parcels MapServer. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:04:38Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "BOOK",
+      "PAGE",
+      "PARCEL",
+      "APN",
+      "PIN",
+      "PIN_FORMATTED",
+      "DOCUMENT",
+      "ACRES",
+      "CITY",
+      "URL",
+      "MAP_PAGE",
+      "GlobalID"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/sutter-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/sutter-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/sutter-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/sutter-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 36162,
+    "content_hash": "8fa8d9b1a1e271272730e4137ff644463ebd15933478654b3bcbdbb1cf7a3667",
+    "shard_manifest_sha256": "3db4bf4dfd5ecc7183676e1c7c8fbb48b186565a9ec9fe672ac00c794f0c5967",
+    "shard_count": 51
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Sutter, CA \u2192 107 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:04:38Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.suttercounty.org/server/rest/services/Aumentum/Aumentum_Public_Portal/MapServer/4 layer=Sutter Aumentum_Public_Portal MapServer/4 Tax Parcels join=APN"
+    },
+    {
+      "at": "2026-09-25T00:04:38Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:04:38Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.suttercounty.org/server/rest/services/Aumentum/Aumentum_Public_Portal/MapServer/4; where='1=1'; outFields=OBJECTID,BOOK,PAGE,PARCEL,APN,PIN,PIN_FORMATTED,DOCUMENT,ACRES,CITY,URL,MAP_PAGE,GlobalID; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:05:14Z",
+      "action": "staging_download_complete",
+      "detail": "features=36162 sha256=eabf72e5057891eb1df00001dd2c96480ae5707ef4bb47e9fd4b54f39b1222fc bytes=27872722 pages=37 file=/workspace/parcel-staging/scratch/sutter-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:05:14Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/sutter-ca/raw.ndjson; keep=OBJECTID,BOOK,PAGE,PARCEL,APN,PIN,PIN_FORMATTED,DOCUMENT,ACRES,CITY,URL,MAP_PAGE,GlobalID; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:05:14Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/sutter-ca/raw.ndjson; keep=OBJECTID,BOOK,PAGE,PARCEL,APN,PIN,PIN_FORMATTED,DOCUMENT,ACRES,CITY,URL,MAP_PAGE,GlobalID; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:05:16Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=36162 shards=51 max_shard_bytes=3666167 index_sha256=8fa8d9b1a1e271272730e4137ff644463ebd15933478654b3bcbdbb1cf7a3667 dir=/workspace/parcel-staging/scratch/sutter-ca/normalized sum_counts=36162 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Sutter CA Tax Parcels (MapServer/4). No owner/mailing/value on layer. No AWS/CDN/Grant B."
+}

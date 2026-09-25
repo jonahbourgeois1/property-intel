@@ -1,0 +1,121 @@
+{
+  "id": "san-miguel-co",
+  "state": "CO",
+  "county": "San Miguel",
+  "portfolio_sites": 996,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='San Miguel'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Colorado Public Parcel Composite (statewide). Owner/situs/value fields stripped from outFields. No clear written grant for CDN redistribution or commercial product use; class unknown.",
+    "terms_notes": "Colorado Public Parcel Composite (statewide). Owner/situs/value fields stripped from outFields. No clear written grant for CDN redistribution or commercial product use; class unknown.",
+    "reviewed_at": "2026-09-24T21:21:29Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "parcel_id",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "countyName",
+      "countyFips",
+      "parcel_id",
+      "account",
+      "landSqft",
+      "landAcres",
+      "block",
+      "lot",
+      "subCode",
+      "subName",
+      "zoningCode",
+      "zoningDesc",
+      "landUseCde",
+      "landUseDsc",
+      "URL",
+      "dateReceived"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/san-miguel-co",
+    "raw_file": "/workspace/parcel-staging/scratch/san-miguel-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/san-miguel-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/san-miguel-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 10732,
+    "content_hash": "43bee9828eca0c7e0de0329ad7423f4c8780beb67736d91bd2df30fc1f59e690",
+    "shard_manifest_sha256": "d61a326d2ff4942dc975f33cea679a7477498f4256b0a4d705048240dc706985",
+    "shard_count": 72
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: San Miguel, CO \u2192 996 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:21:29Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0 layer=Colorado_Public_Parcels FeatureServer/0 where countyName='San Miguel' join=parcel_id"
+    },
+    {
+      "at": "2026-09-24T21:21:29Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:21:29Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0; where=\"countyName='San Miguel'\"; outFields=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:21:50Z",
+      "action": "staging_download_complete",
+      "detail": "features=10732 sha256=5cd26a15fecf2913358484ee4d0691c01311335f6766d2c726371627ac6c2347 bytes=18464376 pages=6 file=/workspace/parcel-staging/scratch/san-miguel-co/raw.ndjson format=ndjson where=\"countyName='San Miguel'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:21:51Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/san-miguel-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:21:51Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/san-miguel-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:21:52Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=10732 shards=72 max_shard_bytes=3776436 index_sha256=43bee9828eca0c7e0de0329ad7423f4c8780beb67736d91bd2df30fc1f59e690 dir=/workspace/parcel-staging/scratch/san-miguel-co/normalized sum_counts=10732 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: CO statewide public parcel fabric filtered to San Miguel County. No AWS/CDN/Grant B."
+}

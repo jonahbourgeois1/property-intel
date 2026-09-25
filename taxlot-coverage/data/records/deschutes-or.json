@@ -1,0 +1,130 @@
+{
+  "id": "deschutes-or",
+  "state": "OR",
+  "county": "Deschutes",
+  "portfolio_sites": 1862,
+  "status": "blocked-license",
+  "source_last_updated": "2026-09-24",
+  "source_url": "https://services1.arcgis.com/znO8Hz1SuVVohYhZ/arcgis/rest/services/Taxlots/FeatureServer/0",
+  "source_layer": "Taxlot (FeatureServer/0); Hub item deschutes::taxlot-1 / Taxlots FeatureServer",
+  "source_format": "ArcGIS FeatureServer (GeoJSON/JSON query); also Hub shapefile/KML/CSV downloads via data.deschutes.org",
+  "license_url": "https://www.deschutescounty.gov/1103/GIS-Data",
+  "policy": {
+    "class": "internal-only",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County GIS FAQ (indexed wording; live FAQ URL currently 404) states GIS data is licensed for the exclusive use of the user\u2019s company or agency and that no redistribution of digital data is allowed, with details in a formal licensing agreement. Portal metadata says \u201cfree to download and use,\u201d but that does not override an exclusive-use / no-redistribution rule. Public CDN re-host and selling derived products are NOT cleared without a written Deschutes agreement that explicitly allows them.",
+    "terms_notes": "Cited FAQ answer: exclusive company/agency use; no digital redistribution. GIS Data page: free via data.deschutes.org, updated weekly. Hub Taxlot item license marked custom/none. Confirm with Deschutes GIS before any Grant B republish or commercial product use.",
+    "reviewed_at": "2026-09-24T18:29:32Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Customer-visible lot outline = display of digital taxlot geometry. FAQ: exclusive company use + no digital redistribution. Not cleared for viewer outline without written Deschutes agreement."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/PIP without drawing the line is closer to internal processing, but FAQ exclusive-use / no-redistribution and commercial product context mean NOT cleared until GIS confirms clip-only use in writing. Do not assume yes."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TAXLOT",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "TAXLOT",
+      "TOWNSHIP",
+      "RANGE",
+      "SECTION",
+      "QUARTER",
+      "SIXTEENTH",
+      "PARCEL",
+      "MAPSUP",
+      "MAPNUMBER",
+      "DIAL"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/deschutes-or",
+    "raw_file": "/workspace/parcel-staging/scratch/deschutes-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/deschutes-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/deschutes-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 109504,
+    "content_hash": "2284f52993544b9fad56b3e1c2f06a750c73b7e23500e941cfbd91ce017c00dd",
+    "shard_manifest_sha256": "399a25bbc13ab4cc91186b7fb1d389008e9f2e4cee2302a1aed541c0e115ba1d",
+    "shard_count": 207
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/deschutes/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/deschutes/"
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "notes": "Wave 0: source live. Already in Segment 2 counties.json; CDN publish conflicts with no-redistribution FAQ \u2014 escalate to Jonah before refresh publish.",
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "source_identified",
+      "detail": "counties.json + Hub: https://services1.arcgis.com/znO8Hz1SuVVohYhZ/arcgis/rest/services/Taxlots/FeatureServer/0 (Taxlot). Portal https://data.deschutes.org/datasets/deschutes::taxlot-1. County page https://www.deschutescounty.gov/1103/GIS-Data (weekly updates)."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "metadata_probe",
+      "detail": "GET FeatureServer?f=pjson; query returnCountOnly \u2192 109504. editingInfo.dataLastEditDate 1790243053783 \u2192 2026-09-24T09:44:13Z."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "retrieval_recipe",
+      "detail": "Paginate FeatureServer/0/query where=1=1 outFields=OBJECTID,TAXLOT,... (no owner fields on this layer) returnGeometry=true outSR=4326 f=geojson; resultOffset/resultRecordCount until exhausted. Or Hub download shapefile/GeoJSON from data.deschutes.org Taxlot item. Do not publish until license reclassified."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "policy_review",
+      "detail": "Classified internal-only from FAQ exclusive-use / no-redistribution language (search index; live FAQ 404). derive_and_sell=false. Status blocked-license."
+    },
+    {
+      "at": "2026-09-24T19:37:38Z",
+      "action": "use_cases_framed",
+      "detail": "Split product rights into viewer_outline (customer-visible lot line) and workflow_clip (server-side clip/PIP). Both remain allowed=false pending written clearance."
+    },
+    {
+      "at": "2026-09-24T19:53:54Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services1.arcgis.com/znO8Hz1SuVVohYhZ/arcgis/rest/services/Taxlots/FeatureServer/0; outFields=OBJECTID,TAXLOT,TOWNSHIP,RANGE,SECTION,QUARTER,SIXTEENTH,PARCEL,MAPSUP,MAPNUMBER,DIAL; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:53:58Z",
+      "action": "staging_download_complete",
+      "detail": "features=2000 sha256=78a3620d5360aa920c105973b79d9146c070e3f740be03245529c43e575b1023 bytes=3755073 pages=1 file=/workspace/parcel-staging/scratch/deschutes-or/raw.ndjson format=ndjson status remains blocked-license (research staging OK; publish/CDN still blocked). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T19:55:49Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services1.arcgis.com/znO8Hz1SuVVohYhZ/arcgis/rest/services/Taxlots/FeatureServer/0; outFields=OBJECTID,TAXLOT,TOWNSHIP,RANGE,SECTION,QUARTER,SIXTEENTH,PARCEL,MAPSUP,MAPNUMBER,DIAL; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:57:15Z",
+      "action": "staging_download_complete",
+      "detail": "features=109504 sha256=d3c1f87b13fb443c239d330e4953cd504bd2413dae56205cbfc78fff2716f072 bytes=148181865 pages=55 file=/workspace/parcel-staging/scratch/deschutes-or/raw.ndjson format=ndjson status remains blocked-license (research staging OK; publish/CDN still blocked). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:10:35Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/deschutes-or/raw.ndjson; keep=OBJECTID,TAXLOT,TOWNSHIP,RANGE,SECTION,QUARTER,SIXTEENTH,PARCEL,MAPSUP,MAPNUMBER,DIAL; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:10:51Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=109504 shards=207 max_shard_bytes=3894142 index_sha256=2284f52993544b9fad56b3e1c2f06a750c73b7e23500e941cfbd91ce017c00dd dir=/workspace/parcel-staging/scratch/deschutes-or/normalized sum_counts=109504 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status remains blocked-license (normalized artifacts written; publish/CDN still blocked). Research-only; no AWS/CDN."
+    }
+  ]
+}

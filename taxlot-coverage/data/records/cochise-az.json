@@ -1,0 +1,111 @@
+{
+  "id": "cochise-az",
+  "state": "AZ",
+  "county": "Cochise",
+  "portfolio_sites": 11,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services6.arcgis.com/Yxem0VOcqSy8T6TE/arcgis/rest/services/Cad_Parcel_Geometry/FeatureServer/0",
+  "source_layer": "Cochise Cad_Parcel_Geometry FeatureServer/0 (lean APN geometry)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gis-cochise.opendata.arcgis.com/",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Cochise County official Cad_Parcel_Geometry (open data). Lean geometry+APN; no owner/value on this layer. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:49:35Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "apn",
+    "feature_id_field": "objectid",
+    "keep_properties": [
+      "objectid",
+      "apn",
+      "reference",
+      "globalid",
+      "tax_area_code",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/cochise-az",
+    "raw_file": "/workspace/parcel-staging/scratch/cochise-az/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/cochise-az/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/cochise-az/normalized"
+  },
+  "metrics": {
+    "feature_count": 124879,
+    "content_hash": "80a3e53f8e367e87fce9244618460f29b4abd7d755afa36eff0a071ec9382ad5",
+    "shard_manifest_sha256": "51a2ff5e8d1644d01951fcc60959e4cc1ce9ece9cd2406d8abf0388d6bfaac9e",
+    "shard_count": 277
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Cochise, AZ \u2192 11 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:49:35Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://services6.arcgis.com/Yxem0VOcqSy8T6TE/arcgis/rest/services/Cad_Parcel_Geometry/FeatureServer/0 layer=Cochise Cad_Parcel_Geometry FeatureServer/0 (lean APN geometry) join=apn"
+    },
+    {
+      "at": "2026-09-25T01:49:35Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:49:35Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services6.arcgis.com/Yxem0VOcqSy8T6TE/arcgis/rest/services/Cad_Parcel_Geometry/FeatureServer/0; where='1=1'; outFields=objectid,apn,reference,globalid,tax_area_code,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:51:23Z",
+      "action": "staging_download_complete",
+      "detail": "features=124879 sha256=a954814a73ae8fecfe9f41d7a05a1c2afe177cab2b6428be0d280b0dc79bee2e bytes=81764412 pages=125 file=/workspace/parcel-staging/scratch/cochise-az/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:51:23Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/cochise-az/raw.ndjson; keep=objectid,apn,reference,globalid,tax_area_code,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:51:23Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/cochise-az/raw.ndjson; keep=objectid,apn,reference,globalid,tax_area_code,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:51:31Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=124879 shards=277 max_shard_bytes=3964280 index_sha256=80a3e53f8e367e87fce9244618460f29b4abd7d755afa36eff0a071ec9382ad5 dir=/workspace/parcel-staging/scratch/cochise-az/normalized sum_counts=124879 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Cochise AZ Cad_Parcel_Geometry (not TaxLien subset). Cad_Parcel_TaxInfo has owner/situs/value \u2014 not used. No AWS/CDN/Grant B."
+}

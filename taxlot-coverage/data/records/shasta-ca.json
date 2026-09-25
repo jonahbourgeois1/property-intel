@@ -1,0 +1,109 @@
+{
+  "id": "shasta-ca",
+  "state": "CA",
+  "county": "Shasta",
+  "portfolio_sites": 435,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.shastacounty.gov/arcgis/rest/services/OpenData/Parcels/FeatureServer/0",
+  "source_layer": "Shasta County OpenData/Parcels FeatureServer/0",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gis.shastacounty.gov/arcgis/rest/services/OpenData/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Shasta County open-data Parcels FeatureServer (geometry + ASMT/acres only). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-24T22:20:45Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "ASMT",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "ASMT",
+      "Area_",
+      "Acres",
+      "Shape__Area"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/shasta-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/shasta-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/shasta-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/shasta-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 97110,
+    "content_hash": "58df0128221c5d27f0933b0adf55a7a87f5a47e324aebf088400c53049a8138f",
+    "shard_manifest_sha256": "b35495db84ba8460a4aa758ad7d5805df34c085550a36cc0de2542c1a5ac1e6b",
+    "shard_count": 233
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Shasta, CA \u2192 435 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:20:45Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.shastacounty.gov/arcgis/rest/services/OpenData/Parcels/FeatureServer/0 layer=Shasta County OpenData/Parcels FeatureServer/0 join=ASMT"
+    },
+    {
+      "at": "2026-09-24T22:20:45Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:20:45Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.shastacounty.gov/arcgis/rest/services/OpenData/Parcels/FeatureServer/0; where='1=1'; outFields=OBJECTID,ASMT,Area_,Acres,Shape__Area; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:21:41Z",
+      "action": "staging_download_complete",
+      "detail": "features=97110 sha256=f0f620ecfc07f66b3ed803cd9aa1c5d06061ea1ef514de1970409aa7b9dfd7c3 bytes=80642967 pages=49 file=/workspace/parcel-staging/scratch/shasta-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:21:42Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/shasta-ca/raw.ndjson; keep=OBJECTID,ASMT,Area_,Acres,Shape__Area; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:21:42Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/shasta-ca/raw.ndjson; keep=OBJECTID,ASMT,Area_,Acres,Shape__Area; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:21:50Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=97110 shards=233 max_shard_bytes=3378167 index_sha256=58df0128221c5d27f0933b0adf55a7a87f5a47e324aebf088400c53049a8138f dir=/workspace/parcel-staging/scratch/shasta-ca/normalized sum_counts=97110 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Shasta CA OpenData Parcels (no owner/mailing on layer). No AWS/CDN/Grant B."
+}

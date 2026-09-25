@@ -1,0 +1,108 @@
+{
+  "id": "coos-or",
+  "state": "OR",
+  "county": "Coos",
+  "portfolio_sites": 6,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services.arcgis.com/or6I5QjRIBzpPc8G/arcgis/rest/services/GIS_Online_March_2026/FeatureServer/4",
+  "source_layer": "GIS_Online_March_2026 / March_2026_Parcels",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON)",
+  "license_url": "https://services.arcgis.com/or6I5QjRIBzpPc8G/arcgis/rest/services/GIS_Online_March_2026/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:47:55Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TLID",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "TLID",
+      "Map_No",
+      "Parcel_No",
+      "TXID",
+      "TXCD",
+      "PCLCD",
+      "ACRES",
+      "PLAN_ZONE"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/coos-or",
+    "raw_file": "/workspace/parcel-staging/scratch/coos-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/coos-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/coos-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 42410,
+    "content_hash": "47b6bbbfb781123aede91b84394b7eadade0a8464f2e0d60895e13ac4d9cc801",
+    "shard_manifest_sha256": "ee28cca36bbe250577bd4d4c0ff8679411ac84ea70284127073b9b91b411d026",
+    "shard_count": 130
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Coos, OR \u2192 6 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:47:55Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services.arcgis.com/or6I5QjRIBzpPc8G/arcgis/rest/services/GIS_Online_March_2026/FeatureServer/4 layer=GIS_Online_March_2026 / March_2026_Parcels join=TLID"
+    },
+    {
+      "at": "2026-09-24T20:47:55Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:47:55Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services.arcgis.com/or6I5QjRIBzpPc8G/arcgis/rest/services/GIS_Online_March_2026/FeatureServer/4; where='1=1'; outFields=OBJECTID,TLID,Map_No,Parcel_No,TXID,TXCD,PCLCD,ACRES,PLAN_ZONE; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:49:42Z",
+      "action": "staging_download_complete",
+      "detail": "features=42412 sha256=5b39a403aa46a4e446e09254f70c26abb45d487697ad021bebe83e72e590ce9b bytes=220882159 pages=22 file=/workspace/parcel-staging/scratch/coos-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:58:12Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/coos-or/raw.ndjson; keep=OBJECTID,TLID,Map_No,Parcel_No,TXID,TXCD,PCLCD,ACRES,PLAN_ZONE; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:58:33Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=42410 shards=130 max_shard_bytes=3835506 index_sha256=47b6bbbfb781123aede91b84394b7eadade0a8464f2e0d60895e13ac4d9cc801 dir=/workspace/parcel-staging/scratch/coos-or/normalized sum_counts=42410 pct_delta_vs_metrics=0.005% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+}

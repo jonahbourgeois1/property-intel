@@ -1,0 +1,106 @@
+{
+  "id": "umatilla-or",
+  "state": "OR",
+  "county": "Umatilla",
+  "portfolio_sites": 1,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services3.arcgis.com/pi8Rll0S1Iwgkq8o/arcgis/rest/services/Tax_Lot_04_30_2024/FeatureServer/4",
+  "source_layer": "Pendleton Tax_Lot_04_30_2024 FeatureServer/4 (best available; may be city-centric)",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON)",
+  "license_url": "https://services3.arcgis.com/pi8Rll0S1Iwgkq8o/arcgis/rest/services/Tax_Lot_04_30_2024/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:50:35Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TLID",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "TLID",
+      "MapClass",
+      "account_id",
+      "map_tax",
+      "MAP",
+      "Taxlot"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/umatilla-or",
+    "raw_file": "/workspace/parcel-staging/scratch/umatilla-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/umatilla-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/umatilla-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 44217,
+    "content_hash": "798c7c2fd7309e34eee77ce858c0312aa6eefd735e4e6aa934ad7f6e042449b9",
+    "shard_manifest_sha256": "d25497ba2ed0861a989bbf6a83a3e4113de270d24bb10e6fd18652b92770b627",
+    "shard_count": 195
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Umatilla, OR \u2192 1 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:50:35Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services3.arcgis.com/pi8Rll0S1Iwgkq8o/arcgis/rest/services/Tax_Lot_04_30_2024/FeatureServer/4 layer=Pendleton Tax_Lot_04_30_2024 FeatureServer/4 (best available; may be city-centric) join=TLID"
+    },
+    {
+      "at": "2026-09-24T20:50:35Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:50:35Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services3.arcgis.com/pi8Rll0S1Iwgkq8o/arcgis/rest/services/Tax_Lot_04_30_2024/FeatureServer/4; where='1=1'; outFields=OBJECTID,TLID,MapClass,account_id,map_tax,MAP,Taxlot; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:51:13Z",
+      "action": "staging_download_complete",
+      "detail": "features=44217 sha256=8abc123a846511b9bf0610e5df3ad4506ee9145963c8485f00ebb0d0f6b42a78 bytes=38482691 pages=23 file=/workspace/parcel-staging/scratch/umatilla-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:59:16Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/umatilla-or/raw.ndjson; keep=OBJECTID,TLID,MapClass,account_id,map_tax,MAP,Taxlot; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:59:20Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=44217 shards=195 max_shard_bytes=3543080 index_sha256=798c7c2fd7309e34eee77ce858c0312aa6eefd735e4e6aa934ad7f6e042449b9 dir=/workspace/parcel-staging/scratch/umatilla-or/normalized sum_counts=44217 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. No countywide Umatilla FeatureServer found; Pendleton-published taxlot layer used as interim."
+}

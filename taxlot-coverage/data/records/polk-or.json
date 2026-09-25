@@ -1,0 +1,105 @@
+{
+  "id": "polk-or",
+  "state": "OR",
+  "county": "Polk",
+  "portfolio_sites": 30,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services6.arcgis.com/5P1A4d8638S82qKd/arcgis/rest/services/LWC_Taxlots_WFL1/FeatureServer/1",
+  "source_layer": "LWC Benton_Polk_Taxlots_Combined filtered ORTaxlot LIKE '27%' (Polk)",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON)",
+  "license_url": "https://services6.arcgis.com/5P1A4d8638S82qKd/arcgis/rest/services/LWC_Taxlots_WFL1/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:44:48Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "MapTaxlot",
+    "feature_id_field": "FID",
+    "keep_properties": [
+      "FID",
+      "MapTaxlot",
+      "ORTaxlot",
+      "MapNumber",
+      "Account_Nu",
+      "TaxCodeAre"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/polk-or",
+    "raw_file": "/workspace/parcel-staging/scratch/polk-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/polk-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/polk-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 35314,
+    "content_hash": "938e1793e3ea9d55bb9f27d73b0ae5d28d0c048ba04c2773edad3e7a4bd2725c",
+    "shard_manifest_sha256": "c2c8a4367df968d460238209980ada38e93d5f1cc37001fb85db1fabc77b296c",
+    "shard_count": 48
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Polk, OR \u2192 30 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:44:48Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services6.arcgis.com/5P1A4d8638S82qKd/arcgis/rest/services/LWC_Taxlots_WFL1/FeatureServer/1 layer=LWC Benton_Polk_Taxlots_Combined filtered ORTaxlot LIKE '27%' (Polk) join=MapTaxlot"
+    },
+    {
+      "at": "2026-09-24T20:44:48Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:44:48Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services6.arcgis.com/5P1A4d8638S82qKd/arcgis/rest/services/LWC_Taxlots_WFL1/FeatureServer/1; where=\"ORTaxlot LIKE '27%'\"; outFields=FID,MapTaxlot,ORTaxlot,MapNumber,Account_Nu,TaxCodeAre; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:45:12Z",
+      "action": "staging_download_complete",
+      "detail": "features=35314 sha256=304f5419acf153d0cb29eb71c483e6c5d5f7ab0f204df1fc0f80575787efb211 bytes=22036723 pages=18 file=/workspace/parcel-staging/scratch/polk-or/raw.ndjson format=ndjson where=\"ORTaxlot LIKE '27%'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:57:02Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/polk-or/raw.ndjson; keep=FID,MapTaxlot,ORTaxlot,MapNumber,Account_Nu,TaxCodeAre; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:57:04Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=35314 shards=48 max_shard_bytes=3752292 index_sha256=938e1793e3ea9d55bb9f27d73b0ae5d28d0c048ba04c2773edad3e7a4bd2725c dir=/workspace/parcel-staging/scratch/polk-or/normalized sum_counts=35314 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. Polk Assessor MapServer returned HTTP 500; used Luckiamute Watershed Council Benton/Polk merge filtered by ORMAP county prefix 27."
+}

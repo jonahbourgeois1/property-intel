@@ -1,0 +1,111 @@
+{
+  "id": "ventura-ca",
+  "state": "CA",
+  "county": "Ventura",
+  "portfolio_sites": 8,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services2.arcgis.com/XJ5Tb7dTYtAMoyYT/arcgis/rest/services/Parcels_Quarterly/FeatureServer/0",
+  "source_layer": "Ventura Parcels_Quarterly FeatureServer/0 (APN lean)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://venturacountydatadownloads-vcitsgis.hub.arcgis.com/",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Ventura County Parcels Quarterly/Monthly AGOL layer (lean APN geometry). maps.ventura.org MapServer returns 403; this AGOL service used instead. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:56:47Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "APN10",
+      "LAT",
+      "LON",
+      "SHAPE__Area",
+      "SHAPE__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/ventura-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/ventura-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/ventura-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/ventura-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 268078,
+    "content_hash": "0fa3ae81f6ce66f4f1e0b5435bbe3c446bcefd0fa3e061056bd011cb96959bf1",
+    "shard_manifest_sha256": "ab6d68d03d3460149304a468ac9863c5d5f554e4c7e9ab852962f2b7a643d6e6",
+    "shard_count": 143
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Ventura, CA \u2192 8 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:56:47Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://services2.arcgis.com/XJ5Tb7dTYtAMoyYT/arcgis/rest/services/Parcels_Quarterly/FeatureServer/0 layer=Ventura Parcels_Quarterly FeatureServer/0 (APN lean) join=APN"
+    },
+    {
+      "at": "2026-09-25T01:56:47Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:56:47Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services2.arcgis.com/XJ5Tb7dTYtAMoyYT/arcgis/rest/services/Parcels_Quarterly/FeatureServer/0; where='1=1'; outFields=OBJECTID,APN,APN10,LAT,LON,SHAPE__Area,SHAPE__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:59:48Z",
+      "action": "staging_download_complete",
+      "detail": "features=268078 sha256=c07c24e92bddf66969873b38bf97caa604ebecb9ccee9c477075312719511b87 bytes=181443358 pages=135 file=/workspace/parcel-staging/scratch/ventura-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:59:49Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/ventura-ca/raw.ndjson; keep=OBJECTID,APN,APN10,LAT,LON,SHAPE__Area,SHAPE__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:59:49Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/ventura-ca/raw.ndjson; keep=OBJECTID,APN,APN10,LAT,LON,SHAPE__Area,SHAPE__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:00:11Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=268078 shards=143 max_shard_bytes=3832059 index_sha256=0fa3ae81f6ce66f4f1e0b5435bbe3c446bcefd0fa3e061056bd011cb96959bf1 dir=/workspace/parcel-staging/scratch/ventura-ca/normalized sum_counts=268078 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Ventura CA Parcels_Quarterly AGOL (lean APN). Official MapServer 403. No AWS/CDN/Grant B."
+}

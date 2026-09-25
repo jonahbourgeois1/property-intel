@@ -1,0 +1,122 @@
+{
+  "id": "sacramento-ca",
+  "state": "CA",
+  "county": "Sacramento",
+  "portfolio_sites": 6,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Parcels/FeatureServer/0",
+  "source_layer": "Sacramento County Parcels FeatureServer/0 (5NARefyPVtAeuJPU)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Sacramento County official Parcels FeatureServer. STREET_*/CITY/ZIP situs stripped. Owner not on layer. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:05:44Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "LOT_SIZE",
+      "NEIBRHC",
+      "JURISDICTION",
+      "TRA",
+      "SUBDIVISIO",
+      "LOT",
+      "LANDUSE",
+      "LU_GENERAL",
+      "LU_SPECIF",
+      "LU_DETAIL",
+      "LU_USE",
+      "LU_SEC_USE",
+      "PRCL_KEY",
+      "PRCL_TYPE",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/sacramento-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/sacramento-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/sacramento-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/sacramento-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 502164,
+    "content_hash": "45a8cf6803b58bf70a554f6457a6187c74a35fc6aadcf4ed05266c84f08b119e",
+    "shard_manifest_sha256": "63a3db033a2f3934c4f82273833c8a60612f962d3430935aeb4db01ffde294c0",
+    "shard_count": 243
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Sacramento, CA \u2192 6 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T02:05:44Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Parcels/FeatureServer/0 layer=Sacramento County Parcels FeatureServer/0 (5NARefyPVtAeuJPU) join=APN"
+    },
+    {
+      "at": "2026-09-25T02:05:44Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:05:44Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Parcels/FeatureServer/0; where='1=1'; outFields=OBJECTID,APN,LOT_SIZE,NEIBRHC,JURISDICTION,TRA,SUBDIVISIO,LOT,LANDUSE,LU_GENERAL,LU_SPECIF,LU_DETAIL,LU_USE,LU_SEC_USE,PRCL_KEY,PRCL_TYPE,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:10:49Z",
+      "action": "staging_download_complete",
+      "detail": "features=502165 sha256=418d2906819775c8e4869c2d80478482c7e47af86aa0dff6119b3008032aa093 bytes=418812157 pages=252 file=/workspace/parcel-staging/scratch/sacramento-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:10:49Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/sacramento-ca/raw.ndjson; keep=OBJECTID,APN,LOT_SIZE,NEIBRHC,JURISDICTION,TRA,SUBDIVISIO,LOT,LANDUSE,LU_GENERAL,LU_SPECIF,LU_DETAIL,LU_USE,LU_SEC_USE,PRCL_KEY,PRCL_TYPE,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:10:50Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/sacramento-ca/raw.ndjson; keep=OBJECTID,APN,LOT_SIZE,NEIBRHC,JURISDICTION,TRA,SUBDIVISIO,LOT,LANDUSE,LU_GENERAL,LU_SPECIF,LU_DETAIL,LU_USE,LU_SEC_USE,PRCL_KEY,PRCL_TYPE,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:11:35Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=502164 shards=243 max_shard_bytes=3970915 index_sha256=45a8cf6803b58bf70a554f6457a6187c74a35fc6aadcf4ed05266c84f08b119e dir=/workspace/parcel-staging/scratch/sacramento-ca/normalized sum_counts=502164 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Sacramento CA Parcels AGOL; situs STREET_NBR/STREET_NAM/CITY/ZIP stripped. No AWS/CDN/Grant B."
+}

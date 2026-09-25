@@ -1,0 +1,70 @@
+{
+  "id": "grant-nm",
+  "state": "NM",
+  "county": "Grant",
+  "portfolio_sites": 1,
+  "status": "deferred-tail",
+  "source_last_updated": null,
+  "source_url": null,
+  "source_layer": null,
+  "source_format": null,
+  "license_url": null,
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "",
+    "terms_notes": "",
+    "reviewed_at": null,
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": null,
+    "feature_id_field": null,
+    "keep_properties": [],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/grant-nm",
+    "raw_file": null,
+    "normalized_file": null,
+    "inspect_report": null
+  },
+  "metrics": {
+    "feature_count": null,
+    "content_hash": null
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Grant, NM \u2192 1 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    }
+  ],
+  "notes": "Portfolio seed from Distinct Addresses roll (1 sites). Status sourcing \u2014 identify taxlot/parcel GIS source next. Wave 2 hygiene: deferred-tail (\u22645 portfolio sites; pending statewide fabric / Wave 4)."
+}

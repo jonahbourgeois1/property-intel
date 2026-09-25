@@ -1,0 +1,105 @@
+{
+  "id": "crook-or",
+  "state": "OR",
+  "county": "Crook",
+  "portfolio_sites": 84,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.crookcountyor.gov/server/rest/services/OpenData/TaxlotandTables/MapServer/0",
+  "source_layer": "OpenData/TaxlotandTables MapServer/0 Taxlots",
+  "source_format": "ArcGIS MapServer query (GeoJSON)",
+  "license_url": "https://gis.crookcountyor.gov/server/rest/services/OpenData/TaxlotandTables/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:36:49Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "MapTaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "MapNumber",
+      "MapTaxlot",
+      "ORTaxlot",
+      "TaxlotAcre",
+      "REFLink"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/crook-or",
+    "raw_file": "/workspace/parcel-staging/scratch/crook-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/crook-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/crook-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 17596,
+    "content_hash": "ac8a66739f727be54da7b5f437fa9b90193491b18a389e5085f0ef07f0b1f80f",
+    "shard_manifest_sha256": "c94ae8ca4b0f4e2bb56de0adadd27de0160ce1e69d5b61c2824dcfb520bf6e33",
+    "shard_count": 175
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Crook, OR \u2192 84 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:36:49Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.crookcountyor.gov/server/rest/services/OpenData/TaxlotandTables/MapServer/0 layer=OpenData/TaxlotandTables MapServer/0 Taxlots join=MapTaxlot"
+    },
+    {
+      "at": "2026-09-24T20:36:49Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:36:49Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.crookcountyor.gov/server/rest/services/OpenData/TaxlotandTables/MapServer/0; where='1=1'; outFields=OBJECTID,MapNumber,MapTaxlot,ORTaxlot,TaxlotAcre,REFLink; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:37:02Z",
+      "action": "staging_download_complete",
+      "detail": "features=17596 sha256=8bf02d69c308dd9d81908f3e6ac5e164b073f16be5714f92e29d1f22466f3087 bytes=27462082 pages=9 file=/workspace/parcel-staging/scratch/crook-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:56:35Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/crook-or/raw.ndjson; keep=OBJECTID,MapNumber,MapTaxlot,ORTaxlot,TaxlotAcre,REFLink; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:56:37Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=17596 shards=175 max_shard_bytes=3008846 index_sha256=ac8a66739f727be54da7b5f437fa9b90193491b18a389e5085f0ef07f0b1f80f dir=/workspace/parcel-staging/scratch/crook-or/normalized sum_counts=17596 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+}

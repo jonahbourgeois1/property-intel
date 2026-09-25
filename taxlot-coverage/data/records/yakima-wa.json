@@ -1,0 +1,113 @@
+{
+  "id": "yakima-wa",
+  "state": "WA",
+  "county": "Yakima",
+  "portfolio_sites": 7,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Yakima'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:00:37Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/yakima-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/yakima-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/yakima-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/yakima-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 105495,
+    "content_hash": "913bc08bd0dbe7e851990f2a0b70093dc1cf74ab3f1f9664b5d2d7d07fe95c0c",
+    "shard_manifest_sha256": "8e4029505265f21328ebcdce1796d7106b4c1b17b8c361869dfd587b3a065a2e",
+    "shard_count": 296
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Yakima, WA \u2192 7 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T02:00:37Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Yakima' join=PARCEL_ID_NR where=\"COUNTY_NM='Yakima'\""
+    },
+    {
+      "at": "2026-09-25T02:00:37Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:00:37Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Yakima'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:02:19Z",
+      "action": "staging_download_complete",
+      "detail": "features=105496 sha256=d63c22ef8e8d093929532995afaee1bd5ff5a9c9dc8e9070509f46d55d052c1e bytes=102050975 pages=27 file=/workspace/parcel-staging/scratch/yakima-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Yakima'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:02:19Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/yakima-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:02:19Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/yakima-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:02:28Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=105495 shards=296 max_shard_bytes=3839086 index_sha256=913bc08bd0dbe7e851990f2a0b70093dc1cf74ab3f1f9664b5d2d7d07fe95c0c dir=/workspace/parcel-staging/scratch/yakima-wa/normalized sum_counts=105495 pct_delta_vs_metrics=0.001% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Yakima County (yakima-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

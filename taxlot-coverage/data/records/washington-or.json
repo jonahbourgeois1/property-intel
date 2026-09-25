@@ -1,0 +1,110 @@
+{
+  "id": "washington-or",
+  "state": "OR",
+  "county": "Washington",
+  "portfolio_sites": 68,
+  "status": "inspected",
+  "source_last_updated": "2026-02-06",
+  "source_url": "https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3",
+  "source_layer": "Metro RLIS Taxlots (Public) FeatureServer/3 where COUNTY='W' (Washington)",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); metro fabric county subset",
+  "license_url": "https://rlisdiscovery.oregonmetro.gov/datasets/9d3c396ffad44649bc7451465aa300f0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Metro RLIS Taxlots (Public) \u2014 ownership excluded. Redistribution/commercial product use not clearly granted in writing for Vyanet CDN/viewer. Class unknown.",
+    "terms_notes": "Metro RLIS Taxlots (Public) \u2014 ownership excluded. Redistribution/commercial product use not clearly granted in writing for Vyanet CDN/viewer. Class unknown.",
+    "reviewed_at": "2026-09-24T20:37:14Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TLID",
+    "feature_id_field": "FID",
+    "keep_properties": [
+      "FID",
+      "TLID",
+      "COUNTY",
+      "ORTAXLOT",
+      "TAXCODE",
+      "PROP_CODE",
+      "LANDUSE",
+      "STATECLASS",
+      "GIS_ACRES",
+      "A_T_ACRES",
+      "JURIS_CITY"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/washington-or",
+    "raw_file": "/workspace/parcel-staging/scratch/washington-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/washington-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/washington-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 200116,
+    "content_hash": "af62ffe0c41567f3a691389506e23ca1a8235aa95e85121a336a8e17d2aa1774",
+    "shard_manifest_sha256": "1d4ed69ab72066b7a2238449a71c88795138b824966ba6cb110e5ad1f8761438",
+    "shard_count": 122
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Washington, OR \u2192 68 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:37:14Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3 layer=Metro RLIS Taxlots (Public) FeatureServer/3 where COUNTY='W' (Washington) join=TLID"
+    },
+    {
+      "at": "2026-09-24T20:37:14Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:37:14Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3; where=\"COUNTY='W'\"; outFields=FID,TLID,COUNTY,ORTAXLOT,TAXCODE,PROP_CODE,LANDUSE,STATECLASS,GIS_ACRES,A_T_ACRES,JURIS_CITY; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:45:53Z",
+      "action": "staging_download_complete",
+      "detail": "features=200117 sha256=80bd5c0ed4370c7ba42b6f40ce495d191902a5c793d4777de821104402dfed77 bytes=165433491 pages=101 file=/workspace/parcel-staging/scratch/washington-or/raw.ndjson format=ndjson where=\"COUNTY='W'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:57:04Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/washington-or/raw.ndjson; keep=FID,TLID,COUNTY,ORTAXLOT,TAXCODE,PROP_CODE,LANDUSE,STATECLASS,GIS_ACRES,A_T_ACRES,JURIS_CITY; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:57:25Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=200116 shards=122 max_shard_bytes=3862279 index_sha256=af62ffe0c41567f3a691389506e23ca1a8235aa95e85121a336a8e17d2aa1774 dir=/workspace/parcel-staging/scratch/washington-or/normalized sum_counts=200116 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: Metro RLIS used as county source for Washington only (not statewide fabric). No AWS/CDN/Grant B."
+}

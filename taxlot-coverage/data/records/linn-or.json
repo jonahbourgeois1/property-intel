@@ -1,0 +1,124 @@
+{
+  "id": "linn-or",
+  "state": "OR",
+  "county": "Linn",
+  "portfolio_sites": 608,
+  "status": "inspected",
+  "source_last_updated": "2026-09-18",
+  "source_url": "https://gis.co.linn.or.us/arcgis/rest/services/AssessmentTax/pub_taxlots_web/MapServer/0",
+  "source_layer": "AssessmentTax/pub_taxlots_web MapServer layer 0 (Tax Lots)",
+  "source_format": "ArcGIS MapServer query; county download site marks Tax Lot shapefile as licensed (not free open download)",
+  "license_url": "https://apps.co.linn.or.us/webmap/data.asp",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Linn\u2019s public web MapServer serves taxlot polygons without owner/address/value fields (good for privacy). The county download page states Tax Lot data is licensed and directs users to GIS (sbarnett@co.linn.or.us) for license info. No published text found granting public redistribution or commercial derive-and-sell. Do not promote to AWS/CDN or sell derived products until Linn GIS confirms license class in writing.",
+    "terms_notes": "Download page quote: \u201cTax Lot, Aerial Photography and Address point data is licensed.\u201d Public MapServer copyright: Linn County Assessors Office.",
+    "reviewed_at": "2026-09-24T18:29:32Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Download page: taxlot data is licensed. No grant to draw lot lines for customers in a commercial map."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Licensed data \u2014 confirm with Linn GIS (sbarnett@co.linn.or.us) whether server-side clip/PIP for a commercial monitoring product is allowed without customer-visible outlines."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PIN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PIN",
+      "ACTNUM",
+      "TXID",
+      "TaxlotAcre"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/linn-or",
+    "raw_file": "/workspace/parcel-staging/scratch/linn-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/linn-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/linn-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 54598,
+    "content_hash": "6dfd71f3cf1aac5f9d0efad0663e6db4d15c81c2522e0049122138a9342286aa",
+    "shard_manifest_sha256": "66af2ad722082c6339151f1bdce661ff130dd8d74c89b18e3122679ea0788d11",
+    "shard_count": 148
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/linn/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/linn/"
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "notes": "Viewer tiles exist; pipeline-gap for shards until Grant B AND license clearance.",
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "source_identified",
+      "detail": "counties.json: https://gis.co.linn.or.us/arcgis/rest/services/AssessmentTax/pub_taxlots_web/MapServer/0 via download_arcgis_taxlots.py linn. Do NOT use apps.co.linn.or.us taxlot zip as source without license."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "metadata_probe",
+      "detail": "returnCountOnly \u2192 54598. max(last_edited_date)=1789693445000 \u2192 2026-09-18T01:04:05Z. PIN unique per pipeline notes."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "retrieval_recipe",
+      "detail": "Paginate MapServer/0/query where=1=1 outFields=OBJECTID,PIN,ACTNUM,TXID,TaxlotAcre returnGeometry=true outSR=4326 f=geojson; preserve PIN whitespace. Contact sbarnett@co.linn.or.us for redistribution/commercial terms before publish."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "policy_review",
+      "detail": "Classified unknown due to explicit \u201clicensed\u201d taxlot language; derive_and_sell=false."
+    },
+    {
+      "at": "2026-09-24T19:37:38Z",
+      "action": "use_cases_framed",
+      "detail": "Split product rights into viewer_outline (customer-visible lot line) and workflow_clip (server-side clip/PIP). Both remain allowed=false pending written clearance."
+    },
+    {
+      "at": "2026-09-24T19:53:58Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.co.linn.or.us/arcgis/rest/services/AssessmentTax/pub_taxlots_web/MapServer/0; outFields=OBJECTID,PIN,ACTNUM,TXID,TaxlotAcre; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:54:39Z",
+      "action": "staging_download_complete",
+      "detail": "features=54598 sha256=bc23ec2f3fbe1d6099ac5c8dbe9d9f3389f02d0c62814ae45a09cf13a8a33218 bytes=33345404 pages=28 file=/workspace/parcel-staging/scratch/linn-or/raw.ndjson format=ndjson status policy-review -> downloaded. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T19:57:15Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.co.linn.or.us/arcgis/rest/services/AssessmentTax/pub_taxlots_web/MapServer/0; outFields=OBJECTID,PIN,ACTNUM,TXID,TaxlotAcre; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:57:57Z",
+      "action": "staging_download_complete",
+      "detail": "features=54598 sha256=bc23ec2f3fbe1d6099ac5c8dbe9d9f3389f02d0c62814ae45a09cf13a8a33218 bytes=33345404 pages=28 file=/workspace/parcel-staging/scratch/linn-or/raw.ndjson format=ndjson status downloaded -> downloaded. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:11:07Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/linn-or/raw.ndjson; keep=OBJECTID,PIN,ACTNUM,TXID,TaxlotAcre; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:11:10Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=54598 shards=148 max_shard_bytes=1877058 index_sha256=6dfd71f3cf1aac5f9d0efad0663e6db4d15c81c2522e0049122138a9342286aa dir=/workspace/parcel-staging/scratch/linn-or/normalized sum_counts=54598 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ]
+}

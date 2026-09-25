@@ -1,0 +1,117 @@
+{
+  "id": "colusa-ca",
+  "state": "CA",
+  "county": "Colusa",
+  "portfolio_sites": 23,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://www.countyofcolusaca.gov/DocumentCenter/View/6965/Colusa-County-Tax-Parc",
+  "source_layer": "Colusa County Tax Parcels 2025 shapefile (GIS Download Library)",
+  "source_format": "County shapefile ZIP \u2192 NDJSON (ogr2ogr)",
+  "license_url": "https://www.countyofcolusaca.gov/713/GIS-Download-Library",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Colusa County Tax Parcels shapefile via GIS Download Library (disclaimer form gate). ASSESSOR/SITUS_* stripped. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:06:29Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "ACRES",
+      "AG_PRESERV",
+      "LAND_USE_1",
+      "LAND_USE_D",
+      "PARCEL_DES",
+      "SUP_DIST",
+      "TAX_YEAR",
+      "TRA",
+      "YEAR_BUILT",
+      "ZONING_COD",
+      "ZONING_DES"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/colusa-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/colusa-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/colusa-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/colusa-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 15062,
+    "content_hash": "13d67f245a5a088cd4037a99585cad9c3d07b22b48b9801b35f33343e19aea1e",
+    "shard_manifest_sha256": "e5cea37b8d4bc3b9bd4607e4095f018ef19778305b7c605645516d4247ded817",
+    "shard_count": 72
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Colusa, CA \u2192 23 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:06:29Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://www.countyofcolusaca.gov/DocumentCenter/View/6965/Colusa-County-Tax-Parc layer=Colusa County Tax Parcels 2025 shapefile (GIS Download Library) join=APN"
+    },
+    {
+      "at": "2026-09-25T01:06:29Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:06:29Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://www.countyofcolusaca.gov/DocumentCenter/View/6965/Colusa-County-Tax-Parc; where='1=1'; outFields=OBJECTID,APN,ACRES,AG_PRESERV,LAND_USE_1,LAND_USE_D,PARCEL_DES,SUP_DIST,TAX_YEAR,TRA,YEAR_BUILT,ZONING_COD,ZONING_DES; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:06:30Z",
+      "action": "staging_download_complete",
+      "detail": "features=15062 sha256=1a4855973d9f9be259ee38183141d73e2423138073aaa2b653c8637f63b57b24 bytes=10642055 pages=1 file=/workspace/parcel-staging/scratch/colusa-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:06:31Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/colusa-ca/raw.ndjson; keep=OBJECTID,APN,ACRES,AG_PRESERV,LAND_USE_1,LAND_USE_D,PARCEL_DES,SUP_DIST,TAX_YEAR,TRA,YEAR_BUILT,ZONING_COD,ZONING_DES; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:06:31Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/colusa-ca/raw.ndjson; keep=OBJECTID,APN,ACRES,AG_PRESERV,LAND_USE_1,LAND_USE_D,PARCEL_DES,SUP_DIST,TAX_YEAR,TRA,YEAR_BUILT,ZONING_COD,ZONING_DES; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:06:31Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=15062 shards=72 max_shard_bytes=1802964 index_sha256=13d67f245a5a088cd4037a99585cad9c3d07b22b48b9801b35f33343e19aea1e dir=/workspace/parcel-staging/scratch/colusa-ca/normalized sum_counts=15062 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Colusa CA official Tax Parcels 2025 shapefile from DocumentCenter/View/6965. Stripped ASSESSOR/SITUS_1/SITUS_2. Reprojected NAD83 CA SP II ft \u2192 EPSG:4326. No AWS/CDN/Grant B."
+}

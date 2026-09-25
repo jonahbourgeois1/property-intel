@@ -1,0 +1,109 @@
+{
+  "id": "del-norte-ca",
+  "state": "CA",
+  "county": "Del Norte",
+  "portfolio_sites": 7,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services3.arcgis.com/IkUDY1vRIUWiVvcz/arcgis/rest/services/Parcels_20241125/FeatureServer/0",
+  "source_layer": "Del Norte Parcels_20241125 FeatureServer/0 (r.sarina county GIS)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services3.arcgis.com/IkUDY1vRIUWiVvcz/arcgis/rest/services/Parcels_20241125/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Del Norte County Parcels_20241125 (county GIS AGOL). Address/Land/Structure/TotalAsses/IsHomeowne stripped. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:05:33Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "Asmt",
+    "feature_id_field": "FID",
+    "keep_properties": [
+      "FID",
+      "Asmt",
+      "TRA",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/del-norte-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/del-norte-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/del-norte-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/del-norte-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 16181,
+    "content_hash": "fb6853fea80c1fb844c3d5106b6642d69d6fb6e1ef9acecc609ff8ce7b020cdb",
+    "shard_manifest_sha256": "1fe5ffe09ced50f868e9b3cda4c0faa90dd6a4ff0f6da2f9b801b820efafc1cc",
+    "shard_count": 67
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Del Norte, CA \u2192 7 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T02:05:33Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://services3.arcgis.com/IkUDY1vRIUWiVvcz/arcgis/rest/services/Parcels_20241125/FeatureServer/0 layer=Del Norte Parcels_20241125 FeatureServer/0 (r.sarina county GIS) join=Asmt"
+    },
+    {
+      "at": "2026-09-25T02:05:33Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:05:33Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services3.arcgis.com/IkUDY1vRIUWiVvcz/arcgis/rest/services/Parcels_20241125/FeatureServer/0; where='1=1'; outFields=FID,Asmt,TRA,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:05:43Z",
+      "action": "staging_download_complete",
+      "detail": "features=16181 sha256=37d2908faee1954e2825933e63fed20aca82ab04a93ed44fe973f00a9024ca6b bytes=9393996 pages=9 file=/workspace/parcel-staging/scratch/del-norte-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:05:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/del-norte-ca/raw.ndjson; keep=FID,Asmt,TRA,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:05:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/del-norte-ca/raw.ndjson; keep=FID,Asmt,TRA,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:05:43Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=16181 shards=67 max_shard_bytes=1195353 index_sha256=fb6853fea80c1fb844c3d5106b6642d69d6fb6e1ef9acecc609ff8ce7b020cdb dir=/workspace/parcel-staging/scratch/del-norte-ca/normalized sum_counts=16181 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Del Norte CA Parcels_20241125. Stripped Address*/Street*/Land/Structure/TotalAsses/IsHomeowne. No AWS/CDN/Grant B."
+}

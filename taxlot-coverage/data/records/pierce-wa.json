@@ -1,0 +1,113 @@
+{
+  "id": "pierce-wa",
+  "state": "WA",
+  "county": "Pierce",
+  "portfolio_sites": 30,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Pierce'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:50:49Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/pierce-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/pierce-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/pierce-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/pierce-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 339590,
+    "content_hash": "af9f2d15ad1aa131233ae9abea8563fb04cbb0200c9307a6c2676a7b6489094f",
+    "shard_manifest_sha256": "e75d0dc2f55fedd9e95b7e7e6ece409a908b93df1ce819d84375f2b9d435e910",
+    "shard_count": 194
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Pierce, WA \u2192 30 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:50:49Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Pierce' join=PARCEL_ID_NR where=\"COUNTY_NM='Pierce'\""
+    },
+    {
+      "at": "2026-09-25T00:50:49Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:50:49Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Pierce'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:54:59Z",
+      "action": "staging_download_complete",
+      "detail": "features=339590 sha256=c179eec3589f3d3877030daa1ba9f7d29101016bae9b5bca5a931383bfcf594c bytes=300861606 pages=85 file=/workspace/parcel-staging/scratch/pierce-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Pierce'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:54:59Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pierce-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:54:59Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pierce-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:55:29Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=339590 shards=194 max_shard_bytes=3941994 index_sha256=af9f2d15ad1aa131233ae9abea8563fb04cbb0200c9307a6c2676a7b6489094f dir=/workspace/parcel-staging/scratch/pierce-wa/normalized sum_counts=339590 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: WA statewide WDFW parcels filtered to Pierce County (pierce-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

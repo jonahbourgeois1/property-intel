@@ -1,0 +1,120 @@
+{
+  "id": "spokane-wa",
+  "state": "WA",
+  "county": "Spokane",
+  "portfolio_sites": 2033,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services1.arcgis.com/ozNll27nt9ZtPWOn/arcgis/rest/services/Parcels/FeatureServer/0",
+  "source_layer": "Spokane County Parcels FeatureServer/0 (open data catalog)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gisdatacatalog-spokanecounty.opendata.arcgis.com/datasets/228db1be1d6940a3b5e3f2104e470134_0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Spokane County open-data Parcels FeatureServer. Public query available; no clear written grant for CDN redistribution or commercial viewer_outline/workflow_clip. Class unknown.",
+    "terms_notes": "Spokane County open-data Parcels FeatureServer. Public query available; no clear written grant for CDN redistribution or commercial viewer_outline/workflow_clip. Class unknown.",
+    "reviewed_at": "2026-09-24T21:03:46Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PID_NUM",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PID_NUM",
+      "ACO_NUM",
+      "PIDMAP",
+      "parcel",
+      "nbhd_code",
+      "nbhd_name",
+      "prop_use_code",
+      "prop_use_desc",
+      "tax_year",
+      "acreage",
+      "tax_code_area",
+      "seg_status",
+      "eff_from_date",
+      "eff_to_date",
+      "asmt_year"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/spokane-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/spokane-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/spokane-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/spokane-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 214531,
+    "content_hash": "b35517523a24c6a0b178e04bd914cf3c646c0c5f623ef156a9b6c8202cbd124d",
+    "shard_manifest_sha256": "4d6201f97f6cfecbc46b953f3755ce2d20bf194c15c666be12899b753b68266e",
+    "shard_count": 247
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Spokane, WA \u2192 2033 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:03:46Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://services1.arcgis.com/ozNll27nt9ZtPWOn/arcgis/rest/services/Parcels/FeatureServer/0 layer=Spokane County Parcels FeatureServer/0 (open data catalog) join=PID_NUM"
+    },
+    {
+      "at": "2026-09-24T21:03:46Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:03:46Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services1.arcgis.com/ozNll27nt9ZtPWOn/arcgis/rest/services/Parcels/FeatureServer/0; where='1=1'; outFields=OBJECTID,PID_NUM,ACO_NUM,PIDMAP,parcel,nbhd_code,nbhd_name,prop_use_code,prop_use_desc,tax_year,acreage,tax_code_area,seg_status,eff_from_date,eff_to_date,asmt_year; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:06:44Z",
+      "action": "staging_download_complete",
+      "detail": "features=214531 sha256=e8ccb980e77765a2713be29879254ad0812b67e49b1daa624720eac043de5e60 bytes=352928256 pages=108 file=/workspace/parcel-staging/scratch/spokane-wa/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:06:44Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/spokane-wa/raw.ndjson; keep=OBJECTID,PID_NUM,ACO_NUM,PIDMAP,parcel,nbhd_code,nbhd_name,prop_use_code,prop_use_desc,tax_year,acreage,tax_code_area,seg_status,eff_from_date,eff_to_date,asmt_year; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:06:44Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/spokane-wa/raw.ndjson; keep=OBJECTID,PID_NUM,ACO_NUM,PIDMAP,parcel,nbhd_code,nbhd_name,prop_use_code,prop_use_desc,tax_year,acreage,tax_code_area,seg_status,eff_from_date,eff_to_date,asmt_year; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:07:23Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=214531 shards=247 max_shard_bytes=3998810 index_sha256=b35517523a24c6a0b178e04bd914cf3c646c0c5f623ef156a9b6c8202cbd124d dir=/workspace/parcel-staging/scratch/spokane-wa/normalized sum_counts=214531 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: Spokane County open-data parcels (not WA statewide ownership fabric). Stripped site_address/assessed/value/exemption fields. No AWS/CDN/Grant B."
+}

@@ -1,0 +1,118 @@
+{
+  "id": "honolulu-hi",
+  "state": "HI",
+  "county": "Honolulu",
+  "portfolio_sites": 1855,
+  "status": "inspected",
+  "source_last_updated": "2026-04-30",
+  "source_url": "https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25",
+  "source_layer": "Hawaii Statewide TMKs MapServer/25 where county='Honolulu'",
+  "source_format": "ArcGIS MapServer query (NDJSON); statewide TMK fabric county subset",
+  "license_url": "https://opendata.hawaii.gov/dataset/parcels-hawaii-statewide",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Hawaii Statewide GIS Program TMK parcels (merged county sources). Open data portal; no clear written grant for CDN redistribution or commercial product use. Class unknown.",
+    "terms_notes": "Hawaii Statewide GIS Program TMK parcels (merged county sources). Open data portal; no clear written grant for CDN redistribution or commercial product use. Class unknown.",
+    "reviewed_at": "2026-09-24T21:12:10Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "tmk_txt",
+    "feature_id_field": "objectid",
+    "keep_properties": [
+      "objectid",
+      "tmk",
+      "tmk_txt",
+      "county",
+      "division",
+      "island",
+      "zone",
+      "section",
+      "plat",
+      "plat1",
+      "parcel",
+      "parcel1",
+      "gisacres",
+      "cty_tmk"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/honolulu-hi",
+    "raw_file": "/workspace/parcel-staging/scratch/honolulu-hi/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/honolulu-hi/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/honolulu-hi/normalized"
+  },
+  "metrics": {
+    "feature_count": 171953,
+    "content_hash": "ecd87557053998d9f3f81d4ee16f2b44573a4adbdebb8387fd7abb0cb7eb28b0",
+    "shard_manifest_sha256": "e939704803109b13173d0fe4dd1070ef85c571fd64ebb062966e2e73ac8238d8",
+    "shard_count": 88
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Honolulu, HI \u2192 1855 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:12:10Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25 layer=Hawaii Statewide TMKs MapServer/25 where county='Honolulu' join=tmk_txt"
+    },
+    {
+      "at": "2026-09-24T21:12:10Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:12:10Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25; where=\"county='Honolulu'\"; outFields=objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:16:38Z",
+      "action": "staging_download_complete",
+      "detail": "features=171953 sha256=9c8a5a98f7f8833a20242251ec7d1e6a2bdc94b8ef3bfba318b9e468558b9373 bytes=135649516 pages=172 file=/workspace/parcel-staging/scratch/honolulu-hi/raw.ndjson format=ndjson where=\"county='Honolulu'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:16:38Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/honolulu-hi/raw.ndjson; keep=objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:16:38Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/honolulu-hi/raw.ndjson; keep=objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:16:53Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=171953 shards=88 max_shard_bytes=3936964 index_sha256=ecd87557053998d9f3f81d4ee16f2b44573a4adbdebb8387fd7abb0cb7eb28b0 dir=/workspace/parcel-staging/scratch/honolulu-hi/normalized sum_counts=171953 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: Hawaii statewide TMK fabric filtered to Honolulu (City & County). Not scraped map. No AWS/CDN/Grant B."
+}

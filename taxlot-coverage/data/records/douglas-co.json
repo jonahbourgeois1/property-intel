@@ -1,0 +1,117 @@
+{
+  "id": "douglas-co",
+  "state": "CO",
+  "county": "Douglas",
+  "portfolio_sites": 1962,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://apps.douglas.co.us/gisod/rest/services/Parcels/FeatureServer/4",
+  "source_layer": "Douglas County CO GISOD Parcels FeatureServer/4 PARCELS",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://apps.douglas.co.us/gisod/rest/services/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Douglas County CO GIS open services Parcels layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "Douglas County CO GIS open services Parcels layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T21:07:26Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_SPN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PARCEL_SPN",
+      "PARCEL_NAME",
+      "BLOCK_NO",
+      "MISC_ANNO",
+      "DEEDED_AREA",
+      "CALC_AREA",
+      "GLOBALID",
+      "PARCELS_EID",
+      "PARCEL_TYPE",
+      "ADDRESS_COUNT",
+      "LAT",
+      "LON"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/douglas-co",
+    "raw_file": "/workspace/parcel-staging/scratch/douglas-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/douglas-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/douglas-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 158789,
+    "content_hash": "b49adf0561b937ef199eeeac8f690b027f6d2bb39dc32b6d9f0e90b993eb0a73",
+    "shard_manifest_sha256": "5e23f80acd0182a95d86c409336ad674a45f88ee978f6cd8689c04563438da12",
+    "shard_count": 232
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Douglas, CO \u2192 1962 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:07:26Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://apps.douglas.co.us/gisod/rest/services/Parcels/FeatureServer/4 layer=Douglas County CO GISOD Parcels FeatureServer/4 PARCELS join=PARCEL_SPN"
+    },
+    {
+      "at": "2026-09-24T21:07:26Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:07:26Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://apps.douglas.co.us/gisod/rest/services/Parcels/FeatureServer/4; where='1=1'; outFields=OBJECTID,PARCEL_SPN,PARCEL_NAME,BLOCK_NO,MISC_ANNO,DEEDED_AREA,CALC_AREA,GLOBALID,PARCELS_EID,PARCEL_TYPE,ADDRESS_COUNT,LAT,LON; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:11:13Z",
+      "action": "staging_download_complete",
+      "detail": "features=158789 sha256=c8142ba77ba490066aa12a73529b79c6ceae8bbf1be3c90a90c23a40d27c71b6 bytes=435210624 pages=80 file=/workspace/parcel-staging/scratch/douglas-co/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:11:13Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/douglas-co/raw.ndjson; keep=OBJECTID,PARCEL_SPN,PARCEL_NAME,BLOCK_NO,MISC_ANNO,DEEDED_AREA,CALC_AREA,GLOBALID,PARCELS_EID,PARCEL_TYPE,ADDRESS_COUNT,LAT,LON; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:11:13Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/douglas-co/raw.ndjson; keep=OBJECTID,PARCEL_SPN,PARCEL_NAME,BLOCK_NO,MISC_ANNO,DEEDED_AREA,CALC_AREA,GLOBALID,PARCELS_EID,PARCEL_TYPE,ADDRESS_COUNT,LAT,LON; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:12:09Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=158789 shards=232 max_shard_bytes=3906542 index_sha256=b49adf0561b937ef199eeeac8f690b027f6d2bb39dc32b6d9f0e90b993eb0a73 dir=/workspace/parcel-staging/scratch/douglas-co/normalized sum_counts=158789 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: Douglas County Colorado (douglas-co) \u2014 NOT douglas-or/wa. County FeatureServer preferred over CO statewide composite. No AWS/CDN/Grant B."
+}

@@ -1,0 +1,118 @@
+{
+  "id": "lassen-ca",
+  "state": "CA",
+  "county": "Lassen",
+  "portfolio_sites": 9,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Lassen_Parcel_Final_Schema1/FeatureServer/0",
+  "source_layer": "Lassen_Parcel_Final_Schema1 FeatureServer/0 (planning-enriched export)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Lassen_Parcel_Final_Schema1/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Lassen County parcel polygons FeatureServer (planning/hazard-enriched export; same org pattern as Glenn). Situs/OWNERSHIP/LAND_VAL/TAX stripped. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:56:19Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "LAND_USE",
+      "ZONING",
+      "SCAG_LUCO",
+      "SCAG_LU",
+      "FHSZ_CODE",
+      "FHSZ_DESC",
+      "FLO_CODE",
+      "FLO_DESC",
+      "AREA_AC",
+      "AREA_SQFT",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/lassen-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/lassen-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/lassen-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/lassen-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 47354,
+    "content_hash": "548719b6a08244d43243d635c3261573dfa46c03a57f088f14eb0ce9b2db7d3f",
+    "shard_manifest_sha256": "25f45f29071ef8ac631c8dae81e90dbc822a0c48b6a28ac879a47e0895535e14",
+    "shard_count": 265
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Lassen, CA \u2192 9 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:56:19Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Lassen_Parcel_Final_Schema1/FeatureServer/0 layer=Lassen_Parcel_Final_Schema1 FeatureServer/0 (planning-enriched export) join=APN"
+    },
+    {
+      "at": "2026-09-25T01:56:19Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:56:19Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Lassen_Parcel_Final_Schema1/FeatureServer/0; where='1=1'; outFields=OBJECTID,APN,LAND_USE,ZONING,SCAG_LUCO,SCAG_LU,FHSZ_CODE,FHSZ_DESC,FLO_CODE,FLO_DESC,AREA_AC,AREA_SQFT,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:56:43Z",
+      "action": "staging_download_complete",
+      "detail": "features=47354 sha256=380d39f2871920bd40f904afad72b5173ae1fa9669aba417e943366ef2048b19 bytes=48113302 pages=24 file=/workspace/parcel-staging/scratch/lassen-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:56:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/lassen-ca/raw.ndjson; keep=OBJECTID,APN,LAND_USE,ZONING,SCAG_LUCO,SCAG_LU,FHSZ_CODE,FHSZ_DESC,FLO_CODE,FLO_DESC,AREA_AC,AREA_SQFT,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:56:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/lassen-ca/raw.ndjson; keep=OBJECTID,APN,LAND_USE,ZONING,SCAG_LUCO,SCAG_LU,FHSZ_CODE,FHSZ_DESC,FLO_CODE,FLO_DESC,AREA_AC,AREA_SQFT,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:56:47Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=47354 shards=265 max_shard_bytes=3998584 index_sha256=548719b6a08244d43243d635c3261573dfa46c03a57f088f14eb0ce9b2db7d3f dir=/workspace/parcel-staging/scratch/lassen-ca/normalized sum_counts=47354 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Lassen CA Lassen_Parcel_Final_Schema1. Stripped HOUSE_NUM/ST_*/FULL_ADD/CITY/ZIP/OWNERSHIP/LAND_VAL/TAX. CalAgPermits Lassen/Parcels requires token. No AWS/CDN/Grant B."
+}

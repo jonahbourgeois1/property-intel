@@ -1,0 +1,113 @@
+{
+  "id": "kitsap-wa",
+  "state": "WA",
+  "county": "Kitsap",
+  "portfolio_sites": 30,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Kitsap'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:55:30Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/kitsap-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/kitsap-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/kitsap-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/kitsap-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 139602,
+    "content_hash": "cee4c0e6f9345b7b2c6fb16c58b875092d99042e92b8bf3cafdaaf0b1a110df4",
+    "shard_manifest_sha256": "4ab46b9ed8e5e72e4e445813a3844892862c9a80d43270f98b4e4a3e9835e6ea",
+    "shard_count": 109
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Kitsap, WA \u2192 30 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:55:30Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Kitsap' join=PARCEL_ID_NR where=\"COUNTY_NM='Kitsap'\""
+    },
+    {
+      "at": "2026-09-25T00:55:30Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:55:30Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Kitsap'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:57:59Z",
+      "action": "staging_download_complete",
+      "detail": "features=139602 sha256=0fc0dcb15a0f716cefde23ab3c8fc54de4f7a924108d420cca2974df888dadfc bytes=243993794 pages=35 file=/workspace/parcel-staging/scratch/kitsap-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Kitsap'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:58:00Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/kitsap-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:58:00Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/kitsap-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:58:25Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=139602 shards=109 max_shard_bytes=3988373 index_sha256=cee4c0e6f9345b7b2c6fb16c58b875092d99042e92b8bf3cafdaaf0b1a110df4 dir=/workspace/parcel-staging/scratch/kitsap-wa/normalized sum_counts=139602 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: WA statewide WDFW parcels filtered to Kitsap County (kitsap-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

@@ -1,0 +1,116 @@
+{
+  "id": "glenn-ca",
+  "state": "CA",
+  "county": "Glenn",
+  "portfolio_sites": 70,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Glenn_County/FeatureServer/0",
+  "source_layer": "Glenn_County FeatureServer/0 Glenn_County_ExportFeatures1",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Glenn_County/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Glenn County parcel polygons FeatureServer (planning/hazard-enriched export). Situs address fields stripped. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-24T22:20:32Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "LAND_USE",
+      "ZONING",
+      "SCAG_LUCO",
+      "SCAG_LU",
+      "FHSZ_CODE",
+      "FHSZ_DESC",
+      "FLO_CODE",
+      "FLO_DESC",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/glenn-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/glenn-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/glenn-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/glenn-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 15167,
+    "content_hash": "1bd39a07dc290569d7dd6f44e153a1f2db48a15e614fedabf06ed926d5755456",
+    "shard_manifest_sha256": "aa4745f6eb17e70959abfbe48854f230e40617a9f907f22026f9e45a63939f33",
+    "shard_count": 80
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Glenn, CA \u2192 70 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:20:32Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Glenn_County/FeatureServer/0 layer=Glenn_County FeatureServer/0 Glenn_County_ExportFeatures1 join=APN"
+    },
+    {
+      "at": "2026-09-24T22:20:32Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:20:32Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Glenn_County/FeatureServer/0; where='1=1'; outFields=OBJECTID,APN,LAND_USE,ZONING,SCAG_LUCO,SCAG_LU,FHSZ_CODE,FHSZ_DESC,FLO_CODE,FLO_DESC,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:20:41Z",
+      "action": "staging_download_complete",
+      "detail": "features=15167 sha256=a14b2ba46d12ceae852131905f2cd5d6fb7ce873f3ad5a5519e80884a56f01cf bytes=9572309 pages=8 file=/workspace/parcel-staging/scratch/glenn-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:20:41Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/glenn-ca/raw.ndjson; keep=OBJECTID,APN,LAND_USE,ZONING,SCAG_LUCO,SCAG_LU,FHSZ_CODE,FHSZ_DESC,FLO_CODE,FLO_DESC,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:20:41Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/glenn-ca/raw.ndjson; keep=OBJECTID,APN,LAND_USE,ZONING,SCAG_LUCO,SCAG_LU,FHSZ_CODE,FHSZ_DESC,FLO_CODE,FLO_DESC,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:20:42Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=15167 shards=80 max_shard_bytes=2336553 index_sha256=1bd39a07dc290569d7dd6f44e153a1f2db48a15e614fedabf06ed926d5755456 dir=/workspace/parcel-staging/scratch/glenn-ca/normalized sum_counts=15167 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Glenn CA parcels AGOL export. Stripped HOUSE_NUM/PREFIX_DIR/ST_*/FULL_ADD/City/ZIP_CODE. No AWS/CDN/Grant B."
+}

@@ -1,0 +1,108 @@
+{
+  "id": "orange-ca",
+  "state": "CA",
+  "county": "Orange",
+  "portfolio_sites": 22,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://www.ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer/0",
+  "source_layer": "OC Survey Map_Layers/Parcels MapServer/0",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://www.ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Orange County CA Public Works (ocgis.com) Parcels MapServer. SITE_ADDRESS stripped. No owner on public layer. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:13:48Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "ASSESSMENT_NO",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "ASSESSMENT_NO",
+      "YEAR_BUILT",
+      "NBR_BEDROOMS"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/orange-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/orange-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/orange-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/orange-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 702987,
+    "content_hash": "75afa970413821d73eb5940a3582089ba3ef56bdb0a8f91bfe31e5b5f67a125b",
+    "shard_manifest_sha256": "762c638d0299caf46303aacaf9c51dcba3b45bde11b628887be39da46d5f801d",
+    "shard_count": 206
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Orange, CA \u2192 22 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:13:48Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://www.ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer/0 layer=OC Survey Map_Layers/Parcels MapServer/0 join=ASSESSMENT_NO"
+    },
+    {
+      "at": "2026-09-25T01:13:48Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:13:48Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://www.ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer/0; where='1=1'; outFields=OBJECTID,ASSESSMENT_NO,YEAR_BUILT,NBR_BEDROOMS; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:26:01Z",
+      "action": "staging_download_complete",
+      "detail": "features=703000 sha256=4950bd934fbf2cea6f5ae268c81262f1637d6b21f905550b05356bcaa84378f7 bytes=442968376 pages=704 file=/workspace/parcel-staging/scratch/orange-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:26:01Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/orange-ca/raw.ndjson; keep=OBJECTID,ASSESSMENT_NO,YEAR_BUILT,NBR_BEDROOMS; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:26:01Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/orange-ca/raw.ndjson; keep=OBJECTID,ASSESSMENT_NO,YEAR_BUILT,NBR_BEDROOMS; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:27:03Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=702987 shards=206 max_shard_bytes=3977629 index_sha256=75afa970413821d73eb5940a3582089ba3ef56bdb0a8f91bfe31e5b5f67a125b dir=/workspace/parcel-staging/scratch/orange-ca/normalized sum_counts=702987 pct_delta_vs_metrics=0.002% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Orange CA ocgis Parcels; SITE_ADDRESS stripped. No AWS/CDN/Grant B."
+}

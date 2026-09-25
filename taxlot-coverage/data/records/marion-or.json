@@ -1,0 +1,112 @@
+{
+  "id": "marion-or",
+  "state": "OR",
+  "county": "Marion",
+  "portfolio_sites": 290,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.co.marion.or.us/arcgis/rest/services/Public/Parcels/MapServer/0",
+  "source_layer": "Public/Parcels MapServer/0",
+  "source_format": "ArcGIS MapServer query (GeoJSON)",
+  "license_url": "https://gis.co.marion.or.us/arcgis/rest/services/Public/Parcels/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:31:09Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TAXLOT",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "TAXLOT",
+      "TAXACCT",
+      "ALT_TAXLOT",
+      "ACRES",
+      "ZONECODE",
+      "TAXCODE",
+      "CITY",
+      "LASTUPDATE",
+      "TAXLOTNS",
+      "REFLINK",
+      "MAPLINK",
+      "PROPCLASS"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/marion-or",
+    "raw_file": "/workspace/parcel-staging/scratch/marion-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/marion-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/marion-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 115870,
+    "content_hash": "d2d32d667bcf1a0fe2815cbf323b61797a8f31f0866fd1819ead42c30596df17",
+    "shard_manifest_sha256": "1635eea6abe19bea43e061dd5803c6348c6befb5e1426210fe3bfbdd0e826131",
+    "shard_count": 147
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Marion, OR \u2192 290 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:31:09Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.co.marion.or.us/arcgis/rest/services/Public/Parcels/MapServer/0 layer=Public/Parcels MapServer/0 join=TAXLOT"
+    },
+    {
+      "at": "2026-09-24T20:31:09Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:31:09Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.co.marion.or.us/arcgis/rest/services/Public/Parcels/MapServer/0; where='1=1'; outFields=OBJECTID,TAXLOT,TAXACCT,ALT_TAXLOT,ACRES,ZONECODE,TAXCODE,CITY,LASTUPDATE,TAXLOTNS,REFLINK,MAPLINK,PROPCLASS; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:34:27Z",
+      "action": "staging_download_complete",
+      "detail": "features=115870 sha256=d1fcb40b887aae89c4c54a9ef43e0614b8fd026e65a95c8fa0f067cd541f8ffa bytes=181567540 pages=116 file=/workspace/parcel-staging/scratch/marion-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:55:41Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/marion-or/raw.ndjson; keep=OBJECTID,TAXLOT,TAXACCT,ALT_TAXLOT,ACRES,ZONECODE,TAXCODE,CITY,LASTUPDATE,TAXLOTNS,REFLINK,MAPLINK,PROPCLASS; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:56:00Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=115870 shards=147 max_shard_bytes=3988600 index_sha256=d2d32d667bcf1a0fe2815cbf323b61797a8f31f0866fd1819ead42c30596df17 dir=/workspace/parcel-staging/scratch/marion-or/normalized sum_counts=115870 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+}

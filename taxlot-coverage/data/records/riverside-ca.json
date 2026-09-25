@@ -1,0 +1,113 @@
+{
+  "id": "riverside-ca",
+  "state": "CA",
+  "county": "Riverside",
+  "portfolio_sites": 263,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services1.arcgis.com/pWmBUdSlVpXStHU6/arcgis/rest/services/Parcels/FeatureServer/0",
+  "source_layer": "Riverside County Parcels FeatureServer/0 (pWmBUdSlVpXStHU6)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services1.arcgis.com/pWmBUdSlVpXStHU6/arcgis/rest/services/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Riverside County parcels FeatureServer (lean attribute set; no owner/mailing/value). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-24T22:42:05Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "Name",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "Name",
+      "CountyTRA",
+      "Lot_Numb",
+      "RecBookPage",
+      "RecAC",
+      "SubDiv",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/riverside-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/riverside-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/riverside-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/riverside-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 840059,
+    "content_hash": "231f72583418c5048345ba8db25f3c6f76d41e7d574bcd75006047413708170e",
+    "shard_manifest_sha256": "7ed30ec764deff6d1c9d6b6e6394fb8a2ec2792e0c419bf903d8bb0ea655685a",
+    "shard_count": 577
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Riverside, CA \u2192 263 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:42:05Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://services1.arcgis.com/pWmBUdSlVpXStHU6/arcgis/rest/services/Parcels/FeatureServer/0 layer=Riverside County Parcels FeatureServer/0 (pWmBUdSlVpXStHU6) join=Name"
+    },
+    {
+      "at": "2026-09-24T22:42:05Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:42:05Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services1.arcgis.com/pWmBUdSlVpXStHU6/arcgis/rest/services/Parcels/FeatureServer/0; where='1=1'; outFields=OBJECTID,Name,CountyTRA,Lot_Numb,RecBookPage,RecAC,SubDiv,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:51:48Z",
+      "action": "staging_download_complete",
+      "detail": "features=840060 sha256=5d8dd1138019c622beb1faaa9adff65ee492ae28b2c62a5b861d6187ae98c1e7 bytes=690126305 pages=421 file=/workspace/parcel-staging/scratch/riverside-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:51:48Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/riverside-ca/raw.ndjson; keep=OBJECTID,Name,CountyTRA,Lot_Numb,RecBookPage,RecAC,SubDiv,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:51:48Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/riverside-ca/raw.ndjson; keep=OBJECTID,Name,CountyTRA,Lot_Numb,RecBookPage,RecAC,SubDiv,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:53:12Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=840059 shards=577 max_shard_bytes=3925593 index_sha256=231f72583418c5048345ba8db25f3c6f76d41e7d574bcd75006047413708170e dir=/workspace/parcel-staging/scratch/riverside-ca/normalized sum_counts=840059 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Riverside CA parcels FeatureServer (geometry + APN-like Name/TRA). No AWS/CDN/Grant B."
+}

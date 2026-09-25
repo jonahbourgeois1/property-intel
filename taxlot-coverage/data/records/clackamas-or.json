@@ -1,0 +1,118 @@
+{
+  "id": "clackamas-or",
+  "state": "OR",
+  "county": "Clackamas",
+  "portfolio_sites": 50,
+  "status": "inspected",
+  "source_last_updated": "2026-06-26",
+  "source_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2",
+  "source_layer": "OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Clackamas'",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); statewide fabric subset",
+  "license_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "terms_notes": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "reviewed_at": "2026-09-24T20:34:27Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "maptaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "county_code",
+      "county_name",
+      "maptaxlot",
+      "taxlot",
+      "taxlot_acre",
+      "meridian",
+      "township",
+      "township_char",
+      "range",
+      "range_char",
+      "sctn",
+      "qtr160",
+      "qtr40",
+      "tr_key",
+      "trs_key",
+      "trsqq_key",
+      "effective_date",
+      "last_update_date"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/clackamas-or",
+    "raw_file": "/workspace/parcel-staging/scratch/clackamas-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/clackamas-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/clackamas-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 167553,
+    "content_hash": "db18cd8176f416d37919f5e959c19aefff2be3cf17bc0c077fcaae77dccc1585",
+    "shard_manifest_sha256": "1329811256947335220ec3f6df59e063ea6eb546a4343e327a5f4848d6c1b4e3",
+    "shard_count": 193
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Clackamas, OR \u2192 50 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:34:27Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2 layer=OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Clackamas' join=maptaxlot"
+    },
+    {
+      "at": "2026-09-24T20:34:27Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:34:27Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2; where=\"county_name='Clackamas'\"; outFields=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:36:49Z",
+      "action": "staging_download_complete",
+      "detail": "features=167553 sha256=f91b58889cff4ced3a62f56a221df9b4c0cb9fff12db6b79be71079c34cc0eb9 bytes=284476853 pages=84 file=/workspace/parcel-staging/scratch/clackamas-or/raw.ndjson format=ndjson where=\"county_name='Clackamas'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:56:00Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/clackamas-or/raw.ndjson; keep=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:56:34Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=167553 shards=193 max_shard_bytes=29130168 index_sha256=db18cd8176f416d37919f5e959c19aefff2be3cf17bc0c077fcaae77dccc1585 dir=/workspace/parcel-staging/scratch/clackamas-or/normalized sum_counts=167553 pct_delta_vs_metrics=0.000% props_ok=True warnings=1 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: staged from OWRD statewide public-query fabric filtered to Clackamas County. No AWS/CDN/Grant B."
+}
