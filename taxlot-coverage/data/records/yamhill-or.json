@@ -1,0 +1,106 @@
+{
+  "id": "yamhill-or",
+  "state": "OR",
+  "county": "Yamhill",
+  "portfolio_sites": 7,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services3.arcgis.com/psFPG9JNmFwLruqu/arcgis/rest/services/Yamhill_County_Taxlots_2025/FeatureServer/0",
+  "source_layer": "Yamhill_County_Taxlots_2025 FeatureServer/0 (YamhillSWCD)",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON)",
+  "license_url": "https://services3.arcgis.com/psFPG9JNmFwLruqu/arcgis/rest/services/Yamhill_County_Taxlots_2025/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:47:29Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "maptaxlot",
+    "feature_id_field": "FID",
+    "keep_properties": [
+      "FID",
+      "maptaxlot",
+      "acctnbr",
+      "account_ac",
+      "parcel_acr",
+      "sqft",
+      "taxlot"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/yamhill-or",
+    "raw_file": "/workspace/parcel-staging/scratch/yamhill-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/yamhill-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/yamhill-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 42754,
+    "content_hash": "4d96c3859e36e8e3a049e8a9d9572032f01c4cfe85e4f3749a3e9258a90bbfd4",
+    "shard_manifest_sha256": "9531464625ceee6c4dc76e606e1f17af025e0474a57fd5bc2e6e2f02b9a819e0",
+    "shard_count": 62
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Yamhill, OR \u2192 7 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:47:29Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services3.arcgis.com/psFPG9JNmFwLruqu/arcgis/rest/services/Yamhill_County_Taxlots_2025/FeatureServer/0 layer=Yamhill_County_Taxlots_2025 FeatureServer/0 (YamhillSWCD) join=maptaxlot"
+    },
+    {
+      "at": "2026-09-24T20:47:29Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:47:29Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services3.arcgis.com/psFPG9JNmFwLruqu/arcgis/rest/services/Yamhill_County_Taxlots_2025/FeatureServer/0; where='1=1'; outFields=FID,maptaxlot,acctnbr,account_ac,parcel_acr,sqft,taxlot; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:47:55Z",
+      "action": "staging_download_complete",
+      "detail": "features=42754 sha256=f5eaabd2460c64f367e9463de9d347e5f141196348c980deb8ae38741025ed31 bytes=29830572 pages=22 file=/workspace/parcel-staging/scratch/yamhill-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:58:07Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/yamhill-or/raw.ndjson; keep=FID,maptaxlot,acctnbr,account_ac,parcel_acr,sqft,taxlot; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:58:10Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=42754 shards=62 max_shard_bytes=3457698 index_sha256=4d96c3859e36e8e3a049e8a9d9572032f01c4cfe85e4f3749a3e9258a90bbfd4 dir=/workspace/parcel-staging/scratch/yamhill-or/normalized sum_counts=42754 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+}

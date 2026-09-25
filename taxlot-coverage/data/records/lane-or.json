@@ -1,0 +1,124 @@
+{
+  "id": "lane-or",
+  "state": "OR",
+  "county": "Lane",
+  "portfolio_sites": 183,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://lcmaps.lanecounty.org/arcgis/rest/services/LaneCountyMaps/AddressParcel/MapServer/2",
+  "source_layer": "LaneCountyMaps/AddressParcel MapServer layer 2 (Parcels)",
+  "source_format": "ArcGIS MapServer query (JSON/GeoJSON); paid countywide taxlot package also sold with signed Data Disclaimer",
+  "license_url": "https://www.lanecountyor.gov/government/county_departments/information_services/maps___g_i_s/g_i_s_data_sales_and_services",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "A public AddressParcel MapServer exposes parcel polygons (includes owner/mailing/value fields \u2014 strip before any publish). Separately, Lane County sells countywide taxlot geometry ($100) only after a signed Data Disclaimer; LCOG parcel products require a signed license agreement. No open-data clause found that clearly allows public CDN re-host or selling derived property-intel products. Treat as not cleared for derive-and-sell until Jonah obtains written terms covering redistributed geometry and commercial derivatives.",
+    "terms_notes": "EPIL web disclaimer is warranty/accuracy only. Data Sales page requires signed Data Disclaimer before taxlot delivery. Do not equate public MapServer access with redistribution rights.",
+    "reviewed_at": "2026-09-24T18:29:32Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "No open clause found allowing display of parcel boundaries in a commercial viewer. Paid taxlots require signed Data Disclaimer \u2014 ask explicitly about end-user outline display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Public MapServer \u2260 commercial processing rights. Clip-only automation still needs written clearance before relying on it in a sold product."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "MAPTAXLOT",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "MAPTAXLOT",
+      "MAPNUMBER",
+      "TAXLOT",
+      "MAPACRES"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/lane-or",
+    "raw_file": "/workspace/parcel-staging/scratch/lane-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/lane-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/lane-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 159145,
+    "content_hash": "3b6e74779fc75de156502fe52cc779ed7c989332193c3037b901f1d2065445d0",
+    "shard_manifest_sha256": "2fe452363573b174ccb51753a52ff2d6c2aa0c72fa7b2c95ddc2fd74234733f0",
+    "shard_count": 286
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/lane/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/lane/"
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "notes": "Oracle training county. keep_properties must strip owner fields present on the live layer.",
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "source_identified",
+      "detail": "counties.json feature_service_url + download_lane_taxlots.py path: https://lcmaps.lanecounty.org/arcgis/rest/services/LaneCountyMaps/AddressParcel/MapServer/2"
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "metadata_probe",
+      "detail": "GET layer?f=pjson (fields include OWNNAME/ADDR*). query returnCountOnly \u2192 159145. No usable last_edited_date statistic on probed fields. Source CRS wk id 2914 (Oregon North ft)."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "retrieval_recipe",
+      "detail": "Paginate MapServer/2/query where=1=1 outFields=OBJECTID,MAPTAXLOT,MAPNUMBER,TAXLOT,MAPACRES (omit owner/mailing/value) returnGeometry=true outSR=4326 f=geojson; page with resultOffset (maxRecordCount 2000). Alternate: purchase taxlot package from Lane GIS (lcgis@lanecountyor.gov) after signed Data Disclaimer \u2014 still need redistribution language for CDN."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "policy_review",
+      "detail": "Classified unknown; redistribute_public=false; derive_and_sell=false pending signed terms review."
+    },
+    {
+      "at": "2026-09-24T19:37:38Z",
+      "action": "use_cases_framed",
+      "detail": "Split product rights into viewer_outline (customer-visible lot line) and workflow_clip (server-side clip/PIP). Both remain allowed=false pending written clearance."
+    },
+    {
+      "at": "2026-09-24T19:53:54Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://lcmaps.lanecounty.org/arcgis/rest/services/LaneCountyMaps/AddressParcel/MapServer/2; outFields=OBJECTID,MAPTAXLOT,MAPNUMBER,TAXLOT,MAPACRES; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:55:33Z",
+      "action": "staging_download_failed",
+      "detail": "exit=-15 stderr="
+    },
+    {
+      "at": "2026-09-24T19:55:49Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://lcmaps.lanecounty.org/arcgis/rest/services/LaneCountyMaps/AddressParcel/MapServer/2; outFields=OBJECTID,MAPTAXLOT,MAPNUMBER,TAXLOT,MAPACRES; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:58:54Z",
+      "action": "staging_download_complete",
+      "detail": "features=159145 sha256=e77471801e0f20d2687804e94ab05cb3f8a9297e47cbf89522c9c36cea7d52de bytes=148594046 pages=80 file=/workspace/parcel-staging/scratch/lane-or/raw.ndjson format=ndjson status policy-review -> downloaded. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:10:51Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/lane-or/raw.ndjson; keep=OBJECTID,MAPTAXLOT,MAPNUMBER,TAXLOT,MAPACRES; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:11:07Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=159145 shards=286 max_shard_bytes=3193762 index_sha256=3b6e74779fc75de156502fe52cc779ed7c989332193c3037b901f1d2065445d0 dir=/workspace/parcel-staging/scratch/lane-or/normalized sum_counts=159145 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ]
+}

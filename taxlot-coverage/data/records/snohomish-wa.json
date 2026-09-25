@@ -1,0 +1,113 @@
+{
+  "id": "snohomish-wa",
+  "state": "WA",
+  "county": "Snohomish",
+  "portfolio_sites": 16,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Snohomish'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:30:15Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/snohomish-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/snohomish-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/snohomish-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/snohomish-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 318594,
+    "content_hash": "ed8f751161e0bdd6e95abcac8b7ebe5eae8409d2640c9135f50c6e771e372699",
+    "shard_manifest_sha256": "6cf11bdfc54799c7f113f7237cbce212c42c0220147fe4c7759c16c6ee315cfc",
+    "shard_count": 332
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Snohomish, WA \u2192 16 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:30:15Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Snohomish' join=PARCEL_ID_NR where=\"COUNTY_NM='Snohomish'\""
+    },
+    {
+      "at": "2026-09-25T01:30:15Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:30:15Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Snohomish'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:36:41Z",
+      "action": "staging_download_complete",
+      "detail": "features=318594 sha256=2660b5728e89e3f049f2fd5ce0b725dff73ea9db0afc8cd627d9abe0b2ceed70 bytes=480315032 pages=80 file=/workspace/parcel-staging/scratch/snohomish-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Snohomish'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:36:41Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/snohomish-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:36:41Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/snohomish-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:37:41Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=318594 shards=332 max_shard_bytes=17790091 index_sha256=ed8f751161e0bdd6e95abcac8b7ebe5eae8409d2640c9135f50c6e771e372699 dir=/workspace/parcel-staging/scratch/snohomish-wa/normalized sum_counts=318594 pct_delta_vs_metrics=0.000% props_ok=True warnings=4 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Snohomish County (snohomish-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

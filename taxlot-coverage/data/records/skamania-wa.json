@@ -1,0 +1,118 @@
+{
+  "id": "skamania-wa",
+  "state": "WA",
+  "county": "Skamania",
+  "portfolio_sites": 1,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Skamania'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:31:58Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/skamania-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/skamania-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/skamania-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/skamania-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 8362,
+    "content_hash": "840b982447f975f33a92a0c7e8ce90283eccfadb5fd5ac0d517b8caee5b3c22e",
+    "shard_manifest_sha256": "04592677d69c7405400ffa514e47f568aec44b373822ba3705c54b0c4fb8fc4a",
+    "shard_count": 55
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Skamania, WA \u2192 1 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    },
+    {
+      "at": "2026-09-25T02:31:58Z",
+      "action": "source_identified",
+      "detail": "Wave 4 fabric-deferred source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Skamania' join=PARCEL_ID_NR where=\"COUNTY_NM='Skamania'\""
+    },
+    {
+      "at": "2026-09-25T02:31:58Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:31:58Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Skamania'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:32:08Z",
+      "action": "staging_download_complete",
+      "detail": "features=8362 sha256=48a6bca8b001601c1439a7634a16742f8968599fa933b6df17c11b9b2f721728 bytes=9799814 pages=3 file=/workspace/parcel-staging/scratch/skamania-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Skamania'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:32:09Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/skamania-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:32:09Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/skamania-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:32:09Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=8362 shards=55 max_shard_bytes=1068358 index_sha256=840b982447f975f33a92a0c7e8ce90283eccfadb5fd5ac0d517b8caee5b3c22e dir=/workspace/parcel-staging/scratch/skamania-wa/normalized sum_counts=8362 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Skamania County (skamania-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B."
+}

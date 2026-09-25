@@ -1,0 +1,118 @@
+{
+  "id": "benton-or",
+  "state": "OR",
+  "county": "Benton",
+  "portfolio_sites": 336,
+  "status": "inspected",
+  "source_last_updated": "2026-06-26",
+  "source_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2",
+  "source_layer": "OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Benton'",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); statewide fabric subset",
+  "license_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "terms_notes": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "reviewed_at": "2026-09-24T20:30:38Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "maptaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "county_code",
+      "county_name",
+      "maptaxlot",
+      "taxlot",
+      "taxlot_acre",
+      "meridian",
+      "township",
+      "township_char",
+      "range",
+      "range_char",
+      "sctn",
+      "qtr160",
+      "qtr40",
+      "tr_key",
+      "trs_key",
+      "trsqq_key",
+      "effective_date",
+      "last_update_date"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/benton-or",
+    "raw_file": "/workspace/parcel-staging/scratch/benton-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/benton-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/benton-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 39332,
+    "content_hash": "25cb8a0590a49ce9fa015b8041073e36a4b88186ecb5b3a917e6ff09803c8b1c",
+    "shard_manifest_sha256": "d09b78564adeb918e1bdefd6c0db35f4933e030a82dd878f914c71966ed94fe0",
+    "shard_count": 66
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Benton, OR \u2192 336 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:30:38Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2 layer=OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Benton' join=maptaxlot"
+    },
+    {
+      "at": "2026-09-24T20:30:38Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:30:38Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2; where=\"county_name='Benton'\"; outFields=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:31:09Z",
+      "action": "staging_download_complete",
+      "detail": "features=39332 sha256=5fb74629268a2f36e029c94340ecfbcce29388f6dcd459edd94c1b70c56051e4 bytes=55655666 pages=20 file=/workspace/parcel-staging/scratch/benton-or/raw.ndjson format=ndjson where=\"county_name='Benton'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:55:16Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/benton-or/raw.ndjson; keep=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:55:21Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=39332 shards=66 max_shard_bytes=2882707 index_sha256=25cb8a0590a49ce9fa015b8041073e36a4b88186ecb5b3a917e6ff09803c8b1c dir=/workspace/parcel-staging/scratch/benton-or/normalized sum_counts=39332 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: staged from OWRD statewide public-query fabric filtered to Benton County. No AWS/CDN/Grant B."
+}

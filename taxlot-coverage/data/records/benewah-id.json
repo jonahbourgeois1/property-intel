@@ -1,0 +1,114 @@
+{
+  "id": "benewah-id",
+  "state": "ID",
+  "county": "Benewah",
+  "portfolio_sites": 5,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "source_layer": "IDWR Reference/Parcels FeatureServer/0 where COUNTY='Benewah'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Idaho IDWR statewide Reference/Parcels FeatureServer. OWNER field present on service but stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:18:18Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PIN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PIN",
+      "COUNTY",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/benewah-id",
+    "raw_file": "/workspace/parcel-staging/scratch/benewah-id/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/benewah-id/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/benewah-id/normalized"
+  },
+  "metrics": {
+    "feature_count": 11714,
+    "content_hash": "26892b07a393e0e183ae111c61590ae5905b25e5beae528fbfdb31891e298f65",
+    "shard_manifest_sha256": "75f6d418538e03351ca3b50f8661ff71e293f84d2bf4927d674fa66a1ca42adb",
+    "shard_count": 62
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Benewah, ID \u2192 5 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    },
+    {
+      "at": "2026-09-25T02:18:18Z",
+      "action": "source_identified",
+      "detail": "Wave 4 fabric-deferred source https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0 layer=IDWR Reference/Parcels FeatureServer/0 where COUNTY='Benewah' join=PIN where=\"COUNTY='Benewah'\""
+    },
+    {
+      "at": "2026-09-25T02:18:18Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:18:18Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0; where=\"COUNTY='Benewah'\"; outFields=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:18:32Z",
+      "action": "staging_download_complete",
+      "detail": "features=11714 sha256=99f240a046e56d3e450aa304588755bb5cb6e8aa12baf3c5d0f14856cce0ad2b bytes=8296668 pages=6 file=/workspace/parcel-staging/scratch/benewah-id/raw.ndjson format=ndjson where=\"COUNTY='Benewah'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:18:33Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/benewah-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:18:33Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/benewah-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:18:33Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=11714 shards=62 max_shard_bytes=1148697 index_sha256=26892b07a393e0e183ae111c61590ae5905b25e5beae528fbfdb31891e298f65 dir=/workspace/parcel-staging/scratch/benewah-id/normalized sum_counts=11714 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 4 fabric-deferred: Idaho statewide IDWR parcels filtered to Benewah County (benewah-id). Was deferred-tail; fabric covers. OWNER stripped. No AWS/CDN/Grant B."
+}

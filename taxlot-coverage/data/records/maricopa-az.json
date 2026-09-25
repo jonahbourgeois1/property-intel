@@ -1,0 +1,139 @@
+{
+  "id": "maricopa-az",
+  "state": "AZ",
+  "county": "Maricopa",
+  "portfolio_sites": 837,
+  "status": "inspected",
+  "source_last_updated": "2026-09-21",
+  "source_url": "https://www.arcgis.com/sharing/rest/content/items/c937f17330f64e64abd41976fc8bb17f/data",
+  "source_layer": "Maricopa Assessor Parcels_All.shp (ArcGIS item c937f17330f64e64abd41976fc8bb17f Parcels.zip)",
+  "source_format": "Esri Shapefile \u2192 NDJSON (EPSG:2868\u21924326); Assessor Data Downloads bulk extract",
+  "license_url": "https://mcassessor.maricopa.gov/page/data_sales/",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Maricopa County Assessor public Parcels shapefile (Data Downloads). Disclaimer on item; no clear written grant for CDN redistribution or commercial product use. Class unknown. StreetNumb/City/Zip and other situs fields stripped from staged NDJSON.",
+    "terms_notes": "Maricopa County Assessor public Parcels shapefile (Data Downloads). Disclaimer on item; no clear written grant for CDN redistribution or commercial product use. Class unknown. StreetNumb/City/Zip and other situs fields stripped from staged NDJSON.",
+    "reviewed_at": "2026-09-24T22:09:14Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "Floor",
+      "CreateDate",
+      "RecordDate",
+      "Area",
+      "PUC",
+      "Deed",
+      "MCR",
+      "Lot",
+      "Block",
+      "Tract",
+      "STR",
+      "Shape_Leng",
+      "Shape_Area"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/maricopa-az",
+    "raw_file": "/workspace/parcel-staging/scratch/maricopa-az/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/maricopa-az/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/maricopa-az/normalized"
+  },
+  "metrics": {
+    "feature_count": 1760494,
+    "content_hash": "825b1746c37ec9dc7189ebc46d0c9eebb38b2f2085142bbb6f82d88f9812f0d6",
+    "shard_manifest_sha256": "cf411da041d85a3799f4ec9aaa8c511eb67ebb39f5f3abbe29ebc133b3dee9f1",
+    "shard_count": 867
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Maricopa, AZ \u2192 837 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:49:18Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://gis.mcassessor.maricopa.gov/arcgis/rest/services/Parcels/MapServer/0 layer=Maricopa County Assessor Parcels MapServer/0 join=APN"
+    },
+    {
+      "at": "2026-09-24T21:49:18Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:49:18Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.mcassessor.maricopa.gov/arcgis/rest/services/Parcels/MapServer/0; where='1=1'; outFields=OBJECTID,APN,APN_DASH,BOOK,MAP,ITEM,FLOOR,MCRNUM,SUBNAME,LAND_SIZE,LOT_NUM,STR,PUC,MCR_BOOK,MCR_PAGE,CITY_ZONING,JURISDICTION,BLOCK,TRACT,TAX_YR_CUR; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:08:06Z",
+      "action": "staging_download_failed",
+      "detail": "exit=-15 elapsed_s=1127.4 err=5:10Z] page 281 offset=280000 size=1000\n[2026-09-24T22:05:15Z] page 282 offset=281000 size=1000\n[2026-09-24T22:05:19Z] page 283 offset=282000 size=1000\n[2026-09-24T22:05:24Z] page 284 offset=283000 size=1000\n[2026-09-24T22:05:29Z] page 285 offset=284000 size=1000\n[2026-09-24T22:05:33Z] page 286 offset=285000 size=1000\n[2026-09-24T22:05:38Z] page 287 offset=286000 size=1000\n[2026-09-24T22:05:43Z] page 288 offset=287000 size=1000\n[2026-09-24T22:05:48Z] page 289 offset=288000 size=1000\n[2026-09-24T22:05:52Z] page 290 offset=289000 size=1000\n[2026-09-24T22:05:57Z] page 291 offset=290000 size=1000\n[2026-09-24T22:06:02Z] page 292 offset=291000 size=1000\n[2026-09-24T22:06:06Z] page 293 offset=292000 size=1000\n[2026-09-24T22:06:11Z] page 294 offset=293000 size=1000\n[2026-09-24T22:06:16Z] page 295 offset=294000 size=1000\n[2026-09-24T22:06:20Z] page 296 offset=295000 size=1000\n[2026-09-24T22:06:25Z] page 297 offset=296000 size=1000\n[2026-09-24T22:06:30Z] page 298 offset=297000 size=1000\n[2026-09-24T22:06:34Z] page 299 offset=298000 size=1000\n[2026-09-24T22:06:39Z] page 300 offset=299000 size=1000\n[2026-09-24T22:06:44Z] page 301 offset=300000 size=1000\n[2026-09-24T22:06:52Z] page 302 offset=301000 size=1000\n[2026-09-24T22:06:57Z] page 303 offset=302000 size=1000\n[2026-09-24T22:07:01Z] page 304 offset=303000 size=1000\n[2026-09-24T22:07:06Z] page 305 offset=304000 size=1000\n[2026-09-24T22:07:11Z] page 306 offset=305000 size=1000\n[2026-09-24T22:07:16Z] page 307 offset=306000 size=1000\n[2026-09-24T22:07:21Z] page 308 offset=307000 size=1000\n[2026-09-24T22:07:26Z] page 309 offset=308000 size=1000\n[2026-09-24T22:07:31Z] page 310 offset=309000 size=1000\n[2026-09-24T22:07:38Z] page 311 offset=310000 size=1000\n[2026-09-24T22:07:43Z] page 312 offset=311000 size=1000\n[2026-09-24T22:07:49Z] page 313 offset=312000 size=1000\n[2026-09-24T22:07:54Z] page 314 offset=313000 size=1000\n[2026-09-24T22:07:59Z] page 315 offset=314000 size=1000\n[2026-09-24T22:08:05Z] page 316 offset=315000 size=1000\n"
+    },
+    {
+      "at": "2026-09-24T22:09:14Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source switched to Assessor Parcels.zip shapefile item c937f17330f64e64abd41976fc8bb17f (MapServer pagination abandoned as too slow for ~3.3M). join=APN"
+    },
+    {
+      "at": "2026-09-24T22:09:14Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance. Assessor data_sales disclaimer reviewed at high level."
+    },
+    {
+      "at": "2026-09-24T22:09:14Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from Assessor Parcels.zip \u2192 Parcels_All.shp; convert to NDJSON outSR=4326; keep=OBJECTID,APN,Floor,CreateDate,RecordDate,Area,PUC,Deed,MCR,Lot,Block,Tract,STR,Shape_Leng,Shape_Area; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:11:37Z",
+      "action": "staging_download_complete",
+      "detail": "features=1760494 sha256=3ef01bd1a09d7b4485ed33665572c0e42ae50bc92295bd60afcfe9cf226d12c5 bytes=1122638826 file=/workspace/parcel-staging/scratch/maricopa-az/raw.ndjson format=ndjson source=shapefile. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:11:37Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/maricopa-az/raw.ndjson; keep=OBJECTID,APN,Floor,CreateDate,RecordDate,Area,PUC,Deed,MCR,Lot,Block,Tract,STR,Shape_Leng,Shape_Area; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:11:37Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/maricopa-az/raw.ndjson; keep=OBJECTID,APN,Floor,CreateDate,RecordDate,Area,PUC,Deed,MCR,Lot,Block,Tract,STR,Shape_Leng,Shape_Area; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:14:20Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=1760494 shards=867 max_shard_bytes=3999915 index_sha256=825b1746c37ec9dc7189ebc46d0c9eebb38b2f2085142bbb6f82d88f9812f0d6 dir=/workspace/parcel-staging/scratch/maricopa-az/normalized sum_counts=1760494 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: Maricopa Assessor bulk Parcels.zip shapefile (not MapServer pagination). MapServer/0 returnCountOnly\u22483.32M vs shapefile\u22481.76M \u2014 staged official countywide extract. Stripped situs street/city/zip. No AWS/CDN/Grant B."
+}

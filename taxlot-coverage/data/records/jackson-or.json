@@ -1,0 +1,118 @@
+{
+  "id": "jackson-or",
+  "state": "OR",
+  "county": "Jackson",
+  "portfolio_sites": 314,
+  "status": "inspected",
+  "source_last_updated": "2026-06-26",
+  "source_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2",
+  "source_layer": "OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Jackson'",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); statewide fabric subset",
+  "license_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "terms_notes": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "reviewed_at": "2026-09-24T20:30:38Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "maptaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "county_code",
+      "county_name",
+      "maptaxlot",
+      "taxlot",
+      "taxlot_acre",
+      "meridian",
+      "township",
+      "township_char",
+      "range",
+      "range_char",
+      "sctn",
+      "qtr160",
+      "qtr40",
+      "tr_key",
+      "trs_key",
+      "trsqq_key",
+      "effective_date",
+      "last_update_date"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/jackson-or",
+    "raw_file": "/workspace/parcel-staging/scratch/jackson-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/jackson-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/jackson-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 96151,
+    "content_hash": "3f02a16afe29d5c8b9583336c8aed6faa8d7ab9a23a3a436d4397dcec456526c",
+    "shard_manifest_sha256": "b15549b89cd28f23f6d31bcc36274da9a2e29334ff4a7caf308fe942473e7198",
+    "shard_count": 195
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Jackson, OR \u2192 314 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:30:38Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2 layer=OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Jackson' join=maptaxlot"
+    },
+    {
+      "at": "2026-09-24T20:30:38Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:30:38Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2; where=\"county_name='Jackson'\"; outFields=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:32:15Z",
+      "action": "staging_download_complete",
+      "detail": "features=96151 sha256=b26ba9e3ddbff13530c48c1ac2553058f9d1ce8474da7e29cbcbb20bd2b7a57d bytes=220738491 pages=49 file=/workspace/parcel-staging/scratch/jackson-or/raw.ndjson format=ndjson where=\"county_name='Jackson'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:55:21Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/jackson-or/raw.ndjson; keep=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:55:41Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=96151 shards=195 max_shard_bytes=3866746 index_sha256=3f02a16afe29d5c8b9583336c8aed6faa8d7ab9a23a3a436d4397dcec456526c dir=/workspace/parcel-staging/scratch/jackson-or/normalized sum_counts=96151 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: staged from OWRD statewide public-query fabric filtered to Jackson County. No AWS/CDN/Grant B."
+}

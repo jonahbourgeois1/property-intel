@@ -1,0 +1,118 @@
+{
+  "id": "jefferson-or",
+  "state": "OR",
+  "county": "Jefferson",
+  "portfolio_sites": 80,
+  "status": "inspected",
+  "source_last_updated": "2026-06-26",
+  "source_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2",
+  "source_layer": "OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Jefferson'",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); statewide fabric subset",
+  "license_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "terms_notes": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "reviewed_at": "2026-09-24T20:37:02Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "maptaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "county_code",
+      "county_name",
+      "maptaxlot",
+      "taxlot",
+      "taxlot_acre",
+      "meridian",
+      "township",
+      "township_char",
+      "range",
+      "range_char",
+      "sctn",
+      "qtr160",
+      "qtr40",
+      "tr_key",
+      "trs_key",
+      "trsqq_key",
+      "effective_date",
+      "last_update_date"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/jefferson-or",
+    "raw_file": "/workspace/parcel-staging/scratch/jefferson-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/jefferson-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/jefferson-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 13636,
+    "content_hash": "1b9dc0301b8458d57feab4f4b2a025799839438011ef8724e10a907411002c92",
+    "shard_manifest_sha256": "978e4b5167917ea35e338959614a97cf1b875d551b88d9070435bfc07e54495b",
+    "shard_count": 112
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Jefferson, OR \u2192 80 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:37:02Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2 layer=OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Jefferson' join=maptaxlot"
+    },
+    {
+      "at": "2026-09-24T20:37:02Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:37:02Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2; where=\"county_name='Jefferson'\"; outFields=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:37:14Z",
+      "action": "staging_download_complete",
+      "detail": "features=13636 sha256=7ad3fc18b46e3982e973cc1a90a61f7b30d16e4b8325f2e38cbde5102ebf0f6a bytes=17470730 pages=7 file=/workspace/parcel-staging/scratch/jefferson-or/raw.ndjson format=ndjson where=\"county_name='Jefferson'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:56:37Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/jefferson-or/raw.ndjson; keep=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:56:38Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=13636 shards=112 max_shard_bytes=2796819 index_sha256=1b9dc0301b8458d57feab4f4b2a025799839438011ef8724e10a907411002c92 dir=/workspace/parcel-staging/scratch/jefferson-or/normalized sum_counts=13636 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: staged from OWRD statewide public-query fabric filtered to Jefferson County. No AWS/CDN/Grant B."
+}

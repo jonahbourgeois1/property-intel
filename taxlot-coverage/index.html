@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taxlot GIS — County Coverage</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <p class="eyebrow">Taxlot GIS</p>
+      <h1>County Coverage</h1>
+      <p class="subtitle" id="subtitle">Loading…</p>
+      <div class="hero-rule" aria-hidden="true"></div>
+    </header>
+
+    <section class="selection" id="selection" aria-live="polite">
+      <div class="selection-left">
+        <span class="selection-label">Selection</span>
+        <span class="selection-count" id="selection-count">—</span>
+      </div>
+      <p class="selection-msg" id="selection-msg">All counties. Check any combination of states and counties below — selections add together.</p>
+    </section>
+
+    <section class="kpis" id="kpis" aria-label="Summary KPIs"></section>
+
+    <section class="filters-card" aria-label="Filters">
+      <div class="filter-cols">
+        <div class="filter-col">
+          <div class="filter-col-head">
+            <span>State</span>
+            <button type="button" class="linkish" id="state-clear" hidden>clear</button>
+            <span class="sel-hint" id="state-hint">none</span>
+          </div>
+          <input type="search" id="state-search" placeholder="Search states" autocomplete="off" />
+          <div class="check-list" id="state-list" role="group" aria-label="States"></div>
+        </div>
+        <div class="filter-col">
+          <div class="filter-col-head">
+            <span>County</span>
+            <button type="button" class="linkish" id="county-clear" hidden>clear</button>
+            <span class="sel-hint" id="county-hint">none</span>
+          </div>
+          <input type="search" id="county-search" placeholder="Search counties" autocomplete="off" />
+          <div class="check-list" id="county-list" role="group" aria-label="Counties"></div>
+        </div>
+        <div class="filter-col filter-col-status">
+          <div class="filter-col-head">
+            <span>Status quick-filters</span>
+            <span class="sel-hint" id="status-hint">none</span>
+          </div>
+          <p class="status-help">Click a KPI or pill to filter the table. Detail opens when you click a county row.</p>
+          <div class="pills" id="status-pills"></div>
+        </div>
+      </div>
+      <div class="filter-actions">
+        <div class="pills pills-inline" id="extra-pills"></div>
+        <button type="button" class="btn-reset" id="reset">Reset all filters</button>
+      </div>
+    </section>
+
+    <section class="breakdown">
+      <div class="breakdown-head">
+        <h2>Breakdown — tap a column head to sort · click a row for detail</h2>
+        <div class="view-toggles">
+          <button type="button" class="view-btn active" data-view="county">By county</button>
+          <button type="button" class="view-btn" data-view="state">By state</button>
+        </div>
+      </div>
+      <div class="table-card">
+        <table id="county-table">
+          <thead>
+            <tr>
+              <th class="num">#</th>
+              <th data-sort="name">Name</th>
+              <th class="num" data-sort="sites">Sites</th>
+              <th data-sort="status">Status</th>
+              <th data-sort="policy">Policy</th>
+              <th class="num" data-sort="derive">Derive&amp;sell</th>
+              <th class="num" data-sort="features">Features</th>
+              <th data-sort="source_updated">Source updated</th>
+              <th data-sort="retrieved">Retrieved</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot id="tfoot"></tfoot>
+        </table>
+        <p class="empty" id="empty" hidden>No counties match these filters.</p>
+      </div>
+    </section>
+
+    <aside class="detail-panel" id="detail" hidden>
+      <div class="detail-inner">
+        <div class="detail-top">
+          <div class="detail-heading">
+            <h2 id="detail-title">County detail</h2>
+            <p class="detail-status" id="detail-status">Record loaded from local data/records — staged on Taxlot GIS Agent computer</p>
+          </div>
+          <button type="button" class="detail-close" id="detail-close" aria-label="Close detail">×</button>
+        </div>
+        <div id="detail-body"></div>
+      </div>
+    </aside>
+    <div class="detail-backdrop" id="detail-backdrop" hidden></div>
+
+    <footer class="foot">
+      <p><strong>Staging only.</strong> Filters run entirely in the browser. County records hold GIS acquisition fields — no customer street addresses, city lists, or Res/Com/FMR breakdowns are stored here.</p>
+      <p class="foot-meta">Taxlot GIS · parcel-agent · Wave 0 = Deschutes, Lane, Linn, Josephine, Douglas (OR)</p>
+    </footer>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

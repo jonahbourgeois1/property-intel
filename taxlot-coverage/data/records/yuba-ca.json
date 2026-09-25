@@ -1,0 +1,112 @@
+{
+  "id": "yuba-ca",
+  "state": "CA",
+  "county": "Yuba",
+  "portfolio_sites": 26,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.yuba.org/arcgis/rest/services/Yuba_Parcels_Map_MIL1/MapServer/0",
+  "source_layer": "Yuba_Parcels_Map_MIL1 MapServer/0 Parcels",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gis.yuba.org/arcgis/rest/services/Yuba_Parcels_Map_MIL1/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Yuba County official Parcels MapServer (lean APN geometry). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:58:26Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "APN",
+      "BKPG",
+      "PARCEL",
+      "MH",
+      "ROW",
+      "Shape_Length",
+      "Shape_Area"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/yuba-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/yuba-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/yuba-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/yuba-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 33228,
+    "content_hash": "c6b6c79e9cff5da6685d02136eea24f421bfa03eb4281a35dc183418fd3d9d5f",
+    "shard_manifest_sha256": "4b1a8d54d4d9413e178ec2826f64bd2f1c4210d8a5b3a175dcc3dc1aad630045",
+    "shard_count": 47
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Yuba, CA \u2192 26 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:58:26Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.yuba.org/arcgis/rest/services/Yuba_Parcels_Map_MIL1/MapServer/0 layer=Yuba_Parcels_Map_MIL1 MapServer/0 Parcels join=APN"
+    },
+    {
+      "at": "2026-09-25T00:58:26Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:58:26Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.yuba.org/arcgis/rest/services/Yuba_Parcels_Map_MIL1/MapServer/0; where='1=1'; outFields=OBJECTID,APN,BKPG,PARCEL,MH,ROW,Shape_Length,Shape_Area; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:58:52Z",
+      "action": "staging_download_complete",
+      "detail": "features=33228 sha256=2ee5bda8cea22d5e53451f83b3c97ef65b1b553e40a0b424065731d1bb06240b bytes=25420559 pages=34 file=/workspace/parcel-staging/scratch/yuba-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:58:52Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/yuba-ca/raw.ndjson; keep=OBJECTID,APN,BKPG,PARCEL,MH,ROW,Shape_Length,Shape_Area; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:58:52Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/yuba-ca/raw.ndjson; keep=OBJECTID,APN,BKPG,PARCEL,MH,ROW,Shape_Length,Shape_Area; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:58:54Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=33228 shards=47 max_shard_bytes=3847465 index_sha256=c6b6c79e9cff5da6685d02136eea24f421bfa03eb4281a35dc183418fd3d9d5f dir=/workspace/parcel-staging/scratch/yuba-ca/normalized sum_counts=33228 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Yuba CA official MapServer parcels (no owner/mailing/value). No AWS/CDN/Grant B."
+}

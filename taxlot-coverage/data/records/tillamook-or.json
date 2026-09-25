@@ -1,0 +1,118 @@
+{
+  "id": "tillamook-or",
+  "state": "OR",
+  "county": "Tillamook",
+  "portfolio_sites": 4,
+  "status": "inspected",
+  "source_last_updated": "2026-06-26",
+  "source_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2",
+  "source_layer": "OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Tillamook'",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); statewide fabric subset",
+  "license_url": "https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "terms_notes": "OWRD service: query of tax lots with county agreements for public use. No clear written grant for CDN redistribution, viewer_outline, or derive_and_sell. Class unknown.",
+    "reviewed_at": "2026-09-24T20:49:50Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "maptaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "county_code",
+      "county_name",
+      "maptaxlot",
+      "taxlot",
+      "taxlot_acre",
+      "meridian",
+      "township",
+      "township_char",
+      "range",
+      "range_char",
+      "sctn",
+      "qtr160",
+      "qtr40",
+      "tr_key",
+      "trs_key",
+      "trsqq_key",
+      "effective_date",
+      "last_update_date"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/tillamook-or",
+    "raw_file": "/workspace/parcel-staging/scratch/tillamook-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/tillamook-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/tillamook-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 31353,
+    "content_hash": "90aa0692fcb7f8cf62bb1df7f1215476e766e830aa00316a60c250d9e7ab8d74",
+    "shard_manifest_sha256": "68564023fdcebd8a36c821ea1a19ee1dd8a0445d492d58d4f915ed3d435dae1b",
+    "shard_count": 86
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Tillamook, OR \u2192 4 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:49:50Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2 layer=OWRD Tax_Lots_Public_Query_WGS84 FeatureServer/2 where county_name='Tillamook' join=maptaxlot"
+    },
+    {
+      "at": "2026-09-24T20:49:50Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:49:50Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.wrd.state.or.us/server/rest/services/tax/Tax_Lots_Public_Query_WGS84/FeatureServer/2; where=\"county_name='Tillamook'\"; outFields=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:50:18Z",
+      "action": "staging_download_complete",
+      "detail": "features=31353 sha256=586c7c7a42761e4ed47e4b1af5e295d551e353cc9147096010b13d3caec3577e bytes=40619417 pages=16 file=/workspace/parcel-staging/scratch/tillamook-or/raw.ndjson format=ndjson where=\"county_name='Tillamook'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:58:49Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/tillamook-or/raw.ndjson; keep=OBJECTID,county_code,county_name,maptaxlot,taxlot,taxlot_acre,meridian,township,township_char,range,range_char,sctn,qtr160,qtr40,tr_key,trs_key,trsqq_key,effective_date,last_update_date; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:58:52Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=31353 shards=86 max_shard_bytes=2699978 index_sha256=90aa0692fcb7f8cf62bb1df7f1215476e766e830aa00316a60c250d9e7ab8d74 dir=/workspace/parcel-staging/scratch/tillamook-or/normalized sum_counts=31353 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: staged from OWRD statewide public-query fabric filtered to Tillamook County. No AWS/CDN/Grant B."
+}

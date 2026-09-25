@@ -1,0 +1,103 @@
+{
+  "id": "wasco-or",
+  "state": "OR",
+  "county": "Wasco",
+  "portfolio_sites": 11,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://public.co.wasco.or.us/gisserver/rest/services/Taxlots/MapServer/0",
+  "source_layer": "Wasco Taxlots MapServer/0",
+  "source_format": "ArcGIS MapServer query (GeoJSON)",
+  "license_url": "https://public.co.wasco.or.us/gisserver/rest/services/Taxlots/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:46:23Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "MapTaxlot",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "AccountNum",
+      "MapTaxlot",
+      "CalculatedAcres"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/wasco-or",
+    "raw_file": "/workspace/parcel-staging/scratch/wasco-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/wasco-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/wasco-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 15516,
+    "content_hash": "fa4516066b93d0007b39e9357fe6b3f0a7d7b223e75304fdcd4e96d7ab91c086",
+    "shard_manifest_sha256": "f461530c124628e388750ffdbe0e09ee6e8ecadc2f1109662770578062af2c76",
+    "shard_count": 148
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Wasco, OR \u2192 11 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:46:23Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://public.co.wasco.or.us/gisserver/rest/services/Taxlots/MapServer/0 layer=Wasco Taxlots MapServer/0 join=MapTaxlot"
+    },
+    {
+      "at": "2026-09-24T20:46:23Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:46:23Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://public.co.wasco.or.us/gisserver/rest/services/Taxlots/MapServer/0; where='1=1'; outFields=OBJECTID,AccountNum,MapTaxlot,CalculatedAcres; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:49:19Z",
+      "action": "staging_download_complete",
+      "detail": "features=15516 sha256=76fdacd7ed69edf912b54853ea3b1e01a1dba1ec98ec43b02b945e38641e0445 bytes=21497915 pages=156 file=/workspace/parcel-staging/scratch/wasco-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:58:10Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/wasco-or/raw.ndjson; keep=OBJECTID,AccountNum,MapTaxlot,CalculatedAcres; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:58:12Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=15516 shards=148 max_shard_bytes=2540014 index_sha256=fa4516066b93d0007b39e9357fe6b3f0a7d7b223e75304fdcd4e96d7ab91c086 dir=/workspace/parcel-staging/scratch/wasco-or/normalized sum_counts=15516 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+}

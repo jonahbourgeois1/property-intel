@@ -1,0 +1,129 @@
+{
+  "id": "delta-co",
+  "state": "CO",
+  "county": "Delta",
+  "portfolio_sites": 10,
+  "status": "blocked-license",
+  "source_last_updated": null,
+  "source_url": "https://maps.deltacountyco.gov/arcgis/rest/services/PARCELSonly/FeatureServer/209",
+  "source_layer": "Delta CO PARCELSonly FeatureServer/209 Tax Parcels (not on CO statewide fabric)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://www.deltacountyco.gov/821/Data-Share-Policy",
+  "policy": {
+    "class": "internal-only",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Delta County CO Data Share Policy affirmatively forbids freely giving >25 parcels for commercial use, charges $600 for full county dataset, and prohibits resale. Research staging only; class blocked-license / internal-only for redistribute and derive-and-sell.",
+    "terms_notes": "Affirmative forbid for redistribution/resale.",
+    "reviewed_at": "2026-09-25T01:55:31Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TaxPIN_GIS",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "TaxPIN_GIS",
+      "ACCOUNTNO",
+      "ASR_Lookup",
+      "GIS_Acres",
+      "ACRES",
+      "AREAID",
+      "LANDSQFT",
+      "SUBCODE",
+      "SUBNAME",
+      "BLOCK",
+      "LOT",
+      "BOOK",
+      "PAGE",
+      "CLASSCD1",
+      "CLASSCD1_DESC",
+      "TAXYEAR",
+      "LEGAL",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/delta-co",
+    "raw_file": "/workspace/parcel-staging/scratch/delta-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/delta-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/delta-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 19238,
+    "content_hash": "33a46f0d2bba83bdfede6428e24c102c1b31fcf336a548bc692f037440e2a2a1",
+    "shard_manifest_sha256": "b8cee09531eac747bf9792a376d6cdb5ceb42b87f832dbc1c0bc390212f55fe1",
+    "shard_count": 67
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Delta, CO \u2192 10 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:55:31Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://maps.deltacountyco.gov/arcgis/rest/services/PARCELSonly/FeatureServer/209 layer=Delta CO PARCELSonly FeatureServer/209 Tax Parcels (not on CO statewide fabric) join=TaxPIN_GIS"
+    },
+    {
+      "at": "2026-09-25T01:55:31Z",
+      "action": "policy_review",
+      "detail": "class=internal-only redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:55:32Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://maps.deltacountyco.gov/arcgis/rest/services/PARCELSonly/FeatureServer/209; where='1=1'; outFields=OBJECTID,TaxPIN_GIS,ACCOUNTNO,ASR_Lookup,GIS_Acres,ACRES,AREAID,LANDSQFT,SUBCODE,SUBNAME,BLOCK,LOT,BOOK,PAGE,CLASSCD1,CLASSCD1_DESC,TAXYEAR,LEGAL,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:55:42Z",
+      "action": "staging_download_complete",
+      "detail": "features=19238 sha256=480eae876497315f05c3e9169432855a24b5aba798b7c13bb663260e8233a948 bytes=28050758 pages=10 file=/workspace/parcel-staging/scratch/delta-co/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:55:42Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/delta-co/raw.ndjson; keep=OBJECTID,TaxPIN_GIS,ACCOUNTNO,ASR_Lookup,GIS_Acres,ACRES,AREAID,LANDSQFT,SUBCODE,SUBNAME,BLOCK,LOT,BOOK,PAGE,CLASSCD1,CLASSCD1_DESC,TAXYEAR,LEGAL,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:55:42Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/delta-co/raw.ndjson; keep=OBJECTID,TaxPIN_GIS,ACCOUNTNO,ASR_Lookup,GIS_Acres,ACRES,AREAID,LANDSQFT,SUBCODE,SUBNAME,BLOCK,LOT,BOOK,PAGE,CLASSCD1,CLASSCD1_DESC,TAXYEAR,LEGAL,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:55:43Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=19238 shards=67 max_shard_bytes=2500365 index_sha256=33a46f0d2bba83bdfede6428e24c102c1b31fcf336a548bc692f037440e2a2a1 dir=/workspace/parcel-staging/scratch/delta-co/normalized sum_counts=19238 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:55:44Z",
+      "action": "policy_block",
+      "detail": "Affirmative county data-share forbid on redistribution/resale; staged for research only; status=blocked-license. No AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Delta CO county Tax Parcels (absent from CO statewide fabric). Owner/mailing/situs/assessed-value fields stripped. Affirmative no-redistribution policy \u2192 blocked-license after stage. No AWS/CDN/Grant B."
+}

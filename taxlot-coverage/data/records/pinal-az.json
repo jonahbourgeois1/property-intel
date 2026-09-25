@@ -1,0 +1,116 @@
+{
+  "id": "pinal-az",
+  "state": "AZ",
+  "county": "Pinal",
+  "portfolio_sites": 137,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://azwatermaps.azwater.gov/arcgis/rest/services/General/Parcels_for_TEST/FeatureServer/7",
+  "source_layer": "ADWR General/Parcels_for_TEST FeatureServer/7 Pinal_Parcels",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://azwatermaps.azwater.gov/arcgis/rest/services/General/Parcels_for_TEST/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "ADWR Pinal_Parcels layer (statewide parcel extract subset). SITE_*/OWNER_NAME stripped. Preferred over Casa Grande MapServer (~60k incomplete). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-24T23:51:00Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "ID",
+      "COUNTY",
+      "APN",
+      "BOOK",
+      "MAP",
+      "PARCEL",
+      "SUFFIX",
+      "URL",
+      "Shape__Area",
+      "Shape__Length",
+      "ACRES_US"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/pinal-az",
+    "raw_file": "/workspace/parcel-staging/scratch/pinal-az/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/pinal-az/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/pinal-az/normalized"
+  },
+  "metrics": {
+    "feature_count": 280169,
+    "content_hash": "815aa9b5f97f0f4e74be4c8999d50513a656a4df07f7456fa34a571c85805166",
+    "shard_manifest_sha256": "97f0b135f4266dc01fb0c728071c604d39fde901d58c236096113c596860e090",
+    "shard_count": 304
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Pinal, AZ \u2192 137 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T23:51:00Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://azwatermaps.azwater.gov/arcgis/rest/services/General/Parcels_for_TEST/FeatureServer/7 layer=ADWR General/Parcels_for_TEST FeatureServer/7 Pinal_Parcels join=APN"
+    },
+    {
+      "at": "2026-09-24T23:51:00Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T23:51:01Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://azwatermaps.azwater.gov/arcgis/rest/services/General/Parcels_for_TEST/FeatureServer/7; where='1=1'; outFields=OBJECTID,ID,COUNTY,APN,BOOK,MAP,PARCEL,SUFFIX,URL,Shape__Area,Shape__Length,ACRES_US; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T23:52:43Z",
+      "action": "staging_download_complete",
+      "detail": "features=280172 sha256=01389d3ed0741434abe785a6cb5040df548277d2aea75c2081fedde3ee0b78bf bytes=221567061 pages=141 file=/workspace/parcel-staging/scratch/pinal-az/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T23:52:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pinal-az/raw.ndjson; keep=OBJECTID,ID,COUNTY,APN,BOOK,MAP,PARCEL,SUFFIX,URL,Shape__Area,Shape__Length,ACRES_US; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T23:52:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pinal-az/raw.ndjson; keep=OBJECTID,ID,COUNTY,APN,BOOK,MAP,PARCEL,SUFFIX,URL,Shape__Area,Shape__Length,ACRES_US; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T23:53:05Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=280169 shards=304 max_shard_bytes=3981055 index_sha256=815aa9b5f97f0f4e74be4c8999d50513a656a4df07f7456fa34a571c85805166 dir=/workspace/parcel-staging/scratch/pinal-az/normalized sum_counts=280169 pct_delta_vs_metrics=0.001% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Pinal AZ via ADWR Pinal_Parcels (~280k). Casa Grande MapServer (~60k) rejected as incomplete. Stripped SITE_ADDRESS/SITE_CITY/SITE_ZIP/OWNER_NAME. No AWS/CDN/Grant B."
+}

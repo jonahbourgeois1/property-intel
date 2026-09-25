@@ -1,0 +1,113 @@
+{
+  "id": "benton-wa",
+  "state": "WA",
+  "county": "Benton",
+  "portfolio_sites": 24,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Benton'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:06:35Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/benton-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/benton-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/benton-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/benton-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 79508,
+    "content_hash": "99bdacbeb6913222e7d81bfbcc5887084a57ef4f60fa794de22702eab695c4d4",
+    "shard_manifest_sha256": "0e165d48962eaecb6724748662ee23d72875083927164f52a8a92357feadeaab",
+    "shard_count": 155
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Benton, WA \u2192 24 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:06:35Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Benton' join=PARCEL_ID_NR where=\"COUNTY_NM='Benton'\""
+    },
+    {
+      "at": "2026-09-25T01:06:35Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:06:35Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Benton'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:08:37Z",
+      "action": "staging_download_complete",
+      "detail": "features=79508 sha256=3593af061adaa4b9403024c2dcab653b7b770628cdfd1e44b9b439be33b6cf85 bytes=187265839 pages=20 file=/workspace/parcel-staging/scratch/benton-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Benton'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:08:37Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/benton-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:08:37Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/benton-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:08:58Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=79508 shards=155 max_shard_bytes=3819200 index_sha256=99bdacbeb6913222e7d81bfbcc5887084a57ef4f60fa794de22702eab695c4d4 dir=/workspace/parcel-staging/scratch/benton-wa/normalized sum_counts=79508 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Benton County (benton-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

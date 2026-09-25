@@ -1,0 +1,121 @@
+{
+  "id": "el-paso-co",
+  "state": "CO",
+  "county": "El Paso",
+  "portfolio_sites": 52,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='El Paso'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Colorado Public Parcel Composite (statewide). Owner/situs/value fields stripped from outFields. No clear written grant for CDN redistribution or commercial product use; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:40:38Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "parcel_id",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "countyName",
+      "countyFips",
+      "parcel_id",
+      "account",
+      "landSqft",
+      "landAcres",
+      "block",
+      "lot",
+      "subCode",
+      "subName",
+      "zoningCode",
+      "zoningDesc",
+      "landUseCde",
+      "landUseDsc",
+      "URL",
+      "dateReceived"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/el-paso-co",
+    "raw_file": "/workspace/parcel-staging/scratch/el-paso-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/el-paso-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/el-paso-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 277007,
+    "content_hash": "d4b9b25c14cb255424e34e73995c35679764dca5555521d9c1620c1784fc1adf",
+    "shard_manifest_sha256": "bd95421809061bb864f3e69e1b7beee41bd44370e0dec64a86304ca568357ce3",
+    "shard_count": 188
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: El Paso, CO \u2192 52 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:40:38Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0 layer=Colorado_Public_Parcels FeatureServer/0 where countyName='El Paso' join=parcel_id where=\"countyName='El Paso'\""
+    },
+    {
+      "at": "2026-09-25T00:40:38Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:40:38Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0; where=\"countyName='El Paso'\"; outFields=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:45:17Z",
+      "action": "staging_download_complete",
+      "detail": "features=277007 sha256=ccea2b85ccc11092bdca252581bdf8a0a4349dfb0ff332c462358c07a0741b7c bytes=204697029 pages=139 file=/workspace/parcel-staging/scratch/el-paso-co/raw.ndjson format=ndjson where=\"countyName='El Paso'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:45:17Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/el-paso-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:45:17Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/el-paso-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:45:36Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=277007 shards=188 max_shard_bytes=3996564 index_sha256=d4b9b25c14cb255424e34e73995c35679764dca5555521d9c1620c1784fc1adf dir=/workspace/parcel-staging/scratch/el-paso-co/normalized sum_counts=277007 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: CO statewide public parcel fabric filtered to El Paso County (el-paso-co). Owner/situs/value stripped. No AWS/CDN/Grant B."
+}

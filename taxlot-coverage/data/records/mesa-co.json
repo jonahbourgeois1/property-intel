@@ -1,0 +1,126 @@
+{
+  "id": "mesa-co",
+  "state": "CO",
+  "county": "Mesa",
+  "portfolio_sites": 3,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Mesa'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Colorado Public Parcel Composite (statewide). Owner/situs/value fields stripped from outFields. No clear written grant for CDN redistribution or commercial product use; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:22:24Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "parcel_id",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "countyName",
+      "countyFips",
+      "parcel_id",
+      "account",
+      "landSqft",
+      "landAcres",
+      "block",
+      "lot",
+      "subCode",
+      "subName",
+      "zoningCode",
+      "zoningDesc",
+      "landUseCde",
+      "landUseDsc",
+      "URL",
+      "dateReceived"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/mesa-co",
+    "raw_file": "/workspace/parcel-staging/scratch/mesa-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/mesa-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/mesa-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 78984,
+    "content_hash": "03d7f160dbfe9166719f1ea73a3107d5b977cdce2e21aae336908ad12ede484e",
+    "shard_manifest_sha256": "f292857fa250efad36cfe8cf79f4c1a964619005480cf42e62ab79044a51c98f",
+    "shard_count": 182
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Mesa, CO \u2192 3 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    },
+    {
+      "at": "2026-09-25T02:22:24Z",
+      "action": "source_identified",
+      "detail": "Wave 4 fabric-deferred source https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0 layer=Colorado_Public_Parcels FeatureServer/0 where countyName='Mesa' join=parcel_id where=\"countyName='Mesa'\""
+    },
+    {
+      "at": "2026-09-25T02:22:24Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:22:24Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0; where=\"countyName='Mesa'\"; outFields=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:25:20Z",
+      "action": "staging_download_complete",
+      "detail": "features=78984 sha256=54f636597cb41a50b2dcab2dd3a45390380aaeb90fc9d99392cf966cef0d3663 bytes=98572437 pages=40 file=/workspace/parcel-staging/scratch/mesa-co/raw.ndjson format=ndjson where=\"countyName='Mesa'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:25:20Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/mesa-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:25:20Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/mesa-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:25:29Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=78984 shards=182 max_shard_bytes=3962441 index_sha256=03d7f160dbfe9166719f1ea73a3107d5b977cdce2e21aae336908ad12ede484e dir=/workspace/parcel-staging/scratch/mesa-co/normalized sum_counts=78984 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 4 fabric-deferred: CO statewide public parcel fabric filtered to Mesa County (mesa-co). Was deferred-tail; fabric covers. Owner/situs/value stripped. No AWS/CDN/Grant B."
+}

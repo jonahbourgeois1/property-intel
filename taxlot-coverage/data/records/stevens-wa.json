@@ -1,0 +1,113 @@
+{
+  "id": "stevens-wa",
+  "state": "WA",
+  "county": "Stevens",
+  "portfolio_sites": 45,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Stevens'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T00:48:58Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/stevens-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/stevens-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/stevens-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/stevens-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 42940,
+    "content_hash": "52426d2abb2b67955154ca2a605f0b20523aa56d69a08dfcdaaf4b9c35fd8852",
+    "shard_manifest_sha256": "11cce1f7ba1c7cfaf9e75e0b603e341fd2962e870d57f12c8c102822e3427194",
+    "shard_count": 193
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Stevens, WA \u2192 45 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T00:48:58Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Stevens' join=PARCEL_ID_NR where=\"COUNTY_NM='Stevens'\""
+    },
+    {
+      "at": "2026-09-25T00:48:58Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T00:48:58Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Stevens'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T00:49:44Z",
+      "action": "staging_download_complete",
+      "detail": "features=42943 sha256=25dfed0b5bd1f0f4e22d62abfbcaecf5a99cff863e46998aa1a80c0b883013ec bytes=53204364 pages=11 file=/workspace/parcel-staging/scratch/stevens-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Stevens'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T00:49:44Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/stevens-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:49:44Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/stevens-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T00:49:49Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=42940 shards=193 max_shard_bytes=3061392 index_sha256=52426d2abb2b67955154ca2a605f0b20523aa56d69a08dfcdaaf4b9c35fd8852 dir=/workspace/parcel-staging/scratch/stevens-wa/normalized sum_counts=42940 pct_delta_vs_metrics=0.007% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: WA statewide WDFW parcels filtered to Stevens County (stevens-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+}

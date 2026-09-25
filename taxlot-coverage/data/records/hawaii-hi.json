@@ -1,0 +1,118 @@
+{
+  "id": "hawaii-hi",
+  "state": "HI",
+  "county": "Hawaii",
+  "portfolio_sites": 13,
+  "status": "inspected",
+  "source_last_updated": "2026-04-27",
+  "source_url": "https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25",
+  "source_layer": "Hawaii Statewide TMKs MapServer/25 where county='Hawaii'",
+  "source_format": "ArcGIS MapServer query (NDJSON); statewide TMK fabric county subset",
+  "license_url": "https://opendata.hawaii.gov/dataset/parcels-hawaii-statewide",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Hawaii Statewide GIS Program TMK parcels (merged county sources). Open data portal; no clear written grant for CDN redistribution or commercial product use. Class unknown.",
+    "terms_notes": "Hawaii Statewide GIS Program TMK parcels (merged county sources). Open data portal; no clear written grant for CDN redistribution or commercial product use. Class unknown.",
+    "reviewed_at": "2026-09-24T21:18:00Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "tmk_txt",
+    "feature_id_field": "objectid",
+    "keep_properties": [
+      "objectid",
+      "tmk",
+      "tmk_txt",
+      "county",
+      "division",
+      "island",
+      "zone",
+      "section",
+      "plat",
+      "plat1",
+      "parcel",
+      "parcel1",
+      "gisacres",
+      "cty_tmk"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/hawaii-hi",
+    "raw_file": "/workspace/parcel-staging/scratch/hawaii-hi/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/hawaii-hi/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/hawaii-hi/normalized"
+  },
+  "metrics": {
+    "feature_count": 135718,
+    "content_hash": "6f585d18974c79bdd69f640dafc11cce794a6e08f7a0d151e1c60a2df9624230",
+    "shard_manifest_sha256": "99a797328386f16db7041be8f2f603bc8fd1d8f14c13542a093c15ccdfd63342",
+    "shard_count": 156
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Hawaii, HI \u2192 13 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:18:00Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25 layer=Hawaii Statewide TMKs MapServer/25 where county='Hawaii' join=tmk_txt"
+    },
+    {
+      "at": "2026-09-24T21:18:00Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:18:00Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25; where=\"county='Hawaii'\"; outFields=objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:21:13Z",
+      "action": "staging_download_complete",
+      "detail": "features=135718 sha256=bda7359c3a8cc4d6e128bfd4da8ba3d1e934caf0fb11494db43565df3b0957aa bytes=123476623 pages=136 file=/workspace/parcel-staging/scratch/hawaii-hi/raw.ndjson format=ndjson where=\"county='Hawaii'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:21:13Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/hawaii-hi/raw.ndjson; keep=objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:21:13Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/hawaii-hi/raw.ndjson; keep=objectid,tmk,tmk_txt,county,division,island,zone,section,plat,plat1,parcel,parcel1,gisacres,cty_tmk; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:21:24Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=135718 shards=156 max_shard_bytes=3877900 index_sha256=6f585d18974c79bdd69f640dafc11cce794a6e08f7a0d151e1c60a2df9624230 dir=/workspace/parcel-staging/scratch/hawaii-hi/normalized sum_counts=135718 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2 opportunistic: Hawaii County (Big Island) from same statewide TMK fabric used for Honolulu/Maui. No AWS/CDN/Grant B."
+}

@@ -1,0 +1,131 @@
+{
+  "id": "pima-az",
+  "state": "AZ",
+  "county": "Pima",
+  "portfolio_sites": 837,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13",
+  "source_layer": "Pima GISOpenData LandRecords MapServer/13 Parcels - Regional (Tax Code Only)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Pima County GIS Open Data LandRecords parcels (tax-code-only layer; no owner/mail/FCV). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Pima County GIS Open Data LandRecords parcels (tax-code-only layer; no owner/mail/FCV). No clear CDN/commercial grant; class unknown.",
+    "reviewed_at": "2026-09-24T22:08:06Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PARCEL",
+      "AREA",
+      "BK",
+      "MP",
+      "PCL",
+      "PCL_R",
+      "BK_MP",
+      "X_HPGN",
+      "Y_HPGN",
+      "LON",
+      "LAT"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/pima-az",
+    "raw_file": "/workspace/parcel-staging/scratch/pima-az/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/pima-az/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/pima-az/normalized"
+  },
+  "metrics": {
+    "feature_count": 448363,
+    "content_hash": "5f04901c525a051d13ad0090fdccaab8019676b5ccb599de3e1d8ab18a695c7e",
+    "shard_manifest_sha256": "cf80dfcc59e38746827b0c2cabd1a36dd55c3532ffa7585d043d911594bfd920",
+    "shard_count": 430
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Pima, AZ \u2192 837 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:36Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13 layer=Pima GISOpenData LandRecords MapServer/13 Parcels - Regional (Tax Code Only) join=PARCEL"
+    },
+    {
+      "at": "2026-09-24T22:03:36Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:03:36Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13; where='1=1'; outFields=OBJECTID,PARCEL,AREA,BK,MP,PCL,PCL_R,BK_MP,X_HPGN,Y_HPGN,LON,LAT; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:07:09Z",
+      "action": "staging_download_complete",
+      "detail": "features=448363 sha256=3d3dfd465b99aed4929ab8f0d86a17f75ff374b8708cee9f236a91ba8a632098 bytes=329098950 pages=225 file=/workspace/parcel-staging/scratch/pima-az/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:07:09Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pima-az/raw.ndjson; keep=OBJECTID,PARCEL,AREA,BK,MP,PCL,PCL_R,BK_MP,X_HPGN,Y_HPGN,LON,LAT; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:07:09Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pima-az/raw.ndjson; keep=OBJECTID,PARCEL,AREA,BK,MP,PCL,PCL_R,BK_MP,X_HPGN,Y_HPGN,LON,LAT; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:07:47Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=448363 shards=430 max_shard_bytes=3950073 index_sha256=5f04901c525a051d13ad0090fdccaab8019676b5ccb599de3e1d8ab18a695c7e dir=/workspace/parcel-staging/scratch/pima-az/normalized sum_counts=448363 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:08:06Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13 layer=Pima GISOpenData LandRecords MapServer/13 Parcels - Regional (Tax Code Only) join=PARCEL"
+    },
+    {
+      "at": "2026-09-24T22:08:06Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:08:06Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13; where='1=1'; outFields=OBJECTID,PARCEL,AREA,BK,MP,PCL,PCL_R,BK_MP,X_HPGN,Y_HPGN,LON,LAT; outSR=4326; no AWS/CDN/Grant B."
+    }
+  ],
+  "notes": "Wave 2: Pima regional tax-code parcels (layer 13 preferred over layer 12 which carries MAIL*/FCV). No AWS/CDN/Grant B."
+}

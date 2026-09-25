@@ -1,0 +1,118 @@
+{
+  "id": "ferry-wa",
+  "state": "WA",
+  "county": "Ferry",
+  "portfolio_sites": 2,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Ferry'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:31:07Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/ferry-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/ferry-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/ferry-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/ferry-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 9229,
+    "content_hash": "940794a1e4772c3df0c3426f5ccd65d9b880527780c218af47a2c90f49b550fb",
+    "shard_manifest_sha256": "9df59a18e670a1a5b3a5e929e915264708c6a7234e47acc7ddeb4464368fc1d0",
+    "shard_count": 145
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Ferry, WA \u2192 2 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    },
+    {
+      "at": "2026-09-25T02:31:07Z",
+      "action": "source_identified",
+      "detail": "Wave 4 fabric-deferred source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Ferry' join=PARCEL_ID_NR where=\"COUNTY_NM='Ferry'\""
+    },
+    {
+      "at": "2026-09-25T02:31:07Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:31:07Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Ferry'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:31:17Z",
+      "action": "staging_download_complete",
+      "detail": "features=9229 sha256=3664c354a913b6e547e513098a1ef12142e9af2c73204d2d28f697ab4fc78d0c bytes=9049492 pages=3 file=/workspace/parcel-staging/scratch/ferry-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Ferry'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:31:17Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/ferry-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:31:17Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/ferry-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:31:17Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=9229 shards=145 max_shard_bytes=853265 index_sha256=940794a1e4772c3df0c3426f5ccd65d9b880527780c218af47a2c90f49b550fb dir=/workspace/parcel-staging/scratch/ferry-wa/normalized sum_counts=9229 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Ferry County (ferry-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B."
+}

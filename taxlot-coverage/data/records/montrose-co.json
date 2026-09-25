@@ -1,0 +1,116 @@
+{
+  "id": "montrose-co",
+  "state": "CO",
+  "county": "Montrose",
+  "portfolio_sites": 22,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://mcmap.montrosecounty.net/server/rest/services/MontroseCounty/FeatureServer/47",
+  "source_layer": "MontroseCounty FeatureServer/47 Parcel Line (not on CO statewide fabric)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://www.montrosecounty.net/406/Downloadable-Data",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Montrose County official Parcel Line FeatureServer (county portal; absent from CO statewide fabric). Owner/mailing/situs (name/address*/full_add/loccity/zip*) stripped. County states free public shapefile downloads; no clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T01:27:04Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "assessorsi",
+    "feature_id_field": "objectid",
+    "keep_properties": [
+      "objectid",
+      "assessorsi",
+      "visible",
+      "accountno",
+      "areaid",
+      "accttype",
+      "legal",
+      "mill_levy",
+      "special_us",
+      "zoning_nu",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/montrose-co",
+    "raw_file": "/workspace/parcel-staging/scratch/montrose-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/montrose-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/montrose-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 29208,
+    "content_hash": "57e52585bc9d3dd625bb65af4f82406aa0da487488acbc325e790309f79801d0",
+    "shard_manifest_sha256": "425091c475a96edfcce17de46f1234108699d1702264966c2197013e7f352dff",
+    "shard_count": 109
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Montrose, CO \u2192 22 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T01:27:04Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://mcmap.montrosecounty.net/server/rest/services/MontroseCounty/FeatureServer/47 layer=MontroseCounty FeatureServer/47 Parcel Line (not on CO statewide fabric) join=assessorsi"
+    },
+    {
+      "at": "2026-09-25T01:27:04Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T01:27:04Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://mcmap.montrosecounty.net/server/rest/services/MontroseCounty/FeatureServer/47; where='1=1'; outFields=objectid,assessorsi,visible,accountno,areaid,accttype,legal,mill_levy,special_us,zoning_nu,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T01:29:38Z",
+      "action": "staging_download_complete",
+      "detail": "features=29208 sha256=531f39d15b5f0986e19cce2157761b4962dcbdd3b8e5f4bb9ce2af32ba31416c bytes=29070316 pages=293 file=/workspace/parcel-staging/scratch/montrose-co/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T01:29:38Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/montrose-co/raw.ndjson; keep=objectid,assessorsi,visible,accountno,areaid,accttype,legal,mill_levy,special_us,zoning_nu,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:29:38Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/montrose-co/raw.ndjson; keep=objectid,assessorsi,visible,accountno,areaid,accttype,legal,mill_levy,special_us,zoning_nu,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T01:29:40Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=29208 shards=109 max_shard_bytes=3554004 index_sha256=57e52585bc9d3dd625bb65af4f82406aa0da487488acbc325e790309f79801d0 dir=/workspace/parcel-staging/scratch/montrose-co/normalized sum_counts=29208 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Montrose CO county FeatureServer/47 (not in Colorado_Public_Parcels). Stripped name/address/careof/full_add. No AWS/CDN/Grant B."
+}

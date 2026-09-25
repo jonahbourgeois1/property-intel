@@ -1,0 +1,118 @@
+{
+  "id": "clallam-wa",
+  "state": "WA",
+  "county": "Clallam",
+  "portfolio_sites": 1,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
+  "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Clallam'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "WA DFW statewide parcels fabric (no owner/taxpayer/value attributes on this service). No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:35:18Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PARCEL_ID_NR",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "FIPS_NR",
+      "COUNTY_NM",
+      "PARCEL_ID_NR",
+      "ORIG_PARCEL_ID",
+      "DATA_LINK",
+      "ORIG_LANDUSE_CD",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/clallam-wa",
+    "raw_file": "/workspace/parcel-staging/scratch/clallam-wa/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/clallam-wa/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/clallam-wa/normalized"
+  },
+  "metrics": {
+    "feature_count": 54516,
+    "content_hash": "1a5b500b02efaaa32ad7fb13dd560f720f184489651917accafe6de39fec8658",
+    "shard_manifest_sha256": "e7585a2fefa0fed74237e18bf166dcff502a5a983f6ae17f25661fdeee515fcc",
+    "shard_count": 140
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Clallam, WA \u2192 1 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    },
+    {
+      "at": "2026-09-25T02:35:18Z",
+      "action": "source_identified",
+      "detail": "Wave 4 fabric-deferred source https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0 layer=WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Clallam' join=PARCEL_ID_NR where=\"COUNTY_NM='Clallam'\""
+    },
+    {
+      "at": "2026-09-25T02:35:18Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:35:18Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0; where=\"COUNTY_NM='Clallam'\"; outFields=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:37:17Z",
+      "action": "staging_download_complete",
+      "detail": "features=54516 sha256=3f94447d59a5a2ae66b5a1b1ea7d03393547bda72e54d7f7a112c3178ed5dbfc bytes=53294508 pages=14 file=/workspace/parcel-staging/scratch/clallam-wa/raw.ndjson format=ndjson where=\"COUNTY_NM='Clallam'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:37:17Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/clallam-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:37:17Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/clallam-wa/raw.ndjson; keep=OBJECTID,FIPS_NR,COUNTY_NM,PARCEL_ID_NR,ORIG_PARCEL_ID,DATA_LINK,ORIG_LANDUSE_CD,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:37:21Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=54516 shards=140 max_shard_bytes=2777508 index_sha256=1a5b500b02efaaa32ad7fb13dd560f720f184489651917accafe6de39fec8658 dir=/workspace/parcel-staging/scratch/clallam-wa/normalized sum_counts=54516 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Clallam County (clallam-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B."
+}

@@ -1,0 +1,109 @@
+{
+  "id": "latah-id",
+  "state": "ID",
+  "county": "Latah",
+  "portfolio_sites": 7,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "source_layer": "IDWR Reference/Parcels FeatureServer/0 where COUNTY='Latah'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Idaho IDWR statewide Reference/Parcels FeatureServer. OWNER field present on service but stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:04:17Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PIN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PIN",
+      "COUNTY",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/latah-id",
+    "raw_file": "/workspace/parcel-staging/scratch/latah-id/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/latah-id/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/latah-id/normalized"
+  },
+  "metrics": {
+    "feature_count": 21259,
+    "content_hash": "97ebd743c57a43003849ca28b11de98b19c22e1a9f05734ca1fe49f186c312fb",
+    "shard_manifest_sha256": "b444f1f57b1bb29c8df91b2afad517290d6e0fc743ffd4df18b491233a4ade4d",
+    "shard_count": 78
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Latah, ID \u2192 7 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T02:04:17Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0 layer=IDWR Reference/Parcels FeatureServer/0 where COUNTY='Latah' join=PIN where=\"COUNTY='Latah'\""
+    },
+    {
+      "at": "2026-09-25T02:04:17Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:04:17Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0; where=\"COUNTY='Latah'\"; outFields=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:04:43Z",
+      "action": "staging_download_complete",
+      "detail": "features=21259 sha256=87fcf79ca3af3e38c0e5c403f8926cba0f2f64501544ce57e4ec5687bc75c2b9 bytes=16512507 pages=11 file=/workspace/parcel-staging/scratch/latah-id/raw.ndjson format=ndjson where=\"COUNTY='Latah'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:04:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/latah-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:04:43Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/latah-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:04:45Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=21259 shards=78 max_shard_bytes=1972764 index_sha256=97ebd743c57a43003849ca28b11de98b19c22e1a9f05734ca1fe49f186c312fb dir=/workspace/parcel-staging/scratch/latah-id/normalized sum_counts=21259 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Idaho statewide IDWR parcels filtered to Latah County (latah-id). OWNER stripped. No AWS/CDN/Grant B."
+}

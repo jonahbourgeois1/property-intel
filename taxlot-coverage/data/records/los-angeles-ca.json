@@ -1,0 +1,120 @@
+{
+  "id": "los-angeles-ca",
+  "state": "CA",
+  "county": "Los Angeles",
+  "portfolio_sites": 204,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/LA_County_Parcels/FeatureServer/0",
+  "source_layer": "LA_County_Parcels FeatureServer/0 (AGOL mirror of Assessor parcels)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://public.gis.lacounty.gov/public/rest/services/LACounty_Cache/LACounty_Parcel/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Los Angeles County Assessor parcels (AGOL FeatureServer mirror). Situs/owner/value/exemption fields stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-24T22:53:43Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "AIN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "AIN",
+      "APN",
+      "TaxRateArea",
+      "TaxRateCity",
+      "UseCode",
+      "UseCode_2",
+      "UseType",
+      "UseDescription",
+      "ParcelTypeCode",
+      "SpatialChangeDate",
+      "ParcelCreateDate",
+      "Assr_Map",
+      "Assr_Index_Map",
+      "CENTER_LAT",
+      "CENTER_LON"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/los-angeles-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/los-angeles-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/los-angeles-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/los-angeles-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 2412255,
+    "content_hash": "f6bf72782387c23336c4a3363122f3e1140e2e77ae77910665031892993559a6",
+    "shard_manifest_sha256": "768f7397e9a2442e20a84c936de001f69213fa21c0465389e35c5de50e05c80f",
+    "shard_count": 1133
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Los Angeles, CA \u2192 204 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:53:43Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/LA_County_Parcels/FeatureServer/0 layer=LA_County_Parcels FeatureServer/0 (AGOL mirror of Assessor parcels) join=AIN"
+    },
+    {
+      "at": "2026-09-24T22:53:43Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:53:43Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/LA_County_Parcels/FeatureServer/0; where='1=1'; outFields=OBJECTID,AIN,APN,TaxRateArea,TaxRateCity,UseCode,UseCode_2,UseType,UseDescription,ParcelTypeCode,SpatialChangeDate,ParcelCreateDate,Assr_Map,Assr_Index_Map,CENTER_LAT,CENTER_LON; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T23:40:11Z",
+      "action": "staging_download_complete",
+      "detail": "features=2412255 sha256=38f0ade6d2ef28eede1f20f27d3ab06ceab392ca3117793cbb82406cbb90d0df bytes=2238940088 pages=1207 file=/workspace/parcel-staging/scratch/los-angeles-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T23:40:11Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/los-angeles-ca/raw.ndjson; keep=OBJECTID,AIN,APN,TaxRateArea,TaxRateCity,UseCode,UseCode_2,UseType,UseDescription,ParcelTypeCode,SpatialChangeDate,ParcelCreateDate,Assr_Map,Assr_Index_Map,CENTER_LAT,CENTER_LON; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T23:40:11Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/los-angeles-ca/raw.ndjson; keep=OBJECTID,AIN,APN,TaxRateArea,TaxRateCity,UseCode,UseCode_2,UseType,UseDescription,ParcelTypeCode,SpatialChangeDate,ParcelCreateDate,Assr_Map,Assr_Index_Map,CENTER_LAT,CENTER_LON; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T23:44:34Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=2412255 shards=1133 max_shard_bytes=7869529 index_sha256=f6bf72782387c23336c4a3363122f3e1140e2e77ae77910665031892993559a6 dir=/workspace/parcel-staging/scratch/los-angeles-ca/normalized sum_counts=2412255 pct_delta_vs_metrics=0.000% props_ok=True warnings=2 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: LA County parcels via AGOL FeatureServer (maxRecordCount 2000). Stripped Situs*/Roll_*Value/Roll_*Exemp/LegalDesc*. No AWS/CDN/Grant B."
+}

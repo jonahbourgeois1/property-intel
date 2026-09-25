@@ -1,0 +1,109 @@
+{
+  "id": "kootenai-id",
+  "state": "ID",
+  "county": "Kootenai",
+  "portfolio_sites": 307,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "source_layer": "IDWR Reference/Parcels FeatureServer/0 where COUNTY='Kootenai'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Idaho IDWR statewide Reference/Parcels FeatureServer. OWNER field present on service but stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-24T22:40:09Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PIN",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "PIN",
+      "COUNTY",
+      "Shape__Area",
+      "Shape__Length"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/kootenai-id",
+    "raw_file": "/workspace/parcel-staging/scratch/kootenai-id/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/kootenai-id/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/kootenai-id/normalized"
+  },
+  "metrics": {
+    "feature_count": 94488,
+    "content_hash": "47295f4b7a25488c6c0405feccf636ed7e8be45c1e5066279cfaa09b5e0aa00c",
+    "shard_manifest_sha256": "2d4e1f43f582a368f0a3b456d77671df0670de16f084cc5640bff700d99861cc",
+    "shard_count": 101
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Kootenai, ID \u2192 307 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:40:09Z",
+      "action": "source_identified",
+      "detail": "Wave 3 source https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0 layer=IDWR Reference/Parcels FeatureServer/0 where COUNTY='Kootenai' join=PIN where=\"COUNTY='Kootenai'\""
+    },
+    {
+      "at": "2026-09-24T22:40:09Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T22:40:09Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0; where=\"COUNTY='Kootenai'\"; outFields=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T22:41:58Z",
+      "action": "staging_download_complete",
+      "detail": "features=94488 sha256=c98f50f1022204bcb1b8ae17f40d07b9ab5f59b6b9bf14e6f165f107762ec852 bytes=65752216 pages=48 file=/workspace/parcel-staging/scratch/kootenai-id/raw.ndjson format=ndjson where=\"COUNTY='Kootenai'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T22:41:58Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/kootenai-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:41:58Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/kootenai-id/raw.ndjson; keep=OBJECTID,PIN,COUNTY,Shape__Area,Shape__Length; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T22:42:05Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=94488 shards=101 max_shard_bytes=3543399 index_sha256=47295f4b7a25488c6c0405feccf636ed7e8be45c1e5066279cfaa09b5e0aa00c dir=/workspace/parcel-staging/scratch/kootenai-id/normalized sum_counts=94488 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3: Idaho statewide IDWR parcels filtered to Kootenai County (kootenai-id). OWNER stripped. No AWS/CDN/Grant B."
+}

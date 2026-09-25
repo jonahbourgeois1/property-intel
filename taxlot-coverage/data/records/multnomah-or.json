@@ -1,0 +1,110 @@
+{
+  "id": "multnomah-or",
+  "state": "OR",
+  "county": "Multnomah",
+  "portfolio_sites": 185,
+  "status": "inspected",
+  "source_last_updated": "2026-02-06",
+  "source_url": "https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3",
+  "source_layer": "Metro RLIS Taxlots (Public) FeatureServer/3 where COUNTY='M' (Multnomah)",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON/NDJSON); metro fabric county subset",
+  "license_url": "https://rlisdiscovery.oregonmetro.gov/datasets/9d3c396ffad44649bc7451465aa300f0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Metro RLIS Taxlots (Public) \u2014 ownership excluded. Redistribution/commercial product use not clearly granted in writing for Vyanet CDN/viewer. Class unknown.",
+    "terms_notes": "Metro RLIS Taxlots (Public) \u2014 ownership excluded. Redistribution/commercial product use not clearly granted in writing for Vyanet CDN/viewer. Class unknown.",
+    "reviewed_at": "2026-09-24T20:32:15Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "TLID",
+    "feature_id_field": "FID",
+    "keep_properties": [
+      "FID",
+      "TLID",
+      "COUNTY",
+      "ORTAXLOT",
+      "TAXCODE",
+      "PROP_CODE",
+      "LANDUSE",
+      "STATECLASS",
+      "GIS_ACRES",
+      "A_T_ACRES",
+      "JURIS_CITY"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/multnomah-or",
+    "raw_file": "/workspace/parcel-staging/scratch/multnomah-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/multnomah-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/multnomah-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 283139,
+    "content_hash": "e38e5c1d236e1b3be8ed461741eb5c5a02f12b06f886cd72637a0e25bbe1bb85",
+    "shard_manifest_sha256": "2ce58f56d6c287c870906e8f7e6f56c5e3f16db3a7871fc9b4f589ab39b9246f",
+    "shard_count": 116
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Multnomah, OR \u2192 185 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:32:15Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3 layer=Metro RLIS Taxlots (Public) FeatureServer/3 where COUNTY='M' (Multnomah) join=TLID"
+    },
+    {
+      "at": "2026-09-24T20:32:15Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:32:15Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3; where=\"COUNTY='M'\"; outFields=FID,TLID,COUNTY,ORTAXLOT,TAXCODE,PROP_CODE,LANDUSE,STATECLASS,GIS_ACRES,A_T_ACRES,JURIS_CITY; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:44:48Z",
+      "action": "staging_download_complete",
+      "detail": "features=283139 sha256=dba2b687f8ff02e12ac05fc70d3a578682ae44aadf754f271614b2f4901ff966 bytes=179789479 pages=142 file=/workspace/parcel-staging/scratch/multnomah-or/raw.ndjson format=ndjson where=\"COUNTY='M'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:56:38Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/multnomah-or/raw.ndjson; keep=FID,TLID,COUNTY,ORTAXLOT,TAXCODE,PROP_CODE,LANDUSE,STATECLASS,GIS_ACRES,A_T_ACRES,JURIS_CITY; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:57:01Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=283139 shards=116 max_shard_bytes=3969726 index_sha256=e38e5c1d236e1b3be8ed461741eb5c5a02f12b06f886cd72637a0e25bbe1bb85 dir=/workspace/parcel-staging/scratch/multnomah-or/normalized sum_counts=283139 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: Metro RLIS used as county source for Multnomah only (not statewide fabric). No AWS/CDN/Grant B."
+}

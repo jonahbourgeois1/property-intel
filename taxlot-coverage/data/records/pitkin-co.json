@@ -1,0 +1,108 @@
+{
+  "id": "pitkin-co",
+  "state": "CO",
+  "county": "Pitkin",
+  "portfolio_sites": 855,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://maps.pitkincounty.com/arcgis/rest/services/Hosted/Parcel_Boundary_Basic_Info/MapServer/1",
+  "source_layer": "Pitkin County Parcel_Boundary_Basic_Info MapServer/1",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://maps.pitkincounty.com/arcgis/rest/services/Hosted/Parcel_Boundary_Basic_Info/MapServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Pitkin County hosted Parcel Boundary Basic Info. Owner_name stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Pitkin County hosted Parcel Boundary Basic Info. Owner_name stripped from outFields. No clear CDN/commercial grant; class unknown.",
+    "reviewed_at": "2026-09-24T21:21:52Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "parcel",
+    "feature_id_field": "objectid",
+    "keep_properties": [
+      "objectid",
+      "parcel",
+      "accountnumber",
+      "globalid"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/pitkin-co",
+    "raw_file": "/workspace/parcel-staging/scratch/pitkin-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/pitkin-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/pitkin-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 19219,
+    "content_hash": "3326bd8445f2bfbc6121115d12f99a5a199d4f3592cc018a3579b22ea4150894",
+    "shard_manifest_sha256": "f3f961b6611640ced9d53558a63bf2e32a4fc033436c997247a505c41189f9dd",
+    "shard_count": 45
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Pitkin, CO \u2192 855 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T21:21:52Z",
+      "action": "source_identified",
+      "detail": "Wave 2 source https://maps.pitkincounty.com/arcgis/rest/services/Hosted/Parcel_Boundary_Basic_Info/MapServer/1 layer=Pitkin County Parcel_Boundary_Basic_Info MapServer/1 join=parcel"
+    },
+    {
+      "at": "2026-09-24T21:21:52Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T21:21:52Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://maps.pitkincounty.com/arcgis/rest/services/Hosted/Parcel_Boundary_Basic_Info/MapServer/1; where='1=1'; outFields=objectid,parcel,accountnumber,globalid; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T21:22:09Z",
+      "action": "staging_download_complete",
+      "detail": "features=19219 sha256=dc1147d3c97ec451e5dd1ff9ab0b12a70f0206c99f7c0d9a47f9a40b173b359e bytes=24277126 pages=10 file=/workspace/parcel-staging/scratch/pitkin-co/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T21:22:10Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pitkin-co/raw.ndjson; keep=objectid,parcel,accountnumber,globalid; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:22:10Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/pitkin-co/raw.ndjson; keep=objectid,parcel,accountnumber,globalid; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T21:22:12Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=19219 shards=45 max_shard_bytes=3570056 index_sha256=3326bd8445f2bfbc6121115d12f99a5a199d4f3592cc018a3579b22ea4150894 dir=/workspace/parcel-staging/scratch/pitkin-co/normalized sum_counts=19219 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 2: Pitkin County parcel boundary layer (owner_name omitted). No AWS/CDN/Grant B."
+}

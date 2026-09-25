@@ -1,0 +1,126 @@
+{
+  "id": "elbert-co",
+  "state": "CO",
+  "county": "Elbert",
+  "portfolio_sites": 2,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Elbert'",
+  "source_format": "ArcGIS FeatureServer query (NDJSON); statewide fabric county subset",
+  "license_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Colorado Public Parcel Composite (statewide). Owner/situs/value fields stripped from outFields. No clear written grant for CDN redistribution or commercial product use; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:31:17Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "parcel_id",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "countyName",
+      "countyFips",
+      "parcel_id",
+      "account",
+      "landSqft",
+      "landAcres",
+      "block",
+      "lot",
+      "subCode",
+      "subName",
+      "zoningCode",
+      "zoningDesc",
+      "landUseCde",
+      "landUseDsc",
+      "URL",
+      "dateReceived"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/elbert-co",
+    "raw_file": "/workspace/parcel-staging/scratch/elbert-co/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/elbert-co/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/elbert-co/normalized"
+  },
+  "metrics": {
+    "feature_count": 17710,
+    "content_hash": "cc1e53115c45c0a7c607df19654a56c0de308a0958b90540eceb1cbd3391bf77",
+    "shard_manifest_sha256": "a5c68667601d699c8f1269783d9dd1247755184b10d4b1b4d9e92e88d9245505",
+    "shard_count": 93
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Elbert, CO \u2192 2 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T22:03:49Z",
+      "action": "deferred_tail",
+      "detail": "Wave 4 deferred pending statewide fabric / low site count. Marked deferred-tail in Wave 2 hygiene (portfolio_sites<=5, non-OR, still sourcing)."
+    },
+    {
+      "at": "2026-09-25T02:31:17Z",
+      "action": "source_identified",
+      "detail": "Wave 4 fabric-deferred source https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0 layer=Colorado_Public_Parcels FeatureServer/0 where countyName='Elbert' join=parcel_id where=\"countyName='Elbert'\""
+    },
+    {
+      "at": "2026-09-25T02:31:17Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:31:18Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0; where=\"countyName='Elbert'\"; outFields=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:31:56Z",
+      "action": "staging_download_complete",
+      "detail": "features=17710 sha256=b345d7242caf84e8beafbdd48f0bbc7830bca4cdddd960abaea9b1cc6f4e7417 bytes=16126846 pages=9 file=/workspace/parcel-staging/scratch/elbert-co/raw.ndjson format=ndjson where=\"countyName='Elbert'\". Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:31:57Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/elbert-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:31:57Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/elbert-co/raw.ndjson; keep=OBJECTID,countyName,countyFips,parcel_id,account,landSqft,landAcres,block,lot,subCode,subName,zoningCode,zoningDesc,landUseCde,landUseDsc,URL,dateReceived; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:31:58Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=17710 shards=93 max_shard_bytes=2005579 index_sha256=cc1e53115c45c0a7c607df19654a56c0de308a0958b90540eceb1cbd3391bf77 dir=/workspace/parcel-staging/scratch/elbert-co/normalized sum_counts=17710 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 4 fabric-deferred: CO statewide public parcel fabric filtered to Elbert County (elbert-co). Was deferred-tail; fabric covers. Owner/situs/value stripped. No AWS/CDN/Grant B."
+}

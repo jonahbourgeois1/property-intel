@@ -1,0 +1,106 @@
+{
+  "id": "hood-river-or",
+  "state": "OR",
+  "county": "Hood River",
+  "portfolio_sites": 1,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services7.arcgis.com/xtfQPw7zwSRPkcfN/arcgis/rest/services/Tax_Lot_Parcels_Public/FeatureServer/54",
+  "source_layer": "Tax_Lot_Parcels_Public FeatureServer/54 TAXLOTS",
+  "source_format": "ArcGIS FeatureServer query (GeoJSON)",
+  "license_url": "https://services7.arcgis.com/xtfQPw7zwSRPkcfN/arcgis/rest/services/Tax_Lot_Parcels_Public/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "terms_notes": "County/partner public GIS layer. Terms not clearly granting CDN redistribution or commercial product use; class unknown. Staged locally only.",
+    "reviewed_at": "2026-09-24T20:50:18Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial display of lot outlines."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Default deny until written terms allow commercial internal clip/PIP."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "MAPTAXLOT",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "MAPTAXLOT",
+      "ACCOUNT",
+      "PROP_CLASS",
+      "MAP_ACRES",
+      "TAXLOT_ACRES",
+      "ORMAPLink"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/hood-river-or",
+    "raw_file": "/workspace/parcel-staging/scratch/hood-river-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/hood-river-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/hood-river-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 11892,
+    "content_hash": "13e7aefd0c0684e6fd35acd76421695a8f72bbeb6957b73752a807190283f048",
+    "shard_manifest_sha256": "aa16489fa147144ebbdc6fcb6f384678f121c6a29d513482718f4ab3f99d4135",
+    "shard_count": 38
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Hood River, OR \u2192 1 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-24T20:50:18Z",
+      "action": "source_identified",
+      "detail": "Wave 1 source https://services7.arcgis.com/xtfQPw7zwSRPkcfN/arcgis/rest/services/Tax_Lot_Parcels_Public/FeatureServer/54 layer=Tax_Lot_Parcels_Public FeatureServer/54 TAXLOTS join=MAPTAXLOT"
+    },
+    {
+      "at": "2026-09-24T20:50:18Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-24T20:50:18Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services7.arcgis.com/xtfQPw7zwSRPkcfN/arcgis/rest/services/Tax_Lot_Parcels_Public/FeatureServer/54; where='1=1'; outFields=OBJECTID,MAPTAXLOT,ACCOUNT,PROP_CLASS,MAP_ACRES,TAXLOT_ACRES,ORMAPLink; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T20:50:35Z",
+      "action": "staging_download_complete",
+      "detail": "features=11892 sha256=052a98be81ce208f2e7ef54f8aa89a101dffac2368ad99ce35ae2450f9d077c4 bytes=41662617 pages=6 file=/workspace/parcel-staging/scratch/hood-river-or/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:58:58Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/hood-river-or/raw.ndjson; keep=OBJECTID,MAPTAXLOT,ACCOUNT,PROP_CLASS,MAP_ACRES,TAXLOT_ACRES,ORMAPLink; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:59:02Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=11892 shards=38 max_shard_bytes=3534069 index_sha256=13e7aefd0c0684e6fd35acd76421695a8f72bbeb6957b73752a807190283f048 dir=/workspace/parcel-staging/scratch/hood-river-or/normalized sum_counts=11892 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+}

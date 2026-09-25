@@ -1,0 +1,106 @@
+{
+  "id": "imperial-ca",
+  "state": "CA",
+  "county": "Imperial",
+  "portfolio_sites": 7,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://services7.arcgis.com/RomaVqqozKczDNgd/arcgis/rest/services/Imperial_County_Parcels_(View)/FeatureServer/0",
+  "source_layer": "Imperial_County_Parcels_(View) FeatureServer/0 (APN-only view; county staff org)",
+  "source_format": "ArcGIS FeatureServer/MapServer query (NDJSON)",
+  "license_url": "https://services7.arcgis.com/RomaVqqozKczDNgd/arcgis/rest/services/Imperial_County_Parcels_(View)/FeatureServer",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Imperial County Parcels View (APN-only). CalAgPermits Imperial/Parcels token-gated/empty. No clear CDN/commercial grant; class unknown.",
+    "terms_notes": "Default deny for use_cases / redistribute_public / derive_and_sell until written grant.",
+    "reviewed_at": "2026-09-25T02:04:45Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Show taxlot boundary to the end user in the map viewer. Default deny until written terms allow commercial display."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Server-side clip/mask / point-in-polygon during automation. Default deny until written terms allow commercial processing."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "APN",
+    "feature_id_field": "FID",
+    "keep_properties": [
+      "FID",
+      "APN"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/imperial-ca",
+    "raw_file": "/workspace/parcel-staging/scratch/imperial-ca/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/imperial-ca/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/imperial-ca/normalized"
+  },
+  "metrics": {
+    "feature_count": 88490,
+    "content_hash": "2442d3c4f45129f1d7c4273c9182dcec8ba462d54f3d61af590662c7090e7fc5",
+    "shard_manifest_sha256": "3dd1c8f0b8815eceb73abd6406951e4b70520650b9c43c99a1c337cc2c515f31",
+    "shard_count": 196
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": null,
+    "s3_prefix": null
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:51:47Z",
+      "action": "portfolio_seed",
+      "detail": "Seeded from Distinct Addresses county roll: Imperial, CA \u2192 7 sites. No city lists or addresses stored."
+    },
+    {
+      "at": "2026-09-25T02:04:45Z",
+      "action": "source_identified",
+      "detail": "Wave 3B source https://services7.arcgis.com/RomaVqqozKczDNgd/arcgis/rest/services/Imperial_County_Parcels_(View)/FeatureServer/0 layer=Imperial_County_Parcels_(View) FeatureServer/0 (APN-only view; county staff org) join=APN"
+    },
+    {
+      "at": "2026-09-25T02:04:45Z",
+      "action": "policy_review",
+      "detail": "class=unknown redistribute_public=false derive_and_sell=false use_cases denied pending written clearance."
+    },
+    {
+      "at": "2026-09-25T02:04:45Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://services7.arcgis.com/RomaVqqozKczDNgd/arcgis/rest/services/Imperial_County_Parcels_(View)/FeatureServer/0; where='1=1'; outFields=FID,APN; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-25T02:05:29Z",
+      "action": "staging_download_complete",
+      "detail": "features=88490 sha256=ebbd6157d6c98383e165aa3ed3932a97acdaee8700dcafd68dd66ff64f570560 bytes=38106719 pages=45 file=/workspace/parcel-staging/scratch/imperial-ca/raw.ndjson format=ndjson where='1=1'. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-25T02:05:29Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/imperial-ca/raw.ndjson; keep=FID,APN; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:05:29Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/imperial-ca/raw.ndjson; keep=FID,APN; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-25T02:05:33Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=88490 shards=196 max_shard_bytes=3191457 index_sha256=2442d3c4f45129f1d7c4273c9182dcec8ba462d54f3d61af590662c7090e7fc5 dir=/workspace/parcel-staging/scratch/imperial-ca/normalized sum_counts=88490 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ],
+  "notes": "Wave 3B: Imperial CA APN-only View FeatureServer (~88k). No AWS/CDN/Grant B."
+}

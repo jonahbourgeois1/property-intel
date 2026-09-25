@@ -1,0 +1,124 @@
+{
+  "id": "douglas-or",
+  "state": "OR",
+  "county": "Douglas",
+  "portfolio_sites": 21,
+  "status": "inspected",
+  "source_last_updated": null,
+  "source_url": "https://gis.co.douglas.or.us/server/rest/services/Parcel/Parcels/FeatureServer/0",
+  "source_layer": "Parcel/Parcels FeatureServer/0",
+  "source_format": "ArcGIS FeatureServer query; Assessor also sells GIS shapefile downloads via paid subscription",
+  "license_url": "https://or-douglascounty.civicplus.com/162/Database-Downloads",
+  "policy": {
+    "class": "unknown",
+    "redistribute_public": false,
+    "derive_and_sell": false,
+    "summary": "Douglas County Assessor offers parcel GIS shapefiles as a fee-based subscription download (subscriptions@douglascountyor.gov). A public Parcels FeatureServer is also reachable and includes owner/value fields. Fee-gated official downloads plus no open redistribution clause found means public CDN re-host and commercial derive-and-sell are not cleared. Get written terms before Grant B. Always use PROP_ID (not TAXID) as join_field.",
+    "terms_notes": "Database Downloads page: subscription fee-based service for downloadable formats including Geoparcels/Parcels shapefiles. No public-domain/CC grant located on that page.",
+    "reviewed_at": "2026-09-24T18:29:32Z",
+    "reviewed_by": "taxlot-gis-agent",
+    "use_cases": {
+      "viewer_outline": {
+        "allowed": false,
+        "notes": "Official parcel downloads are fee/subscription; no clause allowing customer-visible lot lines in a third-party product."
+      },
+      "workflow_clip": {
+        "allowed": false,
+        "notes": "Fee-gated + no open commercial-processing grant. Clip-in-workflow not cleared until written terms (use PROP_ID join)."
+      }
+    }
+  },
+  "schema": {
+    "join_field": "PROP_ID",
+    "feature_id_field": "OBJECTID",
+    "keep_properties": [
+      "OBJECTID",
+      "TAXID",
+      "PROP_ID",
+      "ACCT_ACREAGE",
+      "TotalAcreage"
+    ],
+    "crs_published": "EPSG:4326"
+  },
+  "artifacts": {
+    "scratch_dir": "/workspace/parcel-staging/scratch/douglas-or",
+    "raw_file": "/workspace/parcel-staging/scratch/douglas-or/raw.ndjson",
+    "normalized_file": "/workspace/parcel-staging/scratch/douglas-or/normalized/index.json",
+    "inspect_report": null,
+    "normalized_dir": "/workspace/parcel-staging/scratch/douglas-or/normalized"
+  },
+  "metrics": {
+    "feature_count": 68858,
+    "content_hash": "e9945b14f80b2ffe1362202a0e895c45a8b9d055356eaa0dede7b0ec89504f67",
+    "shard_manifest_sha256": "3a60386f8f987528fda31677b76569b3da51dd0fc5ff29842fa21b67762739ad",
+    "shard_count": 272
+  },
+  "promote": {
+    "grant": null,
+    "verified_at": null,
+    "ready_to_promote_at": null,
+    "published_at": null,
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/douglas/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/douglas/"
+  },
+  "cadence_days": 90,
+  "next_check": null,
+  "notes": "Douglas collision: never label as bare Douglas. Viewer tiles exist; pipeline-gap.",
+  "retrieval_log": [
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "source_identified",
+      "detail": "counties.json: https://gis.co.douglas.or.us/server/rest/services/Parcel/Parcels/FeatureServer/0 via download_arcgis_taxlots.py douglas. Id must stay douglas-or (not CO/WA)."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "metadata_probe",
+      "detail": "returnCountOnly \u2192 68858. maxRecordCount 50000. Fields include NAME/ADDR*/ASSD_VALUE/MARKET_VALUE \u2014 strip. Native CRS EPSG:2270."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "retrieval_recipe",
+      "detail": "Paginate FeatureServer/0/query where=1=1 outFields=OBJECTID,TAXID,PROP_ID,ACCT_ACREAGE,TotalAcreage returnGeometry=true outSR=4326 f=geojson. Join PROP_ID only. Optional paid shapefile path via Assessor subscriptions \u2014 still needs redistribution language for CDN."
+    },
+    {
+      "at": "2026-09-24T18:29:32Z",
+      "action": "policy_review",
+      "detail": "Classified unknown; derive_and_sell=false given fee subscription packaging and missing open license."
+    },
+    {
+      "at": "2026-09-24T19:37:38Z",
+      "action": "use_cases_framed",
+      "detail": "Split product rights into viewer_outline (customer-visible lot line) and workflow_clip (server-side clip/PIP). Both remain allowed=false pending written clearance."
+    },
+    {
+      "at": "2026-09-24T19:55:19Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.co.douglas.or.us/server/rest/services/Parcel/Parcels/FeatureServer/0; outFields=OBJECTID,TAXID,PROP_ID,ACCT_ACREAGE,TotalAcreage; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:55:33Z",
+      "action": "staging_download_failed",
+      "detail": "exit=-15 stderr="
+    },
+    {
+      "at": "2026-09-24T19:58:37Z",
+      "action": "staging_download_start",
+      "detail": "Research-only staging from https://gis.co.douglas.or.us/server/rest/services/Parcel/Parcels/FeatureServer/0; outFields=OBJECTID,TAXID,PROP_ID,ACCT_ACREAGE,TotalAcreage; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-09-24T19:59:06Z",
+      "action": "staging_download_complete",
+      "detail": "features=68858 sha256=2fd79f9bc1a8675d8941be91f75b1cbc97d26e446d4a327e5b90b4d7d637bb63 bytes=76742459 pages=35 file=/workspace/parcel-staging/scratch/douglas-or/raw.ndjson format=ndjson status policy-review -> downloaded. Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-09-24T20:11:15Z",
+      "action": "normalize_shards_start",
+      "detail": "Streaming /workspace/parcel-staging/scratch/douglas-or/raw.ndjson; keep=OBJECTID,TAXID,PROP_ID,ACCT_ACREAGE,TotalAcreage; zoom_base=12 zoom_max=16 max_bytes=4000000; local only (no AWS/CDN)."
+    },
+    {
+      "at": "2026-09-24T20:11:22Z",
+      "action": "normalize_shards_complete",
+      "detail": "features=68858 shards=272 max_shard_bytes=1863671 index_sha256=e9945b14f80b2ffe1362202a0e895c45a8b9d055356eaa0dede7b0ec89504f67 dir=/workspace/parcel-staging/scratch/douglas-or/normalized sum_counts=68858 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    }
+  ]
+}
