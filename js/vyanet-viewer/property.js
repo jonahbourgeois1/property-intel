@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.44';
+export const HUB_BUILD = '1.8.47';
 // Records indexes (Satellite sync) are not copied to GitHub data/index.
 // The hub reads GitHub first, then this origin. Views there are file names
 // ("satellite"), not 32-hex record ids, so they are not opened as 2D/3D tabs.
@@ -405,13 +405,58 @@ export function indexHasChekt(idx) {
   return !!(idx && Array.isArray(idx.chekt_sites) && idx.chekt_sites.length);
 }
 
+// A published CHEKT account rejects a blank password (401). An id with no
+// account is 404. Other results are not an account.
+export async function chektAccountOnFile(propertyId, gw) {
+  if (!propertyId || !gw || gw.off) return false;
+  try {
+    const r = await fetch(gw.url + '/live?property=' + encodeURIComponent(propertyId), {
+      headers: { 'x-viewer-key': ' ' }
+    });
+    return r.status === 401;
+  } catch (e) {
+    return false;
+  }
+}
+
+// One passcode per property. The old name was one key for every link in the tab.
+export function viewerPassKeyName(propertyId) {
+  const id = String(propertyId || '').trim().toLowerCase();
+  return id ? ('vyViewerKey:' + id) : 'vyViewerKey';
+}
+
+export function readViewerPass(propertyId) {
+  try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+  try {
+    return (sessionStorage.getItem(viewerPassKeyName(propertyId)) || '').trim();
+  } catch (e) {
+    return '';
+  }
+}
+
+export function writeViewerPass(propertyId, key) {
+  const name = viewerPassKeyName(propertyId);
+  try {
+    if (key) sessionStorage.setItem(name, key);
+    else sessionStorage.removeItem(name);
+    sessionStorage.removeItem('vyViewerKey');
+  } catch (e) {}
+}
+
 // GitHub indexes store a 32-hex view-record id. Records indexes store the
-// files-key ("satellite", "drone"). Only the hex id is a page this hub can open.
-function githubViews(idx) {
+// files key ("satellite") and the record id on files.satellite.id.
+function viewsForHub(idx) {
   const src = (idx && idx.views) || {};
+  const files = (idx && idx.files) || {};
   const views = {};
   Object.keys(src).forEach(function (k) {
-    if (isHex32(src[k])) views[k] = String(src[k]).toLowerCase();
+    const dest = src[k];
+    if (isHex32(dest)) {
+      views[k] = String(dest).toLowerCase();
+      return;
+    }
+    const ent = files[dest] || files[k];
+    if (ent && isHex32(ent.id)) views[k] = String(ent.id).toLowerCase();
   });
   return views;
 }
@@ -419,10 +464,15 @@ function githubViews(idx) {
 export async function loadPropertyIndex(root, propertyId) {
   const id = String(propertyId || '').trim();
   if (!id) return null;
-  const local = await fetchJson(String(root || '') + 'index/' + id + '.json');
-  const idx = (local && local.views) ? local : await fetchJson(RECORDS_ORIGIN + 'index/' + id + '.json');
+  let idx = await fetchJson(String(root || '') + 'index/' + id + '.json');
+  let fromRecords = false;
+  if (!(idx && idx.views)) {
+    idx = await fetchJson(RECORDS_ORIGIN + 'index/' + id + '.json');
+    fromRecords = !!idx;
+  }
   if (!idx) return null;
-  idx.views = githubViews(idx);
+  idx.views = viewsForHub(idx);
+  if (fromRecords) idx.recordsOrigin = RECORDS_ORIGIN;
   return idx;
 }
 
@@ -555,6 +605,11 @@ function childQuery(extra) {
   return out.toString();
 }
 
+function frameQuery(idx, extra) {
+  if (idx && idx.recordsOrigin && !extra.dataRoot) extra.dataRoot = idx.recordsOrigin;
+  return childQuery(extra);
+}
+
 export function framesFromIndex(idx, nm) {
   const views = (idx && idx.views) || {};
   const modelView = MODEL_VIEWS.find(function (v) { return views[v]; });
@@ -584,10 +639,10 @@ export function framesFromIndex(idx, nm) {
     privateDefault: modelView ? '3d' : (satView ? 'satellite' : ''),
     // embed=1 tells the child pages the hub owns the always-on chrome
     // (live/weather/hazard buttons), so they don't reveal their own copies.
-    modelHref: modelView ? (MODEL_PAGE + '?' + childQuery({ view: modelView, embed: '1' })) : '',
-    satHref: satView ? (SAT_PAGE + '?' + childQuery({ tab: satView, embed: '1' })) : '',
-    liveHref: LIVE_PAGE + '?' + childQuery({ embed: '1' }),
-    hoaHref: hoa ? (HOA_PAGE + '?' + childQuery({ hoa: hoa, embed: '1' })) : '',
+    modelHref: modelView ? (MODEL_PAGE + '?' + frameQuery(idx, { view: modelView, embed: '1' })) : '',
+    satHref: satView ? (SAT_PAGE + '?' + frameQuery(idx, { tab: satView, embed: '1' })) : '',
+    liveHref: LIVE_PAGE + '?' + frameQuery(idx, { embed: '1' }),
+    hoaHref: hoa ? (HOA_PAGE + '?' + frameQuery(idx, { hoa: hoa, embed: '1' })) : '',
     nmHref: hasNearmap ? (NEARMAP_PAGE + '?' + childQuery({
       full: '1',
       delivery: delivery,
@@ -637,8 +692,11 @@ export async function findNadir(root, idx, nm) {
     if (!id || seen.indexOf(v + '/' + id) !== -1) continue;
     seen.push(v + '/' + id);
     try {
-      const rec = await fetchJson(root + v + '/' + id + '.json');
-      if (rec && rec.nadir && rec.nadir.url) return String(rec.nadir.url);
+      const folder = (v === 'security' || v === 'wildfire') ? 'satellite' : v;
+      const base = (idx && idx.recordsOrigin) || root;
+      const rec = await fetchJson(base + folder + '/' + id + '.json');
+      const url = rec && ((rec.nadir && rec.nadir.url) || rec.nadir_url);
+      if (url) return String(url);
     } catch (e) {}
   }
   return '';
@@ -774,15 +832,13 @@ export function groupLiveCameras(list) {
   return groups;
 }
 
-// Ask the gateway whether it accepts this key. Walk the alias ids the same
-// way model-viewer does: 200 = accepted and this property has live cameras;
-// 401 = this property rejected the key (stop); 404 = this id has no
-// CHEKT account, try the next. The query is only the property id. The
-// gateway does not match address, name, or site_no. Anything else
-// (429, 5xx, network) is inconclusive: accept the key and let
-// model-viewer's own 401-retry loop sort it out.
+// Ask the gateway whether this password opens this property. 200 = yes.
+// 401 = this property rejected it. 404 = this id is not that account, try
+// the next alias. Anything else is not stored: a password is kept only
+// after this property accepts it.
 export async function validateViewerKey(key, ids, gw, idx) {
   if (gw.off) return { ok: true, live: false };
+  let saw404 = false;
   for (let i = 0; i < ids.length; i++) {
     let r;
     try {
@@ -790,11 +846,12 @@ export async function validateViewerKey(key, ids, gw, idx) {
         headers: { 'x-viewer-key': key }
       });
     } catch (e) {
-      return { ok: true, live: false };
+      return { ok: false, live: false, reason: 'unreachable' };
     }
     if (r.status === 200) return { ok: true, live: true };
     if (r.status === 401) return { ok: false, live: false };
-    if (r.status !== 404) return { ok: true, live: false };
+    if (r.status === 404) { saw404 = true; continue; }
+    return { ok: false, live: false, reason: 'unreachable' };
   }
-  return { ok: true, live: false };
+  return { ok: false, live: false, reason: saw404 ? 'unknown' : 'unreachable' };
 }

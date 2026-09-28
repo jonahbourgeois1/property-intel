@@ -741,7 +741,7 @@
 <div id="pass-overlay" onclick="if(event.target===this)cancelViewerPasscode()">
   <form id="pass-card" onsubmit="submitViewerPasscode(event)">
     <div class="pass-title">Live feed</div>
-    <div class="pass-sub">Enter the viewer passcode to open cameras and clips. It stays in this tab only.</div>
+    <div class="pass-sub">Enter this property's passcode to open cameras and clips. It stays in this tab only.</div>
     <div id="pass-err"></div>
     <input id="pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
     <div class="pass-actions">
@@ -800,7 +800,7 @@
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.42';
+import { liveAliasIds, gwLiveQuery, indexLiveRoster, liveCamKey, groupLiveCameras, LIVE_PAGE_SIZE, bindMjpegImg, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters, readViewerPass, writeViewerPass } from './js/vyanet-viewer/property.js?v=1.8.45';
 import { fetchPropertyGis, gisFactsHtml } from './js/vyanet-viewer/gis-facts.js?v=1.8.14';
 // Load GLTFLoader and OrbitControls from three.js examples CDN
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
@@ -2435,8 +2435,7 @@ function camSpriteFor(cam) {
 // URL exposes is nothing, and a leaked stream URL dies inside the hour.
 
 function gwPasscode(force, interactive) {
-  let k = '';
-  try { k = (sessionStorage.getItem('vyViewerKey') || '').trim(); } catch (e) {}
+  const k = readViewerPass(propertyId);
   if (k && !force) return Promise.resolve(k);
   if (!interactive) return Promise.resolve('');
   if (gwPassWait) return gwPassWait;
@@ -2477,10 +2476,10 @@ window.submitViewerPasscode = function (ev) {
   const k = (inp && inp.value ? inp.value : '').trim();
   if (!k) {
     const err = document.getElementById('pass-err');
-    if (err) { err.textContent = 'Enter a passcode'; err.style.display = 'block'; }
+    if (err) { err.textContent = "Enter this property's passcode"; err.style.display = 'block'; }
     return;
   }
-  try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
+  writeViewerPass(propertyId, k);
   finishViewerPasscode(k);
 };
 window.cancelViewerPasscode = function () {
@@ -2511,7 +2510,7 @@ async function gwGet(path, interactive) {
   if (!k) throw new Error('no passcode entered');
   let r = await fetch(GW_URL + path, { headers: { 'x-viewer-key': k } });
   if (r.status === 401) {
-    try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+    writeViewerPass(propertyId, '');
     k = await gwPasscode(true, ask);
     if (!k) throw new Error('no passcode entered');
     r = await fetch(GW_URL + path, { headers: { 'x-viewer-key': k } });
