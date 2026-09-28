@@ -208,9 +208,9 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters, loadPropertyIndex } from './js/vyanet-viewer/property.js?v=1.8.44';
+import { dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters, loadPropertyIndex, readViewerPass, writeViewerPass } from './js/vyanet-viewer/property.js?v=1.8.47';
 
-const BUILD = '1.1.12';
+const BUILD = '1.1.13';
 const params = new URLSearchParams(window.location.search);
 const propertyId = (params.get('property') || '').trim();
 const embedded = params.get('embed') === '1';
@@ -257,7 +257,7 @@ async function loadIndex() {
 
 let gwPassWait = null, gwPassResolve = null;
 function ssKey() {
-  try { return (sessionStorage.getItem('vyViewerKey') || '').trim(); } catch (e) { return ''; }
+  return readViewerPass(propertyId);
 }
 function showViewerPasscode(errText) {
   return new Promise(function (resolve) {
@@ -290,7 +290,7 @@ window.submitViewerPasscode = function (ev) {
     if (err) { err.textContent = "Enter this property's passcode"; err.style.display = 'block'; }
     return;
   }
-  try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
+  writeViewerPass(propertyId, k);
   finishViewerPasscode(k);
 };
 window.cancelViewerPasscode = function () { finishViewerPasscode(''); };
@@ -316,7 +316,7 @@ async function gwGet(path, interactive) {
   if (!k) throw new Error('no passcode entered');
   let r = await fetch(gw.url + path, { headers: { 'x-viewer-key': k } });
   if (r.status === 401) {
-    try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+    writeViewerPass(propertyId, '');
     k = await gwPasscode(true, ask);
     if (!k) throw new Error('no passcode entered');
     r = await fetch(gw.url + path, { headers: { 'x-viewer-key': k } });

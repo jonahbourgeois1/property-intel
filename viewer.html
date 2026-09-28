@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.20</div>
+    <div id="version-badge">v2.10.21</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -530,7 +530,7 @@
 <div id="pass-overlay" onclick="if(event.target===this)cancelViewerPasscode()">
   <form id="pass-card" onsubmit="submitViewerPasscode(event)">
     <div class="pass-title">Live feed</div>
-    <div class="pass-sub">Enter the viewer passcode to open this camera. It stays in this tab only.</div>
+    <div class="pass-sub">Enter this property's passcode to open this camera. It stays in this tab only.</div>
     <div id="pass-err"></div>
     <input id="pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
     <div class="pass-actions">
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.20';
+const VERSION     = 'v2.10.22';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -614,6 +614,22 @@ const VIEW_LABELS = { security:'Security', wildfire:'Wildfire', tour:'Ground', p
 const GW_URL = (_qs.get('gw') || 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws').replace(/\/+$/, '');
 const GW_OFF = _qs.get('gw') === '0';
 const propertyId = (_qs.get('property') || '').trim();
+// Same slot as property.js viewerPassKeyName: one passcode per property.
+function viewerPassName_() {
+  var id = String(propertyId || '').trim().toLowerCase();
+  return id ? ('vyViewerKey:' + id) : 'vyViewerKey';
+}
+function readViewerPass_() {
+  try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+  try { return (sessionStorage.getItem(viewerPassName_()) || '').trim(); } catch (e) { return ''; }
+}
+function writeViewerPass_(key) {
+  try {
+    if (key) sessionStorage.setItem(viewerPassName_(), key);
+    else sessionStorage.removeItem(viewerPassName_());
+    sessionStorage.removeItem('vyViewerKey');
+  } catch (e) {}
+}
 // Eugene currently has two index files for the same building. Keep in sync
 // with property.js CAMERA_HUB_SIBLINGS / liveAliasIds.
 const CAMERA_HUB_SIBLINGS = {
@@ -622,6 +638,20 @@ const CAMERA_HUB_SIBLINGS = {
   '2dce25a3643b86a7d8a1551228c3306f': ['6de88883bfd4a8349a901c54611ed9d7'],
   '6de88883bfd4a8349a901c54611ed9d7': ['2dce25a3643b86a7d8a1551228c3306f']
 };
+
+// Records indexes store the file name ("satellite") on views and the record
+// id on files.satellite.id. GitHub indexes already store the 32-hex id.
+function resolveViewIds_(entry) {
+  const src = Object.assign({}, (entry && entry.views) || {});
+  const files = (entry && entry.files) || {};
+  Object.keys(src).forEach(function (k) {
+    const dest = src[k];
+    if (/^[0-9a-f]{32}$/i.test(String(dest || ''))) return;
+    const ent = files[dest] || files[k];
+    if (ent && /^[0-9a-f]{32}$/i.test(String(ent.id || ''))) src[k] = String(ent.id).toLowerCase();
+  });
+  return src;
+}
 
 // Maps each view suffix to the subfolder its JSON lives in
 function viewBaseUrl(viewSuffix) {
@@ -1165,7 +1195,7 @@ async function ensureClips(force, interactive) {
         headers: { 'x-viewer-key': k }
       });
       if (r.status === 401) {
-        try { sessionStorage.removeItem('vyViewerKey'); } catch (e2) {}
+        writeViewerPass_('');
         k = await gwPasscode_(true, ask);
         if (!k) return [];
         i--;
@@ -1463,8 +1493,7 @@ function paintCamThumbs_() {
   }
 }
 function gwPasscode_(force, interactive) {
-  let k = '';
-  try { k = (sessionStorage.getItem('vyViewerKey') || '').trim(); } catch (e) {}
+  const k = readViewerPass_();
   if (k && !force) return Promise.resolve(k);
   if (!interactive) return Promise.resolve('');
   if (gwPassWait) return gwPassWait;
@@ -1502,10 +1531,10 @@ window.submitViewerPasscode = function (ev) {
   const k = (inp && inp.value ? inp.value : '').trim();
   if (!k) {
     const err = document.getElementById('pass-err');
-    if (err) { err.textContent = 'Enter a passcode'; err.style.display = 'block'; }
+    if (err) { err.textContent = "Enter this property's passcode"; err.style.display = 'block'; }
     return;
   }
-  try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
+  writeViewerPass_(k);
   finishViewerPasscode_(k);
 };
 window.cancelViewerPasscode = function () { finishViewerPasscode_(''); };
@@ -1529,7 +1558,7 @@ async function prefetchLiveJoin_(interactive) {
         headers: { 'x-viewer-key': k }
       });
       if (r.status === 401) {
-        try { sessionStorage.removeItem('vyViewerKey'); } catch (e) {}
+        writeViewerPass_('');
         k = await gwPasscode_(true, ask);
         if (!k) return;
         i--;
@@ -2773,7 +2802,7 @@ async function loadPropertyData() {
     }
     const propRes = await fetch(BASE_URL + propertyHash + '.json', { cache: 'no-store' });
     const propData = propRes.ok ? await propRes.json() : null;
-    const views = Object.assign({}, entry.views);
+    const views = resolveViewIds_(entry);
     if (propData && propData.viewer360) { views['tour'] = propertyHash; dbg('viewer360 found — Tour tab enabled', 'ok'); }
     currentViews = views;
     document.getElementById('property-name').textContent = entry.name;

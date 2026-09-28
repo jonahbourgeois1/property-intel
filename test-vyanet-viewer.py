@@ -617,7 +617,7 @@ with sync_playwright() as p:
     check('B1c skip disabled until role picked', page.is_disabled('#gt-skip'))
     page.click('#role-customer')
     page.click('#gt-enter')
-    check('B2 empty passcode refused inline', 'Enter the viewer passcode' in page.text_content('#gt-err'))
+    check('B2 empty passcode refused inline', "Enter this property's passcode" in page.text_content('#gt-err'))
     page.fill('#gt-pass-input', 'wrong-key')
     page.click('#gt-enter')
     page.wait_for_function("document.getElementById('gt-err').textContent !== ''")
@@ -628,7 +628,7 @@ with sync_playwright() as p:
     page.click('#gt-enter')
     page.wait_for_selector('#home.visible')
     check('B5 accepted key enters home', True)
-    check('B6 vyViewerKey stored for tab', page.evaluate("sessionStorage.getItem('vyViewerKey')") == 'right-key')
+    check('B6 vyViewerKey stored for tab', page.evaluate("sessionStorage.getItem('vyViewerKey:" + JONES + "')") == 'right-key')
     page.reload()
     page.wait_for_selector('#home.visible')
     check('B7 reload skips gate (role + key in session)', not visible(page, '#gate'))
@@ -656,7 +656,7 @@ with sync_playwright() as p:
     page.fill('#gt-pass-input', 'any-key')
     page.click('#gt-enter')
     page.wait_for_selector('#home.visible')
-    check('C2 gw=0 stores key without gateway call', page.evaluate("sessionStorage.getItem('vyViewerKey')") == 'any-key'
+    check('C2 gw=0 stores key without gateway call', page.evaluate("sessionStorage.getItem('vyViewerKey:" + JONES + "')") == 'any-key'
           and gw_called['v'] == 0)
     check('C3 role chip technician', page.text_content('#hm-role') == 'Viewing as Technician')
     ctx.close()
@@ -814,7 +814,7 @@ with sync_playwright() as p:
     page.click('#btn-pv-live')
     check('I2 live without key opens popup', visible(page, '#live-pass'))
     page.click('#live-pass-go')
-    check('I3 empty passcode refused', 'Enter the viewer passcode' in page.text_content('#live-pass-err'))
+    check('I3 empty passcode refused', "Enter this property's passcode" in page.text_content('#live-pass-err'))
     page.fill('#live-pass-input', 'wrong-key')
     page.click('#live-pass-go')
     page.wait_for_function(
@@ -825,7 +825,7 @@ with sync_playwright() as p:
     page.click('#live-pass-go')
     page.wait_for_selector('#frame-live.on')
     check('I5 accepted key stored and live starts', page.evaluate(
-        "sessionStorage.getItem('vyViewerKey')") == 'right-key')
+        "sessionStorage.getItem('vyViewerKey:" + JONES + "')") == 'right-key')
     check('I6 popup closed after unlock', not visible(page, '#live-pass'))
     check('I6b 3D frame is not the live stage',
           'on' not in (page.get_attribute('#frame-3d', 'class') or ''))

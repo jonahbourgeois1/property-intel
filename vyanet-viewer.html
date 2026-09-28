@@ -566,7 +566,7 @@
       <div class="gt-sub">This property's passcode unlocks live video and stays in this tab only. Skip it now and you will be asked when you open Live Feed.</div>
       <input id="gt-pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
     </div>
-    <div id="gt-pass-saved">Viewer passcode already saved in this tab.</div>
+    <div id="gt-pass-saved">This property's passcode is already saved in this tab.</div>
     <div id="gt-err"></div>
     <button type="submit" id="gt-enter" disabled>ENTER</button>
     <button type="button" id="gt-skip" disabled onclick="gateSkipLive()">Continue without live</button>
@@ -589,8 +589,8 @@
 import { dataRoot, framesFromIndex, validateViewerKey,
          liveAliasIds, gwConfig, findNadir, detectCameras, ROLES, HUB_BUILD,
          PLUGINS, NEARMAP_DELIVERY_HUB, nearmapVisible, loadPropertyIndex,
-         indexHasChekt
-       } from './js/vyanet-viewer/property.js?v=1.8.44';
+         indexHasChekt, readViewerPass, writeViewerPass, chektAccountOnFile
+       } from './js/vyanet-viewer/property.js?v=1.8.47';
 import { DASH_SOURCES, loadSourceCard, dashAfterPaint } from './js/vyanet-viewer/dashboard.js?v=1.8.17';
 
 const BUILD = HUB_BUILD;
@@ -607,7 +607,7 @@ const root = dataRoot();
 const gw = gwConfig();
 const state = {
   idx: null, spec: null, role: '', entered: false, busy: false,
-  hasCams: false, needsKey: false, camsSettled: false, camsChecked: false,
+  hasCams: false, chektAccount: false, needsKey: false, camsSettled: false, camsChecked: false,
   liveReady: false, pendingLive: false,
   modelReady: false, pending3d: false, dashStarted: false,
   heroStage: '', passBusy: false, privateSub: '', communitySub: '', stage: 'home'
@@ -908,8 +908,8 @@ window.livePassSubmit = async function (ev) {
   const verdict = await validateViewerKey(key, liveAliasIds(state.idx, propertyId), gw, state.idx);
   state.passBusy = false;
   go.disabled = false;
-  if (!verdict.ok) { livePassErr('Passcode not accepted. Try again.'); return; }
-  ssSet('vyViewerKey', key);
+  if (!verdict.ok) { livePassErr(passVerdictErr(verdict)); return; }
+  writeViewerPass(propertyId, key);
   notifyChildKey();
   document.getElementById('live-pass').classList.remove('visible');
   goLiveNow();
@@ -917,7 +917,7 @@ window.livePassSubmit = async function (ev) {
 window.openLive = function () {
   const spec = state.spec;
   if (!spec || !state.entered || !spec.hasLive) return;
-  if (!ss('vyViewerKey')) { showLivePass(); return; }
+  if (!readViewerPass(propertyId)) { showLivePass(); return; }
   goLiveNow();
 };
 window.addEventListener('message', function (e) {
@@ -1011,6 +1011,21 @@ window.switchRole = function () {
   showGate();
 };
 
+function propertyShowsLive(spec, idx, cams) {
+  if (!spec) return;
+  spec.hasLive = !!(cams || spec.hasModel || indexHasChekt(idx) || state.chektAccount || !nearmapVisible());
+  if (spec.hasLive && !spec.hasPrivate) {
+    spec.hasPrivate = true;
+    if (!spec.privateDefault) spec.privateDefault = 'live';
+  }
+}
+
+function passVerdictErr(verdict) {
+  if (verdict && verdict.reason === 'unknown') return 'This property has no CHEKT passcode on file.';
+  if (verdict && verdict.reason === 'unreachable') return 'Could not check the passcode. Try again.';
+  return 'Passcode not accepted. Try again.';
+}
+
 function gateErr(msg) {
   const el = document.getElementById('gt-err');
   el.textContent = msg || '';
@@ -1018,7 +1033,7 @@ function gateErr(msg) {
 }
 
 function paintPassBlock() {
-  const need = !!(state.spec && state.spec.hasLive && !ss('vyViewerKey'));
+  const need = !!(state.spec && state.spec.hasLive && !readViewerPass(propertyId));
   state.needsKey = need;
   document.getElementById('gt-pass-block').classList.toggle('visible', need);
   document.getElementById('gt-skip').classList.toggle('visible', need);
@@ -1055,8 +1070,8 @@ window.gateSubmit = async function (ev) {
     const verdict = await validateViewerKey(key, liveAliasIds(state.idx, propertyId), gw, state.idx);
     state.busy = false;
     refreshEnter();
-    if (!verdict.ok) { gateErr('Passcode not accepted. Try again.'); return; }
-    ssSet('vyViewerKey', key);
+    if (!verdict.ok) { gateErr(passVerdictErr(verdict)); return; }
+    writeViewerPass(propertyId, key);
     notifyChildKey();
     state.needsKey = false;
     paintPassBlock();
@@ -1090,7 +1105,7 @@ function enterApp() {
   state.entered = true;
   document.getElementById('gate').classList.remove('visible');
   state.spec = specFromIndex(state.idx);
-  state.spec.hasLive = !!(state.hasCams || state.spec.hasModel || indexHasChekt(state.idx));
+  propertyShowsLive(state.spec, state.idx, state.hasCams);
   const spec = state.spec;
   paintAhart();
   // Mount plugins now so the later swap is instant; they render behind
@@ -1126,7 +1141,7 @@ function enterApp() {
   if (start === 'public') state.communitySub = 'map';
   document.getElementById('hm-role').textContent =
     state.role ? 'Viewing as ' + roleLabel(state.role) : '';
-  if (start === 'private' && sub === 'live' && !ss('vyViewerKey')) {
+  if (start === 'private' && sub === 'live' && !readViewerPass(propertyId)) {
     showHome();
     showLivePass();
   } else if (start === 'home') {
@@ -1195,12 +1210,17 @@ async function boot() {
   });
   const cams = await detectCameras(root, idx, state.spec, propertyId);
   state.hasCams = cams;
-  state.spec.hasLive = !!(cams || state.spec.hasModel || indexHasChekt(idx));
+  state.chektAccount = false;
+  if (!cams && !state.spec.hasModel && !indexHasChekt(idx)) {
+    state.chektAccount = await chektAccountOnFile(propertyId, gw);
+  }
+  propertyShowsLive(state.spec, idx, cams);
+  document.getElementById('btn-private').disabled = !state.spec.hasPrivate;
   document.getElementById('btn-pv-live').disabled = !state.spec.hasLive;
   document.getElementById('hm-none').classList.toggle('visible',
     !state.spec.hasModel && !state.spec.hasSatellite && !state.spec.hasLive && !state.spec.hasNearmap);
   state.camsSettled = true;
-  state.needsKey = !!(state.spec.hasLive && !ss('vyViewerKey'));
+  state.needsKey = !!(state.spec.hasLive && !readViewerPass(propertyId));
   // A known role skips the gate: session restore on refresh, or &role= as a
   // tester/dispatch deep link. First visits with no role still gate. The
   // passcode never travels in a URL.
