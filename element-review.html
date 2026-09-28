@@ -48,6 +48,11 @@
              element-critique are never read or written. Sheet menu
              "Open Element Review" under Satellite Sandbox sets this.
 
+  v6.8.22 (map fill): the satellite basemap is sized to the stage in pixels.
+    A percentage height inside the grid cell was indefinite on the first
+    measure, so Maps locked a small canvas to the top-left and the rest of
+    the stage stayed the map background.
+
   v6.8.20 (round history): "Show pins" swaps the map to a previous round.
     Round 0 = Bedrock (first filed critique's published XY, else live pins).
     Round 1+ = each filed review after verdicts. Now = the live sheet pins,
@@ -1026,6 +1031,8 @@
      flat fallback renderer is untouched when the map cannot be used.
      ══════════════════════════════════════════════════════════════════════ */
   .stage.mapmode { padding: 0; display: block; }
+  /* width/height here are the fallback. erInitMap replaces them with the
+     stage's pixel size before Maps measures the div — see v6.8.22. */
   #map { position: absolute; inset: 0; width: 100%; height: 100%; background: #0a0c0f; }
   .stage:not(.mapmode) #map { display: none; }
   /* The frame is moved into a map pane by the OverlayView and sized by it, so
@@ -1250,7 +1257,7 @@
      the page script so `window.NadirGeo` exists before the map is set up. If
      this 404s the map is skipped and the page falls back to the flat nadir
      image, exactly as v6.2 rendered it. -->
-<script src="nadir-geo.js"></script>
+<script src="nadir-geo.js?v=1.3.3"></script>
 <script>
 (function () {
   // v2: merged, tagged catalog.
@@ -1319,7 +1326,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.20';
+  var BUILD = 'v6.8.22';
   // The oldest SERVER build whose re-pin writer keeps duplicate catalog ids as
   // separate instances (pin seq identity, critique-api v6.8.2). Submitting
   // against anything older stacks or deletes duplicates — four separate
@@ -3249,13 +3256,18 @@
   // SOUTH-WEST corner on that county's 0.07° grid. A tile that does not exist
   // is a 404, which is the honest answer "no coverage here".
   //
-  // Two published counties, each with its own origin (do not reuse Deschutes
-  // 43.61/−122.01 for Lane — the filenames were built from 43.40/−124.20).
+  // Five published counties, each with its own origin (do not reuse
+  // Deschutes 43.61/−122.01 for Lane, Josephine, Linn, or Douglas —
+  // Lane filenames were built from 43.40/−124.20, Josephine from
+  // 41.90/−124.20, Linn from 44.13/−123.29, Douglas from 42.63/−124.27).
   // Lookup tries each county until a polygon contains the point.
   var PARCEL_BASE = qp('parcels') || 'data/parcels/';
   var PARCEL_COUNTIES = [
     { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
-    { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 }
+    { name: 'lane',      lat0: 43.40, lng0: -124.20, step: 0.07 },
+    { name: 'josephine', lat0: 41.90, lng0: -124.20, step: 0.07 },
+    { name: 'linn',      lat0: 44.13, lng0: -123.29, step: 0.07 },
+    { name: 'douglas',   lat0: 42.63, lng0: -124.27, step: 0.07 }
   ];
   // Features are filed in ONE tile by representative point, not clipped to the
   // grid, so a polygon can hang up to ~0.0037° past its tile's edge. A point in
@@ -3284,7 +3296,7 @@
 
   // Lot lookup: holes count, skip Lane ROW leftovers (TAXLOT 77/88/99 and
   // ACCTNO 000None), smallest remaining lot wins. Canonical copy is
-  // NadirGeo.parcelHit (nadir-geo.js 1.3.2). Outer-ring-only first-hit drew
+  // NadirGeo.parcelHit (nadir-geo.js 1.3.3). Outer-ring-only first-hit drew
   // the Cottage Grove street grid onto 75 S 5th St.
   function parcelHit(geo, lat, lng) {
     if (window.NadirGeo && window.NadirGeo.parcelHit) {
@@ -3840,9 +3852,87 @@
             'page is not being served from responder-intel.vyanet.com.)');
   }
 
+  // Maps reads the container once, inside `new Map()`, and locks an inner div
+  // to that pixel size. #map is absolutely positioned with height:100% inside
+  // a stretched grid cell. That percentage is not a definite height on the
+  // first measure, so the inner canvas comes out a small block in the top-left
+  // and the rest of the stage stays this div's background. Size it to the
+  // stage in pixels before construction, and again whenever the stage changes.
+  var erMapWatching = false;
+  var erInitTries = 0;
+
+  function erStageBox() {
+    var stage = document.querySelector('.stage');
+    var el = document.getElementById('map');
+    if (!stage || !el) return null;
+    var w = stage.clientWidth;
+    var h = stage.clientHeight;
+    if (!(w > 1 && h > 1)) return null;
+    return { el: el, w: w, h: h };
+  }
+
+  function erApplyMapBox(box) {
+    box.el.style.width = box.w + 'px';
+    box.el.style.height = box.h + 'px';
+  }
+
+  function erMapCanvasShort(box) {
+    var inner = box.el.querySelector('.gm-style') || box.el.firstElementChild;
+    if (!inner) return false;
+    return Math.abs(inner.offsetWidth - box.w) > 2 ||
+           Math.abs(inner.offsetHeight - box.h) > 2;
+  }
+
+  function erSyncMapToStage(refit) {
+    if (!erMap || !window.google || !google.maps || !google.maps.event) return;
+    var box = erStageBox();
+    if (!box) return;
+    var prevW = parseInt(box.el.style.width, 10) || 0;
+    var prevH = parseInt(box.el.style.height, 10) || 0;
+    var same = prevW === box.w && prevH === box.h;
+    var short = erMapCanvasShort(box);
+    if (same && !short) return;
+    if (!same) erApplyMapBox(box);
+    // A correct outer size with a stale inner canvas ignores a bare resize.
+    // Nudge one pixel so Maps' own observer sees a change, then put it back.
+    if (short && same) {
+      box.el.style.width = (box.w - 1) + 'px';
+      google.maps.event.trigger(erMap, 'resize');
+      box.el.style.width = box.w + 'px';
+    }
+    google.maps.event.trigger(erMap, 'resize');
+    if (refit) erFitNadir();
+    if (erOverlay && typeof erOverlay.draw === 'function') erOverlay.draw();
+  }
+
+  function erWatchStage() {
+    if (erMapWatching) return;
+    erMapWatching = true;
+    var stage = document.querySelector('.stage');
+    var kick = function () { erSyncMapToStage(false); };
+    if (stage && window.ResizeObserver) {
+      var ro = new ResizeObserver(kick);
+      ro.observe(stage);
+    } else {
+      window.addEventListener('resize', kick);
+    }
+  }
+
   function erInitMap() {
+    if (erMap) return;
+    var box = erStageBox();
+    if (!box) {
+      if (erInitTries++ > 120) {
+        erToast('The map could not measure the page. Add &map=0 to the URL ' +
+                'to review on the flat image.');
+        return;
+      }
+      requestAnimationFrame(erInitMap);
+      return;
+    }
+    erApplyMapBox(box);
     var g = google.maps;
-    erMap = new g.Map(document.getElementById('map'), {
+    erMap = new g.Map(box.el, {
       mapTypeId: g.MapTypeId.SATELLITE,
       tilt: 0,
       rotateControl: false,
@@ -3883,6 +3973,13 @@
     erWireButtons();
     erApplyNadir();
     paintEarthLink();
+    erWatchStage();
+    // fitBounds above used the size at construction. If the stage was still
+    // settling, correct once when the first camera settles — before a reviewer
+    // has panned. Later stage changes only refill tiles; Fit recenters.
+    g.event.addListenerOnce(erMap, 'idle', function () {
+      erSyncMapToStage(true);
+    });
     if (window.console) {
       console.log('[element-review] map mode: centre ' + erGeo.lat.toFixed(6) +
         ', ' + erGeo.lng.toFixed(6) + ' capture zoom ' + erGeo.zoom +
