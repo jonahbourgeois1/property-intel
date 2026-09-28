@@ -59,7 +59,11 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.42';
+export const HUB_BUILD = '1.8.44';
+// Records indexes (Satellite sync) are not copied to GitHub data/index.
+// The hub reads GitHub first, then this origin. Views there are file names
+// ("satellite"), not 32-hex record ids, so they are not opened as 2D/3D tabs.
+export const RECORDS_ORIGIN = 'https://d1h1on7f1v1lpy.cloudfront.net/';
 export const LIVE_PAGE_SIZE = 4;
 
 export function stopMjpegImg(img) {
@@ -391,6 +395,35 @@ export async function fetchJson(url) {
   if (res.status === 404) return null;
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return await res.json();
+}
+
+export function isHex32(id) {
+  return /^[0-9a-f]{32}$/i.test(String(id || '').trim());
+}
+
+export function indexHasChekt(idx) {
+  return !!(idx && Array.isArray(idx.chekt_sites) && idx.chekt_sites.length);
+}
+
+// GitHub indexes store a 32-hex view-record id. Records indexes store the
+// files-key ("satellite", "drone"). Only the hex id is a page this hub can open.
+function githubViews(idx) {
+  const src = (idx && idx.views) || {};
+  const views = {};
+  Object.keys(src).forEach(function (k) {
+    if (isHex32(src[k])) views[k] = String(src[k]).toLowerCase();
+  });
+  return views;
+}
+
+export async function loadPropertyIndex(root, propertyId) {
+  const id = String(propertyId || '').trim();
+  if (!id) return null;
+  const local = await fetchJson(String(root || '') + 'index/' + id + '.json');
+  const idx = (local && local.views) ? local : await fetchJson(RECORDS_ORIGIN + 'index/' + id + '.json');
+  if (!idx) return null;
+  idx.views = githubViews(idx);
+  return idx;
 }
 
 // Property camera metadata: data/cameras/json/{id}.json.
@@ -743,11 +776,11 @@ export function groupLiveCameras(list) {
 
 // Ask the gateway whether it accepts this key. Walk the alias ids the same
 // way model-viewer does: 200 = accepted and this property has live cameras;
-// 401 = key rejected (stop â€” the gateway checks the key before the
-// property); 404 = this property id has no CHEKT sites, try the next.
-// The query is only the property id. The gateway does not match address,
-// name, or site_no. Anything else (429, 5xx, network) is inconclusive:
-// accept the key and let model-viewer's own 401-retry loop sort it out.
+// 401 = this property rejected the key (stop); 404 = this id has no
+// CHEKT account, try the next. The query is only the property id. The
+// gateway does not match address, name, or site_no. Anything else
+// (429, 5xx, network) is inconclusive: accept the key and let
+// model-viewer's own 401-retry loop sort it out.
 export async function validateViewerKey(key, ids, gw, idx) {
   if (gw.off) return { ok: true, live: false };
   for (let i = 0; i < ids.length; i++) {

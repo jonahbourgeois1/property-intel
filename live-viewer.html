@@ -197,7 +197,7 @@
 <div id="pass-overlay" onclick="passOverlayClick(event)">
   <form id="pass-card" onsubmit="submitViewerPasscode(event)">
     <div class="pass-title">Live feed</div>
-    <div class="pass-sub">Enter the viewer passcode to open cameras and clips. It stays in this tab only.</div>
+    <div class="pass-sub">Enter this property's passcode to open cameras and clips. It stays in this tab only.</div>
     <div id="pass-err"></div>
     <input id="pass-input" type="password" autocomplete="current-password" placeholder="Passcode">
     <div class="pass-actions">
@@ -208,9 +208,9 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { fetchJson, dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters } from './js/vyanet-viewer/property.js?v=1.8.42';
+import { dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters, loadPropertyIndex } from './js/vyanet-viewer/property.js?v=1.8.44';
 
-const BUILD = '1.1.11';
+const BUILD = '1.1.12';
 const params = new URLSearchParams(window.location.search);
 const propertyId = (params.get('property') || '').trim();
 const embedded = params.get('embed') === '1';
@@ -251,7 +251,7 @@ let idxCache = null;
 async function loadIndex() {
   if (idxCache) return idxCache;
   if (!propertyId) return null;
-  idxCache = await fetchJson(root + 'index/' + propertyId + '.json');
+  idxCache = await loadPropertyIndex(root, propertyId);
   return idxCache;
 }
 
@@ -287,7 +287,7 @@ window.submitViewerPasscode = function (ev) {
   const k = (inp && inp.value ? inp.value : '').trim();
   if (!k) {
     const err = document.getElementById('pass-err');
-    if (err) { err.textContent = 'Enter a passcode'; err.style.display = 'block'; }
+    if (err) { err.textContent = "Enter this property's passcode"; err.style.display = 'block'; }
     return;
   }
   try { sessionStorage.setItem('vyViewerKey', k); } catch (e) {}
