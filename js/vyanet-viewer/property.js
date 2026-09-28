@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.47';
+export const HUB_BUILD = '1.8.48';
 // Records indexes (Satellite sync) are not copied to GitHub data/index.
 // The hub reads GitHub first, then this origin. Views there are file names
 // ("satellite"), not 32-hex record ids, so they are not opened as 2D/3D tabs.
@@ -832,17 +832,37 @@ export function groupLiveCameras(list) {
   return groups;
 }
 
+// Password check only. auth=1 tells a current gateway to answer before it
+// asks CHEKT for cameras. The property id is the one being tried, not the
+// index id, so an alias can still match.
+function gwAuthQuery(id) {
+  const q = new URLSearchParams();
+  const prop = String(id || '').trim();
+  if (prop) q.set('property', prop);
+  q.set('auth', '1');
+  return q.toString();
+}
+
+// A deployed gateway that does not know auth=1 still lists cameras, and a
+// CHEKT failure there is 502 after the password already matched.
+async function passwordAlreadyMatched(r) {
+  if (r.status !== 502 && r.status !== 503) return false;
+  let err = '';
+  try { err = String(((await r.json()) || {}).error || ''); } catch (e) {}
+  return err.indexOf('chekt returned') === 0 || err === 'upstream failure';
+}
+
 // Ask the gateway whether this password opens this property. 200 = yes.
 // 401 = this property rejected it. 404 = this id is not that account, try
-// the next alias. Anything else is not stored: a password is kept only
-// after this property accepts it.
+// the next alias. A camera-list failure after a matched password is still
+// yes. Anything else is not stored.
 export async function validateViewerKey(key, ids, gw, idx) {
   if (gw.off) return { ok: true, live: false };
   let saw404 = false;
   for (let i = 0; i < ids.length; i++) {
     let r;
     try {
-      r = await fetch(gw.url + '/live?' + gwLiveQuery(ids[i], idx), {
+      r = await fetch(gw.url + '/live?' + gwAuthQuery(ids[i]), {
         headers: { 'x-viewer-key': key }
       });
     } catch (e) {
@@ -851,6 +871,7 @@ export async function validateViewerKey(key, ids, gw, idx) {
     if (r.status === 200) return { ok: true, live: true };
     if (r.status === 401) return { ok: false, live: false };
     if (r.status === 404) { saw404 = true; continue; }
+    if (await passwordAlreadyMatched(r)) return { ok: true, live: false };
     return { ok: false, live: false, reason: 'unreachable' };
   }
   return { ok: false, live: false, reason: saw404 ? 'unknown' : 'unreachable' };
