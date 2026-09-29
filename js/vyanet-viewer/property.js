@@ -59,7 +59,7 @@ export const PLUGINS = [
   { id: 'luxury-estates', label: 'Luxury Estates', blurb: 'Premium security and property intelligence for complex high-value residences.' }
 ];
 export const AHART_PLUGINS = PLUGINS;
-export const HUB_BUILD = '1.8.49';
+export const HUB_BUILD = '1.8.50';
 // Records indexes (Satellite sync) are not copied to GitHub data/index.
 // The hub reads GitHub first, then this origin. Views there are file names
 // ("satellite"), not 32-hex record ids, so they are not opened as 2D/3D tabs.
