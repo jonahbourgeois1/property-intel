@@ -1427,6 +1427,7 @@ let dirList = [], dirNadir = '', dirCorners = null;
 let dirLayer = null, activeDir = -1, dirBusy = false;
 let pinSets = { element: [], concern: [] }, pinLayers = { element: null, concern: null };
 let dirRecord = null;
+let chektSitesOnIndex = false;
 let camList = [], camLayer = null, camBounds = null;
 let hubGisRec = null;
 let factsAutoOpened = false;
@@ -1729,12 +1730,15 @@ function convSatPinToNadir(p, centerLat, centerLng, zoom, bounds) {
 // views.security existed. That is inverted: highest-caliber mapping wins.
 // 1) data/pins/{id}.json if published  2) 3D nadir pins  3) satellite FR.
 async function loadFrPinSets(bounds) {
-  if (!propertyId || !bounds) return null;
   let pinFile = null, idx = null, sat = null;
+  if (propertyId) {
+    try { idx = await fetchJson(DATA_ROOT + 'index/' + propertyId + '.json'); }
+    catch (e) { idx = null; }
+    if (idx && Array.isArray(idx.chekt_sites) && idx.chekt_sites.length) chektSitesOnIndex = true;
+  }
+  if (!propertyId || !bounds) return null;
   try { pinFile = await fetchJson(DATA_ROOT + 'pins/' + propertyId + '.json'); }
   catch (e) { pinFile = null; }
-  try { idx = await fetchJson(DATA_ROOT + 'index/' + propertyId + '.json'); }
-  catch (e) { idx = null; }
   let modelRec = dirRecord;
   if ((!modelRec || !modelRec.nadir) && idx && idx.views) {
     const mk = ['drone-test', 'plane', 'drone'].find(function (k) { return idx.views[k]; });
@@ -1804,7 +1808,7 @@ function startDirections(rec) {
   });
 }
 function refreshPinsIfStale() {
-  if (!propertyId || !dirRecord) return;
+  if (chektSitesOnIndex || !propertyId || !dirRecord) return;
   const bounds = camBounds || boundsOf(dirRecord);
   loadFrPinSets(bounds).then(function (fr) {
     const next = fr || nadirPinSets(dirRecord);
@@ -1990,6 +1994,7 @@ function initDirections(d) {
                 (drawable ? '' : '<div class="rd-note">No model coordinates for this route.</div>') +
               '</div></div>';
   });
+  if (chektSitesOnIndex) hPins = '';
   const filled = { facts: hFacts, pins: hPins, cams: hCams, analysis: hAna, routes: hRoutes };
   PROP_TABS.forEach(function (t) {
     const body = document.getElementById('pp-body-' + t.id);
@@ -2012,7 +2017,7 @@ function initDirections(d) {
   // Pins are permanent scenery, like the entrance marker: place them on load
   // whenever the record can be placed at all. The panel button stays a toggle
   // for hiding them.
-  if (dirCorners && nPins && modelRoot) togglePins3D();
+  if (!chektSitesOnIndex && dirCorners && nPins && modelRoot) togglePins3D();
   if (camList.length && modelRoot) {
     // Wait for the pin job to actually FINISH, not just for the next tick.
     // raycastGround holds dirBusy across many animation frames (4 rays per

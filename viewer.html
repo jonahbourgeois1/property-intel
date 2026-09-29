@@ -486,7 +486,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.21</div>
+    <div id="version-badge">v2.10.23</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +579,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.22';
+const VERSION     = 'v2.10.23';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -663,6 +663,9 @@ function viewBaseUrl(viewSuffix) {
 let map, panelOpen = false, mobileIntelOpen = false;
 let mapsApiReady = false, pendingEntry = null, pendingStoredRing = null;
 let propertyIndex = null, currentViews = null, currentViewData = null;
+function indexHasChektSites_(idx) {
+  return !!(idx && Array.isArray(idx.chekt_sites) && idx.chekt_sites.length);
+}
 let streetViewActive = false, matterportActive = false, djiViewerActive = false;
 let frMode = false;
 let activeMarkers = [], pendingPinSets = [], pendingOverlay = null;
@@ -2426,7 +2429,7 @@ function populateFeatureTabs(d, viewSuffix) {
   d = d || {};
   const filled = {
     facts: hubGisHtml || '',
-    pins: pinsTabHtml_(d, viewSuffix),
+    pins: indexHasChektSites_(propertyIndex) ? '' : pinsTabHtml_(d, viewSuffix),
     cams: camsTabHtml_(),
     analysis: analysisTabHtml_(d, viewSuffix),
     routes: routesTabHtml_(d)
