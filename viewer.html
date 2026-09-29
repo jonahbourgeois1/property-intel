@@ -223,6 +223,8 @@
   @media (max-width: 768px) { #immersive-overlay { right: 0; } }
   /* Hub embed: the shell owns Home/Private chrome. Hide this page's header
      and the old persistent intel column so 2D matches 3D (map + right rail). */
+  body.embed #zoom-reset,
+  body.embed #nadir-toggle { display: none !important; }
   body.embed #header { display: none !important; }
   body.embed { --header-h: 0px; }
   #panel, #toggle-panel, #mobile-toggle { display: none !important; }
@@ -486,7 +488,7 @@
   </div>
   <div class="header-right">
     <button id="toggle-panel" onclick="togglePanel()"><div class="status-dot"></div><span id="toggle-label">View Intel</span></button>
-    <div id="version-badge">v2.10.23</div>
+    <div id="version-badge">v2.10.24</div>
     <div id="property-name">Loading...</div>
   </div>
 </div>
@@ -579,7 +581,7 @@
   </div>
 </div>
 <script>
-const VERSION     = 'v2.10.23';
+const VERSION     = 'v2.10.24';
 const _qs         = new URLSearchParams(window.location.search);
 const EMBEDDED    = _qs.get('embed') === '1';
 if (EMBEDDED) document.body.classList.add('embed');
@@ -913,6 +915,7 @@ function kickCamFlash_() {
   }, 600);
 }
 function dropPins(pins, color, hexColor) {
+  if (indexHasChektSites_(propertyIndex)) return;
   if (!map) { pendingPinSets.push({ pins, color, hexColor }); return; }
   const immersiveActive = matterportActive || streetViewActive || djiViewerActive;
   pins.forEach((pin, i) => {
