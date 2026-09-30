@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Restore the full property list (cam-edit 1.0.4)
+
+**What.** The bare editor URL lists every hub in `data/index/` again. A hub with no cameras file stays in the list with `cameras: 0` and an empty `cameras_file`. Hubs that already have cameras sort first. Save still refuses to create a cameras file.
+
+**Why.** Commit `f28ae73` trimmed the list to the 16 hubs that already have `data/cameras/json/`. Editors need the full index, same as cam-edit 1.0.1.
+
+**Files.** `js/camera-pin-editor.js`, `camera-pin-editor.html`, `camera-pin-properties.json`, `test-camera-pin-editor.mjs`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs` rebuilds the catalog from `data/index/` and `data/cameras/json/` and requires the committed JSON to match, including hubs with zero cameras.
+
+**Status.** Pages after this commit is on `main`.
+
 ### 2026-09-30 — List only properties that already have cameras (cam-edit 1.0.3)
 
 **What.** The bare editor URL lists hubs that already have a cameras file. Hubs in `data/index/` with no cameras file are not rows. A direct `?property=` link to one of those hubs still opens and says this editor does not create a file.
@@ -62,7 +74,7 @@ Internal page for placing camera pins. Clients do not use it.
 | Camera editors — one property | `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}` |
 | Clients (unchanged) | `https://responder-intel.vyanet.com/vyanet-viewer.html?property={hubId}&live=1` |
 
-The list is every hub that already has a cameras file. Search matches name, address, or hub id. Eugene’s site hub and both Tracy hubs are their own rows and point at the shared cameras file (Eugene `4a484f8c…`, Jones `6de88883…`). A hub with no cameras file is not on this list. Opening `?property=` for one of those hubs still says the editor does not create a file.
+The full list is every hub in `data/index/`. Hubs that already have a cameras file sort first. Search matches name, address, or hub id. A row with no cameras file still opens; the editor then says it does not create a file. Eugene’s site hub and both Tracy hubs are their own rows and point at the shared cameras file (Eugene `4a484f8c…`, Jones `6de88883…`).
 
 The list itself is `camera-pin-properties.json` at the repo root. Do not move it under `data/`. That tree is owned by the Apps Script sync.
 

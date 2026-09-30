@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.3';
+export const BUILD = '1.0.4';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -86,10 +86,10 @@ export function camerasFileForHub(propertyId, cameraIds) {
   return '';
 }
 
-// Editor index. records are { id, name, address } from data/index/.
+// Full editor index. records are { id, name, address } from data/index/.
 // cameraCounts maps a cameras-file id to its camera count.
-// Only hubs that already have at least one camera are listed.
-// This does not read the network.
+// Hubs with cameras sort first. Hubs with no cameras file stay, with
+// cameras 0 and an empty cameras_file. This does not read the network.
 export function editorCatalog(records, cameraCounts) {
   const counts = cameraCounts || {};
   const cameraIds = Object.keys(counts);
@@ -100,7 +100,6 @@ export function editorCatalog(records, cameraCounts) {
     if (!id) continue;
     const fileId = camerasFileForHub(id, cameraIds);
     const n = fileId ? Number(counts[fileId]) || 0 : 0;
-    if (!fileId || n < 1) continue;
     rows.push({
       id: id,
       name: String(rec.name || '').trim(),

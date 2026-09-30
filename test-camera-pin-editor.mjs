@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.3.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.4.
 import { readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -27,7 +27,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.3');
+ok('build', BUILD === '1.0.4');
 ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');
@@ -247,8 +247,8 @@ built.forEach((row) => { byId[row.id] = row; });
 ok('gud catalog count', byId[GUD] && byId[GUD].cameras === 15 && byId[GUD].cameras_file === GUD);
 ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras_file === EUGENE_CAMS && byId[EUGENE].cameras > 0);
 ok('tracy catalog file', byId[TRACY] && byId[TRACY].cameras_file === JONES);
-ok('catalog only properties with cameras', built.length > 0 && built.length < records.length &&
-  built.every((row) => row.cameras > 0 && row.cameras_file));
+ok('catalog includes every index hub', built.length === records.length);
+ok('catalog keeps hubs without cameras', built.some((row) => row.cameras === 0 && row.cameras_file === ''));
 ok('catalog cameras first', built.length > 0 && built[0].cameras > 0 &&
   built.filter((row) => row.cameras > 0).length === built.filter((row, i, all) => {
     const lastWith = all.reduce((n, row2, j) => row2.cameras > 0 ? j : n, -1);
