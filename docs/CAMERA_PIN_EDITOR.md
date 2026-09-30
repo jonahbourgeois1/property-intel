@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Full property list (cam-edit 1.0.1)
+
+**What.** The bare editor URL lists every hub, then opens one property. `https://responder-intel.vyanet.com/camera-pin-editor.html` is the link to share with camera editors. `?property={hubId}` stays the deep link into one hub. Client live links stay `vyanet-viewer.html?property={hubId}&live=1`.
+
+**Why.** Editors needed one hub URL, not a separate link per property.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `camera-pin-properties.json`, `test-camera-pin-editor.mjs`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs` rebuilds the catalog from `data/index/` and `data/cameras/json/` and compares it to `camera-pin-properties.json`. Browser pass: bare URL lists properties, search filters, a row opens `?property=`, All properties returns to the bare URL, the client link on a property is still `vyanet-viewer.html?property=…&live=1`.
+
+**Status.** Pages after this commit is on `main`. The list is a committed JSON file at the repo root. It is not under `data/`, so the Apps Script sync does not overwrite it. Refresh that file when hubs or camera counts change; the unit test fails if it drifts.
+
 ### 2026-09-30 — Internal camera pin editor (cam-edit 1.0.0)
 
 **What.** New Pages page `camera-pin-editor.html`. It loads one property with `?property={hubId}` (the `data/index/` hash), shows the cameras on a Google Map, and lets an editor drag pins, set heading, field of view, and range, with undo/redo. Save POSTs to the existing Apps Script web app. Apps Script merges those geometry fields into `data/cameras/json/{id}.json` through the GitHub Contents API. `live`, `mount_height`, `taxlot`, `photo`, labels, and placement notes stay. The editor does not create a cameras file and does not add or delete cameras. A move farther than 5 km is refused, not clamped.
@@ -16,14 +28,19 @@ Internal page for placing camera pins. Clients do not use it.
 
 **Status.** Pages after this commit is on `main`. Save returns success only after the Apps Script paste and a new deployment version below.
 
-## Two links
+## Links
 
 `{hubId}` is the filename of `data/index/{hubId}.json`. Same hash the hub and the live viewer already use.
 
 | Who | URL |
 |---|---|
-| Camera editors (this page) | `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}` |
+| Camera editors — full list (share this) | `https://responder-intel.vyanet.com/camera-pin-editor.html` |
+| Camera editors — one property | `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}` |
 | Clients (unchanged) | `https://responder-intel.vyanet.com/vyanet-viewer.html?property={hubId}&live=1` |
+
+The full list is every hub in `data/index/`. Hubs that already have a cameras file sort first. Search matches name, address, or hub id. A row with no cameras file still opens; the editor then says it does not create a file. Eugene’s site hub and both Tracy hubs are their own rows and point at the shared cameras file (Eugene `4a484f8c…`, Jones `6de88883…`).
+
+The list itself is `camera-pin-properties.json` at the repo root. Do not move it under `data/`. That tree is owned by the Apps Script sync.
 
 Example the live viewer already uses:
 
@@ -84,7 +101,11 @@ if (postRoute === 'camera-pins-save') {
 ## Smoke test
 
 1. Confirm ping shows `camera_pins: true`.
-2. Open an editor link for a property that already has `data/cameras/json/{id}.json`. Gud Cultures:
+2. Open the full editor:
+
+   `https://responder-intel.vyanet.com/camera-pin-editor.html`
+
+   Search `Gud`. Open Gud Cultures. The address bar becomes:
 
    `https://responder-intel.vyanet.com/camera-pin-editor.html?property=1512452d9e6e0f1cf0a32255a4392b12`
 

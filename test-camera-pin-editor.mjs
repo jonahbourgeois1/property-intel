@@ -1,11 +1,11 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.0.
-import { readFileSync, writeFileSync, unlinkSync } from 'fs';
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.1.
+import { readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import {
-  BUILD, MAX_MOVE_M, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
-  mergeCamerasRecord, validateGeometry, normalizeHeading
+  BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
+  camerasFileForHub, editorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -26,7 +26,8 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.0');
+ok('build', BUILD === '1.0.1');
+ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');
 ok('editor url', editorUrl(SAMPLE) ===
@@ -149,6 +150,10 @@ ok('no github api in the page', html.indexOf('api.github.com') === -1);
 ok('no onclick', html.indexOf('onclick=') === -1);
 ok('client page named', html.includes('vyanet-viewer.html'));
 ok('internal banner', html.includes('Not a client link'));
+['indexView', 'indexSearch', 'indexList', 'indexLink', 'indexCount', 'indexBlurb'].forEach((id) => {
+  ok('index id ' + id, html.includes('id="' + id + '"'));
+});
+ok('index hides save until editing', html.includes('body:not(.editing) #saveBtn'));
 
 const scriptMatch = html.match(/<script type="module">([\s\S]*)<\/script>/);
 ok('one module script', !!scriptMatch);
@@ -170,7 +175,7 @@ const dupFns = fns.filter((name, i) => fns.indexOf(name) !== i);
 ok('no duplicate functions', dupFns.length === 0, dupFns.join(','));
 
 const tmp = join(root, '_check-camera-pin-editor.mjs');
-writeFileSync(tmp, script.replace('?v=1.0.0', ''));
+writeFileSync(tmp, script.replace('?v=' + BUILD, ''));
 try {
   execFileSync(process.execPath, ['--check', tmp], { stdio: 'pipe' });
   ok('node --check page module', true);
@@ -211,6 +216,39 @@ const api = readFileSync(join(root, 'apps scripts/critique-api.gs'), 'utf8');
 ok('ping flag', api.includes('camera_pins: (typeof camerasEditorSave_ === \'function\')'));
 ok('post route before critique', api.indexOf("postRoute === 'camera-pins-save'") !== -1 &&
   api.indexOf("postRoute === 'camera-pins-save'") < api.lastIndexOf('critiquePost_(payload)'));
+
+const indexDir = join(root, 'data/index');
+const camDir = join(root, 'data/cameras/json');
+const records = readdirSync(indexDir).filter((name) => name.endsWith('.json')).map((name) => {
+  const doc = JSON.parse(readFileSync(join(indexDir, name), 'utf8'));
+  return {
+    id: name.slice(0, -5),
+    name: doc.name || doc.property_name || '',
+    address: doc.address || ''
+  };
+});
+const cameraCounts = {};
+readdirSync(camDir).filter((name) => name.endsWith('.json')).forEach((name) => {
+  const doc = JSON.parse(readFileSync(join(camDir, name), 'utf8'));
+  cameraCounts[name.slice(0, -5)] = Array.isArray(doc.cameras) ? doc.cameras.length : 0;
+});
+const built = editorCatalog(records, cameraCounts);
+const committed = JSON.parse(readFileSync(join(root, 'camera-pin-properties.json'), 'utf8'));
+ok('catalog matches index and cameras files', JSON.stringify(committed.properties) === JSON.stringify(built),
+  'regenerate camera-pin-properties.json from editorCatalog');
+const byId = {};
+built.forEach((row) => { byId[row.id] = row; });
+ok('gud catalog count', byId[GUD] && byId[GUD].cameras === 15 && byId[GUD].cameras_file === GUD);
+ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras_file === EUGENE_CAMS && byId[EUGENE].cameras > 0);
+ok('tracy catalog file', byId[TRACY] && byId[TRACY].cameras_file === JONES);
+ok('catalog cameras first', built.length > 0 && built[0].cameras > 0 &&
+  built.filter((row) => row.cameras > 0).length === built.filter((row, i, all) => {
+    const lastWith = all.reduce((n, row2, j) => row2.cameras > 0 ? j : n, -1);
+    return i <= lastWith;
+  }).length);
+ok('catalog not under data', !readFileSync(join(root, 'camera-pin-editor.html'), 'utf8').includes('data/camera-pin-properties.json'));
+ok('camerasFileForHub eugene', camerasFileForHub(EUGENE, Object.keys(cameraCounts)) === EUGENE_CAMS);
+ok('camerasFileForHub missing', camerasFileForHub('00000000000000000000000000000000', Object.keys(cameraCounts)) === '');
 
 if (failed) {
   console.log(failed + ' failed');

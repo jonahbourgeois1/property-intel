@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.0';
+export const BUILD = '1.0.1';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -31,10 +31,14 @@ export function normHubId(value) {
   return /^[a-f0-9]{32}$/.test(id) ? id : '';
 }
 
+export function editorHubUrl() {
+  return PUBLIC_ORIGIN + '/' + EDITOR_PAGE;
+}
+
 export function editorUrl(propertyId) {
   const id = normHubId(propertyId);
   if (!id) return '';
-  return PUBLIC_ORIGIN + '/' + EDITOR_PAGE + '?property=' + id;
+  return editorHubUrl() + '?property=' + id;
 }
 
 export function clientLiveUrl(propertyId) {
@@ -68,6 +72,54 @@ export function cameraFileCandidates(propertyId) {
     }
   }
   return ids;
+}
+
+// First candidate that already has a cameras file. Empty when none do.
+export function camerasFileForHub(propertyId, cameraIds) {
+  const have = {};
+  const list = cameraIds || [];
+  for (let i = 0; i < list.length; i++) have[list[i]] = true;
+  const candidates = cameraFileCandidates(propertyId);
+  for (let i = 0; i < candidates.length; i++) {
+    if (have[candidates[i]]) return candidates[i];
+  }
+  return '';
+}
+
+// Full editor index. records are { id, name, address } from data/index/.
+// cameraCounts maps a cameras-file id to its camera count.
+// Hubs with cameras sort first. This does not read the network.
+export function editorCatalog(records, cameraCounts) {
+  const counts = cameraCounts || {};
+  const cameraIds = Object.keys(counts);
+  const rows = [];
+  for (let i = 0; i < (records || []).length; i++) {
+    const rec = records[i] || {};
+    const id = normHubId(rec.id);
+    if (!id) continue;
+    const fileId = camerasFileForHub(id, cameraIds);
+    const n = fileId ? Number(counts[fileId]) || 0 : 0;
+    rows.push({
+      id: id,
+      name: String(rec.name || '').trim(),
+      address: String(rec.address || '').trim(),
+      cameras: n,
+      cameras_file: fileId || ''
+    });
+  }
+  rows.sort(function (a, b) {
+    const ac = a.cameras > 0 ? 0 : 1;
+    const bc = b.cameras > 0 ? 0 : 1;
+    if (ac !== bc) return ac - bc;
+    const an = a.name.toLowerCase();
+    const bn = b.name.toLowerCase();
+    if (an < bn) return -1;
+    if (an > bn) return 1;
+    if (a.id < b.id) return -1;
+    if (a.id > b.id) return 1;
+    return 0;
+  });
+  return rows;
 }
 
 export function roundLatLng(n) {

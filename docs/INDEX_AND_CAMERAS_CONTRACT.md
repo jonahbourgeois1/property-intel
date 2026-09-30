@@ -179,10 +179,11 @@ Pin markers (2D and 3D): cyan circle with camera glyph and number; flashing red 
 
 Editors place camera pins. Clients do not use this page. There is no passcode on the editor (open edit). Do not email the editor URL to a client.
 
-- Editor (internal): `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}`
+- Editor index (internal, share this): `https://responder-intel.vyanet.com/camera-pin-editor.html`
+- Editor deep link (internal): `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}`
 - Client live link (unchanged): `https://responder-intel.vyanet.com/vyanet-viewer.html?property={hubId}&live=1`
 
-`{hubId}` is the `data/index/{hubId}.json` hash both pages already use. Do not invent a second client URL. Do not link the editor from `vyanet-viewer.html`.
+`{hubId}` is the `data/index/{hubId}.json` hash both pages already use. The bare editor URL lists every hub from `camera-pin-properties.json` (repo root, not under `data/`). Hubs with a cameras file sort first. Do not invent a second client URL. Do not link the editor from `vyanet-viewer.html`.
 
 Save is the browser POSTing to the existing Apps Script web app (`route=camera-pins-save`). Apps Script merges geometry into the GitHub cameras file. The browser does not call the GitHub API. No Lambda is involved. Paste and deploy steps are in `docs/CAMERA_PIN_EDITOR.md`.
 
