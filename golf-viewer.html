@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — one map for every broken-out golf course (v1.1.0)
+  golf-viewer.html — one map for every broken-out golf course (v1.1.1)
 
-  Not linked from the responder hub. Course tabs sit under the title.
-  ?sheet= selects which course starts open. The list of courses is
+  Not linked from the responder hub. A course dropdown sits in the
+  header. ?sheet= selects which course starts open. The list of courses is
     GET ?route=golf-courses
   Pins, descriptions, and image URLs for the open course are
     GET ?route=golf-course&sheet=
@@ -73,33 +73,19 @@
     color: var(--ink-faint); border: 1px solid var(--line);
     border-radius: 5px; padding: 2px 6px; margin-left: 10px;
   }
-  .course-tabs {
-    flex: 0 0 auto;
-    display: flex; gap: 8px; align-items: center;
-    overflow-x: auto;
-    padding: 0 16px 12px;
-    background: var(--panel);
-    border-bottom: 1px solid var(--line);
-  }
-  .course-tabs button {
-    flex: 0 0 auto;
+  .course-pick { flex: 0 1 auto; min-width: 0; }
+  #courseTabs {
+    max-width: 280px;
     border: 1px solid var(--line);
-    background: transparent;
-    color: var(--ink-dim);
-    border-radius: 999px;
-    padding: 6px 12px;
+    background: var(--panel-2);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 6px 10px;
     font: inherit;
     font-size: 13px;
     cursor: pointer;
-    white-space: nowrap;
   }
-  .course-tabs button:hover { border-color: var(--ink-dim); color: var(--ink); }
-  .course-tabs button.on {
-    background: var(--marker);
-    border-color: var(--marker);
-    color: var(--marker-ink);
-    font-weight: 600;
-  }
+  #courseTabs:hover { border-color: var(--ink-dim); }
   main {
     flex: 1 1 auto; min-height: 0;
     display: grid;
@@ -246,11 +232,13 @@
 <body>
   <header>
     <span class="kicker">Golf</span>
+    <label class="course-pick">
+      <select id="courseTabs" aria-label="Course"></select>
+    </label>
     <h1 id="title"><span id="courseName">Awbrey Glen</span> <span class="addr" id="addr"></span></h1>
     <span class="count" id="count"></span>
     <span class="build" id="build"></span>
   </header>
-  <nav id="courseTabs" class="course-tabs" aria-label="Courses"></nav>
   <main id="app">
     <section class="stage" id="stage">
       <div id="map"></div>
@@ -284,7 +272,7 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.1.0';
+  var BUILD = 'v1.1.1';
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 
@@ -660,16 +648,15 @@
       seen[label] = (seen[label] || 0) + 1;
     });
     courses.forEach(function (c) {
-      var btn = document.createElement('button');
-      btn.type = 'button';
+      var opt = document.createElement('option');
       var label = c.name || c.sheet;
       if (seen[label] > 1) label = label + ' (' + c.sheet + ')';
-      btn.textContent = label;
-      btn.title = c.address || c.sheet;
-      if (c.sheet === sheetName) btn.className = 'on';
-      btn.addEventListener('click', function () { selectCourse(c.sheet, false); });
-      host.appendChild(btn);
+      opt.value = c.sheet;
+      opt.textContent = label;
+      opt.title = c.address || c.sheet;
+      host.appendChild(opt);
     });
+    if (sheetName) host.value = sheetName;
   }
 
   function selectCourse(name, force) {
@@ -698,6 +685,13 @@
   window.hidePinPopup = hidePinPopup;
   window.expandPinPopup = expandPinPopup;
   window.closePinLightbox = closePinLightbox;
+
+  var courseSelect = document.getElementById('courseTabs');
+  if (courseSelect) {
+    courseSelect.addEventListener('change', function () {
+      selectCourse(courseSelect.value, false);
+    });
+  }
 
   var lightbox = document.getElementById('pin-lightbox');
   if (lightbox) {
