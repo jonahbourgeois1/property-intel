@@ -1778,7 +1778,9 @@ function processDroneTestRows_(onlySheetRow, beforeAnalysis) {
 
     // Cameras are property-level (data/cameras/json/{hubId}.json).
     // Do not put cameras[] on this view record — a later sync would own
-    // the drop. camerasFileForSync_ PUTs the cameras file separately.
+    // the drop. camerasFileForSync_ reads the GitHub cameras file and
+    // republishes that JSON. It does not rebuild pin geometry. The camera
+    // pin editor is the Pages writer of that file.
     let propertyData = {
       name:           accountName,
       address:        address,

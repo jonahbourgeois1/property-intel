@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Camera pin editor</title>
+<!--
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.0)
+
+  For camera editors. Not a client page. Do not send this URL to a client.
+
+  Editor:  /camera-pin-editor.html?property={hubId}
+  Client:   /vyanet-viewer.html?property={hubId}&live=1
+
+  {hubId} is the data/index/{hubId}.json hash. This page loads
+  data/cameras/json/{id}.json (walking the same sibling hubs as the
+  viewer) and POSTs geometry to the Apps Script web app. Apps Script
+  merges into that file. The browser does not call GitHub.
+
+  Open edit: no passcode. Save stays disabled until ?route=ping reports
+  camera_pins, so an old deployment cannot file this body as a critique.
+-->
+<style>
+  :root {
+    --bg: #12161c;
+    --panel: #1c232c;
+    --line: #313a46;
+    --text: #e8eef5;
+    --muted: #93a0b0;
+    --accent: #7eb6e0;
+    --warn: #e0c35a;
+    --ok: #7dcea0;
+    --err: #e08a8a;
+    --pin: #ff5a5a;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font: 14px/1.45 system-ui, Segoe UI, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  .banner {
+    font-size: 12px;
+    color: var(--warn);
+    border: 1px solid #6a5a28;
+    background: #2c2616;
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .chip {
+    font: 11px ui-monospace, monospace;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+  button, input {
+    background: #12161c;
+    color: var(--text);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font: inherit;
+  }
+  button { cursor: pointer; }
+  button:hover, button:focus, input:focus { border-color: var(--accent); outline: none; }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: #1e3a52; border-color: #3a6a94; }
+  button.dirty { background: #3a2e1e; border-color: #c49a3c; color: #f0d48a; }
+  .spacer { flex: 1; }
+  #statusLine { font-size: 12px; color: var(--muted); min-height: 1.2em; }
+  #statusLine.ok { color: var(--ok); }
+  #statusLine.err { color: var(--err); }
+  #gate {
+    max-width: 720px;
+    margin: 32px auto;
+    padding: 8px 20px 32px;
+  }
+  #gate a, aside a { color: var(--accent); }
+  code, .mono { font: 12px/1.45 ui-monospace, Consolas, monospace; }
+  #app {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 1fr minmax(300px, 400px);
+  }
+  #app[hidden], [hidden] { display: none !important; }
+  #mapWrap { position: relative; min-height: 320px; background: #000; }
+  #map { position: absolute; inset: 0; }
+  #mapFallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #0b0e14ee;
+  }
+  #mapFallback .box {
+    max-width: 460px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  aside {
+    border-left: 1px solid var(--line);
+    overflow: auto;
+    padding: 12px 14px 24px;
+    background: #171c23;
+  }
+  .prop-name { margin: 0 0 4px; font-size: 18px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .links { margin: 10px 0; display: flex; flex-direction: column; gap: 4px; }
+  .links a { word-break: break-all; }
+  #list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0 12px; }
+  .cam-row {
+    display: grid;
+    grid-template-columns: 64px 1fr;
+    gap: 8px;
+    text-align: left;
+    padding: 6px;
+    width: 100%;
+  }
+  .cam-row.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .thumb, .thumb-empty {
+    width: 64px;
+    height: 48px;
+    border-radius: 4px;
+    background: #0b0e14;
+    object-fit: cover;
+  }
+  .thumb-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    font-size: 10px;
+    border: 1px dashed var(--line);
+  }
+  #stillImg, #stillEmpty {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #0b0e14;
+    border: 1px solid var(--line);
+  }
+  #stillEmpty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  label input { width: 100%; margin-top: 4px; }
+  .fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .pin {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: var(--pin);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #0008;
+    cursor: grab;
+    touch-action: none;
+  }
+  .pin.active { background: #ffd24d; z-index: 2; }
+  .pin-label {
+    position: absolute;
+    transform: translate(10px, -10px);
+    font-size: 11px;
+    background: #000c;
+    color: #fff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    pointer-events: none;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .heading-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+    border-radius: 50%;
+    background: #1a1e26;
+    border: 2px solid #ff5a5a;
+    cursor: grab;
+    touch-action: none;
+    display: none;
+  }
+  .heading-handle.active { display: block; border-color: #ffd24d; }
+  .live-hdg {
+    position: absolute;
+    transform: translate(-50%, -140%);
+    font: 11px ui-monospace, monospace;
+    background: #000d;
+    color: #ffd24d;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: none;
+    pointer-events: none;
+  }
+  .live-hdg.show { display: block; }
+  .gpin-root { position: absolute; width: 0; height: 0; }
+  kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--muted); }
+  @media (max-width: 860px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
+    aside { border-left: none; border-top: 1px solid var(--line); }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Camera pin editor</h1>
+  <span class="banner">Internal — camera editors only. Not a client link.</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.0</span>
+  <span class="spacer"></span>
+  <button type="button" id="undoBtn" disabled>Undo</button>
+  <button type="button" id="redoBtn" disabled>Redo</button>
+  <button type="button" id="reloadBtn">Reload</button>
+  <button type="button" id="saveBtn" class="primary" disabled>Save</button>
+  <div id="statusLine" aria-live="polite"></div>
+</header>
+<div id="gate">
+  <h2 id="gateTitle">This page needs a property link</h2>
+  <div id="gateBody"></div>
+</div>
+<div id="app" hidden>
+  <div id="mapWrap">
+    <div id="map"></div>
+    <div id="mapFallback" hidden><div class="box" id="mapFallbackText"></div></div>
+  </div>
+  <aside>
+    <h2 class="prop-name" id="propName"></h2>
+    <div class="muted" id="propMeta"></div>
+    <p class="muted" id="placementNote"></p>
+    <div class="links">
+      <div class="muted">Editor link (internal)</div>
+      <a id="editorLink" href=""></a>
+      <div class="muted">Client live link — send this one</div>
+      <a id="clientLink" href="" target="_blank" rel="noopener"></a>
+    </div>
+    <div id="list"></div>
+    <img id="stillImg" alt="" hidden>
+    <div id="stillEmpty" hidden>No still</div>
+    <div id="detailName"></div>
+    <div class="muted" id="detailMeta"></div>
+    <div class="muted" id="liveLine"></div>
+    <div class="muted" id="taxlotLine"></div>
+    <div class="muted" id="mountLine"></div>
+    <div class="muted" id="coordLine"></div>
+    <div class="fields">
+      <label>Heading °<input id="headingInput" type="number" step="0.01" autocomplete="off"></label>
+      <label>FOV °<input id="fovInput" type="number" step="0.01" autocomplete="off"></label>
+      <label>Range m<input id="rangeInput" type="number" step="0.01" autocomplete="off"></label>
+    </div>
+    <p class="muted">Drag a pin to move it. Drag the handle on the selected pin to set heading. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Z</kbd> redo, <kbd>J</kbd>/<kbd>K</kbd> next camera. A move past 5 km is refused and the pin stays put.</p>
+  </aside>
+</div>
+<script type="module">
+import {
+  BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
+  validateGeometry, offsetByHeading, headingFromLatLng
+} from './js/camera-pin-editor.js?v=1.0.0';
+
+var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+var CAMERA_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
+var HEADING_TIP_M = 18;
+
+var params = new URLSearchParams(window.location.search);
+var propertyId = normHubId(params.get('property'));
+
+var state = {
+  cameras: [],
+  fileId: '',
+  record: null,
+  index: null,
+  selected: '',
+  savedById: {},
+  savedJson: '',
+  history: { undo: [], redo: [] },
+  drag: null,
+  map: null,
+  overlays: [],
+  fovPolys: [],
+  saveReady: false,
+  mapsStarted: false
+};
+
+var $ = function (id) { return document.getElementById(id); };
+
+$('buildChip').textContent = 'cam-edit ' + BUILD;
+
+function dataRoot() {
+  var explicit = params.get('dataRoot');
+  if (explicit) return explicit.replace(/\/*$/, '/');
+  if (window.location.protocol === 'file:') return 'https://responder-intel.vyanet.com/data/';
+  return new URL('data/', window.location.href).href;
+}
+
+function fetchJson(url) {
+  return fetch(url, { cache: 'no-store' }).then(function (res) {
+    if (!res.ok) return null;
+    return res.text().then(function (text) {
+      try { return JSON.parse(text); } catch (e) { return null; }
+    });
+  }).catch(function () { return null; });
+}
+
+function setStatus(text, kind) {
+  var el = $('statusLine');
+  el.textContent = text || '';
+  el.className = kind || '';
+}
+
+function stillSrc(photo) {
+  var s = String(photo || '').trim();
+  if (!s) return '';
+  if (/^https?:\/\//i.test(s)) return s;
+  var root = dataRoot();
+  if (s.indexOf('data/') === 0) return root + s.slice(5);
+  return root + s.replace(/^\//, '');
+}
+
+function poseOf(cam) {
+  return {
+    lat: cam.lat, lng: cam.lng, heading: cam.heading, fov: cam.fov, range: cam.range
+  };
+}
+
+function posesJson() {
+  return JSON.stringify(state.cameras.map(function (c) {
+    return { id: c.id, lat: c.lat, lng: c.lng, heading: c.heading, fov: c.fov, range: c.range };
+  }));
+}
+
+function findCam(id) {
+  for (var i = 0; i < state.cameras.length; i++) {
+    if (state.cameras[i].id === id) return state.cameras[i];
+  }
+  return null;
+}
+
+function refreshDirty() {
+  var dirty = posesJson() !== state.savedJson;
+  var btn = $('saveBtn');
+  btn.disabled = !state.saveReady || !dirty;
+  btn.classList.toggle('dirty', dirty && state.saveReady);
+  $('undoBtn').disabled = !state.history.undo.length;
+  $('redoBtn').disabled = !state.history.redo.length;
+}
+
+function pushUndo(entry) {
+  state.history.undo.push(entry);
+  if (state.history.undo.length > 200) state.history.undo.shift();
+  state.history.redo = [];
+  refreshDirty();
+}
+
+function applyPose(cam, pose) {
+  cam.lat = pose.lat;
+  cam.lng = pose.lng;
+  cam.heading = pose.heading;
+  cam.fov = pose.fov;
+  cam.range = pose.range;
+}
+
+function coordText(cam) {
+  if (cam.lat == null || cam.lng == null) return 'unplaced';
+  return Number(cam.lat).toFixed(6) + ', ' + Number(cam.lng).toFixed(6);
+}
+
+function patchRow(id) {
+  var cam = findCam(id);
+  var row = document.querySelector('.cam-row[data-cam="' + id + '"] .coord');
+  if (cam && row) row.textContent = coordText(cam);
+  if (state.selected === id) syncDetail(false);
+}
+
+function syncDetail(forceInputs) {
+  var cam = findCam(state.selected);
+  if (!cam) return;
+  $('detailName').textContent = cam.label || cam.id;
+  $('detailMeta').textContent = cam.id + (cam.placement ? ' · ' + cam.placement : '');
+  var live = cam.live || {};
+  $('liveLine').textContent = live.name
+    ? ('Live name: ' + live.name + (live.site ? ' · site ' + live.site : '') + ' (not edited here)')
+    : (live.device ? ('Live device: ' + live.device + ' (not edited here)') : 'No live association');
+  $('taxlotLine').textContent = cam.taxlot ? ('Taxlot: ' + cam.taxlot + ' (not edited here)') : '';
+  $('mountLine').textContent = cam.mount_height != null
+    ? ('Mount height: ' + cam.mount_height + ' m (not edited here)')
+    : '';
+  $('coordLine').textContent = coordText(cam);
+  var src = stillSrc(cam.photo);
+  var img = $('stillImg');
+  var empty = $('stillEmpty');
+  if (!src) {
+    img.hidden = true;
+    img.removeAttribute('src');
+    empty.hidden = false;
+  } else if (img.getAttribute('src') !== src) {
+    empty.hidden = true;
+    img.hidden = false;
+    img.alt = cam.label || cam.id;
+    img.onerror = function () { img.hidden = true; empty.hidden = false; };
+    img.src = src;
+  } else {
+    img.hidden = false;
+    empty.hidden = true;
+  }
+  ['headingInput', 'fovInput', 'rangeInput'].forEach(function (field, i) {
+    var key = ['heading', 'fov', 'range'][i];
+    var input = $(field);
+    if (forceInputs || document.activeElement !== input) {
+      input.value = cam[key] == null || cam[key] === '' ? '' : String(cam[key]);
+    }
+  });
+}
+
+function selectCam(id) {
+  state.selected = id;
+  var rows = document.querySelectorAll('.cam-row');
+  for (var i = 0; i < rows.length; i++) {
+    rows[i].classList.toggle('active', rows[i].getAttribute('data-cam') === id);
+  }
+  syncDetail(true);
+  redraw();
+}
+
+function renderList() {
+  var list = $('list');
+  list.textContent = '';
+  state.cameras.forEach(function (cam) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cam-row';
+    btn.setAttribute('data-cam', cam.id);
+    var src = stillSrc(cam.photo);
+    var thumb = document.createElement(src ? 'img' : 'div');
+    thumb.className = src ? 'thumb' : 'thumb-empty';
+    if (src) {
+      thumb.alt = '';
+      thumb.src = src;
+      thumb.onerror = function () {
+        var ph = document.createElement('div');
+        ph.className = 'thumb-empty';
+        ph.textContent = 'No still';
+        thumb.replaceWith(ph);
+      };
+    } else {
+      thumb.textContent = 'No still';
+    }
+    var text = document.createElement('div');
+    var name = document.createElement('div');
+    name.textContent = cam.label || cam.id;
+    var coord = document.createElement('div');
+    coord.className = 'coord muted';
+    coord.textContent = coordText(cam);
+    text.appendChild(name);
+    text.appendChild(coord);
+    btn.appendChild(thumb);
+    btn.appendChild(text);
+    btn.addEventListener('click', function () { selectCam(cam.id); });
+    list.appendChild(btn);
+  });
+  if (state.selected) selectCam(state.selected);
+}
+
+function redraw() {
+  for (var i = 0; i < state.overlays.length; i++) {
+    try { state.overlays[i].draw(); } catch (e) {}
+  }
+  updateFov();
+}
+
+function updateFov() {
+  for (var i = 0; i < state.fovPolys.length; i++) {
+    try { state.fovPolys[i].setMap(null); } catch (e) {}
+  }
+  state.fovPolys = [];
+  if (!state.map) return;
+  state.cameras.forEach(function (c) {
+    var fov = Number(c.fov);
+    var range = Number(c.range);
+    var lat = Number(c.lat);
+    var lng = Number(c.lng);
+    var hdg = Number(c.heading);
+    if (!isFinite(lat) || !isFinite(lng) || !isFinite(hdg) || !(fov > 0) || !(range > 0)) return;
+    var active = state.selected === c.id;
+    var path = [{ lat: lat, lng: lng }];
+    var steps = Math.max(6, Math.round(fov / 6));
+    for (var s = 0; s <= steps; s++) {
+      path.push(offsetByHeading(lat, lng, hdg - fov / 2 + (fov * s / steps), range));
+    }
+    var color = active ? '#ffd24d' : '#ff6b6b';
+    state.fovPolys.push(new google.maps.Polygon({
+      paths: path,
+      strokeColor: color,
+      strokeOpacity: active ? 0.9 : 0.65,
+      strokeWeight: active ? 2 : 1,
+      fillColor: color,
+      fillOpacity: active ? 0.18 : 0.08,
+      map: state.map,
+      clickable: false,
+      zIndex: active ? 2 : 1
+    }));
+  });
+}
+
+function clearMap() {
+  for (var i = 0; i < state.overlays.length; i++) {
+    try { state.overlays[i].setMap(null); } catch (e) {}
+  }
+  state.overlays = [];
+  for (var p = 0; p < state.fovPolys.length; p++) {
+    try { state.fovPolys[p].setMap(null); } catch (e) {}
+  }
+  state.fovPolys = [];
+  state.map = null;
+}
+
+function clientToLatLng(ev) {
+  if (!state.map || !state.overlays.length) return null;
+  var proj = null;
+  try { proj = state.overlays[0].getProjection(); } catch (e) { proj = null; }
+  if (!proj) return null;
+  var rect = state.map.getDiv().getBoundingClientRect();
+  var ll = proj.fromContainerPixelToLatLng(new google.maps.Point(ev.clientX - rect.left, ev.clientY - rect.top));
+  if (!ll) return null;
+  return { lat: ll.lat(), lng: ll.lng() };
+}
+
+function startDrag(mode, camId, ev) {
+  if (ev.button != null && ev.button !== 0) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  var cam = findCam(camId);
+  if (!cam) return;
+  selectCam(camId);
+  state.drag = {
+    mode: mode,
+    camId: camId,
+    pointerId: ev.pointerId,
+    x: ev.clientX,
+    y: ev.clientY,
+    before: poseOf(cam)
+  };
+  if (state.map) state.map.setOptions({ draggable: false, scrollwheel: false, gestureHandling: 'none' });
+  try { $('mapWrap').setPointerCapture(ev.pointerId); } catch (e) {}
+}
+
+function onPointerMove(ev) {
+  if (!state.drag || state.drag.pointerId !== ev.pointerId) return;
+  var cam = findCam(state.drag.camId);
+  var ll = clientToLatLng(ev);
+  if (!cam || !ll) return;
+  if (state.drag.mode === 'pin') {
+    cam.lat = ll.lat;
+    cam.lng = ll.lng;
+  } else {
+    cam.heading = headingFromLatLng(cam.lat, cam.lng, ll.lat, ll.lng);
+  }
+  redraw();
+  patchRow(cam.id);
+}
+
+function endDrag(ev) {
+  if (!state.drag) return;
+  if (ev && state.drag.pointerId !== ev.pointerId) return;
+  var drag = state.drag;
+  state.drag = null;
+  if (state.map) state.map.setOptions({ draggable: true, scrollwheel: true, gestureHandling: 'greedy' });
+  var cam = findCam(drag.camId);
+  if (!cam) return;
+  var dx = (ev ? ev.clientX : drag.x) - drag.x;
+  var dy = (ev ? ev.clientY : drag.y) - drag.y;
+  if (dx * dx + dy * dy < 9) {
+    applyPose(cam, drag.before);
+    redraw();
+    patchRow(cam.id);
+    return;
+  }
+  var saved = state.savedById[cam.id] || cam;
+  var checked = validateGeometry({
+    id: cam.id,
+    lat: cam.lat,
+    lng: cam.lng,
+    heading: cam.heading,
+    fov: cam.fov,
+    range: cam.range
+  }, saved);
+  if (!checked.ok) {
+    applyPose(cam, drag.before);
+    setStatus(checked.error, 'err');
+    redraw();
+    patchRow(cam.id);
+    return;
+  }
+  var after = checked.value;
+  applyPose(cam, after);
+  if (after.lat !== drag.before.lat || after.lng !== drag.before.lng ||
+      after.heading !== drag.before.heading || after.fov !== drag.before.fov ||
+      after.range !== drag.before.range) {
+    pushUndo({ camId: cam.id, before: drag.before, after: poseOf(cam) });
+  }
+  redraw();
+  patchRow(cam.id);
+  refreshDirty();
+}
+
+function makeOverlay(cam) {
+  var PinOverlay = class extends google.maps.OverlayView {
+    constructor() {
+      super();
+      this.cam = cam;
+      this.div = null;
+    }
+    onAdd() {
+      var div = document.createElement('div');
+      div.className = 'gpin-root';
+      var pin = document.createElement('div');
+      pin.className = 'pin';
+      pin.title = cam.label || cam.id;
+      var label = document.createElement('div');
+      label.className = 'pin-label';
+      label.textContent = cam.label || cam.id;
+      var handle = document.createElement('div');
+      handle.className = 'heading-handle';
+      handle.title = 'Drag to set heading';
+      var live = document.createElement('div');
+      live.className = 'live-hdg';
+      div.appendChild(pin);
+      div.appendChild(label);
+      div.appendChild(handle);
+      div.appendChild(live);
+      this.div = div;
+      this.getPanes().overlayMouseTarget.appendChild(div);
+      var self = this;
+      pin.addEventListener('pointerdown', function (ev) { startDrag('pin', self.cam.id, ev); });
+      handle.addEventListener('pointerdown', function (ev) { startDrag('heading', self.cam.id, ev); });
+    }
+    draw() {
+      if (!this.div) return;
+      var proj = this.getProjection();
+      var c = this.cam;
+      if (!proj || !isFinite(Number(c.lat)) || !isFinite(Number(c.lng))) return;
+      var pos = proj.fromLatLngToDivPixel(new google.maps.LatLng(Number(c.lat), Number(c.lng)));
+      if (!pos) return;
+      this.div.style.left = pos.x + 'px';
+      this.div.style.top = pos.y + 'px';
+      var tipLL = offsetByHeading(Number(c.lat), Number(c.lng), Number(c.heading) || 0, HEADING_TIP_M);
+      var tip = proj.fromLatLngToDivPixel(new google.maps.LatLng(tipLL.lat, tipLL.lng));
+      var handle = this.div.querySelector('.heading-handle');
+      handle.style.left = (tip.x - pos.x) + 'px';
+      handle.style.top = (tip.y - pos.y) + 'px';
+      var active = state.selected === c.id;
+      this.div.querySelector('.pin').classList.toggle('active', active);
+      handle.classList.toggle('active', active);
+      var live = this.div.querySelector('.live-hdg');
+      if (active && isFinite(Number(c.heading))) {
+        live.textContent = Math.round(Number(c.heading)) + '°';
+        live.classList.add('show');
+      } else {
+        live.classList.remove('show');
+      }
+    }
+    onRemove() {
+      if (this.div && this.div.parentNode) this.div.parentNode.removeChild(this.div);
+      this.div = null;
+    }
+  };
+  var overlay = new PinOverlay();
+  overlay.setMap(state.map);
+  return overlay;
+}
+
+function initMap() {
+  clearMap();
+  var placed = state.cameras.filter(function (c) {
+    return isFinite(Number(c.lat)) && isFinite(Number(c.lng));
+  });
+  var center = placed.length
+    ? { lat: Number(placed[0].lat), lng: Number(placed[0].lng) }
+    : (state.index && isFinite(Number(state.index.lat))
+      ? { lat: Number(state.index.lat), lng: Number(state.index.lng) }
+      : { lat: 44, lng: -121 });
+  state.map = new google.maps.Map($('map'), {
+    center: center,
+    zoom: 19,
+    mapTypeId: 'hybrid',
+    tilt: 0,
+    rotateControl: false,
+    mapTypeControl: true,
+    zoomControl: true,
+    streetViewControl: false,
+    fullscreenControl: true,
+    gestureHandling: 'greedy',
+    clickableIcons: false,
+    maxZoom: 21
+  });
+  state.map.setTilt(0);
+  state.map.addListener('tilt_changed', function () {
+    if (state.map && state.map.getTilt() !== 0) state.map.setTilt(0);
+  });
+  state.cameras.forEach(function (cam) {
+    if (!isFinite(Number(cam.lat)) || !isFinite(Number(cam.lng))) return;
+    state.overlays.push(makeOverlay(cam));
+  });
+  if (placed.length >= 2) {
+    var bounds = new google.maps.LatLngBounds();
+    placed.forEach(function (c) { bounds.extend({ lat: Number(c.lat), lng: Number(c.lng) }); });
+    state.map.fitBounds(bounds, 48);
+  }
+  google.maps.event.addListenerOnce(state.map, 'idle', function () { redraw(); });
+}
+
+function showMapError(text) {
+  $('mapFallback').hidden = false;
+  $('mapFallbackText').textContent = text;
+}
+
+function loadMaps() {
+  if (window.google && window.google.maps) { initMap(); return; }
+  if (state.mapsStarted) return;
+  state.mapsStarted = true;
+  window.__cameraPinEditorMapsReady = function () { initMap(); };
+  var sc = document.createElement('script');
+  sc.async = true;
+  sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(MAPS_KEY) +
+    '&callback=__cameraPinEditorMapsReady&v=weekly';
+  sc.onerror = function () {
+    showMapError('Google Maps failed to load. The pin list is still here. Save stays available once Apps Script reports camera_pins.');
+  };
+  document.head.appendChild(sc);
+}
+
+function commitInputs() {
+  var cam = findCam(state.selected);
+  if (!cam || state.drag) return;
+  var before = poseOf(cam);
+  var saved = state.savedById[cam.id] || cam;
+  var checked = validateGeometry({
+    id: cam.id,
+    lat: cam.lat,
+    lng: cam.lng,
+    heading: $('headingInput').value,
+    fov: $('fovInput').value,
+    range: $('rangeInput').value
+  }, saved);
+  if (!checked.ok) {
+    setStatus(checked.error, 'err');
+    syncDetail(true);
+    return;
+  }
+  applyPose(cam, checked.value);
+  if (checked.value.heading !== before.heading || checked.value.fov !== before.fov ||
+      checked.value.range !== before.range || checked.value.lat !== before.lat ||
+      checked.value.lng !== before.lng) {
+    pushUndo({ camId: cam.id, before: before, after: poseOf(cam) });
+    setStatus('', '');
+  }
+  redraw();
+  patchRow(cam.id);
+  refreshDirty();
+}
+
+function undo() {
+  if (state.drag) return;
+  var entry = state.history.undo.pop();
+  if (!entry) return;
+  var cam = findCam(entry.camId);
+  if (!cam) return;
+  applyPose(cam, entry.before);
+  state.history.redo.push(entry);
+  selectCam(entry.camId);
+  refreshDirty();
+}
+
+function redo() {
+  if (state.drag) return;
+  var entry = state.history.redo.pop();
+  if (!entry) return;
+  var cam = findCam(entry.camId);
+  if (!cam) return;
+  applyPose(cam, entry.after);
+  state.history.undo.push(entry);
+  selectCam(entry.camId);
+  refreshDirty();
+}
+
+function stepCam(dir) {
+  if (!state.cameras.length) return;
+  var idx = 0;
+  for (var i = 0; i < state.cameras.length; i++) {
+    if (state.cameras[i].id === state.selected) idx = i;
+  }
+  var next = state.cameras[(idx + dir + state.cameras.length) % state.cameras.length];
+  selectCam(next.id);
+}
+
+function checkSaveEndpoint() {
+  return fetch(CAMERA_SAVE_URL + '?route=ping&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' })
+    .then(function (res) { return res.text(); })
+    .then(function (text) {
+      var j = JSON.parse(text);
+      return !!(j && j.ok && j.camera_pins === true);
+    })
+    .catch(function () { return false; });
+}
+
+function save() {
+  if (!state.saveReady) {
+    setStatus('Save is off until Apps Script is deployed with camera-pins-save.', 'err');
+    return;
+  }
+  var bodyCams = [];
+  for (var i = 0; i < state.cameras.length; i++) {
+    var cam = state.cameras[i];
+    var saved = state.savedById[cam.id] || cam;
+    var checked = validateGeometry({
+      id: cam.id, lat: cam.lat, lng: cam.lng, heading: cam.heading, fov: cam.fov, range: cam.range
+    }, saved);
+    if (!checked.ok) {
+      setStatus(checked.error, 'err');
+      selectCam(cam.id);
+      return;
+    }
+    bodyCams.push(checked.value);
+  }
+  var btn = $('saveBtn');
+  btn.disabled = true;
+  setStatus('Saving…', '');
+  fetch(CAMERA_SAVE_URL + '?route=camera-pins-save', {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      route: 'camera-pins-save',
+      property: propertyId,
+      file_id: state.fileId,
+      cameras: bodyCams
+    })
+  }).then(function (res) { return res.text(); })
+    .then(function (text) {
+      var j;
+      try { j = JSON.parse(text); } catch (e) { throw new Error('Save did not return JSON'); }
+      if (!j || j.ok === false) throw new Error((j && j.error) || 'Save failed');
+      bodyCams.forEach(function (edit) {
+        var cam = findCam(edit.id);
+        if (cam) applyPose(cam, edit);
+        state.savedById[edit.id] = Object.assign({}, state.savedById[edit.id] || {}, edit);
+      });
+      state.savedJson = posesJson();
+      if (j.unchanged) setStatus('No pin changes to write.', 'ok');
+      else setStatus('Saved ' + (j.updated || []).length + ' camera(s) to ' + (j.path || 'cameras JSON') + '.', 'ok');
+    })
+    .catch(function (err) {
+      setStatus(String(err.message || err), 'err');
+    })
+    .then(function () { refreshDirty(); });
+}
+
+function showGate(title, html) {
+  $('app').hidden = true;
+  $('gate').hidden = false;
+  $('gateTitle').textContent = title;
+  $('gateBody').innerHTML = html;
+}
+
+function exampleBlock() {
+  var sample = '1512452d9e6e0f1cf0a32255a4392b12';
+  return '<p>Editor link (internal):</p><p class="mono">' + editorUrl(sample) + '</p>' +
+    '<p>Client live link (send this, not the editor):</p><p class="mono">' + clientLiveUrl(sample) + '</p>' +
+    '<p class="muted">Replace the hash with the property’s <span class="mono">data/index/</span> id. ' +
+    'The client page stays <span class="mono">vyanet-viewer.html?property=…&amp;live=1</span>.</p>';
+}
+
+function boot() {
+  if (!propertyId) {
+    showGate('This page needs a property link', exampleBlock());
+    return;
+  }
+  var editor = editorUrl(propertyId);
+  var client = clientLiveUrl(propertyId);
+  $('editorLink').href = editor;
+  $('editorLink').textContent = editor;
+  $('clientLink').href = client;
+  $('clientLink').textContent = client;
+  setStatus('Loading cameras…', '');
+  var root = dataRoot();
+  var ids = cameraFileCandidates(propertyId);
+  fetchJson(root + 'index/' + propertyId + '.json?t=' + Date.now()).then(function (idx) {
+    state.index = idx;
+    var chain = Promise.resolve(null);
+    ids.forEach(function (id) {
+      chain = chain.then(function (found) {
+        if (found) return found;
+        return fetchJson(root + 'cameras/json/' + id + '.json?t=' + Date.now()).then(function (rec) {
+          if (rec && Array.isArray(rec.cameras) && rec.cameras.length) return { id: id, rec: rec };
+          return null;
+        });
+      });
+    });
+    return chain;
+  }).then(function (found) {
+    if (!found) {
+      showGate('No cameras file for this property',
+        '<p>This editor does not create <span class="mono">data/cameras/json/</span>. ' +
+        'There is no cameras file for <span class="mono">' + propertyId + '</span> or its known sibling hubs.</p>' +
+        exampleBlock());
+      return;
+    }
+    state.fileId = found.id;
+    state.record = found.rec;
+    state.cameras = found.rec.cameras;
+    state.savedById = {};
+    state.cameras.forEach(function (cam) {
+      state.savedById[cam.id] = JSON.parse(JSON.stringify(cam));
+    });
+    state.savedJson = posesJson();
+    state.selected = state.cameras[0].id;
+    var idx = state.index || {};
+    $('propName').textContent = idx.name || 'Property';
+    var meta = idx.address || '';
+    if (state.fileId !== propertyId) {
+      meta += (meta ? ' · ' : '') + 'Cameras file ' + state.fileId;
+    }
+    $('propMeta').textContent = meta;
+    $('placementNote').textContent = found.rec.placement_note || '';
+    $('gate').hidden = true;
+    $('app').hidden = false;
+    renderList();
+    loadMaps();
+    checkSaveEndpoint().then(function (ready) {
+      state.saveReady = ready;
+      if (!ready) {
+        setStatus('Save is off until Apps Script is deployed with camera-pins-save. Pins in this tab are not stored yet.', 'err');
+      } else {
+        setStatus('Save writes data/cameras/json/' + state.fileId + '.json through Apps Script.', '');
+      }
+      refreshDirty();
+    });
+  }).catch(function (err) {
+    showGate('Could not load this property', '<p>' + String(err && err.message || err) + '</p>' + exampleBlock());
+  });
+}
+
+$('undoBtn').addEventListener('click', undo);
+$('redoBtn').addEventListener('click', redo);
+$('saveBtn').addEventListener('click', save);
+$('reloadBtn').addEventListener('click', function () {
+  if (posesJson() !== state.savedJson && !window.confirm('Discard unsaved pin edits and reload?')) return;
+  window.location.reload();
+});
+['headingInput', 'fovInput', 'rangeInput'].forEach(function (id) {
+  $(id).addEventListener('change', commitInputs);
+  $(id).addEventListener('wheel', function (ev) {
+    if (document.activeElement === $(id)) ev.preventDefault();
+  }, { passive: false });
+});
+$('mapWrap').addEventListener('pointermove', onPointerMove);
+$('mapWrap').addEventListener('pointerup', endDrag);
+$('mapWrap').addEventListener('pointercancel', endDrag);
+document.addEventListener('keydown', function (ev) {
+  var tag = ev.target && ev.target.tagName;
+  var typing = tag === 'INPUT' || tag === 'TEXTAREA';
+  if ((ev.metaKey || ev.ctrlKey) && String(ev.key).toLowerCase() === 'z') {
+    if (typing) return;
+    ev.preventDefault();
+    if (ev.shiftKey) redo();
+    else undo();
+    return;
+  }
+  if (typing) return;
+  if (ev.key === 'j' || ev.key === 'ArrowDown') { ev.preventDefault(); stepCam(1); }
+  if (ev.key === 'k' || ev.key === 'ArrowUp') { ev.preventDefault(); stepCam(-1); }
+});
+
+boot();
+</script>
+</body>
+</html>

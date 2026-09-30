@@ -1,6 +1,6 @@
 # Index + cameras contract (vyanet-viewer)
 
-**Writer:** Apps Script sync is the only writer of GitHub `data/**` (live Pages copy). Do not hand-edit GitHub records; the next sync overwrites them.
+**Writer:** Apps Script is the only writer of GitHub `data/**` (live Pages copy). Do not hand-edit GitHub records. Camera JSON on Pages is written by the camera pin editor (`camera-pins.gs`, GitHub Contents API). Drone-test sync reads that file back and does not rebuild pin geometry. `pushAllToGitHub` does not push `data/cameras/json`, so a sync commit cannot race the editor.
 
 **Records bucket (2026-09-11):** published property JSON lives in `s3://property-intel-records`. Sheet **Sync** writes that bucket. AWS hub id is `hashId(slug(site_no))` from the Satellite tab. **Cameras and GIS are git files** (`data/cameras/json/{id}.json`, `data/gis/{id}.json`, stills under `data/cameras/images/`) — already copied onto AWS from git. Live Pages HTML still reads GitHub `data/` until a viewer is cut over. See `docs/RECORDS_CONTRACT.md`. Satellite / plane / Nearmap stay S3-only. **Exception — drone and drone-test:** `data/responder-drone/` and `data/drone/` dual-write GitHub Pages so `responder-intel.html?property=` links keep working. Drone-test also PUTs `data/drone-test/{viewId}.json` and the merged `data/index/{hubId}.json` so `vyanet-viewer` 3D can load `viewer360` (`model=`). Without that, the hub keeps the old `views.drone` pointer and shows “no GLB”.
 
@@ -67,7 +67,7 @@ Every pipeline may PUT only its own view record. Index writes are **merge-only**
 2. `upsertIndexEntry_(hash(site_no), { views: { "<this-view>": <this-view-record-id> } })` must **merge keys**. Plane sync must not drop `drone-test`; satellite sync must not drop `plane` / `drone` / `drone-test`; drone-test sync must not create a second hub when a file for that name already exists.
 3. Never PUT a replacement `views` object. Never hash the index filename from Account Name, capture name, or a test nickname.
 4. `data/responder-drone/{name-hash}.json` is write-stable: same id in, same id out. The index may *point* at that id via `views.drone` (or a dedicated key); it must not relocate the file.
-5. Camera metadata is a **separate** GitHub file, not a view-record field. Drone-test sync (only) may PUT `data/cameras/json/{hubId}.json` via `camerasFileForSync_`. It fetches the canonical path, then the flat `data/cameras/{id}.json`, then `data/cameras/images/json/`, then a leftover `cameras[]` on the existing view record. Repo-relative still URLs are rewritten onto `data/cameras/images/{hubId}/cam-NN.jpg`. `http(s)` URLs stay. The view record is published **without** `cameras[]`. Never invent an empty cameras file. Never key it on a view-record hash. Never write `data/drone-test/cameras/`. Never nest JSON under `images/`. Plane and satellite sync must not touch this file. JPEG bytes are **not** in `pushAllToGitHub` (UTF-8 text blobs only) — stills stay git-committed until the tiles path exists.
+5. Camera metadata is a **separate** GitHub file, not a view-record field. The camera pin editor (`apps scripts/camera-pins.gs`, route `camera-pins-save`) is the Pages writer: it merges pin geometry onto the existing `data/cameras/json/{hubId}.json` and PUTs that file through the GitHub Contents API. It does not create a cameras file, does not delete cameras, and does not replace `live`, `mount_height`, `taxlot`, `photo`, or placement notes. Drone-test sync calls `camerasFileForSync_`, which reads that GitHub file and republishes the same JSON. It does not rebuild pin geometry. `pushAllToGitHub` does not push `data/cameras/json`. `camerasFileForSync_` fetches the canonical path, then the flat `data/cameras/{id}.json`, then `data/cameras/images/json/`, then a leftover `cameras[]` on the existing view record. Repo-relative still URLs are rewritten onto `data/cameras/images/{hubId}/cam-NN.jpg`. `http(s)` URLs stay. The view record is published **without** `cameras[]`. Never invent an empty cameras file. Never key it on a view-record hash. Never write `data/drone-test/cameras/`. Never nest JSON under `images/`. Plane and satellite sync must not touch this file. JPEG bytes are **not** in `pushAllToGitHub` (UTF-8 text blobs only) — stills stay git-committed until the tiles path exists.
 
 Plane joins satellite by `site_no`. Drone-test joins an existing index file by property name (then address) before site_no, so a duplicate Satellite name does not skip the index write. Minting a name-hash hub is drone-test-only, and only when no index file has that name or address.
 
@@ -174,6 +174,23 @@ Jones (CHEKT site 3525) has **four** live cameras. Technician stills are 14 scen
 Clicking a camera pin on **3D or 2D** opens the same `#cam-popup` card (still, heading/FOV, Go live, 72-hour events). The click fetches `/live` (prompts for the passcode if the tab has none), runs `joinLiveToPins`, then starts that camera’s MJPEG in the card image. Click the image to expand to `#cam-lightbox`; 3D and 2D both list 72-hour clips on the card. Pins with no association stay a still. Hub **LIVE** remains the full wall + 7-day clips plugin. The hub posts `{type:'vyanet-key'}` after a passcode is saved so already-open mapping iframes retry the join.
 
 Pin markers (2D and 3D): cyan circle with camera glyph and number; flashing red LED = live feed associated; steady amber dot (top-left) = a clip in the last 72 hours. 2D also draws the coverage wedge from heading/fov/range.
+
+## Camera pin editor (internal)
+
+Editors place camera pins. Clients do not use this page. There is no passcode on the editor (open edit). Do not email the editor URL to a client.
+
+- Editor (internal): `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}`
+- Client live link (unchanged): `https://responder-intel.vyanet.com/vyanet-viewer.html?property={hubId}&live=1`
+
+`{hubId}` is the `data/index/{hubId}.json` hash both pages already use. Do not invent a second client URL. Do not link the editor from `vyanet-viewer.html`.
+
+Save is the browser POSTing to the existing Apps Script web app (`route=camera-pins-save`). Apps Script merges geometry into the GitHub cameras file. The browser does not call the GitHub API. No Lambda is involved. Paste and deploy steps are in `docs/CAMERA_PIN_EDITOR.md`.
+
+A pin move farther than 5 km from the saved lat/lng is refused. The pin is not clamped to the map edge or to that radius. Field of view above 360° and range above 500 m are refused the same way. Heading wraps on 360° because it is a bearing.
+
+When lat/lng changes, `mx` / `my` / `mz` are removed on that camera so `model-viewer.html` places it from lat/lng and `nadir.bounds` / `nadir.local`. A property with no nadir bounds keeps the 2D pin and loses the precomputed 3D offset until a render writes bounds. `heading_magnetic` is updated only when that camera already has a numeric `declination` and the heading changed (`heading - declination`). Declination is never invented.
+
+Sibling hubs (Eugene `8eea64e5…` → cameras on `4a484f8c…`, Tracy `2dce25a3…` → Jones `6de88883…`) load and save the one existing cameras file. The editor does not create a second file.
 
 ## Pins — one file per property (hub 1.8.0)
 

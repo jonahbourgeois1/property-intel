@@ -192,6 +192,10 @@ function recordsIsDroneGithubPath_(path) {
 
 // Live Pages still reads GitHub data/. Drone-test 3D (GLB in viewer360)
 // is unused unless the hub index and the view JSON land there too.
+// Do not add data/cameras/json here. The camera pin editor PUTs that
+// file through the Contents API. A sync push of the same path would
+// race that commit. camerasFileForSync_ still reads the GitHub file
+// for the records copy and does not rebuild pin geometry.
 function recordsIsPagesGithubPath_(path, label) {
   if (recordsIsDroneGithubPath_(path)) return true;
   if (String(label || '') !== 'drone-test') return false;
@@ -362,7 +366,11 @@ function upsertIndexEntry_(id, patch) {
 //   - pushAllToGitHub encodes utf-8 text blobs only. JPEG bytes stay in git
 //     (or later tiles). Do not PUT stills through this helper.
 //   - Plane / satellite sync must not call camerasFileForSync_ — they do
-//     not own this file. Drone-test sync is the writer for now.
+//     not own this file. Drone-test sync reads the GitHub file and
+//     republishes that JSON. It does not rebuild pin geometry.
+//   - The camera pin editor (camera-pins.gs) is the Pages writer: a
+//     Contents API PUT of data/cameras/json after a geometry merge.
+//     pushAllToGitHub does not push that path, so a sync cannot race it.
 
 const CAMERAS_JSON_DIR = 'data/cameras/json';
 // Eugene stills and cameras JSON live on the name-hash hub. The site_no hub
@@ -453,6 +461,10 @@ function buildCamerasFile_(propertyId, rec) {
 // so the next view PUT does not silently drop them. Returns a
 // { path, content } for pushAllToGitHub, or null when there is nothing to
 // publish. Never invents an empty cameras file.
+// The camera pin editor writes this GitHub file (Contents API). This
+// function reads it back and republishes the same cameras. It does not
+// rebuild lat/lng/heading/fov/range, so an editor save survives the next
+// drone-test sync.
 function camerasFileForSync_(propertyId, fallbackViewPath) {
   if (!propertyId) return null;
   const canonical = camerasCanonicalId_(propertyId);
