@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — map for one broken-out golf course (v1.0.2)
+  golf-viewer.html — map for one broken-out golf course (v1.0.3)
 
   Not linked from the responder hub. Each course sheet writes an
   Open map link on row 1 (columns I–J):
@@ -256,7 +256,7 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.0.2';
+  var BUILD = 'v1.0.3';
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 
@@ -622,19 +622,34 @@
   var loadingText = document.getElementById('loadingText');
   if (loadingText) loadingText.textContent = 'Loading ' + sheetName + '…';
 
-  fetch(GOLF_API_URL + '?route=golf-course&sheet=' + encodeURIComponent(sheetName) + '&_=' + Date.now(), {
-    redirect: 'follow'
-  }).then(function (r) { return r.text(); })
-    .then(function (t) {
-      var j;
-      try { j = JSON.parse(t); }
-      catch (e) { throw new Error('Course API did not return JSON'); }
-      if (!j || j.ok === false) throw new Error((j && j.error) || 'Course API error');
-      applyCourse(j);
-    })
-    .catch(function (err) {
-      fail('Could not load "' + sheetName + '".', err && err.message ? err.message : String(err));
-    });
+  function loadCourse(attempt) {
+    var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
+    var url = GOLF_API_URL + '?route=golf-course&sheet=' + encodeURIComponent(sheetName) + '&_=' + Date.now();
+    fetch(url, { redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { return r.text(); })
+      .then(function (t) {
+        if (timer) clearTimeout(timer);
+        var body = String(t || '').replace(/^\uFEFF/, '').trim();
+        var j;
+        try { j = JSON.parse(body); }
+        catch (e) {
+          if (attempt < 1) { loadCourse(attempt + 1); return; }
+          throw new Error('Course API did not return JSON');
+        }
+        if (!j || j.ok === false) throw new Error((j && j.error) || 'Course API error');
+        applyCourse(j);
+      })
+      .catch(function (err) {
+        if (timer) clearTimeout(timer);
+        if (attempt < 1) { loadCourse(attempt + 1); return; }
+        var msg = err && err.name === 'AbortError'
+          ? 'The course sheet took too long to answer.'
+          : (err && err.message ? err.message : String(err));
+        fail('Could not load "' + sheetName + '".', msg);
+      });
+  }
+  loadCourse(0);
 })();
 </script>
 </body>
