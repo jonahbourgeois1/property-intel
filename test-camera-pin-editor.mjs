@@ -1,8 +1,9 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.1.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.2.
 import { readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
+import vm from 'vm';
 import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   camerasFileForHub, editorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading
@@ -26,7 +27,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.1');
+ok('build', BUILD === '1.0.2');
 ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');
@@ -205,6 +206,11 @@ try {
   try { unlinkSync(gsCheck); } catch (e) {}
 }
 ok('gs route name', gs.includes("route: 'camera-pins-save'") && gs.includes('function camerasEditorSave_'));
+ok('gs reuses records publish', gs.includes('recordsPublishGithubPath_(') && gs.includes('recordsSidecarHubId_('));
+ok('gs no second s3 signer', gs.indexOf('recordsS3PutObject_') === -1 && gs.indexOf('AWS_SECRET') === -1);
+ok('gs partial phrase', gs.includes('GitHub saved ') && gs.includes('but the AWS records copy failed'));
+ok('gs github before records', gs.indexOf('camPinPut_') !== -1 && gs.indexOf('camPinPut_') < gs.indexOf('camPinRefreshRecords_'));
+ok('page shows partial aws error', html.includes('j.github_saved') && html.includes('AWS records copy failed'));
 ok('gs refuses create', gs.includes('refusing to create a cameras file'));
 ok('gs limits', gs.includes('CAM_PIN_MAX_MOVE_M = 5000') && gs.includes('CAM_PIN_FOV_MAX = 360') &&
   gs.includes('CAM_PIN_RANGE_MAX = 500'));
@@ -249,6 +255,51 @@ ok('catalog cameras first', built.length > 0 && built[0].cameras > 0 &&
 ok('catalog not under data', !readFileSync(join(root, 'camera-pin-editor.html'), 'utf8').includes('data/camera-pin-properties.json'));
 ok('camerasFileForHub eugene', camerasFileForHub(EUGENE, Object.keys(cameraCounts)) === EUGENE_CAMS);
 ok('camerasFileForHub missing', camerasFileForHub('00000000000000000000000000000000', Object.keys(cameraCounts)) === '');
+
+const recordsSrc = readFileSync(join(root, 'apps scripts/records.gs'), 'utf8');
+const sidecarStart = recordsSrc.indexOf('const RECORDS_SIDECAR_HUB_REMAP');
+const sidecarEnd = recordsSrc.indexOf('function recordsRewriteCameraPhotos_');
+ok('records remap present', sidecarStart !== -1 && recordsSrc.indexOf('function recordsSidecarHubId_') !== -1);
+const sandbox = {
+  console,
+  recordsCalls: [],
+  recordsPublishGithubPath_: function (path, content) {
+    sandbox.recordsCalls.push({ path: path, content: content });
+  }
+};
+vm.createContext(sandbox);
+vm.runInContext(recordsSrc.slice(sidecarStart, recordsSrc.indexOf('function recordsPublishSidecarCameras_')), sandbox);
+vm.runInContext(gs, sandbox);
+const jonesBody = JSON.stringify({ property: JONES, cameras: [{ id: 'cam-01', lat: 1, lng: 2 }] });
+const jonesSaved = sandbox.camPinAfterGithub_({
+  property: JONES, fileId: JONES, path: 'data/cameras/json/' + JONES + '.json',
+  updated: ['cam-01'], unchanged: false, commit: 'abc'
+}, 'data/cameras/json/' + JONES + '.json', jonesBody);
+ok('jones records hub', jonesSaved.ok === true && jonesSaved.records_hub === D9 &&
+  jonesSaved.records_key === 'cameras/' + D9 + '.json', JSON.stringify(jonesSaved));
+ok('jones publish path', sandbox.recordsCalls.length === 1 &&
+  sandbox.recordsCalls[0].path === 'data/cameras/json/' + JONES + '.json' &&
+  sandbox.recordsCalls[0].content === jonesBody);
+const eugeneSaved = sandbox.camPinRefreshRecords_(
+  'data/cameras/json/' + EUGENE_CAMS + '.json', '{}', EUGENE_CAMS);
+ok('eugene records hub', eugeneSaved.ok === true && eugeneSaved.hubId === EUGENE &&
+  eugeneSaved.key === 'cameras/' + EUGENE + '.json');
+const gudSaved = sandbox.camPinRefreshRecords_(
+  'data/cameras/json/' + GUD + '.json', '{}', GUD);
+ok('gud records hub', gudSaved.ok === true && gudSaved.hubId === GUD && gudSaved.key === 'cameras/' + GUD + '.json');
+sandbox.recordsPublishGithubPath_ = function () { throw new Error('S3 PUT cameras/x → HTTP 403: AccessDenied'); };
+const partial = sandbox.camPinAfterGithub_({
+  property: GUD, fileId: GUD, path: 'data/cameras/json/' + GUD + '.json',
+  updated: ['cam-01'], unchanged: false, commit: 'def'
+}, 'data/cameras/json/' + GUD + '.json', '{}');
+ok('partial keeps github', partial.ok === false && partial.partial === true && partial.github_saved === true &&
+  partial.error.indexOf('GitHub saved data/cameras/json/' + GUD + '.json') === 0 &&
+  partial.error.indexOf('AWS records copy failed') !== -1 &&
+  partial.error.indexOf('HTTP 403') !== -1, partial.error);
+delete sandbox.recordsPublishGithubPath_;
+const missingHelper = sandbox.camPinRefreshRecords_('data/cameras/json/' + GUD + '.json', '{}', GUD);
+ok('missing helper', missingHelper.ok === false && missingHelper.error.indexOf('recordsPublishGithubPath_') !== -1);
+ok('records comment names editor', recordsSrc.includes('Camera pin editor calls this after the GitHub Contents PUT'));
 
 if (failed) {
   console.log(failed + ' failed');

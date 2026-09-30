@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.1)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.2)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -268,7 +268,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.1</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.2</span>
   <span class="spacer"></span>
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
@@ -325,7 +325,7 @@
 import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl
-} from './js/camera-pin-editor.js?v=1.0.1';
+} from './js/camera-pin-editor.js?v=1.0.2';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var CAMERA_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
@@ -909,6 +909,10 @@ function save() {
     .then(function (text) {
       var j;
       try { j = JSON.parse(text); } catch (e) { throw new Error('Save did not return JSON'); }
+      if (j && j.github_saved && j.ok === false) {
+        setStatus(j.error || 'GitHub saved but the AWS records copy failed.', 'err');
+        return;
+      }
       if (!j || j.ok === false) throw new Error((j && j.error) || 'Save failed');
       bodyCams.forEach(function (edit) {
         var cam = findCam(edit.id);
@@ -916,8 +920,15 @@ function save() {
         state.savedById[edit.id] = Object.assign({}, state.savedById[edit.id] || {}, edit);
       });
       state.savedJson = posesJson();
-      if (j.unchanged) setStatus('No pin changes to write.', 'ok');
-      else setStatus('Saved ' + (j.updated || []).length + ' camera(s) to ' + (j.path || 'cameras JSON') + '.', 'ok');
+      var recordsNote = j.records_key ? (' s3://property-intel-records/' + j.records_key) : '';
+      if (j.unchanged) {
+        setStatus(recordsNote
+          ? 'No pin changes to write. AWS records copy refreshed at' + recordsNote + '.'
+          : 'No pin changes to write.', 'ok');
+      } else {
+        setStatus('Saved ' + (j.updated || []).length + ' camera(s) to ' +
+          (j.path || 'cameras JSON') + (recordsNote ? ' and' + recordsNote : '') + '.', 'ok');
+      }
     })
     .catch(function (err) {
       setStatus(String(err.message || err), 'err');

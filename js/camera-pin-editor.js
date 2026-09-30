@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.1';
+export const BUILD = '1.0.2';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;

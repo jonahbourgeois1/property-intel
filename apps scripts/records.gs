@@ -332,6 +332,8 @@ function recordsPublishGithubPath_(path, content) {
     recordsUpsertIndex_(id, { files: { pins: { key: RECORDS_FILES_PREFIX.pins + id + '.json' } } });
     return;
   }
+  // Camera pin editor calls this after the GitHub Contents PUT, with the
+  // merged JSON it just wrote. Same remap as publishRecordsSidecarsFromGithub.
   m = p.match(/^data\/cameras\/(?:json\/)?([A-Za-z0-9]+)\.json$/);
   if (m) {
     const gitId = m[1];

@@ -8,9 +8,13 @@
 //
 // Save path: browser → this web app → GitHub Contents API
 //   data/cameras/json/{fileId}.json
-// Not a browser GitHub write. Not a Lambda. Not a hand edit.
+// then the same request copies that merged JSON to
+//   s3://property-intel-records/cameras/{hubId}.json
+// via recordsPublishGithubPath_ (records.gs). Hub id is the existing
+// sidecar remap (Jones 6de88883… → d9f759…, Eugene 4a484f8c… → 8eea64e5…).
+// Not a browser GitHub or S3 write. Not a Lambda. Not GitHub Actions.
 //
-// Merge rules match js/camera-pin-editor.js (BUILD 1.0.0):
+// Merge rules match js/camera-pin-editor.js:
 //   - Never create a cameras file. Never delete a camera.
 //   - Geometry only: lat, lng, heading, fov, range.
 //   - Keep live, photo, label, mount_height, taxlot, placement, notes.
@@ -307,6 +311,77 @@ function camPinPut_(repoPath, text, message, sha) {
   return { ok: true, commit: commit };
 }
 
+function camPinPublicError_(msg) {
+  var s = String(msg || 'AWS PUT failed');
+  s = s.replace(/AKIA[0-9A-Z]{16}/g, '[key]');
+  s = s.replace(/AWS4-HMAC-SHA256 Credential=[^,\s]+/g, 'AWS4-HMAC-SHA256 Credential=[redacted]');
+  if (s.length > 300) s = s.substring(0, 300);
+  return s;
+}
+
+// GitHub file id → mothership hub. recordsSidecarHubId_ is the only remap.
+function camPinRecordsTarget_(fileId) {
+  if (typeof recordsSidecarHubId_ !== 'function') {
+    return { ok: false, error: 'recordsSidecarHubId_ is not in this deployment' };
+  }
+  var hubId = recordsSidecarHubId_(fileId) || '';
+  if (!hubId) return { ok: false, error: 'no mothership hub for cameras file ' + fileId };
+  return { ok: true, hubId: hubId, key: 'cameras/' + hubId + '.json' };
+}
+
+// Copy the merged cameras JSON onto property-intel-records. Reuses
+// recordsPublishGithubPath_ (photo URLs, index files.cameras, S3 PUT).
+function camPinRefreshRecords_(repoPath, content, fileId) {
+  var target = camPinRecordsTarget_(fileId);
+  if (!target.ok) return target;
+  if (typeof recordsPublishGithubPath_ !== 'function') {
+    target.ok = false;
+    target.error = 'recordsPublishGithubPath_ is not in this deployment';
+    return target;
+  }
+  try {
+    recordsPublishGithubPath_(repoPath, content);
+  } catch (err) {
+    target.ok = false;
+    target.error = camPinPublicError_(err && err.message);
+    return target;
+  }
+  return target;
+}
+
+function camPinRespond_(base, recordsResult) {
+  var out = {
+    route: 'camera-pins-save',
+    property: base.property,
+    file_id: base.fileId,
+    path: base.path,
+    updated: base.updated || [],
+    unchanged: !!base.unchanged,
+    commit: base.commit || '',
+    records_hub: (recordsResult && recordsResult.hubId) || '',
+    records_key: (recordsResult && recordsResult.key) || ''
+  };
+  if (recordsResult && recordsResult.ok) {
+    out.ok = true;
+    out.records = true;
+    return out;
+  }
+  var where = out.records_key
+    ? ('s3://property-intel-records/' + out.records_key)
+    : 's3://property-intel-records/cameras/{hubId}.json';
+  out.ok = false;
+  out.partial = true;
+  out.github_saved = true;
+  out.records = false;
+  out.error = 'GitHub saved ' + base.path + ' but the AWS records copy failed (' + where + '). ' +
+    ((recordsResult && recordsResult.error) || 'AWS PUT failed');
+  return out;
+}
+
+function camPinAfterGithub_(base, repoPath, content) {
+  return camPinRespond_(base, camPinRefreshRecords_(repoPath, content, base.fileId));
+}
+
 function camPinFileBody_(fileId, record) {
   if (typeof buildCamerasFile_ === 'function') {
     var built = buildCamerasFile_(fileId, record);
@@ -358,15 +433,15 @@ function camerasEditorSave_(payload) {
     var merged = camPinMerge_(got.rec, payload.cameras);
     if (!merged.ok) return { ok: false, route: 'camera-pins-save', error: merged.error };
     if (merged.unchanged) {
-      return {
-        ok: true,
-        route: 'camera-pins-save',
-        unchanged: true,
+      var currentFile = camPinFileBody_(fileId, got.rec);
+      return camPinAfterGithub_({
         property: propertyId,
-        file_id: fileId,
+        fileId: fileId,
         path: repoPath,
-        updated: []
-      };
+        updated: [],
+        unchanged: true,
+        commit: ''
+      }, currentFile.path, currentFile.content);
     }
     var file = camPinFileBody_(fileId, merged.record);
     var put = camPinPut_(file.path, file.content, 'Camera pin editor ' + fileId, got.sha);
@@ -378,30 +453,28 @@ function camerasEditorSave_(payload) {
       merged = camPinMerge_(again.rec, payload.cameras);
       if (!merged.ok) return { ok: false, route: 'camera-pins-save', error: merged.error };
       if (merged.unchanged) {
-        return {
-          ok: true,
-          route: 'camera-pins-save',
-          unchanged: true,
+        file = camPinFileBody_(fileId, again.rec);
+        return camPinAfterGithub_({
           property: propertyId,
-          file_id: fileId,
+          fileId: fileId,
           path: file.path,
-          updated: []
-        };
+          updated: [],
+          unchanged: true,
+          commit: ''
+        }, file.path, file.content);
       }
       file = camPinFileBody_(fileId, merged.record);
       put = camPinPut_(file.path, file.content, 'Camera pin editor ' + fileId, again.sha);
     }
     if (!put.ok) return { ok: false, route: 'camera-pins-save', error: put.error };
-    return {
-      ok: true,
-      route: 'camera-pins-save',
-      unchanged: false,
+    return camPinAfterGithub_({
       property: propertyId,
-      file_id: fileId,
+      fileId: fileId,
       path: file.path,
       updated: merged.updated,
+      unchanged: false,
       commit: put.commit || ''
-    };
+    }, file.path, file.content);
   } finally {
     lock.releaseLock();
   }

@@ -185,7 +185,7 @@ Editors place camera pins. Clients do not use this page. There is no passcode on
 
 `{hubId}` is the `data/index/{hubId}.json` hash both pages already use. The bare editor URL lists every hub from `camera-pin-properties.json` (repo root, not under `data/`). Hubs with a cameras file sort first. Do not invent a second client URL. Do not link the editor from `vyanet-viewer.html`.
 
-Save is the browser POSTing to the existing Apps Script web app (`route=camera-pins-save`). Apps Script merges geometry into the GitHub cameras file. The browser does not call the GitHub API. No Lambda is involved. Paste and deploy steps are in `docs/CAMERA_PIN_EDITOR.md`.
+Save is the browser POSTing to the existing Apps Script web app (`route=camera-pins-save`). Apps Script merges geometry into the GitHub cameras file, then calls `recordsPublishGithubPath_` so `s3://property-intel-records/cameras/{hubId}.json` matches that JSON. `{hubId}` is `recordsSidecarHubId_` (Jones `6de88883…` → `d9f759…`, Eugene `4a484f8c…` → `8eea64e5…`). GitHub remains the Pages source until cutover. The browser does not call GitHub or S3. No Lambda and no GitHub Action is involved. If the records PUT fails, the response says GitHub saved and the AWS copy failed. Paste and deploy steps are in `docs/CAMERA_PIN_EDITOR.md`.
 
 A pin move farther than 5 km from the saved lat/lng is refused. The pin is not clamped to the map edge or to that radius. Field of view above 360° and range above 500 m are refused the same way. Heading wraps on 360° because it is a bearing.
 

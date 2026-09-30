@@ -369,7 +369,8 @@ function upsertIndexEntry_(id, patch) {
 //     not own this file. Drone-test sync reads the GitHub file and
 //     republishes that JSON. It does not rebuild pin geometry.
 //   - The camera pin editor (camera-pins.gs) is the Pages writer: a
-//     Contents API PUT of data/cameras/json after a geometry merge.
+//     Contents API PUT of data/cameras/json after a geometry merge, then
+//     recordsPublishGithubPath_ copies that JSON onto the records hub.
 //     pushAllToGitHub does not push that path, so a sync cannot race it.
 
 const CAMERAS_JSON_DIR = 'data/cameras/json';

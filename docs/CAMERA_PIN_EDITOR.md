@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Refresh AWS records after a camera-pin save (cam-edit 1.0.2)
+
+**What.** After the GitHub Contents PUT of `data/cameras/json/{fileId}.json` succeeds, the same Apps Script request copies that merged JSON to `s3://property-intel-records/cameras/{hubId}.json`. The hub id is the existing sidecar remap (`recordsSidecarHubId_`): Jones `6de88883…` → `d9f759…`, Eugene `4a484f8c…` → `8eea64e5…`, every other cameras file keeps its id. The copy goes through `recordsPublishGithubPath_` (photo URLs rewritten to tiles CloudFront, index `files.cameras` merged). GitHub stays the Pages source until viewer cutover. If the S3 step fails, the response is a partial error: GitHub saved, AWS copy failed. Save stays available so the editor can retry; a retry with no new geometry still copies the current GitHub file.
+
+**Why.** The records bucket is what cut-over viewers will read. A pin save that only updates GitHub leaves that copy stale.
+
+**Files.** `apps scripts/camera-pins.gs`, a comment in `apps scripts/records.gs` and `apps scripts/shared.gs`, `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, `docs/RECORDS_CONTRACT.md`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs` runs `recordsSidecarHubId_` and the save response helper: Jones and Eugene remap, Gud stays on its own id, a thrown S3 error returns `github_saved` plus the partial sentence, and a missing `recordsPublishGithubPath_` does too. The page script shows that error and leaves Save enabled. Live AWS PUT was not exercised.
+
+**Status.** Needs a new Apps Script deployment version after pasting `camera-pins.gs`. `records.gs` in this repo already has `recordsPublishGithubPath_`. Paste that file too if the deployed project is older.
+
 ### 2026-09-30 — Full property list (cam-edit 1.0.1)
 
 **What.** The bare editor URL lists every hub, then opens one property. `https://responder-intel.vyanet.com/camera-pin-editor.html` is the link to share with camera editors. `?property={hubId}` stays the deep link into one hub. Client live links stay `vyanet-viewer.html?property={hubId}&live=1`.
@@ -66,6 +78,11 @@ Apps Script:
 4. Leaves `live`, `photo`, `label`, `mount_height`, `taxlot`, `placement`, `placement_note`, and other fields in place.
 5. If lat/lng changed, drops `mx` / `my` / `mz` on that camera so the 3D viewer follows lat/lng. If heading changed and the camera already has `declination`, it sets `heading_magnetic` to `heading - declination`. It does not invent a declination.
 6. PUTs the merged JSON with the GitHub Contents API (the script’s existing `GITHUB_TOKEN`). The commit message is `Camera pin editor {fileId}`.
+7. Copies that same merged JSON with `recordsPublishGithubPath_` (already in `records.gs`). Script Properties `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` sign the PUT. The browser does not talk to S3. No Lambda and no GitHub Action is involved.
+
+The records key is `cameras/{hubId}.json` on `property-intel-records`. `{hubId}` is `recordsSidecarHubId_(fileId)`: Jones’s git file `6de88883…` writes `d9f759…` (site_no 14725), Eugene’s git file `4a484f8c…` writes `8eea64e5…`, and any other cameras file writes its own id. Photo paths on the records object become tiles CloudFront URLs. The GitHub file keeps `data/cameras/images/…` paths. The records index gets `files.cameras` for that hub, same as **Copy cameras + GIS from GitHub**.
+
+If step 7 throws, the response is `{ "ok": false, "partial": true, "github_saved": true, "error": "GitHub saved data/cameras/json/… but the AWS records copy failed …" }`. The pins on GitHub are the ones you saved. The status line says so, and Save stays enabled. Click Save again. With no further pin edits the script still copies the current GitHub file to records.
 
 A later drone-test sync calls `camerasFileForSync_`, which reads this GitHub file and republishes that JSON. It does not rebuild pin positions from the sheet. `pushAllToGitHub` does not push `data/cameras/json`, so the sync does not race this commit on Pages.
 
@@ -76,7 +93,7 @@ The page will not POST until `GET …/exec?route=ping` includes `"camera_pins": 
 The editor project is not in this repo’s runtime. Paste it, then deploy a new version. Saved is not deployed.
 
 1. Open the Apps Script project **GitHub Property Intel Automation**.
-2. Add a file named `camera-pins.gs`. Paste the full contents of `apps scripts/camera-pins.gs` from this repo. Replace the file if it is already there.
+2. Add a file named `camera-pins.gs`. Paste the full contents of `apps scripts/camera-pins.gs` from this repo. Replace the file if it is already there. `records.gs` must already define `recordsPublishGithubPath_` and `recordsSidecarHubId_` (they are in this repo). If a save says that helper is not in this deployment, paste the current `records.gs` as well.
 3. In `critique-api.gs`, inside the `route === 'ping'` object (next to `golf: true`), add:
 
 ```javascript

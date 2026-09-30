@@ -48,6 +48,7 @@ Do not add this bucket as a second origin on `EQJBJ6X237VQF` (`d3fg47bqswi0rr.cl
 | Apps Script `publishRecordsFromSheets` | Bulk sheet walk (overnight). Same S3 layout. Never reads cameras/GIS. |
 | Git `data/cameras/`, `data/gis/`, `data/parcels/` | Source files. Not sheet columns. Jones cameras/GIS today are git ids `6de88883…` / `d9f759…`; Eugene cameras are git id `4a484f8c…`. |
 | Operator `tools/publish-records-static.py` | Copies those git files onto mothership hubs (remap GitHub folder id → site_no hub) and `aws s3 sync` stills + parcels to `property-intel-tiles`. Laptop credential chain. **Not** GitHub Actions. |
+| Camera pin editor (`camerasEditorSave_`) | After a GitHub Contents PUT of `data/cameras/json/{fileId}.json`, the same request calls `recordsPublishGithubPath_` (Script Properties AWS keys). Remap is `recordsSidecarHubId_`. S3 failure is a partial error; GitHub stays the Pages source. |
 | Apps Script `publishRecordsSidecarsFromGithub` | Same git JSON over the Contents API (no Sheet). Jones → site_no 14725, Eugene → VY-IN-003. Does not PUT JPEGs or parcel tiles. |
 | Lambda | Does not write this bucket. |
 | GitHub Actions | Never AWS. |
@@ -194,6 +195,12 @@ Do not unify satellite `site_no` hashes with responder-drone name hashes. The in
 
 ## Changelog
 
+- **2026-09-30** — Camera pin editor refreshes records in the same Apps Script request as the GitHub cameras PUT.
+  - **What.** `camerasEditorSave_` writes `data/cameras/json/{fileId}.json` first, then `recordsPublishGithubPath_` PUTs `cameras/{hubId}.json` and merges index `files.cameras`. Hub id stays `recordsSidecarHubId_` (Jones `6de88883…` → `d9f759…`, Eugene `4a484f8c…` → `8eea64e5…`). An S3 failure returns a partial error; GitHub is already saved.
+  - **Why.** Git remains the Pages cameras source until cutover. The records copy has to move with the pin save or cut-over viewers keep the old pins.
+  - **Files.** `apps scripts/camera-pins.gs`, comment in `apps scripts/records.gs`, `docs/CAMERA_PIN_EDITOR.md`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`.
+  - **How it was checked.** Node test of the remap and the partial-success response. Live AWS PUT was not exercised.
+  - **Status.** Apps Script paste plus a new deployment version. Not live until that deploy.
 - **2026-09-14** — Drone-test dual-writes GitHub Pages (`data/drone-test/{id}.json` + merged `data/index/{hubId}.json`) so `vyanet-viewer` 3D can load `viewer360`. S3 records stay the mothership write. `recordsJoinViewIndex_` uses `droneTestHubId_` (existing index by name/address) because Gud Cultures has no Satellite site_no.
 - **2026-09-11** — Drone is the dual-write exception: `data/responder-drone/` and `data/drone/` go to GitHub Pages on `jonahbourgeois1/property-intel` (live `responder-intel.html` links) **and** `s3://property-intel-records/responder-drone/`. Satellite / plane / Nearmap stay S3-only.
 - **2026-09-11** — Sheet Sync/Publish writes records S3, not GitHub. `pushAllToGitHub` is a trampoline to `pushAllToRecords_`. Paths `data/{satellite,plane,responder-drone,drone-test,nearmap,hoa,pins,index,…}` map onto mothership keys. GitHub-shaped indexes convert to `files`/`views` and merge. Cameras/GIS still git-sourced; drone-test may refresh cameras JSON onto the site_no hub. Full Satellite sync still 6-min capped.
