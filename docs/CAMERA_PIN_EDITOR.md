@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — List the Chekt tab (cam-edit 1.0.5)
+
+**What.** The bare editor URL lists the Chekt accounts (158), with each row’s CHEKT camera count. A missing `data/cameras/json/` file no longer means the account has no cameras. Save still does not create a pin file.
+
+**Why.** The previous list was every `data/index/` hub. Most of those are not Chekt accounts, and the pin files that do exist are not the Chekt camera roster.
+
+**Files.** `js/camera-pin-editor.js`, `camera-pin-editor.html`, `camera-pin-properties.json`, `test-camera-pin-editor.mjs`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. The catalog includes Achterhof (`933e6dd9…`, 4 CHEKT cameras, no pin file) and leaves out an index hub that is not on the Chekt tab.
+
+**Status.** Pages after this commit is on `main`. Opening an account that has no pin file still stops on that gate. The Chekt pin proposals are not in `data/cameras/json/`.
+
 ### 2026-09-30 — Restore the full property list (cam-edit 1.0.4)
 
 **What.** The bare editor URL lists every hub in `data/index/` again. A hub with no cameras file stays in the list with `cameras: 0` and an empty `cameras_file`. Hubs that already have cameras sort first. Save still refuses to create a cameras file.
@@ -74,7 +86,7 @@ Internal page for placing camera pins. Clients do not use it.
 | Camera editors — one property | `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}` |
 | Clients (unchanged) | `https://responder-intel.vyanet.com/vyanet-viewer.html?property={hubId}&live=1` |
 
-The full list is every hub in `data/index/`. Hubs that already have a cameras file sort first. Search matches name, address, or hub id. A row with no cameras file still opens; the editor then says it does not create a file. Eugene’s site hub and both Tracy hubs are their own rows and point at the shared cameras file (Eugene `4a484f8c…`, Jones `6de88883…`).
+The list is the Chekt tab: one row per Chekt account that has a hub id. The camera count is that account’s CHEKT cameras. Search matches name, address, or hub id. A row can have CHEKT cameras and still have no saved pin file. Opening that row says the editor does not create `data/cameras/json/`. Eugene’s Chekt hub points at the existing cameras file `4a484f8c…`. Jones’s Chekt hub is `6de88883…`.
 
 The list itself is `camera-pin-properties.json` at the repo root. Do not move it under `data/`. That tree is owned by the Apps Script sync.
 

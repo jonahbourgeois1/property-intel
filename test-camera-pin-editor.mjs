@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.4.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.5.
 import { readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import vm from 'vm';
 import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
-  camerasFileForHub, editorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading
+  camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -27,7 +27,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.4');
+ok('build', BUILD === '1.0.5');
 ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');
@@ -223,40 +223,31 @@ ok('ping flag', api.includes('camera_pins: (typeof camerasEditorSave_ === \'func
 ok('post route before critique', api.indexOf("postRoute === 'camera-pins-save'") !== -1 &&
   api.indexOf("postRoute === 'camera-pins-save'") < api.lastIndexOf('critiquePost_(payload)'));
 
-const indexDir = join(root, 'data/index');
+const ACHTERHOF = '933e6dd98ecb875eab79fdb3b103a938';
+const NOT_CHEKT = '037c696d19c43c7d03c5b5d272658a09';
 const camDir = join(root, 'data/cameras/json');
-const records = readdirSync(indexDir).filter((name) => name.endsWith('.json')).map((name) => {
-  const doc = JSON.parse(readFileSync(join(indexDir, name), 'utf8'));
-  return {
-    id: name.slice(0, -5),
-    name: doc.name || doc.property_name || '',
-    address: doc.address || ''
-  };
-});
-const cameraCounts = {};
-readdirSync(camDir).filter((name) => name.endsWith('.json')).forEach((name) => {
-  const doc = JSON.parse(readFileSync(join(camDir, name), 'utf8'));
-  cameraCounts[name.slice(0, -5)] = Array.isArray(doc.cameras) ? doc.cameras.length : 0;
-});
-const built = editorCatalog(records, cameraCounts);
+const cameraIds = readdirSync(camDir).filter((name) => name.endsWith('.json')).map((name) => name.slice(0, -5));
 const committed = JSON.parse(readFileSync(join(root, 'camera-pin-properties.json'), 'utf8'));
-ok('catalog matches index and cameras files', JSON.stringify(committed.properties) === JSON.stringify(built),
-  'regenerate camera-pin-properties.json from editorCatalog');
+const props = committed.properties || [];
 const byId = {};
-built.forEach((row) => { byId[row.id] = row; });
+props.forEach((row) => { byId[row.id] = row; });
+ok('catalog is the chekt tab', props.length === 158 && !byId[NOT_CHEKT]);
+ok('achterhof is a chekt account', byId[ACHTERHOF] && byId[ACHTERHOF].cameras === 4 && byId[ACHTERHOF].cameras_file === '');
 ok('gud catalog count', byId[GUD] && byId[GUD].cameras === 15 && byId[GUD].cameras_file === GUD);
-ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras_file === EUGENE_CAMS && byId[EUGENE].cameras > 0);
-ok('tracy catalog file', byId[TRACY] && byId[TRACY].cameras_file === JONES);
-ok('catalog includes every index hub', built.length === records.length);
-ok('catalog keeps hubs without cameras', built.some((row) => row.cameras === 0 && row.cameras_file === ''));
-ok('catalog cameras first', built.length > 0 && built[0].cameras > 0 &&
-  built.filter((row) => row.cameras > 0).length === built.filter((row, i, all) => {
+ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras === 4 && byId[EUGENE].cameras_file === EUGENE_CAMS);
+ok('jones catalog file', byId[JONES] && byId[JONES].cameras === 12 && byId[JONES].cameras_file === JONES);
+ok('catalog cameras first', props.length > 0 && props[0].cameras > 0 &&
+  props.filter((row) => row.cameras > 0).length === props.filter((row, i, all) => {
     const lastWith = all.reduce((n, row2, j) => row2.cameras > 0 ? j : n, -1);
     return i <= lastWith;
   }).length);
+ok('chekt catalog keeps a zero', chektEditorCatalog([
+  { hub: GUD, name: 'Gud', address: 'a', cameras: 15 },
+  { hub: ACHTERHOF, name: 'A', address: 'b', cameras: 0 }
+], cameraIds).length === 2);
 ok('catalog not under data', !readFileSync(join(root, 'camera-pin-editor.html'), 'utf8').includes('data/camera-pin-properties.json'));
-ok('camerasFileForHub eugene', camerasFileForHub(EUGENE, Object.keys(cameraCounts)) === EUGENE_CAMS);
-ok('camerasFileForHub missing', camerasFileForHub('00000000000000000000000000000000', Object.keys(cameraCounts)) === '');
+ok('camerasFileForHub eugene', camerasFileForHub(EUGENE, cameraIds) === EUGENE_CAMS);
+ok('camerasFileForHub missing', camerasFileForHub('00000000000000000000000000000000', cameraIds) === '');
 
 const recordsSrc = readFileSync(join(root, 'apps scripts/records.gs'), 'utf8');
 const sidecarStart = recordsSrc.indexOf('const RECORDS_SIDECAR_HUB_REMAP');

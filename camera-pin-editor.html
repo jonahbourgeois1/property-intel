@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.4)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.5)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -268,7 +268,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.4</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.5</span>
   <span class="spacer"></span>
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
@@ -325,7 +325,7 @@
 import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl
-} from './js/camera-pin-editor.js?v=1.0.4';
+} from './js/camera-pin-editor.js?v=1.0.5';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var CAMERA_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
@@ -1012,12 +1012,12 @@ function renderIndex() {
     link.appendChild(count);
     list.appendChild(link);
   }
-  $('indexCount').textContent = shown + ' shown · ' + indexRows.length + ' properties · ' + withCams + ' with cameras';
+  $('indexCount').textContent = shown + ' shown · ' + indexRows.length + ' Chekt accounts · ' + withCams + ' with cameras';
 }
 
 function bootIndex() {
   showIndex();
-  $('indexBlurb').textContent = 'Every hub. Properties with cameras are listed first. A row with no cameras file still opens; Save does not create one. Client links stay vyanet-viewer.html?property=…&live=1.';
+  $('indexBlurb').textContent = 'Chekt accounts. The count is that account’s CHEKT cameras. A row can have cameras and still have no saved pin file. Client links stay vyanet-viewer.html?property=…&live=1.';
   setStatus('Loading properties…', '');
   var url = new URL('camera-pin-properties.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
@@ -1043,6 +1043,7 @@ function showGate(title, html) {
   $('gate').hidden = false;
   $('gateTitle').textContent = title;
   $('gateBody').innerHTML = html;
+  setStatus('', '');
 }
 
 function exampleBlock() {
@@ -1085,9 +1086,11 @@ function boot() {
     return chain;
   }).then(function (found) {
     if (!found) {
-      showGate('No cameras file for this property',
+      showGate('No saved pin file for this Chekt account',
         '<p>This editor does not create <span class="mono">data/cameras/json/</span>. ' +
-        'There is no cameras file for <span class="mono">' + escapeHtml(propertyId) + '</span> or its known sibling hubs.</p>' +
+        '<span class="mono">' + escapeHtml(propertyId) + '</span> is a Chekt account. ' +
+        'It has no saved pin file yet, including on its known sibling hubs. ' +
+        'CHEKT cameras on the account are separate from that pin file.</p>' +
         exampleBlock());
       return;
     }

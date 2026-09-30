@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.4';
+export const BUILD = '1.0.5';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -105,6 +105,45 @@ export function editorCatalog(records, cameraCounts) {
       name: String(rec.name || '').trim(),
       address: String(rec.address || '').trim(),
       cameras: n,
+      cameras_file: fileId || ''
+    });
+  }
+  rows.sort(function (a, b) {
+    const ac = a.cameras > 0 ? 0 : 1;
+    const bc = b.cameras > 0 ? 0 : 1;
+    if (ac !== bc) return ac - bc;
+    const an = a.name.toLowerCase();
+    const bn = b.name.toLowerCase();
+    if (an < bn) return -1;
+    if (an > bn) return 1;
+    if (a.id < b.id) return -1;
+    if (a.id > b.id) return 1;
+    return 0;
+  });
+  return rows;
+}
+
+// Chekt tab accounts. `accounts` are { id|hub, name, address, cameras }
+// where `cameras` is the CHEKT camera count for that account.
+// cameras_file is set only when a pin file already exists.
+// This does not read the network and does not use the drone cameras file
+// as the list of accounts.
+export function chektEditorCatalog(accounts, cameraIds) {
+  const rows = [];
+  const seen = {};
+  const list = cameraIds || [];
+  for (let i = 0; i < (accounts || []).length; i++) {
+    const rec = accounts[i] || {};
+    const id = normHubId(rec.id || rec.hub);
+    if (!id || seen[id]) continue;
+    seen[id] = true;
+    const n = Number(rec.cameras);
+    const fileId = camerasFileForHub(id, list);
+    rows.push({
+      id: id,
+      name: String(rec.name || '').trim(),
+      address: String(rec.address || '').trim(),
+      cameras: isFinite(n) && n > 0 ? n : 0,
       cameras_file: fileId || ''
     });
   }
