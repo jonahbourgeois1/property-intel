@@ -5,17 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — map for one broken-out golf course (v1.0.3)
+  golf-viewer.html — one map for every broken-out golf course (v1.1.0)
 
-  Not linked from the responder hub. Each course sheet writes an
-  Open map link on row 1 (columns I–J):
-    golf-viewer.html?sheet=Awbrey%20Glen
-
-  Pins, handmade descriptions, and Nearmap image URLs come from that
-  course sheet via the critique web app:
+  Not linked from the responder hub. Course tabs sit under the title.
+  ?sheet= selects which course starts open. The list of courses is
+    GET ?route=golf-courses
+  Pins, descriptions, and image URLs for the open course are
     GET ?route=golf-course&sheet=
 
-  The Golf tab is not read here. Nothing is saved from this page.
+  Each course sheet's Open map link on row 1 opens this page on that
+  course. Nothing is saved from this page.
   Click a numbered marker for a card (same idea as the 2D camera card
   in viewer.html): image, pin name, description. Click the image
   to expand it.
@@ -43,6 +42,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
   body {
+    display: flex; flex-direction: column;
     background: var(--ground);
     color: var(--ink);
     font-family: var(--sans);
@@ -73,10 +73,37 @@
     color: var(--ink-faint); border: 1px solid var(--line);
     border-radius: 5px; padding: 2px 6px; margin-left: 10px;
   }
+  .course-tabs {
+    flex: 0 0 auto;
+    display: flex; gap: 8px; align-items: center;
+    overflow-x: auto;
+    padding: 0 16px 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .course-tabs button {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink-dim);
+    border-radius: 999px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .course-tabs button:hover { border-color: var(--ink-dim); color: var(--ink); }
+  .course-tabs button.on {
+    background: var(--marker);
+    border-color: var(--marker);
+    color: var(--marker-ink);
+    font-weight: 600;
+  }
   main {
+    flex: 1 1 auto; min-height: 0;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
-    height: calc(100% - 51px);
   }
   @media (max-width: 900px) {
     html, body { height: auto; overflow: auto; }
@@ -223,6 +250,7 @@
     <span class="count" id="count"></span>
     <span class="build" id="build"></span>
   </header>
+  <nav id="courseTabs" class="course-tabs" aria-label="Courses"></nav>
   <main id="app">
     <section class="stage" id="stage">
       <div id="map"></div>
@@ -256,11 +284,13 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.0.3';
+  var BUILD = 'v1.1.0';
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 
-  var sheetName = 'Awbrey Glen';
+  var sheetName = '';
+  var courses = [];
+  var loadGen = 0;
   var pins = [];
   var map = null;
   var mapProj = null;
@@ -280,7 +310,6 @@
   }
 
   var fromUrl = qp('sheet').trim();
-  if (fromUrl) sheetName = fromUrl;
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -299,10 +328,24 @@
     if (el) el.style.display = 'none';
   }
 
+  function showLoading(text) {
+    var stage = document.getElementById('stage');
+    if (stage) {
+      var old = stage.querySelectorAll('.error-box');
+      for (var i = 0; i < old.length; i++) old[i].remove();
+    }
+    var el = document.getElementById('mapLoading');
+    var label = document.getElementById('loadingText');
+    if (label) label.textContent = text || 'Loading…';
+    if (el) el.style.display = 'flex';
+  }
+
   function fail(msg, detail) {
     hideLoading();
     var stage = document.getElementById('stage');
     if (!stage) return;
+    var old = stage.querySelectorAll('.error-box');
+    for (var i = 0; i < old.length; i++) old[i].remove();
     var box = document.createElement('div');
     box.className = 'error-box';
     box.innerHTML = escapeHtml(msg) + (detail ? '<code>' + escapeHtml(detail) + '</code>' : '');
@@ -596,9 +639,60 @@
     fillHeader();
     updateCount();
     renderList();
+    renderTabs();
+    if (map) {
+      dropMarkers();
+      hideLoading();
+      return;
+    }
     var loadingText = document.getElementById('loadingText');
     if (loadingText) loadingText.textContent = 'Loading map…';
     loadMaps();
+  }
+
+  function renderTabs() {
+    var host = document.getElementById('courseTabs');
+    if (!host) return;
+    host.innerHTML = '';
+    var seen = {};
+    courses.forEach(function (c) {
+      var label = c.name || c.sheet;
+      seen[label] = (seen[label] || 0) + 1;
+    });
+    courses.forEach(function (c) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      var label = c.name || c.sheet;
+      if (seen[label] > 1) label = label + ' (' + c.sheet + ')';
+      btn.textContent = label;
+      btn.title = c.address || c.sheet;
+      if (c.sheet === sheetName) btn.className = 'on';
+      btn.addEventListener('click', function () { selectCourse(c.sheet, false); });
+      host.appendChild(btn);
+    });
+  }
+
+  function selectCourse(name, force) {
+    if (!name) return;
+    if (!force && name === sheetName && course && course.sheet === name) return;
+    loadGen += 1;
+    var gen = loadGen;
+    sheetName = name;
+    hidePinPopup();
+    markers.forEach(function (m) { m.setMap(null); });
+    markers = [];
+    pins = [];
+    renderList();
+    renderTabs();
+    if (window.history && history.replaceState) {
+      history.replaceState(null, '', window.location.pathname + '?sheet=' + encodeURIComponent(name));
+    }
+    var label = name;
+    for (var i = 0; i < courses.length; i++) {
+      if (courses[i].sheet === name) { label = courses[i].name || name; break; }
+    }
+    showLoading('Loading ' + label + '…');
+    loadCourse(0, gen);
   }
 
   window.hidePinPopup = hidePinPopup;
@@ -619,37 +713,73 @@
     hidePinPopup();
   });
 
-  var loadingText = document.getElementById('loadingText');
-  if (loadingText) loadingText.textContent = 'Loading ' + sheetName + '…';
-
-  function loadCourse(attempt) {
+  function fetchJson(route, extra, attempt, gen, onOk, failTitle) {
     var ctrl = (typeof AbortController === 'function') ? new AbortController() : null;
     var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 20000) : null;
-    var url = GOLF_API_URL + '?route=golf-course&sheet=' + encodeURIComponent(sheetName) + '&_=' + Date.now();
+    var url = GOLF_API_URL + '?route=' + route + (extra || '') + '&_=' + Date.now();
     fetch(url, { redirect: 'follow', signal: ctrl ? ctrl.signal : undefined })
       .then(function (r) { return r.text(); })
       .then(function (t) {
         if (timer) clearTimeout(timer);
+        if (gen !== loadGen) return;
         var body = String(t || '').replace(/^\uFEFF/, '').trim();
         var j;
         try { j = JSON.parse(body); }
         catch (e) {
-          if (attempt < 1) { loadCourse(attempt + 1); return; }
+          if (attempt < 1) { fetchJson(route, extra, attempt + 1, gen, onOk, failTitle); return; }
           throw new Error('Course API did not return JSON');
         }
-        if (!j || j.ok === false) throw new Error((j && j.error) || 'Course API error');
-        applyCourse(j);
+        onOk(j);
       })
       .catch(function (err) {
         if (timer) clearTimeout(timer);
-        if (attempt < 1) { loadCourse(attempt + 1); return; }
+        if (gen !== loadGen) return;
+        if (attempt < 1) { fetchJson(route, extra, attempt + 1, gen, onOk, failTitle); return; }
         var msg = err && err.name === 'AbortError'
           ? 'The course sheet took too long to answer.'
           : (err && err.message ? err.message : String(err));
-        fail('Could not load "' + sheetName + '".', msg);
+        fail(failTitle || 'Could not load the courses.', msg);
       });
   }
-  loadCourse(0);
+
+  function loadCourse(attempt, gen) {
+    fetchJson('golf-course', '&sheet=' + encodeURIComponent(sheetName), attempt, gen, function (j) {
+      if (!j || j.ok === false) {
+        fail('Could not load "' + sheetName + '".', (j && j.error) || 'Course API error');
+        return;
+      }
+      applyCourse(j);
+    }, 'Could not load "' + sheetName + '".');
+  }
+
+  function openListedCourse(list) {
+    courses = list || [];
+    if (!courses.length) {
+      fail('No course sheets yet.', 'Break out a course sheet, then open the viewer again.');
+      return;
+    }
+    var start = fromUrl;
+    var found = false;
+    for (var i = 0; i < courses.length; i++) {
+      if (courses[i].sheet === start) { found = true; break; }
+    }
+    selectCourse(found ? start : courses[0].sheet, true);
+  }
+
+  showLoading('Loading courses…');
+  loadGen = 1;
+  fetchJson('golf-courses', '', 0, loadGen, function (j) {
+    if (j && j.ok && j.courses) {
+      openListedCourse(j.courses);
+      return;
+    }
+    if (fromUrl) {
+      courses = [{ sheet: fromUrl, name: fromUrl, address: '' }];
+      selectCourse(fromUrl, true);
+      return;
+    }
+    fail('Could not list courses.', (j && j.error) || 'Course list did not load.');
+  });
 })();
 </script>
 </body>
