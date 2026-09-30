@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — List only properties that already have cameras (cam-edit 1.0.3)
+
+**What.** The bare editor URL lists hubs that already have a cameras file. Hubs in `data/index/` with no cameras file are not rows. A direct `?property=` link to one of those hubs still opens and says this editor does not create a file.
+
+**Why.** The full index listed 152 hubs and 136 of them had no cameras. The editor is for placing pins on properties that already have cameras.
+
+**Files.** `js/camera-pin-editor.js`, `camera-pin-editor.html`, `camera-pin-properties.json`, `test-camera-pin-editor.mjs`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs` rebuilds the catalog and requires every row to have a cameras file and a count above zero.
+
+**Status.** Pages after this commit is on `main`.
+
 ### 2026-09-30 — Refresh AWS records after a camera-pin save (cam-edit 1.0.2)
 
 **What.** After the GitHub Contents PUT of `data/cameras/json/{fileId}.json` succeeds, the same Apps Script request copies that merged JSON to `s3://property-intel-records/cameras/{hubId}.json`. The hub id is the existing sidecar remap (`recordsSidecarHubId_`): Jones `6de88883…` → `d9f759…`, Eugene `4a484f8c…` → `8eea64e5…`, every other cameras file keeps its id. The copy goes through `recordsPublishGithubPath_` (photo URLs rewritten to tiles CloudFront, index `files.cameras` merged). GitHub stays the Pages source until viewer cutover. If the S3 step fails, the response is a partial error: GitHub saved, AWS copy failed. Save stays available so the editor can retry; a retry with no new geometry still copies the current GitHub file.
@@ -50,7 +62,7 @@ Internal page for placing camera pins. Clients do not use it.
 | Camera editors — one property | `https://responder-intel.vyanet.com/camera-pin-editor.html?property={hubId}` |
 | Clients (unchanged) | `https://responder-intel.vyanet.com/vyanet-viewer.html?property={hubId}&live=1` |
 
-The full list is every hub in `data/index/`. Hubs that already have a cameras file sort first. Search matches name, address, or hub id. A row with no cameras file still opens; the editor then says it does not create a file. Eugene’s site hub and both Tracy hubs are their own rows and point at the shared cameras file (Eugene `4a484f8c…`, Jones `6de88883…`).
+The list is every hub that already has a cameras file. Search matches name, address, or hub id. Eugene’s site hub and both Tracy hubs are their own rows and point at the shared cameras file (Eugene `4a484f8c…`, Jones `6de88883…`). A hub with no cameras file is not on this list. Opening `?property=` for one of those hubs still says the editor does not create a file.
 
 The list itself is `camera-pin-properties.json` at the repo root. Do not move it under `data/`. That tree is owned by the Apps Script sync.
 
