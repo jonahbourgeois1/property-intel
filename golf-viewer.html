@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — one map for every broken-out golf course (v1.1.3)
+  golf-viewer.html — one map for every broken-out golf course (v1.1.4)
 
   Not linked from the responder hub. A course dropdown sits in the
   header. ?sheet= selects which course starts open. The list of courses is
@@ -15,9 +15,13 @@
 
   Each course sheet's Open map link on row 1 opens this page on that
   course. Nothing is saved from this page.
-  Click a numbered marker for a card (same idea as the 2D camera card
-  in viewer.html): image, pin name, description. Click the image
-  to expand it.
+  Click a numbered marker for a card. Click the description to edit
+  it. Drag the marker to move the pin. Save appears only after the
+  description or the position differs from the last filed state, and
+  it hides again when both are back. Save appends one row to the
+  golf-critique sheet. It does not add or delete pins, and it does
+  not rewrite the course sheet. The button will not post until
+  ?route=ping reports golf_critique.
 
   Report opens the hardcoded property-intelligence page for the
   selected course (golf-reports/*.html). Courses without a file
@@ -280,8 +284,43 @@
     font-size: 12.5px; line-height: 1.45; color: #e7ebf0;
     white-space: pre-wrap;
     max-height: 140px; overflow-y: auto;
+    cursor: text;
+    border-radius: 4px;
+    min-height: 1.4em;
   }
   #pin-pop-desc.empty { color: #667380; font-style: italic; }
+  #pin-pop-desc.editing {
+    outline: 1px solid rgba(56, 189, 248, 0.55);
+    padding: 4px 6px;
+    background: rgba(255, 255, 255, 0.04);
+  }
+  #pin-pop-save {
+    display: none;
+    margin-top: 8px;
+    border: 1px solid #38bdf8;
+    background: #38bdf8;
+    color: #0a0c0f;
+    border-radius: 6px;
+    padding: 4px 12px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #pin-pop-save.on { display: inline-block; }
+  #pin-pop-save:disabled { opacity: 0.55; cursor: default; }
+  #pin-pop-status {
+    font-family: var(--mono);
+    font-size: 10px;
+    margin-top: 6px;
+    color: #8a93a2;
+    min-height: 0;
+  }
+  #pin-pop-status.err { color: var(--bad); }
+  #pin-pop-status.ok { color: #6ee7a8; }
+  #pin-pop-edit-hint {
+    font-family: var(--mono); font-size: 9px; color: #555f6e; margin-top: 6px;
+  }
   #pin-pop-hint {
     font-family: var(--mono); font-size: 9px; color: #555f6e; margin-top: 6px;
     display: none;
@@ -357,7 +396,10 @@
       <div id="pin-pop-name"></div>
       <div id="pin-pop-meta"></div>
       <div id="pin-pop-desc"></div>
+      <button type="button" id="pin-pop-save">Save</button>
+      <div id="pin-pop-status"></div>
       <div id="pin-pop-hint">click image to expand</div>
+      <div id="pin-pop-edit-hint">Click the description to edit. Drag the pin to move it.</div>
     </div>
   </div>
   <div id="reportOverlay">
@@ -375,7 +417,7 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.1.3';
+  var BUILD = 'v1.1.4';
   var COURSE_REPORTS = {
     'Awbrey Glen Golf Course': 'golf-reports/awbrey-glen.html',
     'Bend Golf Club': 'golf-reports/bend-golf-club.html',
@@ -397,6 +439,7 @@
   var popupIdx = -1;
   var mapsStarted = false;
   var course = null;
+  var golfCritiqueReady = false;
 
   var buildEl = document.getElementById('build');
   if (buildEl) buildEl.textContent = BUILD;
@@ -598,9 +641,28 @@
           fontSize: '11px',
           fontWeight: '700'
         },
-        title: pin.name || ('Pin ' + pin.pin)
+        title: pin.name || ('Pin ' + pin.pin),
+        draggable: true
       });
       marker.addListener('click', function () { showPinPopup(i); });
+      marker.addListener('drag', function () {
+        var pos = marker.getPosition();
+        if (!pos) return;
+        pin.lat = pos.lat();
+        pin.lng = pos.lng();
+        if (popupIdx === i) updatePinPopup();
+      });
+      marker.addListener('dragend', function () {
+        var pos = marker.getPosition();
+        if (pos) {
+          pin.lat = pos.lat();
+          pin.lng = pos.lng();
+        }
+        if (popupIdx === i) {
+          updatePinPopup();
+          syncSaveButton();
+        }
+      });
       markers.push(marker);
       bounds.extend(marker.getPosition());
       any = true;
@@ -667,11 +729,9 @@
     var meta = document.getElementById('pin-pop-meta');
     if (meta) meta.textContent = bits.join('  ·  ');
     var desc = document.getElementById('pin-pop-desc');
-    if (desc) {
-      var text = String(pin.description || '').trim();
-      desc.textContent = text || 'No description yet';
-      desc.className = text ? '' : 'empty';
-    }
+    if (desc) fillDesc(pin);
+    var status = document.getElementById('pin-pop-status');
+    if (status) { status.textContent = ''; status.className = ''; }
     var pop = document.getElementById('pin-popup');
     if (pop) {
       pop.style.display = 'block';
@@ -681,6 +741,126 @@
     var row = document.getElementById('pin-row-' + idx);
     if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest' });
     updatePinPopup();
+    syncSaveButton();
+  }
+
+  function round6(n) {
+    return Math.round(Number(n) * 1e6) / 1e6;
+  }
+
+  function currentDesc() {
+    var desc = document.getElementById('pin-pop-desc');
+    if (!desc) return '';
+    if (desc.classList.contains('empty')) return '';
+    return String(desc.innerText || desc.textContent || '').replace(/\u00a0/g, ' ').trim();
+  }
+
+  function fillDesc(pin) {
+    var desc = document.getElementById('pin-pop-desc');
+    if (!desc) return;
+    var text = String(pin.description || '').trim();
+    desc.textContent = text || 'No description yet';
+    desc.className = text ? '' : 'empty';
+    desc.removeAttribute('contenteditable');
+  }
+
+  function pinChanged(pin) {
+    if (!pin) return false;
+    var desc = (popupIdx >= 0 && pins[popupIdx] === pin)
+      ? currentDesc()
+      : String(pin.description || '').trim();
+    var moved = round6(pin.lat) !== round6(pin.origLat) || round6(pin.lng) !== round6(pin.origLng);
+    return moved || desc !== String(pin.origDescription || '').trim();
+  }
+
+  function syncSaveButton() {
+    var btn = document.getElementById('pin-pop-save');
+    if (!btn) return;
+    var pin = popupIdx >= 0 ? pins[popupIdx] : null;
+    btn.className = pin && pinChanged(pin) ? 'on' : '';
+    if (!btn.classList.contains('saving')) btn.disabled = false;
+  }
+
+  function beginDescEdit() {
+    if (popupIdx < 0) return;
+    var desc = document.getElementById('pin-pop-desc');
+    if (!desc || desc.getAttribute('contenteditable') === 'true') return;
+    if (desc.classList.contains('empty')) desc.textContent = '';
+    desc.className = 'editing';
+    desc.setAttribute('contenteditable', 'true');
+    desc.focus();
+  }
+
+  function setPinStatus(text, kind) {
+    var status = document.getElementById('pin-pop-status');
+    if (!status) return;
+    status.textContent = text || '';
+    status.className = kind || '';
+  }
+
+  function savePinCritique() {
+    var pin = popupIdx >= 0 ? pins[popupIdx] : null;
+    if (!pin || !pinChanged(pin)) { syncSaveButton(); return; }
+    if (!golfCritiqueReady) {
+      setPinStatus('golf-critique is not deployed yet. Paste golf.gs and critique-api.gs, then deploy a new version.', 'err');
+      return;
+    }
+    var btn = document.getElementById('pin-pop-save');
+    var next = currentDesc();
+    if (btn) { btn.disabled = true; btn.className = 'on saving'; }
+    setPinStatus('Saving…', '');
+    var body = {
+      route: 'golf-critique',
+      view: 'golf-critique',
+      sheet: sheetName,
+      site_no: (course && course.site_no) || '',
+      account: (course && course.name) || '',
+      address: (course && course.address) || '',
+      pin: pin.pin,
+      name: pin.name || '',
+      old_lat: pin.origLat,
+      old_lng: pin.origLng,
+      lat: pin.lat,
+      lng: pin.lng,
+      old_description: pin.origDescription || '',
+      new_description: next,
+      version: BUILD
+    };
+    fetch(GOLF_API_URL + '?route=golf-critique', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      redirect: 'follow'
+    })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return t;
+        });
+      })
+      .then(function (t) {
+        var j;
+        try { j = JSON.parse(t); }
+        catch (e) { throw new Error('Save did not return JSON'); }
+        if (!j || j.ok === false || j.route !== 'golf-critique') {
+          throw new Error((j && j.error) || 'Save was not filed to golf-critique');
+        }
+        pin.description = next;
+        pin.origDescription = next;
+        pin.origLat = round6(pin.lat);
+        pin.origLng = round6(pin.lng);
+        pin.lat = pin.origLat;
+        pin.lng = pin.origLng;
+        fillDesc(pin);
+        if (btn) btn.classList.remove('saving');
+        syncSaveButton();
+        setPinStatus(j.message || 'Filed to golf-critique.', 'ok');
+      })
+      .catch(function (err) {
+        if (btn) { btn.classList.remove('saving'); btn.disabled = false; }
+        syncSaveButton();
+        setPinStatus(err && err.message ? err.message : 'Save failed', 'err');
+      });
   }
 
   function hidePinPopup() {
@@ -799,7 +979,10 @@
         lng: Number(p.lng),
         description: String(p.description || '').trim(),
         image_url: String(p.image_url || '').trim(),
-        missing: p.missing === true
+        missing: p.missing === true,
+        origLat: Number(p.lat),
+        origLng: Number(p.lng),
+        origDescription: String(p.description || '').trim()
       };
     });
     fillHeader();
@@ -949,6 +1132,33 @@
   var reportClose = document.getElementById('reportClose');
   if (reportClose) reportClose.addEventListener('click', closeReport);
 
+  var descEl = document.getElementById('pin-pop-desc');
+  if (descEl) {
+    descEl.addEventListener('click', beginDescEdit);
+    descEl.addEventListener('input', function () {
+      var pin = popupIdx >= 0 ? pins[popupIdx] : null;
+      var text = String(descEl.innerText || '').replace(/\u00a0/g, ' ').trim();
+      if (text && text !== 'No description yet') descEl.classList.remove('empty');
+      if (descEl.getAttribute('contenteditable') === 'true') descEl.classList.add('editing');
+      if (pin) pin.description = descEl.classList.contains('empty') ? '' : text;
+      syncSaveButton();
+    });
+    descEl.addEventListener('blur', function () {
+      var pin = popupIdx >= 0 ? pins[popupIdx] : null;
+      var text = String(descEl.innerText || '').replace(/\u00a0/g, ' ').trim();
+      if (text === 'No description yet') text = '';
+      if (pin) pin.description = text;
+      if (!text) {
+        descEl.textContent = 'No description yet';
+        descEl.className = 'empty';
+        descEl.removeAttribute('contenteditable');
+      }
+      syncSaveButton();
+    });
+  }
+  var saveBtn = document.getElementById('pin-pop-save');
+  if (saveBtn) saveBtn.addEventListener('click', savePinCritique);
+
   var courseSelect = document.getElementById('courseTabs');
   if (courseSelect) {
     courseSelect.addEventListener('change', function () {
@@ -1024,6 +1234,14 @@
     }
     selectCourse(found ? start : courses[0].sheet, true);
   }
+
+  fetch(GOLF_API_URL + '?route=ping&_=' + Date.now(), { redirect: 'follow' })
+    .then(function (r) { return r.text(); })
+    .then(function (t) {
+      var j = JSON.parse(String(t || '').replace(/^\uFEFF/, '').trim());
+      golfCritiqueReady = !!(j && j.golf_critique === true);
+    })
+    .catch(function () { golfCritiqueReady = false; });
 
   if (fromUrl && reportPath(fromUrl)) {
     sheetName = fromUrl;
