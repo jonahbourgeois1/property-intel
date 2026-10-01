@@ -150,7 +150,7 @@ Viewers fetch `data/cameras/json/{id}.json` first, then the flat `data/cameras/{
 }
 ```
 
-Jones (CHEKT site 3525) has **twelve** cameras on the live roster. The pin editor file is still the 14 technician stills. Only four of those pins carry `live`, matched by the hardware address that was already on the pin:
+Jones (CHEKT site 3525) has **twelve** cameras on the live roster. The pin file keeps the 14 technician stills. Four of those stills carry `live`, matched by the hardware address that was already on the pin. The other eight roster cameras are extra pins (`cam-15` through `cam-22`) with `placement: estimated-nadir`, so each CHEKT camera has a pin. Those eight positions are estimates and can be moved in the pin editor:
 
 | pin | still label | CHEKT name | device |
 |---|---|---|---|
@@ -160,7 +160,7 @@ Jones (CHEKT site 3525) has **twelve** cameras on the live roster. The pin edito
 | cam-14 | Driveway — house frontage | DRIVEWAY | 4350156 |
 
 
-These eight roster cameras have no pin in that file: FRONT COURTYARD, GARAGE CORNER DRIVEWAY, GARAGE EXTERIOR, HVAC ENCLOSURE, LOWER DECK DOUBLE DOORS, UPPER DECK FAMILY ROOM DOOR, UPPER DECK LIVING ROOM DOOR, SIDE DRONE. Do not attach them to the leftover lawn stills by order, and do not replace this file with the stacked nadir estimate.
+The eight estimated pins are FRONT COURTYARD, GARAGE CORNER DRIVEWAY, GARAGE EXTERIOR, HVAC ENCLOSURE, LOWER DECK DOUBLE DOORS, UPPER DECK FAMILY ROOM DOOR, UPPER DECK LIVING ROOM DOOR, and SIDE DRONE. They are not attached to the leftover lawn stills, and the four GPS stills stay where the pin editor saved them.
 
 `live` is optional per camera. `live.device` is the CHEKT camera id used to look up `/live` (`device_id`, unique even when several channels share a bridge MAC). Pins that still store a MAC keep resolving, because the roster also indexes a MAC that belongs to only one camera. `live.name` is the current CHEKT roster name when the technician still label does not unique-match (Jones: FRONT DOOR / UPPER DECK MASTER DOOR / LOWER DECK SINGLE DOOR / DRIVEWAY; Eugene: "Britt's Office Cam View" → `SVC MGR OFFICE`). `joinLiveToPins` copies the roster key from `/live` when `live.device` is already on the pin, else when `live.name` / label / id uniquely equals a roster name, else when a roster name (≥8 chars) appears in exactly one remaining pin. Do not pair leftover cameras by file order. Index does **not** inline this array. Presence is implied: viewer GETs `data/cameras/json/{propertyId}.json` and treats 404 as “no cameras.” `model-viewer.html` loads that same file (walking hub id → view ids → documented sibling hubs, then any `cameras[]` still on the view record) so the Cameras tab and 3D camera pins work even when sync has stripped the array off the view JSON.
 
