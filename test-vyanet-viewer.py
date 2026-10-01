@@ -345,13 +345,13 @@ def static_checks():
     check('S24c Jones has all 4 CHEKT live cameras on the confirmed pins',
           len(jones_live) == 4
           and jones_live.get('cam-01', {}).get('name') == 'FRONT DOOR'
-          and jones_live.get('cam-07', {}).get('name') == 'UPPER DECK'
-          and jones_live.get('cam-08', {}).get('name') == 'LOWER DECK'
+          and jones_live.get('cam-07', {}).get('name') == 'UPPER DECK MASTER DOOR'
+          and jones_live.get('cam-08', {}).get('name') == 'LOWER DECK SINGLE DOOR'
           and jones_live.get('cam-14', {}).get('name') == 'DRIVEWAY'
-          and jones_live['cam-01'].get('device') == 'E8ABFAAC68C9'
-          and jones_live['cam-07'].get('device') == 'E8ABFAAC67AE'
-          and jones_live['cam-08'].get('device') == 'E8ABFAAC68DC'
-          and jones_live['cam-14'].get('device') == 'F4B1C20A440D')
+          and jones_live['cam-01'].get('device') == '4350162'
+          and jones_live['cam-07'].get('device') == '4350175'
+          and jones_live['cam-08'].get('device') == '4350171'
+          and jones_live['cam-14'].get('device') == '4350156')
 
 static_checks()
 
