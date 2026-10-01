@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.6';
+export const BUILD = '1.0.7';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -177,6 +177,17 @@ export function normalizeHeading(deg) {
   h = Math.round(h * 100) / 100;
   if (h >= 360) h = 0;
   return h;
+}
+
+// null and "" are unplaced. Number(null) is 0, which would pin the camera
+// in the ocean and paint a blank map at street zoom.
+export function coordPair(obj) {
+  if (!obj || obj.lat == null || obj.lng == null || obj.lat === '' || obj.lng === '') return null;
+  const lat = Number(obj.lat);
+  const lng = Number(obj.lng);
+  if (!isFinite(lat) || !isFinite(lng)) return null;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+  return { lat: lat, lng: lng };
 }
 
 export function haversineM(lat1, lng1, lat2, lng2) {

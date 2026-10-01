@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.6.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.7.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -6,7 +6,8 @@ import { fileURLToPath } from 'url';
 import vm from 'vm';
 import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
-  camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading
+  camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading,
+  coordPair
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -27,7 +28,10 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.6');
+ok('build', BUILD === '1.0.7');
+ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
+ok('blank coord is unplaced', coordPair({ lat: '', lng: '' }) === null);
+ok('real coord kept', coordPair({ lat: 44.07, lng: -123.09 }).lat === 44.07);
 ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');

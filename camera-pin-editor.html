@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.6)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.7)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -297,7 +297,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.6</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.7</span>
   <span class="spacer"></span>
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
@@ -358,8 +358,8 @@
 <script type="module">
 import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
-  validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl
-} from './js/camera-pin-editor.js?v=1.0.6';
+  validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair
+} from './js/camera-pin-editor.js?v=1.0.7';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var CAMERA_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
@@ -600,10 +600,11 @@ function updateFov() {
   state.cameras.forEach(function (c) {
     var fov = Number(c.fov);
     var range = Number(c.range);
-    var lat = Number(c.lat);
-    var lng = Number(c.lng);
+    var pair = coordPair(c);
     var hdg = Number(c.heading);
-    if (!isFinite(lat) || !isFinite(lng) || !isFinite(hdg) || !(fov > 0) || !(range > 0)) return;
+    if (!pair || !isFinite(hdg) || !(fov > 0) || !(range > 0)) return;
+    var lat = pair.lat;
+    var lng = pair.lng;
     var active = state.selected === c.id;
     var path = [{ lat: lat, lng: lng }];
     var steps = Math.max(6, Math.round(fov / 6));
@@ -761,12 +762,17 @@ function makeOverlay(cam) {
       if (!this.div) return;
       var proj = this.getProjection();
       var c = this.cam;
-      if (!proj || !isFinite(Number(c.lat)) || !isFinite(Number(c.lng))) return;
-      var pos = proj.fromLatLngToDivPixel(new google.maps.LatLng(Number(c.lat), Number(c.lng)));
+      var ll = coordPair(c);
+      if (!proj || !ll) {
+        if (this.div) this.div.style.display = 'none';
+        return;
+      }
+      this.div.style.display = '';
+      var pos = proj.fromLatLngToDivPixel(new google.maps.LatLng(ll.lat, ll.lng));
       if (!pos) return;
       this.div.style.left = pos.x + 'px';
       this.div.style.top = pos.y + 'px';
-      var tipLL = offsetByHeading(Number(c.lat), Number(c.lng), Number(c.heading) || 0, HEADING_TIP_M);
+      var tipLL = offsetByHeading(ll.lat, ll.lng, Number(c.heading) || 0, HEADING_TIP_M);
       var tip = proj.fromLatLngToDivPixel(new google.maps.LatLng(tipLL.lat, tipLL.lng));
       var handle = this.div.querySelector('.heading-handle');
       handle.style.left = (tip.x - pos.x) + 'px';
@@ -794,14 +800,10 @@ function makeOverlay(cam) {
 
 function initMap() {
   clearMap();
-  var placed = state.cameras.filter(function (c) {
-    return isFinite(Number(c.lat)) && isFinite(Number(c.lng));
-  });
+  var placed = state.cameras.filter(function (c) { return coordPair(c); });
   var center = placed.length
-    ? { lat: Number(placed[0].lat), lng: Number(placed[0].lng) }
-    : (state.index && isFinite(Number(state.index.lat))
-      ? { lat: Number(state.index.lat), lng: Number(state.index.lng) }
-      : { lat: 44, lng: -121 });
+    ? coordPair(placed[0])
+    : (coordPair(state.index) || { lat: 44.05, lng: -121.31 });
   state.map = new google.maps.Map($('map'), {
     center: center,
     zoom: 19,
@@ -821,15 +823,77 @@ function initMap() {
     if (state.map && state.map.getTilt() !== 0) state.map.setTilt(0);
   });
   state.cameras.forEach(function (cam) {
-    if (!isFinite(Number(cam.lat)) || !isFinite(Number(cam.lng))) return;
+    if (!coordPair(cam)) return;
     state.overlays.push(makeOverlay(cam));
   });
   if (placed.length >= 2) {
     var bounds = new google.maps.LatLngBounds();
-    placed.forEach(function (c) { bounds.extend({ lat: Number(c.lat), lng: Number(c.lng) }); });
+    placed.forEach(function (c) {
+      var pair = coordPair(c);
+      bounds.extend(pair);
+    });
     state.map.fitBounds(bounds, 48);
   }
+  state.map.addListener('click', dropSelectedPin);
   google.maps.event.addListenerOnce(state.map, 'idle', function () { redraw(); });
+  if (!placed.length) locateAccount();
+}
+
+function ensureOverlay(cam) {
+  for (var i = 0; i < state.overlays.length; i++) {
+    if (state.overlays[i].cam === cam) return state.overlays[i];
+  }
+  var overlay = makeOverlay(cam);
+  state.overlays.push(overlay);
+  return overlay;
+}
+
+function dropSelectedPin(ev) {
+  if (state.drag || !ev || !ev.latLng) return;
+  var cam = findCam(state.selected);
+  if (!cam || coordPair(cam)) return;
+  var before = poseOf(cam);
+  cam.lat = ev.latLng.lat();
+  cam.lng = ev.latLng.lng();
+  if (cam.heading == null || cam.heading === '') cam.heading = 0;
+  ensureOverlay(cam);
+  pushUndo({ camId: cam.id, before: before, after: poseOf(cam) });
+  setStatus('', '');
+  redraw();
+  patchRow(cam.id);
+  syncDetail(true);
+  refreshDirty();
+}
+
+function locateAccount() {
+  var fromIndex = coordPair(state.index);
+  if (fromIndex && state.map) {
+    state.map.setCenter(fromIndex);
+    state.map.setZoom(19);
+    return;
+  }
+  var url = new URL('camera-pin-properties.json', window.location.href);
+  fetchJson(url.href).then(function (doc) {
+    var rows = doc && Array.isArray(doc.properties) ? doc.properties : [];
+    var row = null;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].id === propertyId || rows[i].cameras_file === state.fileId) {
+        row = rows[i];
+        break;
+      }
+    }
+    if (!row || !state.map) return;
+    if ($('propName').textContent === 'Property' && row.name) $('propName').textContent = row.name;
+    if (!$('propMeta').textContent && row.address) $('propMeta').textContent = row.address;
+    if (!row.address || !google.maps.Geocoder) return;
+    if (state.cameras.some(function (c) { return coordPair(c); })) return;
+    new google.maps.Geocoder().geocode({ address: row.address }, function (results, status) {
+      if (status !== 'OK' || !results || !results[0] || !state.map) return;
+      if (state.cameras.some(function (c) { return coordPair(c); })) return;
+      state.map.setCenter(results[0].geometry.location);
+      state.map.setZoom(19);
+    });
+  });
 }
 
 function showMapError(text) {

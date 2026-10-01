@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Do not map a missing pin to the ocean (cam-edit 1.0.7)
+
+**What.** A camera with `lat`/`lng` null stays off the map. The map centers on the index coordinates, or geocodes the Chekt account address, instead of `0, 0`. Clicking the map drops the selected unplaced camera. The account name from the Chekt list fills in when `data/index` has no name.
+
+**Why.** `Number(null)` is `0`. Unplaced cameras were drawn in the Gulf of Guinea at zoom 19, which is a blank white map.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Local page for `62fd3a67…` (Battin, all cameras unplaced) shows Bend imagery, not a white ocean.
+
+**Status.** Pages after this commit is on `main`.
+
 ### 2026-09-30 — Enlarge a still on click (cam-edit 1.0.6)
 
 **What.** Clicking the selected still, or a camera’s thumbnail in the right-hand list, opens that JPEG large over the page. Close, Escape, or a click on the dark backdrop puts it away. The pin list and the map stay as they were.
