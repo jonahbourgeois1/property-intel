@@ -1,0 +1,832 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Awbrey Glen Golf Club — Property Intelligence Report</title><style>
+*{box-sizing:border-box}
+:root{--ink:#111;--red:#CD3333;--grey:#6E7279;--bone:#F4F2EE;--char:#1A1C1B;--line:#DEDBD5}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--ink);
+ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.wrap.narrow{max-width:800px}
+section{padding:68px 0;border-top:1px solid var(--line)}
+section.bone{background:var(--bone);border-top:0}
+section.dark{background:var(--char);color:#E8E9E9;border-top:0}
+h1{font:400 clamp(34px,6vw,62px)/1.04 Georgia,"Times New Roman",serif;margin:0 0 6px;letter-spacing:-.5px}
+h2{font:400 clamp(24px,3.4vw,38px)/1.12 Georgia,"Times New Roman",serif;margin:0 0 4px;letter-spacing:-.3px}
+h3{font:700 15px/1.3 inherit;margin:26px 0 8px;letter-spacing:.2px}
+p{margin:0 0 14px}
+.eyebrow{font:700 11px/1 inherit;letter-spacing:2.4px;text-transform:uppercase;color:var(--red);margin:0 0 12px}
+.eyebrow.light{color:#C9A6A6}
+.rule.red{width:74px;height:3px;background:var(--red);margin:16px 0 22px}
+.lede{font:400 clamp(17px,2vw,21px)/1.5 Georgia,serif;color:#333;max-width:62ch}
+.dark .lede{color:#CFD2D2}
+.small{font-size:13px;color:var(--grey);line-height:1.55}
+.na{color:#B9B5AE}
+/* cover */
+.cover{background:var(--char);color:#fff;padding:92px 0 72px}
+.cover .lede{color:#D7D9D9;margin-bottom:6px}
+.cover .meta{font-size:13px;color:#8F9393;letter-spacing:.3px}
+.coverstats{display:flex;flex-wrap:wrap;gap:40px;margin-top:38px;
+ border-top:1px solid #35393A;padding-top:26px}
+.coverstats div{display:flex;flex-direction:column}
+.coverstats b{font:400 30px/1 Georgia,serif}
+.coverstats span{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:#8F9393;margin-top:7px}
+/* stats grid */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+ background:var(--line);border:1px solid var(--line);margin:22px 0 8px}
+.stat{background:var(--bone);padding:18px 20px}
+.stat b{display:block;font:400 22px/1.15 Georgia,serif;margin-bottom:7px}
+.stat span{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey)}
+/* fields */
+.fields{margin:14px 0 0;font-size:13.5px}
+.fields .f{display:grid;grid-template-columns:132px 1fr;gap:14px;
+ padding:7px 0;border-bottom:1px solid var(--line)}
+.fields.wide .f{grid-template-columns:230px 1fr}
+.fields dt{color:var(--grey);font-size:11px;letter-spacing:1.1px;text-transform:uppercase;padding-top:2px}
+.fields dd{margin:0}
+/* two col */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:46px;align-items:start}
+.note{background:var(--bone);padding:22px 24px;font-size:14.5px}
+.note p:last-child{margin:0}
+.callout{border-left:3px solid var(--red);background:var(--bone);padding:18px 22px;margin:24px 0}
+.callout p{margin:0;font-size:15px}
+.dark .callout{background:#232626}
+/* images */
+.shot{display:block;margin:0 0 10px;border:1px solid var(--line);overflow:hidden;background:#EEE}
+.shot img{display:block;width:100%;height:auto}
+.cap{font-size:12px;color:var(--grey);margin:-2px 0 12px}
+/* holes */
+.hole{padding:34px 0;border-top:1px solid var(--line)}
+.hole:first-child{border-top:0}
+.holehead{display:flex;align-items:baseline;gap:20px;margin-bottom:16px}
+.hn{font:400 46px/1 Georgia,serif;color:var(--red);min-width:62px}
+.hm{display:flex;flex-wrap:wrap;gap:18px;font-size:11.5px;letter-spacing:1.4px;
+ text-transform:uppercase;color:var(--grey)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+.paneh{font:700 11px/1 inherit;letter-spacing:1.8px;text-transform:uppercase;
+ color:var(--ink);margin:0 0 10px}
+.obl{margin-top:22px;max-width:560px}
+.rulenote{font-size:12.5px;color:var(--grey);margin-top:16px;padding-top:12px;
+ border-top:1px solid var(--line)}
+.rulenote b{color:var(--ink)}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:34px;margin-top:20px}
+.card h3{margin:0 0 12px;font:700 13px/1 inherit;letter-spacing:1.6px;
+ text-transform:uppercase;color:var(--grey)}
+.cardimgs{display:grid;gap:8px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px;margin:20px 0 10px}
+th{text-align:left;font:700 10.5px/1 inherit;letter-spacing:1.4px;text-transform:uppercase;
+ color:var(--grey);border-bottom:2px solid var(--ink);padding:0 14px 9px 0}
+td{padding:11px 14px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.n{text-align:right;padding-right:0;white-space:nowrap}
+.dark th{color:#9BA0A0;border-bottom-color:#4A4F4F}
+.dark td{border-bottom-color:#2E3232}
+.limits td:first-child{width:24%}.limits td:nth-child(2){width:40%}
+details{margin-top:18px}
+summary{cursor:pointer;font-size:12.5px;letter-spacing:1.2px;text-transform:uppercase;
+ color:var(--red);font-weight:700}
+details p{margin-top:12px}
+footer{background:var(--char);color:#8F9393;font-size:12px;padding:30px 0;border-top:1px solid #2E3232}
+footer b{color:#D7D9D9}
+
+/* sticky nav */
+.topnav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);
+ border-bottom:1px solid var(--line);backdrop-filter:saturate(1.6) blur(8px)}
+.topnav .wrap{display:flex;align-items:center;gap:22px;height:52px}
+.nvname{font:700 11px/1 inherit;letter-spacing:1.6px;text-transform:uppercase;
+ color:var(--ink);white-space:nowrap}
+.nvlinks{display:flex;gap:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nvlinks::-webkit-scrollbar{display:none}
+.topnav a{font:600 11px/1 inherit;letter-spacing:1.3px;text-transform:uppercase;
+ color:var(--grey);text-decoration:none;white-space:nowrap;padding:6px 0;
+ border-bottom:2px solid transparent}
+.topnav a:hover{color:var(--red);border-bottom-color:var(--red)}
+section{scroll-margin-top:54px}
+/* hole selector */
+.holenav{position:sticky;top:52px;z-index:40;background:var(--bone);
+ border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:22px 0 0}
+.hbrow{display:flex;align-items:center;gap:6px;height:54px;overflow-x:auto;
+ -webkit-overflow-scrolling:touch}
+.hbrow::-webkit-scrollbar{display:none}
+.hblabel{font:700 10px/1 inherit;letter-spacing:1.6px;text-transform:uppercase;
+ color:var(--grey);margin-right:8px;white-space:nowrap}
+.hb{flex:0 0 auto;min-width:34px;height:34px;padding:0 9px;cursor:pointer;
+ border:1px solid var(--line);background:#fff;color:var(--ink);
+ font:600 13px/1 inherit;border-radius:2px}
+.hb:hover{border-color:var(--red);color:var(--red)}
+.hb.on{background:var(--red);border-color:var(--red);color:#fff}
+.hb.all{min-width:52px;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.hole{padding-top:30px}
+@media(max-width:860px){
+ .topnav .wrap{gap:14px;height:48px}.nvname{display:none}
+ .holenav{top:48px}.hbrow{height:50px}
+}
+@media print{
+ .topnav,.holenav{display:none}
+ .hole{display:block !important;page-break-inside:avoid}
+}
+@media(max-width:860px){
+ .two,.pair{grid-template-columns:1fr;gap:26px}
+ section{padding:46px 0}.wrap{padding:0 20px}
+ .fields .f,.fields.wide .f{grid-template-columns:1fr;gap:2px}
+ .fields dt{padding-top:0}
+ .coverstats{gap:26px}
+}
+</style></head><body>
+<header class="cover" id="top">
+  <div class="wrap">
+    <p class="eyebrow light">Property Intelligence Report</p>
+    <h1>Awbrey Glen Golf Club</h1>
+    <div class="rule red"></div>
+    <p class="lede">2500 NW Awbrey Glen Drive, Bend, OR 97703</p>
+    <p class="meta">Imagery captured 2026-07-02  &middot; 
+       Every measurement in this report is derived from that capture.</p>
+    <div class="coverstats"><div><b>18</b><span>Holes</span></div><div><b>72</b><span>Par</span></div><div><b>7,007</b><span>Yardage</span></div><div><b>77</b><span>Acres</span></div></div>
+  </div>
+</header><nav class="topnav" id="topnav"><div class="wrap"><span class="nvname">Awbrey Glen Golf Club</span><span class="nvlinks"><a href="#overview">Overview</a><a href="#holes">Holes</a><a href="#water">Water</a><a href="#residences">Residences</a><a href="#paths">Access</a><a href="#clubhouse">Facilities</a><a href="#benchmark">Benchmark</a><a href="#limits">Limits</a></span></div></nav>
+<section id="overview">
+  <div class="wrap">
+    <p class="eyebrow">The club</p>
+    <h2>What this report covers</h2>
+    <div class="rule red"></div>
+    <div class="two">
+      <div><dl class="fields"><div class="f"><dt>Architect</dt><dd>Gene &quot;Bunny&quot; Mason (1993); updated by David McLay Kidd</dd></div><div class="f"><dt>Opened</dt><dd>1993</dd></div><div class="f"><dt>Superintendent</dt><dd>Kyle Watt</dd></div><div class="f"><dt>Coordinates</dt><dd>44.079252, -121.349535</dd></div><div class="f"><dt>Capture date</dt><dd>2026-07-02</dd></div></dl></div>
+      <div class="note">
+        <p>This is a first-pass property record built from a single aerial capture.
+        It says what exists, where it is, and what deserves a closer look.</p>
+        <p>It does not say whether anything is in good or poor condition. Where the
+        imagery cannot answer a question, the report says so rather than estimating.
+        Those limits are listed in full at the end.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="envelope" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Property envelope</p>
+    <h2>The course, measured</h2>
+    <div class="rule red"></div>
+    <div class="stats"><div class="stat"><b>5,607 ft N–S  &times;  3,086 ft E–W</b><span>Property extent</span></div><div class="stat"><b>76.6 acres</b><span>Irrigated turf</span></div><div class="stat"><b>28.8%</b><span>Canopy cover</span></div><div class="stat"><b>3.8 acres across 5 ponds</b><span>Water surface</span></div><div class="stat"><b>46</b><span>Turf patches</span></div><div class="stat"><b>38.2% of turf</b><span>Largest patch</span></div><div class="stat"><b>45</b><span>Bunkers</span></div><div class="stat"><b>87</b><span>Parking stalls</span></div></div>
+    <div class="callout">
+        <p><b>Turf continuity.</b> The irrigated surface is not one connected area.
+        It breaks into 46 patches, and the largest holds
+        38.2% of the total. The rest is divided by
+        trees, cart paths, rough and bare ground.</p></div>
+    <h3>What borders the property</h3>
+    <dl class="fields wide"><div class="f"><dt>North</dt><dd>OSM within 394 ft: landuse=forest, quarry polygon, Skyline Ranch Road and unpaved tracks</dd></div><div class="f"><dt>South</dt><dd>OSM within 394 ft: residential landuse; NW Champion Circle, NW Summit Drive, Mount Washington Drive</dd></div><div class="f"><dt>East</dt><dd>OSM within 394 ft: residential landuse; NW Horizon Drive, NW Fernie Court, NW Kirkaldy Court, Mount Washington Drive</dd></div><div class="f"><dt>West</dt><dd>OSM within 394 ft: landuse=forest; Concannion Drive, Skyline Ranch Road</dd></div></dl>
+  </div>
+</section>
+<section id="holes">
+  <div class="wrap">
+    <p class="eyebrow">Hole by hole</p>
+    <h2>Every green, every landing zone</h2>
+    <div class="rule red"></div>
+    <p class="lede">Each hole is recorded twice from the same capture: the primary
+    tee-shot landing area and the green. Click any frame for the full image.</p>
+  </div>
+  <div class="holenav" id="holenav">
+    <div class="wrap">
+      <div class="hbrow">
+        <span class="hblabel">Hole</span>
+        <button class="hb" data-h="1">1</button><button class="hb" data-h="2">2</button><button class="hb" data-h="3">3</button><button class="hb" data-h="4">4</button><button class="hb" data-h="5">5</button><button class="hb" data-h="6">6</button><button class="hb" data-h="7">7</button><button class="hb" data-h="8">8</button><button class="hb" data-h="9">9</button><button class="hb" data-h="10">10</button><button class="hb" data-h="11">11</button><button class="hb" data-h="12">12</button><button class="hb" data-h="13">13</button><button class="hb" data-h="14">14</button><button class="hb" data-h="15">15</button><button class="hb" data-h="16">16</button><button class="hb" data-h="17">17</button><button class="hb" data-h="18">18</button>
+        <button class="hb all" data-h="all">All</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap" id="holebox">
+<article class="hole" id="hole-1">
+  <div class="holehead">
+    <div class="hn">1</div>
+    <div class="hm">
+      <span>Par 5</span><span>554 yd</span>
+      <span>HCP 4</span><span>1,743 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_01_green_hcvifx.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_01_green_hcvifx.png" alt="Hole 1 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with lighter southern band</dd></div><div class="f"><dt>Bunkers</dt><dd>1, south-east</dd></div><div class="f"><dt>Water</dt><dd>Present, east</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>North</dd></div><div class="f"><dt>Shadow</dt><dd>Canopy shadow in north</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>3 people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797642/Awbrey_Glen_-_Hole_01_fairway_jzoald.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797642/Awbrey_Glen_-_Hole_01_fairway_jzoald.png" alt="Hole 1 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with darker central band</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Present, west, ringed by reeds</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Western shadows from eastern conifers</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>North-west corner</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: nearest edge of street asphalt (white stakes). Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-2">
+  <div class="holehead">
+    <div class="hn">2</div>
+    <div class="hm">
+      <span>Par 4</span><span>391 yd</span>
+      <span>HCP 14</span><span>3,095 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_02_green_sglpky.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_02_green_sglpky.png" alt="Hole 2 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green with faint stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>1, south-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar; fairway west</dd></div><div class="f"><dt>Trees</dt><dd>Absent</dd></div><div class="f"><dt>Shadow</dt><dd>Conifer shadow across eastern half</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Strip east of cart path</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick; 2 people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797643/Awbrey_Glen_-_Hole_02_fairway_wthkwh.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797643/Awbrey_Glen_-_Hole_02_fairway_wthkwh.png" alt="Hole 2 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with diagonal checkered mowing</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Conifers and shrubs east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows across northern half</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>3 roofs: 2 east, 1 west</dd></div><div class="f"><dt>Bare ground</dt><dd>East of cart path under trees</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-3">
+  <div class="holehead">
+    <div class="hn">3</div>
+    <div class="hm">
+      <span>Par 4</span><span>424 yd</span>
+      <span>HCP 8</span><span>4,321 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_03_green_sbxf81.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_03_green_sbxf81.png" alt="Hole 3 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green</dd></div><div class="f"><dt>Bunkers</dt><dd>2: north-west, east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow across southern third</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797643/Awbrey_Glen_-_Hole_03_fairway_gwum5f.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797643/Awbrey_Glen_-_Hole_03_fairway_gwum5f.png" alt="Hole 3 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint stripes; paler strip of rough west</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Pines west; conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow across eastern half</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>1 roof, south-west</dd></div><div class="f"><dt>Bare ground</dt><dd>West</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-4">
+  <div class="holehead">
+    <div class="hn">4</div>
+    <div class="hm">
+      <span>Par 4</span><span>397 yd</span>
+      <span>HCP 2</span><span>3,552 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_04_green_nouzbc.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_04_green_nouzbc.png" alt="Hole 4 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Conifers and shrubs west and south-east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in south-east</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Present at western and south-eastern frame edges, outside the tree line</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797644/Awbrey_Glen_-_Hole_04_fairway_riyj4c.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797644/Awbrey_Glen_-_Hole_04_fairway_riyj4c.png" alt="Hole 4 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green with faint mottling</dd></div><div class="f"><dt>Bunkers</dt><dd>1, east-centre</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Pines west; trees east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows from eastern trees</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>1 roof with paved driveway, east</dd></div><div class="f"><dt>Bare ground</dt><dd>West</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: nearest edge of street asphalt (white stakes). Restroom and water station after green 4. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-5">
+  <div class="holehead">
+    <div class="hn">5</div>
+    <div class="hm">
+      <span>Par 4</span><span>330 yd</span>
+      <span>HCP 16</span><span>3,604 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_05_green_lwdmzf.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_05_green_lwdmzf.png" alt="Hole 5 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Pale mid-green with faint streaking</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Darker mown collar; lighter turf west</dd></div><div class="f"><dt>Trees</dt><dd>Absent</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry grass and bare ground along eastern margin</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797644/Awbrey_Glen_-_Hole_05_fairway_zetx0r.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797644/Awbrey_Glen_-_Hole_05_fairway_zetx0r.png" alt="Hole 5 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green mown pad with faint stripes inside darker turf</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Pines west; trees east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>North-west</dd></div><div class="f"><dt>Structures</dt><dd>1 roof at eastern edge</dd></div><div class="f"><dt>Bare ground</dt><dd>West</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: fence line. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-6">
+  <div class="holehead">
+    <div class="hn">6</div>
+    <div class="hm">
+      <span>Par 3</span><span>168 yd</span>
+      <span>HCP 12</span><span>2,895 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_06_green_radqxt.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_06_green_radqxt.png" alt="Hole 6 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with darker central mottling</dd></div><div class="f"><dt>Bunkers</dt><dd>3: west, north, east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>South-east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in south-east</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>1 cart; 1 person; flagstick</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797645/Awbrey_Glen_-_Hole_06_fairway_jptho4.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797645/Awbrey_Glen_-_Hole_06_fairway_jptho4.png" alt="Hole 6 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with mottled turf and darker circle north</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sparse pines west; trees east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow across centre</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>3 roofs, east</dd></div><div class="f"><dt>Bare ground</dt><dd>West</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: fence line. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-7">
+  <div class="holehead">
+    <div class="hn">7</div>
+    <div class="hm">
+      <span>Par 4</span><span>404 yd</span>
+      <span>HCP 10</span><span>2,251 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_07_green_clgjmp.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713365/Awbrey_Glen_-_Hole_07_green_clgjmp.png" alt="Hole 7 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint checkered mowing</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north-west</dd></div><div class="f"><dt>Water</dt><dd>Present, east; strip of tall grass between water and collar</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar</dd></div><div class="f"><dt>Trees</dt><dd>Broadleaf trees south and south-west</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow south and south-west</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797646/Awbrey_Glen_-_Hole_07_fairway_gyr0p4.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797646/Awbrey_Glen_-_Hole_07_fairway_gyr0p4.png" alt="Hole 7 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Pines west; conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows across fairway from east</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>2 roofs, east</dd></div><div class="f"><dt>Bare ground</dt><dd>West</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: fence line. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-8">
+  <div class="holehead">
+    <div class="hn">8</div>
+    <div class="hm">
+      <span>Par 3</span><span>197 yd</span>
+      <span>HCP 18</span><span>1,791 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_08_green_a7lx2f.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_08_green_a7lx2f.png" alt="Hole 8 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Lighter mid-green with stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>2: west, north-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar; fairway west</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Long shadow along eastern margin</dd></div><div class="f"><dt>Cart path</dt><dd>South-west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797646/Awbrey_Glen_-_Hole_08_fairway_nq7gmn.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797646/Awbrey_Glen_-_Hole_08_fairway_nq7gmn.png" alt="Hole 8 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with bold diagonal stripes; putting surface south-east</dd></div><div class="f"><dt>Bunkers</dt><dd>3, around green</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Conifers north and east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows north and east</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>3 roofs: 2 west, 1 north-east</dd></div><div class="f"><dt>Bare ground</dt><dd>South-west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: nearest edge of street asphalt and fence line. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-9">
+  <div class="holehead">
+    <div class="hn">9</div>
+    <div class="hm">
+      <span>Par 5</span><span>538 yd</span>
+      <span>HCP 6</span><span>255 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_09_green_n2qq3l.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_09_green_n2qq3l.png" alt="Hole 9 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green</dd></div><div class="f"><dt>Bunkers</dt><dd>2: north-west, east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Checkered fairway west</dd></div><div class="f"><dt>Trees</dt><dd>Shrubs east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow across southern and eastern portions</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick at centre</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797647/Awbrey_Glen_-_Hole_09_fairway_fdpprq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797647/Awbrey_Glen_-_Hole_09_fairway_fdpprq.png" alt="Hole 9 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint diagonal stripes; darker rough north</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Broadleaf trees along northern edge</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in south-east</dd></div><div class="f"><dt>Cart path</dt><dd>Across north</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Restroom and water station after green 9. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-10">
+  <div class="holehead">
+    <div class="hn">10</div>
+    <div class="hm">
+      <span>Par 4</span><span>439 yd</span>
+      <span>HCP 11</span><span>1,459 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_10_green_hsdqgm.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_10_green_hsdqgm.png" alt="Hole 10 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with paler southern patch</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Broadleaf trees west and north-east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow across northern half</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>2 people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797647/Awbrey_Glen_-_Hole_10_fairway_rb0jmg.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797647/Awbrey_Glen_-_Hole_10_fairway_rb0jmg.png" alt="Hole 10 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint mottling</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Dense trees west; conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Western shadows across fairway</dd></div><div class="f"><dt>Cart path</dt><dd>East</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>East of cart path</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: nearest edge of street asphalt. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-11">
+  <div class="holehead">
+    <div class="hn">11</div>
+    <div class="hm">
+      <span>Par 3</span><span>204 yd</span>
+      <span>HCP 15</span><span>2,343 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_11_green_vd5cwr.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_11_green_vd5cwr.png" alt="Hole 11 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green with faint mottling</dd></div><div class="f"><dt>Bunkers</dt><dd>1, south-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Broadleaf trees east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in south-east</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick; 1 person</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797648/Awbrey_Glen_-_Hole_11_fairway_rzhhyl.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797648/Awbrey_Glen_-_Hole_11_fairway_rzhhyl.png" alt="Hole 11 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway and northern putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>2</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows east and west</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>4 roofs: 2 west, 2 east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>3 carts; 1 mower; 1 person</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-12">
+  <div class="holehead">
+    <div class="hn">12</div>
+    <div class="hm">
+      <span>Par 5</span><span>580 yd</span>
+      <span>HCP 3</span><span>4,394 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_12_green_eqspdt.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_12_green_eqspdt.png" alt="Hole 12 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mottled mid-green with darker western patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Present, south-east, edged by tall grass</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>North-east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in north-east</dd></div><div class="f"><dt>Cart path</dt><dd>North-west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Sprinkler spray arcs</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797649/Awbrey_Glen_-_Hole_12_fairway_uicbwl.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797649/Awbrey_Glen_-_Hole_12_fairway_uicbwl.png" alt="Hole 12 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with bold checkered stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees west and east</dd></div><div class="f"><dt>Shadow</dt><dd>Conifer shadow in centre</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>East</dd></div><div class="f"><dt>At capture</dt><dd>1 mower</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: street asphalt along the eastern side of hole 12 (club card gives the side relative to play; hole plays north). Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-13">
+  <div class="holehead">
+    <div class="hn">13</div>
+    <div class="hm">
+      <span>Par 3</span><span>189 yd</span>
+      <span>HCP 17</span><span>4,538 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_13_green_ad6vaj.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_13_green_ad6vaj.png" alt="Hole 13 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with darker central streaks</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar; fairway east</dd></div><div class="f"><dt>Trees</dt><dd>1 tree on northern edge</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dark rock outcrops and shrubs west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797649/Awbrey_Glen_-_Hole_13_fairway_juv5tn.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797649/Awbrey_Glen_-_Hole_13_fairway_juv5tn.png" alt="Hole 13 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway and putting surface with faint stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>2: north, south-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees north-east and south-east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows north-east and south-east</dd></div><div class="f"><dt>Cart path</dt><dd>South</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dark rock outcrops west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-14">
+  <div class="holehead">
+    <div class="hn">14</div>
+    <div class="hm">
+      <span>Par 4</span><span>437 yd</span>
+      <span>HCP 7</span><span>4,016 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_14_green_avhejq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_14_green_avhejq.png" alt="Hole 14 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green with lighter centre</dd></div><div class="f"><dt>Bunkers</dt><dd>1, west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>North-west corner</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>East and west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick at centre</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797650/Awbrey_Glen_-_Hole_14_fairway_zwbsga.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797650/Awbrey_Glen_-_Hole_14_fairway_zwbsga.png" alt="Hole 14 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint mottling; darker spot south</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>South-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>West</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Hole 15 boundary stakes (rocky area) are immovable obstructions on hole 14. Restroom and water station after green 14. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-15">
+  <div class="holehead">
+    <div class="hn">15</div>
+    <div class="hm">
+      <span>Par 5</span><span>590 yd</span>
+      <span>HCP 1</span><span>4,859 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_15_green_n5s9js.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_15_green_n5s9js.png" alt="Hole 15 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with darker central streaks</dd></div><div class="f"><dt>Bunkers</dt><dd>1, south</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Darker mown collar ringing surface; fairway west</dd></div><div class="f"><dt>Trees</dt><dd>Absent</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>North-east corner</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797651/Awbrey_Glen_-_Hole_15_fairway_oavqc0.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797651/Awbrey_Glen_-_Hole_15_fairway_oavqc0.png" alt="Hole 15 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint diagonal stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>1 curved, north-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees south-east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Along eastern side</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dark rock, shrubs and bare ground west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: fence line. OB: rocky area on the eastern side of the cart path, defined by white stakes (club card gives the side relative to play; hole plays north-north-east); final stake referenced to the double white stakes at the hole 14 white tee. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-16">
+  <div class="holehead">
+    <div class="hn">16</div>
+    <div class="hm">
+      <span>Par 3</span><span>221 yd</span>
+      <span>HCP 13</span><span>3,853 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_16_green_y47c5i.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713366/Awbrey_Glen_-_Hole_16_green_y47c5i.png" alt="Hole 16 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with darker northern streaks</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north-west corner</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough; grassy hollow north</dd></div><div class="f"><dt>Trees</dt><dd>Broadleaf trees east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in west</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797651/Awbrey_Glen_-_Hole_16_fairway_yg4h0a.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797651/Awbrey_Glen_-_Hole_16_fairway_yg4h0a.png" alt="Hole 16 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway narrowing to putting surface south</dd></div><div class="f"><dt>Bunkers</dt><dd>3, around green</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees north and east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>West and south-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>North and east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Restroom and water station after green 16. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-17">
+  <div class="holehead">
+    <div class="hn">17</div>
+    <div class="hm">
+      <span>Par 4</span><span>389 yd</span>
+      <span>HCP 9</span><span>2,254 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713367/Awbrey_Glen_-_Hole_17_green_ovvfib.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713367/Awbrey_Glen_-_Hole_17_green_ovvfib.png" alt="Hole 17 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint mottling</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east and north-west</dd></div><div class="f"><dt>Shadow</dt><dd>Long shadow across eastern half</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797652/Awbrey_Glen_-_Hole_17_fairway_qcos3i.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797652/Awbrey_Glen_-_Hole_17_fairway_qcos3i.png" alt="Hole 17 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with faint stripes</dd></div><div class="f"><dt>Bunkers</dt><dd>1, north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Shadows across fairway from east</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>4 roofs: 2 west, 2 east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: nearest edge of street asphalt. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article>
+<article class="hole" id="hole-18">
+  <div class="holehead">
+    <div class="hn">18</div>
+    <div class="hm">
+      <span>Par 5</span><span>555 yd</span>
+      <span>HCP 5</span><span>623 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713367/Awbrey_Glen_-_Hole_18_green_ver0uz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790713367/Awbrey_Glen_-_Hole_18_green_ver0uz.png" alt="Hole 18 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with darker southern patch</dd></div><div class="f"><dt>Bunkers</dt><dd>3: west, north-east, south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>West</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick at centre</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797653/Awbrey_Glen_-_Hole_18_fairway_qfesst.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790797653/Awbrey_Glen_-_Hole_18_fairway_qfesst.png" alt="Hole 18 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green with paler mottled patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Present, south-east corner, edged by reeds</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east</dd></div><div class="f"><dt>Shadow</dt><dd>Western shadows from eastern conifers</dd></div><div class="f"><dt>Cart path</dt><dd>West</dd></div><div class="f"><dt>Structures</dt><dd>1 roof, west</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> Use the Tee Sentry signal on the 18th tee. Course-wide: bark chip areas are part of the course, played as general area, no free relief.</p>
+</article></div>
+</section>
+<section id="water" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Water</p><h2>Ponds and shoreline</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>AG-WTR-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806768/Awbrey_Glen_-_Water_vertical_bdsdf8.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806768/Awbrey_Glen_-_Water_vertical_bdsdf8.png" alt="Water"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806767/Awbrey_Glen_-_Water_oblique_rj8zev.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806767/Awbrey_Glen_-_Water_oblique_rj8zev.png" alt="Water oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Surface area</dt><dd>1.18 acres</dd></div><div class="f"><dt>Shape</dt><dd>Elongated north-south, runs off northern and southern frame edges; tree-covered island at centre</dd></div><div class="f"><dt>Shoreline</dt><dd>Irregular; reed fringe on western shore; tree-lined eastern shore</dd></div><div class="f"><dt>Bank face</dt><dd>Grass bank on western shore; tree shadow over eastern bank</dd></div><div class="f"><dt>Holes touching</dt><dd>1</dd></div><div class="f"><dt>Surrounds</dt><dd>Putting surface with bunker and fairway west; trees and unpaved yard with structures east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-WTR-02</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819280/Awbrey_Glen_-_Water_2_vertical_mcfvsa.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819280/Awbrey_Glen_-_Water_2_vertical_mcfvsa.png" alt="Water"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Surface area</dt><dd>1.19 acres</dd></div><div class="f"><dt>Shape</dt><dd>Elongated north-south, runs off northern and southern frame edges; tree clump at south-centre</dd></div><div class="f"><dt>Shoreline</dt><dd>Irregular; grass to the waterline on western and eastern shores</dd></div><div class="f"><dt>Bank face</dt><dd>Grass bank on western and eastern shores</dd></div><div class="f"><dt>Holes touching</dt><dd>1, 18</dd></div><div class="f"><dt>Surrounds</dt><dd>Turf west and east; cart path east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-WTR-03</h3>
+  <div class="cardimgs"></div>
+  
+  <dl class="fields"><div class="f"><dt>Surface area</dt><dd>0.81 acres</dd></div><div class="f"><dt>Shape</dt><dd>Irregular, runs off southern frame edge; tree island west of centre</dd></div><div class="f"><dt>Shoreline</dt><dd>Irregular; trees along eastern shore</dd></div><div class="f"><dt>Holes touching</dt><dd>7, 8</dd></div><div class="f"><dt>Surrounds</dt><dd>Putting surface with bunker north-west; trees east; road and structure south-east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-WTR-04</h3>
+  <div class="cardimgs"></div>
+  
+  <dl class="fields"><div class="f"><dt>Surface area</dt><dd>0.49 acres</dd></div><div class="f"><dt>Shape</dt><dd>Rounded with a western lobe; single tree on the western point</dd></div><div class="f"><dt>Shoreline</dt><dd>Rounded; turf to the waterline on western shore; trees on eastern shore</dd></div><div class="f"><dt>Holes touching</dt><dd>12</dd></div><div class="f"><dt>Surrounds</dt><dd>Turf west with sprinkler arcs north-west; trees and road east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-WTR-05</h3>
+  <div class="cardimgs"></div>
+  
+  <dl class="fields"><div class="f"><dt>Surface area</dt><dd>0.13 acres</dd></div><div class="f"><dt>Shape</dt><dd>Rounded, wholly inside frame</dd></div><div class="f"><dt>Shoreline</dt><dd>Rounded</dd></div><div class="f"><dt>Holes touching</dt><dd>12</dd></div><div class="f"><dt>Surrounds</dt><dd>Fairway west; road and structure east</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="residences">
+  <div class="wrap">
+    <p class="eyebrow">The residential edge</p>
+    <h2>Where the course meets private property</h2><div class="rule red"></div>
+    <div class="callout">
+        <p><b>Canopy at the wall.</b> 5 of
+        6 residence frames show tree canopy in contact with a roof. The club does
+        not own these structures and in most cases cannot touch the vegetation on them.</p></div>
+    <div class="cards"><article class="card">
+  <h3>AG-RES-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806763/Awbrey_Glen_-_Residence_vertical_s299jz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806763/Awbrey_Glen_-_Residence_vertical_s299jz.png" alt="Residence"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806762/Awbrey_Glen_-_Residence_oblique_zlvdna.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806762/Awbrey_Glen_-_Residence_oblique_zlvdna.png" alt="Residence oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Conifers against western wall</dd></div><div class="f"><dt>Against the walls</dt><dd>Tan bare ground at western wall</dd></div><div class="f"><dt>Cleared ground</dt><dd>Tan bare ground west and south of structure between trees</dd></div><div class="f"><dt>Distance to turf</dt><dd>55 ft</dd></div><div class="f"><dt>Driveway</dt><dd>Paved, north of structure, 2 vehicles, runs off northern edge</dd></div><div class="f"><dt>Canopy contact</dt><dd>Conifer crowns touch western roof edge</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-RES-02</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819272/Awbrey_Glen_-_Residence_2_vertical_bykibe.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819272/Awbrey_Glen_-_Residence_2_vertical_bykibe.png" alt="Residence"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Conifers on northern and western sides</dd></div><div class="f"><dt>Against the walls</dt><dd>Patio with round table on western side</dd></div><div class="f"><dt>Cleared ground</dt><dd>Tan ground under trees west and south</dd></div><div class="f"><dt>Distance to turf</dt><dd>50 ft</dd></div><div class="f"><dt>Driveway</dt><dd>Paved, east of structure to the road</dd></div><div class="f"><dt>Canopy contact</dt><dd>Crown touches northern roof edge</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north-east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-RES-03</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819274/Awbrey_Glen_-_Residence_4_vertical_ca6hcw.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819274/Awbrey_Glen_-_Residence_4_vertical_ca6hcw.png" alt="Residence"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Conifers on western side; planted beds east</dd></div><div class="f"><dt>Against the walls</dt><dd>Planted beds at eastern wall</dd></div><div class="f"><dt>Cleared ground</dt><dd>Tan ground under conifers west</dd></div><div class="f"><dt>Distance to turf</dt><dd>40 ft</dd></div><div class="f"><dt>Driveway</dt><dd>Paved, east of structure with turnaround</dd></div><div class="f"><dt>Canopy contact</dt><dd>Crown overlaps eastern roof section</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking south</dd></div></dl>
+</article><article class="card">
+  <h3>AG-RES-04</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819275/Awbrey_Glen_-_Residence_8_vertical_b1a5mz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819275/Awbrey_Glen_-_Residence_8_vertical_b1a5mz.png" alt="Residence"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Trees east</dd></div><div class="f"><dt>Against the walls</dt><dd>Patio with furniture</dd></div><div class="f"><dt>Cleared ground</dt><dd>Lawn patch south-west</dd></div><div class="f"><dt>Canopy contact</dt><dd>Crown touches eastern roof edge</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north-east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-RES-05</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819277/Awbrey_Glen_-_Residence_9_vertical_vz0uws.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819277/Awbrey_Glen_-_Residence_9_vertical_vz0uws.png" alt="Residence"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>0</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north-east</dd></div></dl>
+</article><article class="card">
+  <h3>AG-RES-06</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819278/Awbrey_Glen_-_Residence_10_vertical_inzdxf.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819278/Awbrey_Glen_-_Residence_10_vertical_inzdxf.png" alt="Residence"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Trees east</dd></div><div class="f"><dt>Driveway</dt><dd>Paved, east of structure to the road</dd></div><div class="f"><dt>Canopy contact</dt><dd>Crown touches eastern roof edge</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking east</dd></div></dl>
+</article></div>
+    <p class="small">Selection: water by surface area, largest first (mosaic areas: ponds 1 and 2 differ by 0.01 acre, inside measurement error, so the captured order is kept); residences by proximity to played turf, closest first; paths: bridges, then street crossings, then junctions; tees by yardage spread on that hole, largest first</p>
+  </div>
+</section>
+<section id="paths" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Access</p><h2>Crossings and junctions</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>AG-PTH-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806759/Awbrey_Glen_-_Path_vertical_j2yce6.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806759/Awbrey_Glen_-_Path_vertical_j2yce6.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Street crossing</dd></div><div class="f"><dt>Surface</dt><dd>Paved; two pale painted lines across road</dd></div><div class="f"><dt>Connects</dt><dd>Cart path from north to cart path south across east-west road (NW Champion Circle per OSM), holes 1 to 2</dd></div><div class="f"><dt>Surrounds</dt><dd>Tree canopy on all sides; tan bare ground north</dd></div></dl>
+</article><article class="card">
+  <h3>AG-PTH-02</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819265/Awbrey_Glen_-_Path_4_vertical_dtpstd.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819265/Awbrey_Glen_-_Path_4_vertical_dtpstd.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Street crossing</dd></div><div class="f"><dt>Surface</dt><dd>Paved; two pale painted lines across road</dd></div><div class="f"><dt>Connects</dt><dd>Cart paths north and south across road, holes 10 to 11, NW Champion Circle (OSM name)</dd></div><div class="f"><dt>Surrounds</dt><dd>Trees on both sides</dd></div></dl>
+</article><article class="card">
+  <h3>AG-PTH-03</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819267/Awbrey_Glen_-_Path_5_vertical_rvhreu.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819267/Awbrey_Glen_-_Path_5_vertical_rvhreu.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Street crossing</dd></div><div class="f"><dt>Surface</dt><dd>Paved; two pale painted lines across road</dd></div><div class="f"><dt>Connects</dt><dd>Cart paths north and south across road, holes 11 to 12, NW Vardon Court (OSM name)</dd></div><div class="f"><dt>Surrounds</dt><dd>Trees on both sides</dd></div></dl>
+</article><article class="card">
+  <h3>AG-PTH-04</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819268/Awbrey_Glen_-_Path_6_vertical_zfedl5.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819268/Awbrey_Glen_-_Path_6_vertical_zfedl5.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Street crossing</dd></div><div class="f"><dt>Surface</dt><dd>Paved; two pale painted lines across road</dd></div><div class="f"><dt>Connects</dt><dd>Cart paths north and south across road, holes 16 to 17, NW McCready Drive (OSM name)</dd></div><div class="f"><dt>Surrounds</dt><dd>Trees on both sides</dd></div></dl>
+</article><article class="card">
+  <h3>AG-PTH-05</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819269/Awbrey_Glen_-_Path_7_vertical_hrpbc4.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819269/Awbrey_Glen_-_Path_7_vertical_hrpbc4.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Street crossing</dd></div><div class="f"><dt>Surface</dt><dd>Paved; two pale painted lines across road</dd></div><div class="f"><dt>Connects</dt><dd>Cart paths north and south across road, holes 17 to 18, NW Champion Circle (OSM name)</dd></div><div class="f"><dt>Surrounds</dt><dd>Trees on both sides</dd></div></dl>
+</article><article class="card">
+  <h3>AG-PTH-06</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819271/Awbrey_Glen_-_Path_8_vertical_toqkla.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790819271/Awbrey_Glen_-_Path_8_vertical_toqkla.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Junction</dd></div><div class="f"><dt>Surface</dt><dd>Paved</dd></div><div class="f"><dt>Connects</dt><dd>Two paved cart paths meet around a shrub and rock triangle, hole 9</dd></div><div class="f"><dt>Surrounds</dt><dd>Mown turf north and south; no crowns in frame</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="clubhouse">
+  <div class="wrap">
+    <p class="eyebrow">Arrival</p><h2>Clubhouse and arrival</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>AG-CLB-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806754/Awbrey_Glen_-_Clubhouse_vertical_np3qyl.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806754/Awbrey_Glen_-_Clubhouse_vertical_np3qyl.png" alt="Clubhouse and arrival"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806753/Awbrey_Glen_-_Clubhouse_oblique_zixlwz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806753/Awbrey_Glen_-_Clubhouse_oblique_zixlwz.png" alt="Clubhouse and arrival oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>3 structures: multi-wing structure at centre, covered structure to south-east, small structure at southern edge</dd></div><div class="f"><dt>Surface</dt><dd>Paved</dd></div><div class="f"><dt>Circulation</dt><dd>Cart paths west and south-west; road east; striped lot in north-eastern corner runs off frame; 7 carts on paved pad north-west of structure; 12 vehicles in north-eastern lot</dd></div><div class="f"><dt>Surrounds</dt><dd>Mown turf and paths west; bunkered green south-west; planted beds south; trees and road east</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="practice">
+  <div class="wrap">
+    <p class="eyebrow">Practice</p><h2>Practice areas</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>AG-PRA-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806761/Awbrey_Glen_-_Practice_vertical_wjk8o3.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806761/Awbrey_Glen_-_Practice_vertical_wjk8o3.png" alt="Practice areas"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806760/Awbrey_Glen_-_Practice_oblique_re1ovn.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806760/Awbrey_Glen_-_Practice_oblique_re1ovn.png" alt="Practice areas oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1 structure, partial, eastern edge</dd></div><div class="f"><dt>Surface</dt><dd>Turf</dd></div><div class="f"><dt>Circulation</dt><dd>Paths on all sides; 11 carts on path north of green; 7 carts on paved pad at eastern edge; 1 cart west of green</dd></div><div class="f"><dt>Surrounds</dt><dd>Bunkered green west; bunkered green south; mown range tee pads north; structure and planted beds east</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="maintenance">
+  <div class="wrap">
+    <p class="eyebrow">Maintenance</p><h2>Maintenance compound</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>AG-MNT-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806756/Awbrey_Glen_-_Maintenance_vertical_nnkeaz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806756/Awbrey_Glen_-_Maintenance_vertical_nnkeaz.png" alt="Maintenance compound"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806755/Awbrey_Glen_-_Maintenance_oblique_viuwqy.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806755/Awbrey_Glen_-_Maintenance_oblique_viuwqy.png" alt="Maintenance compound oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>6 structures: northern, southern, long narrow along western and eastern edges, small at centre, open-sided bay south-west</dd></div><div class="f"><dt>Objects</dt><dd>10 vehicles; 6 equipment units; 1 trailer</dd></div><div class="f"><dt>Yard contents</dt><dd>Equipment and bins under open-sided cover along north-western edge</dd></div><div class="f"><dt>Equipment outside</dt><dd>Present: equipment units in open yard</dd></div><div class="f"><dt>Surrounds</dt><dd>Trees west, north and east; turf in south-western corner; paved lane in north-eastern corner</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="tees" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Tees</p><h2>Tee complex</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>AG-TEE-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806766/Awbrey_Glen_-_Tee_vertical_oan3hi.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806766/Awbrey_Glen_-_Tee_vertical_oan3hi.png" alt="Tee"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806764/Awbrey_Glen_-_Tee_oblique_etft0q.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790806764/Awbrey_Glen_-_Tee_oblique_etft0q.png" alt="Tee oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Tee boxes</dt><dd>1 elongated mown loop with 1 pad at western end (vertical); 2 mown outlines in oblique</dd></div><div class="f"><dt>Surface</dt><dd>Darker pad within paler mown bands; eastern half of vertical frame under shadow</dd></div><div class="f"><dt>Surrounds</dt><dd>Low shrubs and tan bare ground west; single tree west of pad; paler rough east</dd></div><div class="f"><dt>Cart path</dt><dd>Not in vertical frame; paved path east of tee in oblique</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="trees">
+  <div class="wrap narrow">
+    <p class="eyebrow">Trees</p><h2>Canopy</h2><div class="rule red"></div>
+    <dl class="fields wide"><div class="f"><dt>Canopy cover</dt><dd>28.8%</dd></div><div class="f"><dt>Within falling distance of tees</dt><dd>Falling distance defined as canopy within 50 ft of the tee surface (crown height not measurable from a vertical): present at AG-TEE-01 (single tree west of pad)</dd></div><div class="f"><dt>Within falling distance of paths</dt><dd>Falling distance defined as canopy within 50 ft of the path surface: present at AG-PTH-01 to 05 (crowns on both sides of every street crossing); absent at AG-PTH-06 (no crowns in frame)</dd></div><div class="f"><dt>In contact with roofs</dt><dd>Present at 5 of 6 residence frames: AG-RES-01 (western roof edge), 02 (northern edge), 03 (eastern section), 04 (eastern edge), 06 (eastern edge); AG-RES-05 shows no structure at frame centre</dd></div><div class="f"><dt>Canopy type edges</dt><dd>Conifer and broadleaf crowns both present in green frames (broadleaf named at greens 7, 10, 11, 16)</dd></div></dl>
+    <p class="small">Falling distance is defined here as canopy within 50 ft of the surface.
+    Crown height cannot be measured from a vertical frame.</p>
+  </div>
+</section>
+<section id="method">
+  <div class="wrap narrow">
+    <p class="eyebrow">Method</p>
+    <h2>How these numbers were produced</h2>
+    <div class="rule red"></div>
+    <p>Measurements come from the 2026-07-02 aerial capture.
+    Scale was fixed by Nearmap ground sample distance, verified against the in-frame Nearmap scale bar at 5 zooms (within 0.5%).</p>
+    <p>Counts of bunkers, patches and stalls were made by eye across that imagery.
+    Canopy cover is a point-intercept estimate. Where tree shadow or resolution
+    prevented a reliable count, the value is left blank rather than estimated.</p>
+    <details><summary>Full source and method notes</summary>
+      <p class="small">Capture date 2026-07-02 (Nearmap vertical and oblique; date label read on every frame used). Units: areas in acres, lengths and distances in feet, shares in percent. Scale anchor: Nearmap ground sample distance GSD = 156543.03392 x cos(lat) / 2^zoom m/px, verified against the scale bar Nearmap draws inside the same frames at 5 zooms (z19 50 ft = 71 px, z19.5 20 ft = 40 px, z20 20 ft = 57 px, z20.5 20 ft = 80 px, z21 10 ft = 57 px; bar/formula ratio 0.997-1.005, within 0.5%). Frame centre = pixel (640, 328) of each 1280x800 capture, confirmed by feature matching two same-centre frames at z19 and z20 (scale 0.5000, fixed point 638.8, 327.8). At lat 44.08: z18 1.407 ft/px, z19.5 0.498 ft/px, z20.5 0.249 ft/px, z21 0.176 ft/px. Imagery-derived values in this file: residence distance_to_turf (pixel distance from roof edge to nearest mown turf in the residence vertical, x GSD, +/-10 ft), all frame descriptions and counts, canopy-contact and falling-distance calls. Course-wide values come from a 30-frame z18 Nearmap vertical mosaic (2026-07-02; frames cropped x 70-1180, y 70-580, placed by Web Mercator position and checked by SIFT matching, 4648 x 3108 px at 1.407 ft/px). Per-frame histogram matching was tested and not applied: tile overlaps in the raw mosaic already matched (mean colour difference 0.08) and matching raised it to 8.0. Envelope = mosaic turf plus water mask grown by 100 ft (208.6 acres); extent_ns and extent_ew are its bounding extents in feet. irrigated_turf_area = turf mask inside the envelope (colour and texture classes, lit and shaded, morphological clean-up); it reads low where tree shadow covers turf. turf_patch_count = connected turf patches of 1,000 sq ft or more inside the envelope; largest_patch_share = largest patch as a percent of that patch total. canopy_cover_pct = point-intercept photo-interpretation of 250 random points inside the envelope (72 canopy, 28.8%, standard error about 2.9 points). Water acres = mosaic water mask with ponds 2 and 3 traced by hand where tree shadow blocked the mask; ponds 1 to 5 = 1.18, 1.19, 0.81, 0.49, 0.13 acres (3.80 total). bunkers_total = 44 on-course bunkers plus 1 practice bunker, counted by eye across the mosaic in panels after a sand-colour candidate pass. parking_stalls = striped stalls in the main clubhouse lot, counted along each row in clubhouse vertical AG_CLB_02 (z19.5) with the lot rotated to the row axis: west row 33 north of the hatched aisle and 10 south of it, east row 40, plus 4 accessible stalls; shaded runs were counted from the stripe pitch (about 14.5 px, roughly 7 ft), so the count carries about plus or minus 5. The north end of the same lot is confirmed in AG_CLB_04; the small clubhouse drop-off court is not striped in the imagery and is not included. path_length_per_hole, structures_within_50ft_of_turf, canopy_by_zone and the grey crown count stay null (see cannot_see). Cross-check against OSM (not used for any value): water 4.48 acres across 5 polygons (imagery 3.80, 85%; per pond 1.51, 1.36, 0.73, 0.71, 0.18); 48 bunker polygons (imagery 45, 94%); OSM extent 6,722 ft N-S (OSM polygons include the practice ground and northern holes past the mosaic envelope's buffered turf edge, imagery 5,607 ft); OSM largest playing-surface share 10.4% measures separate fairway, green and tee polygons, so it does not compare with the connected-turf share; 18,807 ft of golf=cartpath lines (missing holes 1, 8, 9, 18). Earlier detection-layer work (834 patches, largest 56%) was searched for on the box and not found; the imagery count differs because it uses a 1,000 sq ft floor (1,220 components with no floor) and joins turf across narrow shaded gaps. Image fields are null where no Cloudinary upload exists; tee, path and residence entries without any uploaded image were removed and the rest renumbered (residences 01-06 were 01, 02, 04, 08, 09, 10; paths 01-06 were 01, 04, 05, 06, 07, 08). Residences keep the captured order and were not re-ranked: frame-centre distance to the mosaic turf mask (62, 166, 104, 132, 192, 120 ft for AG-RES-01 to 06) measures from the pin, not the roof edge, and the mask misses turf under shadow, so it did not pass as a ranking basis. distance_from_clubhouse = great-circle distance from the Mothership Golf tab column K 'Green N' pin to the 'Clubhouse' pin, in feet. The jump from green 11 (2,343 ft) to green 12 (4,394 ft) is real: green 12 sits about 2,050 ft north of green 11 at the northern end of the course (par 5, 580 yd), not a pin error. Scorecard: club scorecard on awbreyglen.com Golf Course Tour (Golf Scorecards Inc 2/2025), Black tees 7,007 yd (3,403 out, 3,604 in); hole-by-hole page lists hole 3 at 391 yd (copy of hole 2), scorecard value 424 used. Handicap = men's. Architect and opening year from awbreyglen.com/golf: designed by Gene 'Bunny' Mason in 1993, later updated by David McLay Kidd (2010 master plan). Superintendent Kyle Watt and head professional Andrew Silvestri per club scorecard (2/2025). Golf shop phone (541) 388-8526; club main line on site footer (541) 385-6011. Address per club: 2500 NW Awbrey Glen Drive, Bend, OR 97703 (Mothership row reads '2500 Awbrey Glen Dr, Bend, OR 97701'). Lat/lng from Mothership Golf tab column K, except tees[0]: the column K 'Tee' pin (44.089548, -121.357259) is not on any OSM tee polygon and equals Fairway 4 latitude combined with Fairway 5 longitude, so the image-centre coordinate (44.089422, -121.357394) is used. Added water, residence and path entries use their frame-centre coordinates. Landing-zone column K pins sit 12-73 ft from the frame centres. Green 16 has no OSM green polygon (placed on imagery, medium confidence); all other column K green pins fall inside OSM green polygons. Green 5 bunker sits at the northern edge (sheet description said north-east). Selection: water by surface area, largest first; residences by distance to played turf, closest first; paths: no bridges found, street crossings then junctions; tees by yardage spread, largest first (hole 15, 290 yd). Falling distance for trees: no crown height can be measured from a vertical, so it is defined as canopy within 50 ft of the tee or path surface in the frame.</p></details>
+  </div>
+</section>
+<section id="benchmark" class="bone">
+  <div class="wrap narrow">
+    <p class="eyebrow">Benchmark</p><h2>Measured against other courses</h2>
+    <div class="rule red"></div>
+    <table class="bm">
+      <thead><tr><th>Measure</th><th class="n">Awbrey Glen</th><th class="n">Range, other courses</th></tr></thead>
+      <tbody><tr><td>Canopy cover</td><td class="n">28.8%</td><td class="n na">—</td></tr><tr><td>Turf continuity — largest patch</td><td class="n">38.2%</td><td class="n na">—</td></tr><tr><td>Water surface</td><td class="n">3.8 acres</td><td class="n na">—</td></tr><tr><td>Path length per hole</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Structures within 50 ft of turf</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Bunkers</td><td class="n">45</td><td class="n na">—</td></tr><tr><td>Parking stalls</td><td class="n">87</td><td class="n na">—</td></tr></tbody>
+    </table>
+    <p class="small">5 of 7 measures recorded. The comparison column fills as
+    further courses are mapped to the same method.</p>
+  </div>
+</section>
+<section id="limits" class="dark">
+  <div class="wrap">
+    <p class="eyebrow light">Limits</p>
+    <h2>What this imagery cannot establish</h2><div class="rule red"></div>
+    <p class="lede">Every report of this kind has a boundary. These are the questions a
+    single aerial capture cannot answer, and what would answer each one.</p>
+    <table class="limits">
+      <thead><tr><th>Not established</th><th>Why</th><th>What would resolve it</th></tr></thead>
+      <tbody><tr><td><b>Gate control</b></td><td>Gates, locks and access control hardware are not resolvable from vertical or single oblique frames</td><td>Site walk or club access-control inventory</td></tr><tr><td><b>Camera coverage and field of view</b></td><td>Cameras are too small to resolve and field of view cannot be seen from imagery</td><td>Security system plan or on-site camera survey</td></tr><tr><td><b>Bridge load ratings</b></td><td>Ratings are not visible; no bridges were identified in the pinned frames</td><td>Engineering records or posted signage</td></tr><tr><td><b>Hydrant locations and flow</b></td><td>Hydrants are not resolvable under canopy; flow is not visible</td><td>Bend Fire / water utility hydrant map and flow test data</td></tr><tr><td><b>Irrigation pipe and valve positions</b></td><td>Buried; heads and valve boxes not resolvable at frame scale</td><td>Irrigation as-built drawings from the superintendent</td></tr><tr><td><b>Water depth</b></td><td>Depth is not visible from imagery</td><td>Bathymetric survey or club records</td></tr><tr><td><b>Ownership and property lines</b></td><td>Parcel lines are not visible; OSM has no golf_course boundary here</td><td>Deschutes County parcel data</td></tr><tr><td><b>Drive and path widths under the resolution limit</b></td><td>Cart paths under canopy are hidden and narrow edges are finer than frame resolution</td><td>Higher-zoom capture or field measurement</td></tr><tr><td><b>Cause of turf tone variation</b></td><td>Tone differences (paler bands, darker patches) are visible but causes are not</td><td>Superintendent records, soil and irrigation data</td></tr><tr><td><b>Paths under canopy</b></td><td>Cart paths under dense pines are hidden in verticals, so any traced length will be a minimum</td><td>Club cart path plan or field GPS trace</td></tr><tr><td><b>Maintenance yard surface type</b></td><td>Unpaved tan surface; gravel versus bare earth not resolvable at frame scale</td><td>Higher-zoom capture or site visit</td></tr><tr><td><b>Ground slope and drainage direction</b></td><td>Single vertical and oblique frames do not show elevation</td><td>Lidar or survey elevation model</td></tr><tr><td><b>Fuel and chemical storage in the maintenance yard</b></td><td>Contents of structures are not visible</td><td>Superintendent inventory or site visit</td></tr><tr><td><b>Tee frames for holes 1, 12, 10 and 9</b></td><td>Not yet captured</td><td>Nearmap verticals and obliques at the AG-TEE-02 to 05 coordinates</td></tr><tr><td><b>Cart path length</b></td><td>In the z18 mosaic (1.407 ft/px) paths are 6 to 8 px wide, dark, and mostly under pine canopy or shadow; a pavement mask could not separate them from roads, driveways and shadow, and no trace passed a visual check</td><td>Club cart path plan, field GPS trace, or z20+ capture along each hole</td></tr><tr><td><b>Structures within 50 ft of turf, canopy by zone, grey or leafless crowns</b></td><td>Roofs and crowns at the turf edge sit in tree shadow at z18; automated canopy masks agreed with photo-interpreted points only about 80% of the time, too low for zone splits or a crown count, and no roof count passed a visual check</td><td>z20 capture of the turf edge, or a building footprint layer checked against the imagery</td></tr><tr><td><b>Banks and shorelines for ponds 3 to 5</b></td><td>Areas come from the mosaic; no clean close vertical or oblique of these ponds is published</td><td>Clean Nearmap verticals and obliques of ponds 3 to 5</td></tr></tbody>
+    </table>
+  </div>
+</section><footer><div class="wrap"><b>Awbrey Glen Golf Club</b>  &middot;  Property intelligence report  &middot;  Imagery &copy; Nearmap, captured 2026-07-02  &middot;  Analysis by Ahart Intelligence for Vyanet Property Intel</div></footer>
+<script>
+(function(){
+  var box = document.getElementById('holebox');
+  if(!box) return;
+  var holes = [].slice.call(box.querySelectorAll('.hole'));
+  var btns  = [].slice.call(document.querySelectorAll('.hb'));
+  function show(v){
+    var all = (v === 'all');
+    holes.forEach(function(h){
+      h.style.display = (all || h.id === 'hole-' + v) ? '' : 'none';
+    });
+    btns.forEach(function(b){
+      b.classList.toggle('on', b.dataset.h === String(v));
+    });
+    if(!all) history.replaceState(null,'','#hole-'+v);
+  }
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      show(b.dataset.h);
+      var nav = document.getElementById('holenav');
+      if(nav){
+        var y = nav.getBoundingClientRect().top + window.pageYOffset - 56;
+        window.scrollTo({top:y, behavior:'smooth'});
+      }
+    });
+  });
+  document.addEventListener('keydown', function(ev){
+    if(ev.target.tagName === 'INPUT') return;
+    var cur = document.querySelector('.hb.on');
+    if(!cur || cur.dataset.h === 'all') return;
+    var i = btns.indexOf(cur);
+    if(ev.key === 'ArrowRight' && i < btns.length - 2) btns[i+1].click();
+    if(ev.key === 'ArrowLeft'  && i > 0) btns[i-1].click();
+  });
+  var m = location.hash.match(/^#hole-(\d+)$/);
+  show(m ? m[1] : (holes.length ? holes[0].id.replace('hole-','') : 'all'));
+  window.addEventListener('beforeprint', function(){ show('all'); });
+})();
+</script>
+</body></html>

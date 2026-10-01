@@ -1,0 +1,741 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tetherow Golf Club — Property Intelligence Report</title><style>
+*{box-sizing:border-box}
+:root{--ink:#111;--red:#CD3333;--grey:#6E7279;--bone:#F4F2EE;--char:#1A1C1B;--line:#DEDBD5}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--ink);
+ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.wrap.narrow{max-width:800px}
+section{padding:68px 0;border-top:1px solid var(--line)}
+section.bone{background:var(--bone);border-top:0}
+section.dark{background:var(--char);color:#E8E9E9;border-top:0}
+h1{font:400 clamp(34px,6vw,62px)/1.04 Georgia,"Times New Roman",serif;margin:0 0 6px;letter-spacing:-.5px}
+h2{font:400 clamp(24px,3.4vw,38px)/1.12 Georgia,"Times New Roman",serif;margin:0 0 4px;letter-spacing:-.3px}
+h3{font:700 15px/1.3 inherit;margin:26px 0 8px;letter-spacing:.2px}
+p{margin:0 0 14px}
+.eyebrow{font:700 11px/1 inherit;letter-spacing:2.4px;text-transform:uppercase;color:var(--red);margin:0 0 12px}
+.eyebrow.light{color:#C9A6A6}
+.rule.red{width:74px;height:3px;background:var(--red);margin:16px 0 22px}
+.lede{font:400 clamp(17px,2vw,21px)/1.5 Georgia,serif;color:#333;max-width:62ch}
+.dark .lede{color:#CFD2D2}
+.small{font-size:13px;color:var(--grey);line-height:1.55}
+.na{color:#B9B5AE}
+/* cover */
+.cover{background:var(--char);color:#fff;padding:92px 0 72px}
+.cover .lede{color:#D7D9D9;margin-bottom:6px}
+.cover .meta{font-size:13px;color:#8F9393;letter-spacing:.3px}
+.coverstats{display:flex;flex-wrap:wrap;gap:40px;margin-top:38px;
+ border-top:1px solid #35393A;padding-top:26px}
+.coverstats div{display:flex;flex-direction:column}
+.coverstats b{font:400 30px/1 Georgia,serif}
+.coverstats span{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:#8F9393;margin-top:7px}
+/* stats grid */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+ background:var(--line);border:1px solid var(--line);margin:22px 0 8px}
+.stat{background:var(--bone);padding:18px 20px}
+.stat b{display:block;font:400 22px/1.15 Georgia,serif;margin-bottom:7px}
+.stat span{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey)}
+/* fields */
+.fields{margin:14px 0 0;font-size:13.5px}
+.fields .f{display:grid;grid-template-columns:132px 1fr;gap:14px;
+ padding:7px 0;border-bottom:1px solid var(--line)}
+.fields.wide .f{grid-template-columns:230px 1fr}
+.fields dt{color:var(--grey);font-size:11px;letter-spacing:1.1px;text-transform:uppercase;padding-top:2px}
+.fields dd{margin:0}
+/* two col */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:46px;align-items:start}
+.note{background:var(--bone);padding:22px 24px;font-size:14.5px}
+.note p:last-child{margin:0}
+.callout{border-left:3px solid var(--red);background:var(--bone);padding:18px 22px;margin:24px 0}
+.callout p{margin:0;font-size:15px}
+.dark .callout{background:#232626}
+/* images */
+.shot{display:block;margin:0 0 10px;border:1px solid var(--line);overflow:hidden;background:#EEE}
+.shot img{display:block;width:100%;height:auto}
+.cap{font-size:12px;color:var(--grey);margin:-2px 0 12px}
+/* holes */
+.hole{padding:34px 0;border-top:1px solid var(--line)}
+.hole:first-child{border-top:0}
+.holehead{display:flex;align-items:baseline;gap:20px;margin-bottom:16px}
+.hn{font:400 46px/1 Georgia,serif;color:var(--red);min-width:62px}
+.hm{display:flex;flex-wrap:wrap;gap:18px;font-size:11.5px;letter-spacing:1.4px;
+ text-transform:uppercase;color:var(--grey)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+.paneh{font:700 11px/1 inherit;letter-spacing:1.8px;text-transform:uppercase;
+ color:var(--ink);margin:0 0 10px}
+.obl{margin-top:22px;max-width:560px}
+.rulenote{font-size:12.5px;color:var(--grey);margin-top:16px;padding-top:12px;
+ border-top:1px solid var(--line)}
+.rulenote b{color:var(--ink)}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:34px;margin-top:20px}
+.card h3{margin:0 0 12px;font:700 13px/1 inherit;letter-spacing:1.6px;
+ text-transform:uppercase;color:var(--grey)}
+.cardimgs{display:grid;gap:8px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px;margin:20px 0 10px}
+th{text-align:left;font:700 10.5px/1 inherit;letter-spacing:1.4px;text-transform:uppercase;
+ color:var(--grey);border-bottom:2px solid var(--ink);padding:0 14px 9px 0}
+td{padding:11px 14px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.n{text-align:right;padding-right:0;white-space:nowrap}
+.dark th{color:#9BA0A0;border-bottom-color:#4A4F4F}
+.dark td{border-bottom-color:#2E3232}
+.limits td:first-child{width:24%}.limits td:nth-child(2){width:40%}
+details{margin-top:18px}
+summary{cursor:pointer;font-size:12.5px;letter-spacing:1.2px;text-transform:uppercase;
+ color:var(--red);font-weight:700}
+details p{margin-top:12px}
+footer{background:var(--char);color:#8F9393;font-size:12px;padding:30px 0;border-top:1px solid #2E3232}
+footer b{color:#D7D9D9}
+
+/* sticky nav */
+.topnav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);
+ border-bottom:1px solid var(--line);backdrop-filter:saturate(1.6) blur(8px)}
+.topnav .wrap{display:flex;align-items:center;gap:22px;height:52px}
+.nvname{font:700 11px/1 inherit;letter-spacing:1.6px;text-transform:uppercase;
+ color:var(--ink);white-space:nowrap}
+.nvlinks{display:flex;gap:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nvlinks::-webkit-scrollbar{display:none}
+.topnav a{font:600 11px/1 inherit;letter-spacing:1.3px;text-transform:uppercase;
+ color:var(--grey);text-decoration:none;white-space:nowrap;padding:6px 0;
+ border-bottom:2px solid transparent}
+.topnav a:hover{color:var(--red);border-bottom-color:var(--red)}
+section{scroll-margin-top:54px}
+/* hole selector */
+.holenav{position:sticky;top:52px;z-index:40;background:var(--bone);
+ border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:22px 0 0}
+.hbrow{display:flex;align-items:center;gap:6px;height:54px;overflow-x:auto;
+ -webkit-overflow-scrolling:touch}
+.hbrow::-webkit-scrollbar{display:none}
+.hblabel{font:700 10px/1 inherit;letter-spacing:1.6px;text-transform:uppercase;
+ color:var(--grey);margin-right:8px;white-space:nowrap}
+.hb{flex:0 0 auto;min-width:34px;height:34px;padding:0 9px;cursor:pointer;
+ border:1px solid var(--line);background:#fff;color:var(--ink);
+ font:600 13px/1 inherit;border-radius:2px}
+.hb:hover{border-color:var(--red);color:var(--red)}
+.hb.on{background:var(--red);border-color:var(--red);color:#fff}
+.hb.all{min-width:52px;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.hole{padding-top:30px}
+@media(max-width:860px){
+ .topnav .wrap{gap:14px;height:48px}.nvname{display:none}
+ .holenav{top:48px}.hbrow{height:50px}
+}
+@media print{
+ .topnav,.holenav{display:none}
+ .hole{display:block !important;page-break-inside:avoid}
+}
+@media(max-width:860px){
+ .two,.pair{grid-template-columns:1fr;gap:26px}
+ section{padding:46px 0}.wrap{padding:0 20px}
+ .fields .f,.fields.wide .f{grid-template-columns:1fr;gap:2px}
+ .fields dt{padding-top:0}
+ .coverstats{gap:26px}
+}
+</style></head><body>
+<header class="cover" id="top">
+  <div class="wrap">
+    <p class="eyebrow light">Property Intelligence Report</p>
+    <h1>Tetherow Golf Club</h1>
+    <div class="rule red"></div>
+    <p class="lede">61240 Skyline Ranch Road, Bend, OR 97702</p>
+    <p class="meta">Imagery captured 2026-07-02  &middot; 
+       Every measurement in this report is derived from that capture.</p>
+    <div class="coverstats"><div><b>18</b><span>Holes</span></div><div><b>72</b><span>Par</span></div><div><b>7,283</b><span>Yardage</span></div><div><b><span class="na">—</span></b><span>Acres</span></div></div>
+  </div>
+</header><nav class="topnav" id="topnav"><div class="wrap"><span class="nvname">Tetherow Golf Club</span><span class="nvlinks"><a href="#overview">Overview</a><a href="#holes">Holes</a><a href="#water">Water</a><a href="#residences">Residences</a><a href="#paths">Access</a><a href="#clubhouse">Facilities</a><a href="#benchmark">Benchmark</a><a href="#limits">Limits</a></span></div></nav>
+<section id="overview">
+  <div class="wrap">
+    <p class="eyebrow">The club</p>
+    <h2>What this report covers</h2>
+    <div class="rule red"></div>
+    <div class="two">
+      <div><dl class="fields"><div class="f"><dt>Architect</dt><dd>David McLay Kidd</dd></div><div class="f"><dt>Coordinates</dt><dd>44.024963, -121.36531</dd></div><div class="f"><dt>Capture date</dt><dd>2026-07-02</dd></div></dl></div>
+      <div class="note">
+        <p>This is a first-pass property record built from a single aerial capture.
+        It says what exists, where it is, and what deserves a closer look.</p>
+        <p>It does not say whether anything is in good or poor condition. Where the
+        imagery cannot answer a question, the report says so rather than estimating.
+        Those limits are listed in full at the end.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="envelope" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Property envelope</p>
+    <h2>The course, measured</h2>
+    <div class="rule red"></div>
+    <div class="stats"><div class="stat"><b><span class="na">—</span> ft N–S  &times;  <span class="na">—</span> ft E–W</b><span>Property extent</span></div><div class="stat"><b><span class="na">—</span> acres</b><span>Irrigated turf</span></div><div class="stat"><b><span class="na">—</span></b><span>Canopy cover</span></div><div class="stat"><b><span class="na">—</span> acres across <span class="na">—</span> ponds</b><span>Water surface</span></div><div class="stat"><b><span class="na">—</span></b><span>Turf patches</span></div><div class="stat"><b><span class="na">—</span> of turf</b><span>Largest patch</span></div><div class="stat"><b><span class="na">—</span></b><span>Bunkers</span></div><div class="stat"><b><span class="na">—</span></b><span>Parking stalls</span></div></div>
+    
+    <h3>What borders the property</h3>
+    <dl class="fields wide"></dl>
+  </div>
+</section>
+<section id="holes">
+  <div class="wrap">
+    <p class="eyebrow">Hole by hole</p>
+    <h2>Every green, every landing zone</h2>
+    <div class="rule red"></div>
+    <p class="lede">Each hole is recorded twice from the same capture: the primary
+    tee-shot landing area and the green. Click any frame for the full image.</p>
+  </div>
+  <div class="holenav" id="holenav">
+    <div class="wrap">
+      <div class="hbrow">
+        <span class="hblabel">Hole</span>
+        <button class="hb" data-h="1">1</button><button class="hb" data-h="2">2</button><button class="hb" data-h="3">3</button><button class="hb" data-h="4">4</button><button class="hb" data-h="5">5</button><button class="hb" data-h="6">6</button><button class="hb" data-h="7">7</button><button class="hb" data-h="8">8</button><button class="hb" data-h="9">9</button><button class="hb" data-h="10">10</button><button class="hb" data-h="11">11</button><button class="hb" data-h="12">12</button><button class="hb" data-h="13">13</button><button class="hb" data-h="14">14</button><button class="hb" data-h="15">15</button><button class="hb" data-h="16">16</button><button class="hb" data-h="17">17</button><button class="hb" data-h="18">18</button>
+        <button class="hb all" data-h="all">All</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap" id="holebox">
+<article class="hole" id="hole-1">
+  <div class="holehead">
+    <div class="hn">1</div>
+    <div class="hm">
+      <span>Par 4</span><span>400 yd</span>
+      <span>HCP 11</span><span>1,251 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717845/Tetherow_-_Hole_01_green_yorawt.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717845/Tetherow_-_Hole_01_green_yorawt.png" alt="Hole 1 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green mown turf with darker central mottling; north-east and south-east</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the west; person in a bunker</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path along the western edge</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>At capture</dt><dd>Person in a bunker</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799142/Tetherow_-_Hole_01_fairway_fjqvlo.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799142/Tetherow_-_Hole_01_fairway_fjqvlo.png" alt="Hole 1 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler mottled patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Four sod-walled bunkers scattered west and south</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush east and west; single tree east with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Single tree east with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path along the west</dd></div><div class="f"><dt>Structures</dt><dd>Four sod-walled bunkers scattered west and south</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-2">
+  <div class="holehead">
+    <div class="hn">2</div>
+    <div class="hm">
+      <span>Par 5</span><span>546 yd</span>
+      <span>HCP 17</span><span>2,977 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717846/Tetherow_-_Hole_02_green_wuq1bj.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717846/Tetherow_-_Hole_02_green_wuq1bj.png" alt="Hole 2 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers along the southern edge</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough on all visible sides</dd></div><div class="f"><dt>Trees</dt><dd>Absent</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass north-east and north-west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the north-west</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799143/Tetherow_-_Hole_02_fairway_c2psjg.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799143/Tetherow_-_Hole_02_fairway_c2psjg.png" alt="Hole 2 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Two elongated bunkers north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and shrubs west and east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path west</dd></div><div class="f"><dt>Structures</dt><dd>House south-east</dd></div><div class="f"><dt>Bare ground</dt><dd>Bare ground strip east</dd></div><div class="f"><dt>At capture</dt><dd>Person in the north</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-3">
+  <div class="holehead">
+    <div class="hn">3</div>
+    <div class="hm">
+      <span>Par 3</span><span>197 yd</span>
+      <span>HCP 15</span><span>3,647 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717847/Tetherow_-_Hole_03_green_hhc7i0.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717847/Tetherow_-_Hole_03_green_hhc7i0.png" alt="Hole 3 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with a faint darker band</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the north-west and east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and a juniper to the west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick near the centre</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799144/Tetherow_-_Hole_03_fairway_flw45w.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799144/Tetherow_-_Hole_03_fairway_flw45w.png" alt="Hole 3 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway and putting surface; centre and north-east; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers north-west</dd></div><div class="f"><dt>Water</dt><dd>Present: water in the south-east corner</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush north and south</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path curving along the north</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-4">
+  <div class="holehead">
+    <div class="hn">4</div>
+    <div class="hm">
+      <span>Par 4</span><span>481 yd</span>
+      <span>HCP 1</span><span>4,721 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717847/Tetherow_-_Hole_04_green_rni0vq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717847/Tetherow_-_Hole_04_green_rni0vq.png" alt="Hole 4 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Paved path east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the south-west</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799145/Tetherow_-_Hole_04_fairway_ebaprp.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799145/Tetherow_-_Hole_04_fairway_ebaprp.png" alt="Hole 4 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Sod-walled bunker north-centre</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and bare ground west; conifers east casting a western shadow across the fairway</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east casting a western shadow across the fairway</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Sod-walled bunker north-centre; house edge east</dd></div><div class="f"><dt>Bare ground</dt><dd>Sagebrush and bare ground west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-5">
+  <div class="holehead">
+    <div class="hn">5</div>
+    <div class="hm">
+      <span>Par 4</span><span>429 yd</span>
+      <span>HCP 9</span><span>3,829 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717848/Tetherow_-_Hole_05_green_wkqfdm.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717848/Tetherow_-_Hole_05_green_wkqfdm.png" alt="Hole 5 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint lighter patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Two bunkers to the north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Shrubs and trees north-west and south-east with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Shrubs and trees north-west and south-east with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path north-west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799146/Tetherow_-_Hole_05_fairway_w9l9ha.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799146/Tetherow_-_Hole_05_fairway_w9l9ha.png" alt="Hole 5 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with darker mottling; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and scattered pines east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path winding through the north-west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry sandy channel west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-6">
+  <div class="holehead">
+    <div class="hn">6</div>
+    <div class="hm">
+      <span>Par 4</span><span>424 yd</span>
+      <span>HCP 7</span><span>3,317 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717848/Tetherow_-_Hole_06_green_ckgjeg.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717848/Tetherow_-_Hole_06_green_ckgjeg.png" alt="Hole 6 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with darker central blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Three bunkers to the west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Absent</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in the south-east</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass east</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the south</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799147/Tetherow_-_Hole_06_fairway_gygjue.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799147/Tetherow_-_Hole_06_fairway_gygjue.png" alt="Hole 6 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Grassy pot bunker north and sod bunker west; native grass spine with a sand bunker east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Native grass spine with a sand bunker east; sagebrush south-west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths south-west and south-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass spine with a sand bunker east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-7">
+  <div class="holehead">
+    <div class="hn">7</div>
+    <div class="hm">
+      <span>Par 3</span><span>226 yd</span>
+      <span>HCP 13</span><span>3,249 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717849/Tetherow_-_Hole_07_green_tjfofr.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717849/Tetherow_-_Hole_07_green_tjfofr.png" alt="Hole 7 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Shrubs and trees east with south-eastern shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Shrubs and trees east with south-eastern shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the north-west</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799148/Tetherow_-_Hole_07_fairway_glgcqk.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799148/Tetherow_-_Hole_07_fairway_glgcqk.png" alt="Hole 7 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway leading to a putting surface east; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Round bunker in the centre; bunker north-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs west; trees south-east with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Trees south-east with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-8">
+  <div class="holehead">
+    <div class="hn">8</div>
+    <div class="hm">
+      <span>Par 4</span><span>395 yd</span>
+      <span>HCP 3</span><span>2,175 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717849/Tetherow_-_Hole_08_green_jpjwtu.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717849/Tetherow_-_Hole_08_green_jpjwtu.png" alt="Hole 8 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the north and east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Tree shadow north-east</dd></div><div class="f"><dt>Shadow</dt><dd>Tree shadow north-east</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick and two people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799149/Tetherow_-_Hole_08_fairway_kvobmv.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799149/Tetherow_-_Hole_08_fairway_kvobmv.png" alt="Hole 8 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches and dark sinuous lines; grassy mounds north; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Single tree centre-west casting a western shadow; sagebrush and shrubs south-east</dd></div><div class="f"><dt>Shadow</dt><dd>Single tree centre-west casting a western shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path north-west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-9">
+  <div class="holehead">
+    <div class="hn">9</div>
+    <div class="hm">
+      <span>Par 5</span><span>532 yd</span>
+      <span>HCP 5</span><span>788 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717850/Tetherow_-_Hole_09_green_rkuzlb.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717850/Tetherow_-_Hole_09_green_rkuzlb.png" alt="Hole 9 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the north-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Boulders and shrubs east with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Boulders and shrubs east with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path and cart south-west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass</dd></div><div class="f"><dt>At capture</dt><dd>Cart path and cart south-west; two people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799150/Tetherow_-_Hole_09_fairway_nkse6j.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799150/Tetherow_-_Hole_09_fairway_nkse6j.png" alt="Hole 9 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers north-west and north-east among native grass and shrubs</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Bunkers north-west and north-east among native grass and shrubs; sagebrush east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path along the west with a cart and person</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Bunkers north-west and north-east among native grass and shrubs</dd></div><div class="f"><dt>At capture</dt><dd>Cart path along the west with a cart and person</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-10">
+  <div class="holehead">
+    <div class="hn">10</div>
+    <div class="hm">
+      <span>Par 4</span><span>316 yd</span>
+      <span>HCP 18</span><span>1,927 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717850/Tetherow_-_Hole_10_green_jzbqyz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717850/Tetherow_-_Hole_10_green_jzbqyz.png" alt="Hole 10 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with a faint darker ring</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the south-west and south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Dense shrubs east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path north-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799150/Tetherow_-_Hole_10_fairway_xk5eta.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799150/Tetherow_-_Hole_10_fairway_xk5eta.png" alt="Hole 10 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Native-grass island holding two bunkers in the centre; sod bunker south-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush island north-west; shrubs east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native-grass island holding two bunkers in the centre</dd></div><div class="f"><dt>At capture</dt><dd>Person centre-east</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-11">
+  <div class="holehead">
+    <div class="hn">11</div>
+    <div class="hm">
+      <span>Par 4</span><span>466 yd</span>
+      <span>HCP 6</span><span>3,422 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717851/Tetherow_-_Hole_11_green_twa3oi.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717851/Tetherow_-_Hole_11_green_twa3oi.png" alt="Hole 11 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough west</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and conifers east with long canopy shadow in the south-east</dd></div><div class="f"><dt>Shadow</dt><dd>Native grass and conifers east with long canopy shadow in the south-east</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and conifers east with long canopy shadow in the south-east</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the north</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799151/Tetherow_-_Hole_11_fairway_uufax5.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799151/Tetherow_-_Hole_11_fairway_uufax5.png" alt="Hole 11 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with faint mottling; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Curved sod bunker south-centre</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush north-west; tree on a grassy mound east casting a western shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Tree on a grassy mound east casting a western shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path in the south-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-12">
+  <div class="holehead">
+    <div class="hn">12</div>
+    <div class="hm">
+      <span>Par 4</span><span>425 yd</span>
+      <span>HCP 10</span><span>4,498 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717851/Tetherow_-_Hole_12_green_rz3grs.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717851/Tetherow_-_Hole_12_green_rz3grs.png" alt="Hole 12 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with a lighter southern patch</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs east and west; tree shadow south-west</dd></div><div class="f"><dt>Shadow</dt><dd>Tree shadow south-west</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs east and west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the north</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799152/Tetherow_-_Hole_12_fairway_y7zyhj.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799152/Tetherow_-_Hole_12_fairway_y7zyhj.png" alt="Hole 12 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers north-east and south-centre</dd></div><div class="f"><dt>Water</dt><dd>Present: water edge west</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and bare ground west; tree east with western shadow; tree shadow south</dd></div><div class="f"><dt>Shadow</dt><dd>Tree east with western shadow; tree shadow south</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Road and building south-east</dd></div><div class="f"><dt>Bare ground</dt><dd>Sagebrush and bare ground west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-13">
+  <div class="holehead">
+    <div class="hn">13</div>
+    <div class="hm">
+      <span>Par 5</span><span>588 yd</span>
+      <span>HCP 8</span><span>4,607 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717852/Tetherow_-_Hole_13_green_zjazs8.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717852/Tetherow_-_Hole_13_green_zjazs8.png" alt="Hole 13 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker edge south</dd></div><div class="f"><dt>Water</dt><dd>Present: pond with rock edging west</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Trees north-west with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Trees north-west with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the south</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799153/Tetherow_-_Hole_13_fairway_lcjcso.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799153/Tetherow_-_Hole_13_fairway_lcjcso.png" alt="Hole 13 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; grassy hollows north and north-west; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Three sod bunkers east and south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush south-west; central tree with western shadow; trees north-east</dd></div><div class="f"><dt>Shadow</dt><dd>Central tree with western shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-14">
+  <div class="holehead">
+    <div class="hn">14</div>
+    <div class="hm">
+      <span>Par 3</span><span>190 yd</span>
+      <span>HCP 12</span><span>5,246 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717853/Tetherow_-_Hole_14_green_vunq1d.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717853/Tetherow_-_Hole_14_green_vunq1d.png" alt="Hole 14 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the south and south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Absent</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass west and north-east</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick and person</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799154/Tetherow_-_Hole_14_fairway_gpe2ix.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799154/Tetherow_-_Hole_14_fairway_gpe2ix.png" alt="Hole 14 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway and putting surface north; rough; tee pad south-west</dd></div><div class="f"><dt>Bunkers</dt><dd>Two bunkers and a native-grass hollow</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths west and north-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Two bunkers and a native-grass hollow</dd></div><div class="f"><dt>At capture</dt><dd>Person on the green; vehicle in the centre</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-15">
+  <div class="holehead">
+    <div class="hn">15</div>
+    <div class="hm">
+      <span>Par 4</span><span>437 yd</span>
+      <span>HCP 2</span><span>4,028 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717853/Tetherow_-_Hole_15_green_rqi7ot.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717853/Tetherow_-_Hole_15_green_rqi7ot.png" alt="Hole 15 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker edge to the north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs east and south-west</dd></div><div class="f"><dt>Shadow</dt><dd>Shadow in the north-east</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs east and south-west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799155/Tetherow_-_Hole_15_fairway_drxqig.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799155/Tetherow_-_Hole_15_fairway_drxqig.png" alt="Hole 15 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with faint mottling; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush east and west; tree shadow west</dd></div><div class="f"><dt>Shadow</dt><dd>Tree shadow west</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path along the west</dd></div><div class="f"><dt>Structures</dt><dd>Road in the west</dd></div><div class="f"><dt>Bare ground</dt><dd>Native-grass hollow to the north</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-16">
+  <div class="holehead">
+    <div class="hn">16</div>
+    <div class="hm">
+      <span>Par 4</span><span>476 yd</span>
+      <span>HCP 4</span><span>3,499 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717854/Tetherow_-_Hole_16_green_vmdw5u.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717854/Tetherow_-_Hole_16_green_vmdw5u.png" alt="Hole 16 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green mown turf with lighter and darker streaks; white marker in the east</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Striped rough east</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs south-west and east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Dirt track south-west; cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs south-west and east; dirt track south-west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799156/Tetherow_-_Hole_16_fairway_gq3n80.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799156/Tetherow_-_Hole_16_fairway_gq3n80.png" alt="Hole 16 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler mottled patches; sand edge south-west; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Grassy sod bunker in the centre</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and shrubs west and north-east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path along the north-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-17">
+  <div class="holehead">
+    <div class="hn">17</div>
+    <div class="hm">
+      <span>Par 3</span><span>167 yd</span>
+      <span>HCP 14</span><span>3,014 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717854/Tetherow_-_Hole_17_green_zddtc4.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717854/Tetherow_-_Hole_17_green_zddtc4.png" alt="Hole 17 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker streaks</dd></div><div class="f"><dt>Bunkers</dt><dd>Raked bunker to the north-east with further bunkers south and south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass and shrubs west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799157/Tetherow_-_Hole_17_fairway_hvkowq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799157/Tetherow_-_Hole_17_fairway_hvkowq.png" alt="Hole 17 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface north-west; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Two bunkers and a sandy waste area with tracked raking east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and shrub clusters; trees south-west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Two bunkers and a sandy waste area with tracked raking east; cart paths and bridge south</dd></div><div class="f"><dt>Structures</dt><dd>Cart paths and bridge south</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article>
+<article class="hole" id="hole-18">
+  <div class="holehead">
+    <div class="hn">18</div>
+    <div class="hm">
+      <span>Par 5</span><span>588 yd</span>
+      <span>HCP 16</span><span>1,200 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717855/Tetherow_-_Hole_18_green_ahoks7.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717855/Tetherow_-_Hole_18_green_ahoks7.png" alt="Hole 18 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the north-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Shrubs and native grass east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Paved path west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Shrubs and native grass east and west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the north-west</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799158/Tetherow_-_Hole_18_fairway_vtwqiy.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799158/Tetherow_-_Hole_18_fairway_vtwqiy.png" alt="Hole 18 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler mottled patches; west and east; rough strip east</dd></div><div class="f"><dt>Bunkers</dt><dd>Grassy sod-walled bunkers north-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush both sides; single tree west with western shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Single tree west with western shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path north-west</dd></div><div class="f"><dt>Structures</dt><dd>Grassy sod-walled bunkers north-west</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  <p class="rulenote"><b>Local rule.</b> OB: inside edge of all street curbs, boundary fencing and white-capped stakes. Penalty areas: red stakes or red lines. Alternative to stroke and distance in effect (two-stroke penalty).</p>
+</article></div>
+</section>
+<section id="water" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Water</p><h2>Ponds and shoreline</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>TG-WTR-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807424/Tetherow_-_Water_vertical_iukm0r.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807424/Tetherow_-_Water_vertical_iukm0r.png" alt="Water"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807422/Tetherow_-_Water_oblique_jz0f93.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807422/Tetherow_-_Water_oblique_jz0f93.png" alt="Water oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Shape</dt><dd>Elongated east-west, runs off eastern and western edges</dd></div><div class="f"><dt>Shoreline</dt><dd>Irregular; shrub and grass fringe on northern and southern shores</dd></div><div class="f"><dt>Bank face</dt><dd>Grass and shrub bank on northern and southern sides</dd></div><div class="f"><dt>Holes touching</dt><dd>3, 4, 6</dd></div><div class="f"><dt>Surrounds</dt><dd>Mown turf north beyond shrub bank; fairway and turf southwest; sagebrush and tan ground southeast</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="residences">
+  <div class="wrap">
+    <p class="eyebrow">The residential edge</p>
+    <h2>Where the course meets private property</h2><div class="rule red"></div>
+    
+    <div class="cards"><article class="card">
+  <h3>TG-RES-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807418/Tetherow_-_Residence_vertical_eedap6.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807418/Tetherow_-_Residence_vertical_eedap6.png" alt="Residence"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807417/Tetherow_-_Residence_oblique_vfuaow.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807417/Tetherow_-_Residence_oblique_vfuaow.png" alt="Residence oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Sagebrush and low shrubs against western wall; conifer southwest</dd></div><div class="f"><dt>Against the walls</dt><dd>Tan bare ground and dry grass at western wall</dd></div><div class="f"><dt>Cleared ground</dt><dd>Dry grass patch northwest of structure; tan ground west and south</dd></div><div class="f"><dt>Driveway</dt><dd>Paved, northeast of structure, joins road along eastern edge</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking east</dd></div></dl>
+</article></div>
+    <p class="small">Selection: water by surface area, largest first; residences by proximity to played turf, closest first; paths: bridges, then street crossings, then junctions; tees by yardage spread on that hole, largest first</p>
+  </div>
+</section>
+<section id="paths" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Access</p><h2>Crossings and junctions</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>TG-PTH-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807413/Tetherow_-_Path_vertical_g0otyc.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807413/Tetherow_-_Path_vertical_g0otyc.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Bridge</dd></div><div class="f"><dt>Surface</dt><dd>Tan deck; gray pad at southern end</dd></div><div class="f"><dt>Connects</dt><dd>Unpaved track north to turf south across water channel</dd></div><div class="f"><dt>Surrounds</dt><dd>Water east and west of deck; teeing ground northwest; green south; shrubs north; paved path in northeastern corner</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="clubhouse">
+  <div class="wrap">
+    <p class="eyebrow">Arrival</p><h2>Clubhouse and arrival</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>TG-CLB-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807407/Tetherow_-_Clubhouse_vertical_gsln75.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807407/Tetherow_-_Clubhouse_vertical_gsln75.png" alt="Clubhouse and arrival"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807406/Tetherow_-_Clubhouse_oblique_c0keit.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807406/Tetherow_-_Clubhouse_oblique_c0keit.png" alt="Clubhouse and arrival oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>3 structures: multi-gabled structure at centre, partial structure at western edge, partial structure in southeastern corner</dd></div><div class="f"><dt>Surface</dt><dd>Paved</dd></div><div class="f"><dt>Circulation</dt><dd>Striped lot southwest, runs off southern and western edges; rows of carts on paved pad north of structure; umbrellas and seating on patio northeast of structure; vehicles in southwestern lot</dd></div><div class="f"><dt>Surrounds</dt><dd>Paths and greens northwest; mown turf northeast; parking southwest; structures at western and southeastern edges; planted beds south of structure</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking south</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="practice">
+  <div class="wrap">
+    <p class="eyebrow">Practice</p><h2>Practice areas</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>TG-PRA-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807416/Tetherow_-_Practice_vertical_oiscae.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807416/Tetherow_-_Practice_vertical_oiscae.png" alt="Practice areas"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807414/Tetherow_-_Practice_oblique_e9mu8r.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807414/Tetherow_-_Practice_oblique_e9mu8r.png" alt="Practice areas oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>3 structures: clubhouse southwest, multi-gabled structure southeast, covered structure north</dd></div><div class="f"><dt>Surface</dt><dd>Turf</dd></div><div class="f"><dt>Circulation</dt><dd>Lot in southeastern corner, runs off frame; carts and umbrellas on pad north of clubhouse; vehicles in southeastern lot</dd></div><div class="f"><dt>Surrounds</dt><dd>Paths north and south; striped range turf and covered structure north; clubhouse southwest; multi-gabled structure southeast; sagebrush east</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking north</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="maintenance">
+  <div class="wrap">
+    <p class="eyebrow">Maintenance</p><h2>Maintenance compound</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>TG-MNT-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807410/Tetherow_-_Maintenance_vertical_ozcuph.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807410/Tetherow_-_Maintenance_vertical_ozcuph.png" alt="Maintenance compound"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807409/Tetherow_-_Maintenance_oblique_oj7j3i.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807409/Tetherow_-_Maintenance_oblique_oj7j3i.png" alt="Maintenance compound oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>Long white-roof shop south of yard; red-roof structure at western end of shop; small structures along northern edge and at eastern edge</dd></div><div class="f"><dt>Surface</dt><dd>Paved</dd></div><div class="f"><dt>Objects</dt><dd>Vehicles in striped rows at centre of yard; equipment and trailers along western edge</dd></div><div class="f"><dt>Yard contents</dt><dd>Stockpiles, bins and equipment along western edge</dd></div><div class="f"><dt>Equipment outside</dt><dd>Present: stockpiles, bins and equipment along western edge</dd></div><div class="f"><dt>Surrounds</dt><dd>Sagebrush and trees west and south; road along western and southern edges; mown turf east beyond road</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking east</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="tees" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Tees</p><h2>Tee complex</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>TG-TEE-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807421/Tetherow_-_Tee_vertical_bdjwrg.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807421/Tetherow_-_Tee_vertical_bdjwrg.png" alt="Tee"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807420/Tetherow_-_Tee_oblique_oj4h9i.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807420/Tetherow_-_Tee_oblique_oj4h9i.png" alt="Tee oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Tee boxes</dt><dd>1 two-lobed pad inside path loop; 1 small round pad in southwestern corner</dd></div><div class="f"><dt>Surface</dt><dd>Darker mown pad within paler fringe; tan ground and shrubs around</dd></div><div class="f"><dt>Surrounds</dt><dd>Shrubs and conifers north and west; rock outcrop east; unpaved track along western edge</dd></div><div class="f"><dt>Cart path</dt><dd>Paved, loops south and east of tee</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="trees">
+  <div class="wrap narrow">
+    <p class="eyebrow">Trees</p><h2>Canopy</h2><div class="rule red"></div>
+    <dl class="fields wide"><div class="f"><dt>Within falling distance of tees</dt><dd>Falling distance defined as canopy within 50 ft of the tee surface (crown height not measurable from a vertical); tee frame: shrubs and conifers north and west; rock outcrop east; unpaved track along western edge</dd></div><div class="f"><dt>Within falling distance of paths</dt><dd>Falling distance defined as canopy within 50 ft of the path surface; path frame: water east and west of deck; teeing ground northwest; green south; shrubs north; paved path in northeastern corner</dd></div><div class="f"><dt>Grey or leafless crowns</dt><dd>Not_examined: a count requires a full-course mosaic</dd></div></dl>
+    <p class="small">Falling distance is defined here as canopy within 50 ft of the surface.
+    Crown height cannot be measured from a vertical frame.</p>
+  </div>
+</section>
+<section id="benchmark" class="bone">
+  <div class="wrap narrow">
+    <p class="eyebrow">Benchmark</p><h2>Measured against other courses</h2>
+    <div class="rule red"></div>
+    <table class="bm">
+      <thead><tr><th>Measure</th><th class="n">Tetherow</th><th class="n">Range, other courses</th></tr></thead>
+      <tbody><tr><td>Canopy cover</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Turf continuity — largest patch</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Water surface</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Path length per hole</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Structures within 50 ft of turf</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Bunkers</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Parking stalls</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr></tbody>
+    </table>
+    <p class="small">0 of 7 measures recorded. The comparison column fills as
+    further courses are mapped to the same method.</p>
+  </div>
+</section>
+<section id="limits" class="dark">
+  <div class="wrap">
+    <p class="eyebrow light">Limits</p>
+    <h2>What this imagery cannot establish</h2><div class="rule red"></div>
+    <p class="lede">Every report of this kind has a boundary. These are the questions a
+    single aerial capture cannot answer, and what would answer each one.</p>
+    <table class="limits">
+      <thead><tr><th>Not established</th><th>Why</th><th>What would resolve it</th></tr></thead>
+      <tbody><tr><td><b>Gate control</b></td><td>Gates, locks and access control hardware are not resolvable from vertical or single oblique frames</td><td>Site walk or club access-control inventory</td></tr><tr><td><b>Camera coverage and field of view</b></td><td>Cameras are too small to resolve and field of view cannot be seen from imagery</td><td>Security system plan or on-site camera survey</td></tr><tr><td><b>Bridge load ratings</b></td><td>Ratings are not visible in imagery</td><td>Engineering records or posted signage</td></tr><tr><td><b>Hydrant locations and flow</b></td><td>Hydrants are not resolvable under canopy; flow is not visible</td><td>Fire district / water utility hydrant map and flow test data</td></tr><tr><td><b>Irrigation pipe and valve positions</b></td><td>Buried; heads and valve boxes not resolvable at frame scale</td><td>Irrigation as-built drawings from the superintendent</td></tr><tr><td><b>Water depth</b></td><td>Depth is not visible from imagery</td><td>Bathymetric survey or club records</td></tr><tr><td><b>Ownership and property lines</b></td><td>Parcel lines are not visible in imagery</td><td>Deschutes County parcel data</td></tr><tr><td><b>Drive and path widths under the resolution limit</b></td><td>Paths under canopy are hidden and narrow edges are finer than frame resolution</td><td>Higher-zoom capture or field measurement</td></tr><tr><td><b>Cause of turf tone variation</b></td><td>Tone differences are visible but causes are not</td><td>Superintendent records, soil and irrigation data</td></tr><tr><td><b>Course-wide measurements (canopy cover, turf patches, water acres, path length, structures within 50 ft, bunkers, parking stalls, extents)</b></td><td>Only point frames exist for this course; no full-course mosaic was captured and no new captures were allowed for this build</td><td>Full-course Nearmap vertical mosaic at a verified GSD, then classify turf, canopy, water, sand and pavement</td></tr><tr><td><b>Additional water features, residences, paths and tees</b></td><td>Only one pin per category was captured</td><td>Further Nearmap verticals and obliques per the selection rules</td></tr><tr><td><b>Ground slope and drainage direction</b></td><td>Single vertical and oblique frames do not show elevation</td><td>Lidar or survey elevation model</td></tr><tr><td><b>Fuel and chemical storage</b></td><td>Contents of structures are not visible</td><td>Superintendent inventory or site visit</td></tr></tbody>
+    </table>
+  </div>
+</section><footer><div class="wrap"><b>Tetherow Golf Club</b>  &middot;  Property intelligence report  &middot;  Imagery &copy; Nearmap, captured 2026-07-02  &middot;  Analysis by Ahart Intelligence for Vyanet Property Intel</div></footer>
+<script>
+(function(){
+  var box = document.getElementById('holebox');
+  if(!box) return;
+  var holes = [].slice.call(box.querySelectorAll('.hole'));
+  var btns  = [].slice.call(document.querySelectorAll('.hb'));
+  function show(v){
+    var all = (v === 'all');
+    holes.forEach(function(h){
+      h.style.display = (all || h.id === 'hole-' + v) ? '' : 'none';
+    });
+    btns.forEach(function(b){
+      b.classList.toggle('on', b.dataset.h === String(v));
+    });
+    if(!all) history.replaceState(null,'','#hole-'+v);
+  }
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      show(b.dataset.h);
+      var nav = document.getElementById('holenav');
+      if(nav){
+        var y = nav.getBoundingClientRect().top + window.pageYOffset - 56;
+        window.scrollTo({top:y, behavior:'smooth'});
+      }
+    });
+  });
+  document.addEventListener('keydown', function(ev){
+    if(ev.target.tagName === 'INPUT') return;
+    var cur = document.querySelector('.hb.on');
+    if(!cur || cur.dataset.h === 'all') return;
+    var i = btns.indexOf(cur);
+    if(ev.key === 'ArrowRight' && i < btns.length - 2) btns[i+1].click();
+    if(ev.key === 'ArrowLeft'  && i > 0) btns[i-1].click();
+  });
+  var m = location.hash.match(/^#hole-(\d+)$/);
+  show(m ? m[1] : (holes.length ? holes[0].id.replace('hole-','') : 'all'));
+  window.addEventListener('beforeprint', function(){ show('all'); });
+})();
+</script>
+</body></html>

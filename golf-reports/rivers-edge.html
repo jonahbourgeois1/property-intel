@@ -1,0 +1,741 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>River's Edge Golf Course — Property Intelligence Report</title><style>
+*{box-sizing:border-box}
+:root{--ink:#111;--red:#CD3333;--grey:#6E7279;--bone:#F4F2EE;--char:#1A1C1B;--line:#DEDBD5}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--ink);
+ font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
+ -webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+.wrap.narrow{max-width:800px}
+section{padding:68px 0;border-top:1px solid var(--line)}
+section.bone{background:var(--bone);border-top:0}
+section.dark{background:var(--char);color:#E8E9E9;border-top:0}
+h1{font:400 clamp(34px,6vw,62px)/1.04 Georgia,"Times New Roman",serif;margin:0 0 6px;letter-spacing:-.5px}
+h2{font:400 clamp(24px,3.4vw,38px)/1.12 Georgia,"Times New Roman",serif;margin:0 0 4px;letter-spacing:-.3px}
+h3{font:700 15px/1.3 inherit;margin:26px 0 8px;letter-spacing:.2px}
+p{margin:0 0 14px}
+.eyebrow{font:700 11px/1 inherit;letter-spacing:2.4px;text-transform:uppercase;color:var(--red);margin:0 0 12px}
+.eyebrow.light{color:#C9A6A6}
+.rule.red{width:74px;height:3px;background:var(--red);margin:16px 0 22px}
+.lede{font:400 clamp(17px,2vw,21px)/1.5 Georgia,serif;color:#333;max-width:62ch}
+.dark .lede{color:#CFD2D2}
+.small{font-size:13px;color:var(--grey);line-height:1.55}
+.na{color:#B9B5AE}
+/* cover */
+.cover{background:var(--char);color:#fff;padding:92px 0 72px}
+.cover .lede{color:#D7D9D9;margin-bottom:6px}
+.cover .meta{font-size:13px;color:#8F9393;letter-spacing:.3px}
+.coverstats{display:flex;flex-wrap:wrap;gap:40px;margin-top:38px;
+ border-top:1px solid #35393A;padding-top:26px}
+.coverstats div{display:flex;flex-direction:column}
+.coverstats b{font:400 30px/1 Georgia,serif}
+.coverstats span{font-size:10.5px;letter-spacing:1.6px;text-transform:uppercase;color:#8F9393;margin-top:7px}
+/* stats grid */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;
+ background:var(--line);border:1px solid var(--line);margin:22px 0 8px}
+.stat{background:var(--bone);padding:18px 20px}
+.stat b{display:block;font:400 22px/1.15 Georgia,serif;margin-bottom:7px}
+.stat span{font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--grey)}
+/* fields */
+.fields{margin:14px 0 0;font-size:13.5px}
+.fields .f{display:grid;grid-template-columns:132px 1fr;gap:14px;
+ padding:7px 0;border-bottom:1px solid var(--line)}
+.fields.wide .f{grid-template-columns:230px 1fr}
+.fields dt{color:var(--grey);font-size:11px;letter-spacing:1.1px;text-transform:uppercase;padding-top:2px}
+.fields dd{margin:0}
+/* two col */
+.two{display:grid;grid-template-columns:1fr 1fr;gap:46px;align-items:start}
+.note{background:var(--bone);padding:22px 24px;font-size:14.5px}
+.note p:last-child{margin:0}
+.callout{border-left:3px solid var(--red);background:var(--bone);padding:18px 22px;margin:24px 0}
+.callout p{margin:0;font-size:15px}
+.dark .callout{background:#232626}
+/* images */
+.shot{display:block;margin:0 0 10px;border:1px solid var(--line);overflow:hidden;background:#EEE}
+.shot img{display:block;width:100%;height:auto}
+.cap{font-size:12px;color:var(--grey);margin:-2px 0 12px}
+/* holes */
+.hole{padding:34px 0;border-top:1px solid var(--line)}
+.hole:first-child{border-top:0}
+.holehead{display:flex;align-items:baseline;gap:20px;margin-bottom:16px}
+.hn{font:400 46px/1 Georgia,serif;color:var(--red);min-width:62px}
+.hm{display:flex;flex-wrap:wrap;gap:18px;font-size:11.5px;letter-spacing:1.4px;
+ text-transform:uppercase;color:var(--grey)}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:34px}
+.paneh{font:700 11px/1 inherit;letter-spacing:1.8px;text-transform:uppercase;
+ color:var(--ink);margin:0 0 10px}
+.obl{margin-top:22px;max-width:560px}
+.rulenote{font-size:12.5px;color:var(--grey);margin-top:16px;padding-top:12px;
+ border-top:1px solid var(--line)}
+.rulenote b{color:var(--ink)}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:34px;margin-top:20px}
+.card h3{margin:0 0 12px;font:700 13px/1 inherit;letter-spacing:1.6px;
+ text-transform:uppercase;color:var(--grey)}
+.cardimgs{display:grid;gap:8px}
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:14px;margin:20px 0 10px}
+th{text-align:left;font:700 10.5px/1 inherit;letter-spacing:1.4px;text-transform:uppercase;
+ color:var(--grey);border-bottom:2px solid var(--ink);padding:0 14px 9px 0}
+td{padding:11px 14px 11px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.n{text-align:right;padding-right:0;white-space:nowrap}
+.dark th{color:#9BA0A0;border-bottom-color:#4A4F4F}
+.dark td{border-bottom-color:#2E3232}
+.limits td:first-child{width:24%}.limits td:nth-child(2){width:40%}
+details{margin-top:18px}
+summary{cursor:pointer;font-size:12.5px;letter-spacing:1.2px;text-transform:uppercase;
+ color:var(--red);font-weight:700}
+details p{margin-top:12px}
+footer{background:var(--char);color:#8F9393;font-size:12px;padding:30px 0;border-top:1px solid #2E3232}
+footer b{color:#D7D9D9}
+
+/* sticky nav */
+.topnav{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.96);
+ border-bottom:1px solid var(--line);backdrop-filter:saturate(1.6) blur(8px)}
+.topnav .wrap{display:flex;align-items:center;gap:22px;height:52px}
+.nvname{font:700 11px/1 inherit;letter-spacing:1.6px;text-transform:uppercase;
+ color:var(--ink);white-space:nowrap}
+.nvlinks{display:flex;gap:20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nvlinks::-webkit-scrollbar{display:none}
+.topnav a{font:600 11px/1 inherit;letter-spacing:1.3px;text-transform:uppercase;
+ color:var(--grey);text-decoration:none;white-space:nowrap;padding:6px 0;
+ border-bottom:2px solid transparent}
+.topnav a:hover{color:var(--red);border-bottom-color:var(--red)}
+section{scroll-margin-top:54px}
+/* hole selector */
+.holenav{position:sticky;top:52px;z-index:40;background:var(--bone);
+ border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin:22px 0 0}
+.hbrow{display:flex;align-items:center;gap:6px;height:54px;overflow-x:auto;
+ -webkit-overflow-scrolling:touch}
+.hbrow::-webkit-scrollbar{display:none}
+.hblabel{font:700 10px/1 inherit;letter-spacing:1.6px;text-transform:uppercase;
+ color:var(--grey);margin-right:8px;white-space:nowrap}
+.hb{flex:0 0 auto;min-width:34px;height:34px;padding:0 9px;cursor:pointer;
+ border:1px solid var(--line);background:#fff;color:var(--ink);
+ font:600 13px/1 inherit;border-radius:2px}
+.hb:hover{border-color:var(--red);color:var(--red)}
+.hb.on{background:var(--red);border-color:var(--red);color:#fff}
+.hb.all{min-width:52px;font-size:11px;letter-spacing:1px;text-transform:uppercase}
+.hole{padding-top:30px}
+@media(max-width:860px){
+ .topnav .wrap{gap:14px;height:48px}.nvname{display:none}
+ .holenav{top:48px}.hbrow{height:50px}
+}
+@media print{
+ .topnav,.holenav{display:none}
+ .hole{display:block !important;page-break-inside:avoid}
+}
+@media(max-width:860px){
+ .two,.pair{grid-template-columns:1fr;gap:26px}
+ section{padding:46px 0}.wrap{padding:0 20px}
+ .fields .f,.fields.wide .f{grid-template-columns:1fr;gap:2px}
+ .fields dt{padding-top:0}
+ .coverstats{gap:26px}
+}
+</style></head><body>
+<header class="cover" id="top">
+  <div class="wrap">
+    <p class="eyebrow light">Property Intelligence Report</p>
+    <h1>River's Edge Golf Course</h1>
+    <div class="rule red"></div>
+    <p class="lede">400 NW Pro Shop Drive, Bend, OR 97703</p>
+    <p class="meta">Imagery captured 2026-07-02  &middot; 
+       Every measurement in this report is derived from that capture.</p>
+    <div class="coverstats"><div><b>18</b><span>Holes</span></div><div><b>72</b><span>Par</span></div><div><b>6,562</b><span>Yardage</span></div><div><b><span class="na">—</span></b><span>Acres</span></div></div>
+  </div>
+</header><nav class="topnav" id="topnav"><div class="wrap"><span class="nvname">River's Edge Golf Course</span><span class="nvlinks"><a href="#overview">Overview</a><a href="#holes">Holes</a><a href="#water">Water</a><a href="#residences">Residences</a><a href="#paths">Access</a><a href="#clubhouse">Facilities</a><a href="#benchmark">Benchmark</a><a href="#limits">Limits</a></span></div></nav>
+<section id="overview">
+  <div class="wrap">
+    <p class="eyebrow">The club</p>
+    <h2>What this report covers</h2>
+    <div class="rule red"></div>
+    <div class="two">
+      <div><dl class="fields"><div class="f"><dt>Coordinates</dt><dd>44.076786, -121.316607</dd></div><div class="f"><dt>Capture date</dt><dd>2026-07-02</dd></div></dl></div>
+      <div class="note">
+        <p>This is a first-pass property record built from a single aerial capture.
+        It says what exists, where it is, and what deserves a closer look.</p>
+        <p>It does not say whether anything is in good or poor condition. Where the
+        imagery cannot answer a question, the report says so rather than estimating.
+        Those limits are listed in full at the end.</p>
+      </div>
+    </div>
+  </div>
+</section>
+<section id="envelope" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Property envelope</p>
+    <h2>The course, measured</h2>
+    <div class="rule red"></div>
+    <div class="stats"><div class="stat"><b><span class="na">—</span> ft N–S  &times;  <span class="na">—</span> ft E–W</b><span>Property extent</span></div><div class="stat"><b><span class="na">—</span> acres</b><span>Irrigated turf</span></div><div class="stat"><b><span class="na">—</span></b><span>Canopy cover</span></div><div class="stat"><b><span class="na">—</span> acres across <span class="na">—</span> ponds</b><span>Water surface</span></div><div class="stat"><b><span class="na">—</span></b><span>Turf patches</span></div><div class="stat"><b><span class="na">—</span> of turf</b><span>Largest patch</span></div><div class="stat"><b><span class="na">—</span></b><span>Bunkers</span></div><div class="stat"><b><span class="na">—</span></b><span>Parking stalls</span></div></div>
+    
+    <h3>What borders the property</h3>
+    <dl class="fields wide"></dl>
+  </div>
+</section>
+<section id="holes">
+  <div class="wrap">
+    <p class="eyebrow">Hole by hole</p>
+    <h2>Every green, every landing zone</h2>
+    <div class="rule red"></div>
+    <p class="lede">Each hole is recorded twice from the same capture: the primary
+    tee-shot landing area and the green. Click any frame for the full image.</p>
+  </div>
+  <div class="holenav" id="holenav">
+    <div class="wrap">
+      <div class="hbrow">
+        <span class="hblabel">Hole</span>
+        <button class="hb" data-h="1">1</button><button class="hb" data-h="2">2</button><button class="hb" data-h="3">3</button><button class="hb" data-h="4">4</button><button class="hb" data-h="5">5</button><button class="hb" data-h="6">6</button><button class="hb" data-h="7">7</button><button class="hb" data-h="8">8</button><button class="hb" data-h="9">9</button><button class="hb" data-h="10">10</button><button class="hb" data-h="11">11</button><button class="hb" data-h="12">12</button><button class="hb" data-h="13">13</button><button class="hb" data-h="14">14</button><button class="hb" data-h="15">15</button><button class="hb" data-h="16">16</button><button class="hb" data-h="17">17</button><button class="hb" data-h="18">18</button>
+        <button class="hb all" data-h="all">All</button>
+      </div>
+    </div>
+  </div>
+  <div class="wrap" id="holebox">
+<article class="hole" id="hole-1">
+  <div class="holehead">
+    <div class="hn">1</div>
+    <div class="hm">
+      <span>Par 4</span><span>397 yd</span>
+      <span>HCP 10</span><span>1,354 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714983/River_s_Edge_-_Hole_01_green_pjpk2b.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714983/River_s_Edge_-_Hole_01_green_pjpk2b.png" alt="Hole 1 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with darker streaks</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the south-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough with dry grass east</dd></div><div class="f"><dt>Trees</dt><dd>Trees north-west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths to the north-west and south-east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Mown collar and rough with dry grass east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799043/River_s_Edge_-_Hole_01_fairway_es1rxe.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799043/River_s_Edge_-_Hole_01_fairway_es1rxe.png" alt="Hole 1 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with faint mottling and a rounded paler south-western end; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees south-east with shadows; sagebrush and pines north-west</dd></div><div class="f"><dt>Shadow</dt><dd>Trees south-east with shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path north-west with two carts</dd></div><div class="f"><dt>Structures</dt><dd>House</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Cart path north-west with two carts</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-2">
+  <div class="holehead">
+    <div class="hn">2</div>
+    <div class="hm">
+      <span>Par 4</span><span>329 yd</span>
+      <span>HCP 14</span><span>1,631 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714984/River_s_Edge_-_Hole_02_green_fu5qax.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714984/River_s_Edge_-_Hole_02_green_fu5qax.png" alt="Hole 2 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Even mid-green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar with dry native grass east and west</dd></div><div class="f"><dt>Trees</dt><dd>Conifers on all sides with shadow across the northern end</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers on all sides with shadow across the northern end</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Mown collar with dry native grass east and west</dd></div><div class="f"><dt>At capture</dt><dd>Cart and four people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799044/River_s_Edge_-_Hole_02_fairway_iehelt.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799044/River_s_Edge_-_Hole_02_fairway_iehelt.png" alt="Hole 2 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler mottled patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and trees west; two conifers casting western shadows in the centre</dd></div><div class="f"><dt>Shadow</dt><dd>Two conifers casting western shadows in the centre</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path east</dd></div><div class="f"><dt>Structures</dt><dd>Road; houses and landscaped yards east</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry rough west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-3">
+  <div class="holehead">
+    <div class="hn">3</div>
+    <div class="hm">
+      <span>Par 4</span><span>386 yd</span>
+      <span>HCP 8</span><span>2,668 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714984/River_s_Edge_-_Hole_03_green_uvvq62.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714984/River_s_Edge_-_Hole_03_green_uvvq62.png" alt="Hole 3 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east and west with canopy shadow across the eastern half</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east and west with canopy shadow across the eastern half</dd></div><div class="f"><dt>Cart path</dt><dd>Gravel path to the west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799045/River_s_Edge_-_Hole_03_fairway_dktd4z.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799045/River_s_Edge_-_Hole_03_fairway_dktd4z.png" alt="Hole 3 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches and curved mowing lines</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east casting western shadows; sagebrush and pines on bare ground west</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east casting western shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Gravel path west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry rough west; sagebrush and pines on bare ground west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-4">
+  <div class="holehead">
+    <div class="hn">4</div>
+    <div class="hm">
+      <span>Par 3</span><span>157 yd</span>
+      <span>HCP 18</span><span>2,946 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714984/River_s_Edge_-_Hole_04_green_k1w7ud.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714984/River_s_Edge_-_Hole_04_green_k1w7ud.png" alt="Hole 4 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with darker northern blotches; south and south-east</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east and south-west with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east and south-west with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path and road</dd></div><div class="f"><dt>Structures</dt><dd>Cart path and road</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799046/River_s_Edge_-_Hole_04_fairway_ucmmtj.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799046/River_s_Edge_-_Hole_04_fairway_ucmmtj.png" alt="Hole 4 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler dry streaks leading to an eastern putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Three bunkers around the green</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees south and east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path south</dd></div><div class="f"><dt>Structures</dt><dd>Road; houses</dd></div><div class="f"><dt>Bare ground</dt><dd>Native grass north</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-5">
+  <div class="holehead">
+    <div class="hn">5</div>
+    <div class="hm">
+      <span>Par 5</span><span>510 yd</span>
+      <span>HCP 2</span><span>2,411 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714985/River_s_Edge_-_Hole_05_green_xyunkv.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714985/River_s_Edge_-_Hole_05_green_xyunkv.png" alt="Hole 5 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Light green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough</dd></div><div class="f"><dt>Trees</dt><dd>Trees east with shadow across the eastern side</dd></div><div class="f"><dt>Shadow</dt><dd>Trees east with shadow across the eastern side</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>House with brown roof east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick and two people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799046/River_s_Edge_-_Hole_05_fairway_ylml74.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799046/River_s_Edge_-_Hole_05_fairway_ylml74.png" alt="Hole 5 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler dry rough west and bare patches north-west</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east casting western shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east casting western shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Road east; houses west and south-east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Cart and person centre; cart south-west</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-6">
+  <div class="holehead">
+    <div class="hn">6</div>
+    <div class="hm">
+      <span>Par 4</span><span>341 yd</span>
+      <span>HCP 4</span><span>1,987 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717715/River_s_Edge_-_Hole_06_green_pgus5j.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717715/River_s_Edge_-_Hole_06_green_pgus5j.png" alt="Hole 6 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green mown turf with lighter grass north-east and west</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Dense conifers on all sides with shadow across the northern and southern parts</dd></div><div class="f"><dt>Shadow</dt><dd>Dense conifers on all sides with shadow across the northern and southern parts</dd></div><div class="f"><dt>Cart path</dt><dd>Paved path running north to south</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799047/River_s_Edge_-_Hole_06_fairway_ekdkfq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799047/River_s_Edge_-_Hole_06_fairway_ekdkfq.png" alt="Hole 6 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler dry patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Present: dark water channel in the south-centre</dd></div><div class="f"><dt>Trees</dt><dd>Trees north and east with shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Trees north and east with shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path south</dd></div><div class="f"><dt>Structures</dt><dd>Houses west and east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-7">
+  <div class="holehead">
+    <div class="hn">7</div>
+    <div class="hm">
+      <span>Par 3</span><span>180 yd</span>
+      <span>HCP 12</span><span>2,167 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717759/River_s_Edge_-_Hole_07_green_e3befh.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717759/River_s_Edge_-_Hole_07_green_e3befh.png" alt="Hole 7 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with a darker western band</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the north-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east with canopy shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east with canopy shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path</dd></div><div class="f"><dt>Structures</dt><dd>Carts and houses nearby</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Carts and houses nearby</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799048/River_s_Edge_-_Hole_07_fairway_eus5kp.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799048/River_s_Edge_-_Hole_07_fairway_eus5kp.png" alt="Hole 7 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches and curved mowing lines; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker and putting surface south</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees and shrubs with shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Trees and shrubs with shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths west and centre</dd></div><div class="f"><dt>Structures</dt><dd>Houses and road east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>People</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-8">
+  <div class="holehead">
+    <div class="hn">8</div>
+    <div class="hm">
+      <span>Par 4</span><span>330 yd</span>
+      <span>HCP 16</span><span>1,585 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717716/River_s_Edge_-_Hole_08_green_mk9yka.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790717716/River_s_Edge_-_Hole_08_green_mk9yka.png" alt="Hole 8 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the south-west</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough with dry grass west</dd></div><div class="f"><dt>Trees</dt><dd>Trees north and east with canopy shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Trees north and east with canopy shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Road to the west</dd></div><div class="f"><dt>Bare ground</dt><dd>Mown collar and rough with dry grass west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick near the centre</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799049/River_s_Edge_-_Hole_08_fairway_jlfuop.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799049/River_s_Edge_-_Hole_08_fairway_jlfuop.png" alt="Hole 8 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches; highway west</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Conifers north and centre with western shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers north and centre with western shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path north-west</dd></div><div class="f"><dt>Structures</dt><dd>Road with parked vehicles and houses east</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry rough west</dd></div><div class="f"><dt>At capture</dt><dd>Road with parked vehicles and houses east</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-9">
+  <div class="holehead">
+    <div class="hn">9</div>
+    <div class="hm">
+      <span>Par 5</span><span>472 yd</span>
+      <span>HCP 6</span><span>331 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714987/River_s_Edge_-_Hole_09_green_hdhb7w.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714987/River_s_Edge_-_Hole_09_green_hdhb7w.png" alt="Hole 9 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with a darker southern band</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the east</dd></div><div class="f"><dt>Water</dt><dd>Present: pond to the south-west</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Trees north with canopy shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Trees north with canopy shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Paved path west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799050/River_s_Edge_-_Hole_09_fairway_otmgjo.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799050/River_s_Edge_-_Hole_09_fairway_otmgjo.png" alt="Hole 9 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler dry patches and curved mowing lines; rough; paved cul-de-sac north</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees east with western shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Trees east with western shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Short path segment north-west</dd></div><div class="f"><dt>Structures</dt><dd>Houses north-east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-10">
+  <div class="holehead">
+    <div class="hn">10</div>
+    <div class="hm">
+      <span>Par 4</span><span>409 yd</span>
+      <span>HCP 1</span><span>975 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714987/River_s_Edge_-_Hole_10_green_xoy8mn.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714987/River_s_Edge_-_Hole_10_green_xoy8mn.png" alt="Hole 10 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker to the south</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough; second mown area south-east</dd></div><div class="f"><dt>Trees</dt><dd>Dry ground and shrubs west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry ground and shrubs west</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick near the centre</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799051/River_s_Edge_-_Hole_10_fairway_rh48k5.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799051/River_s_Edge_-_Hole_10_fairway_rh48k5.png" alt="Hole 10 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with bold stripes and paler blotches; two grassy hollows with darker centres west and north; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush in the south-west corner</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Cart in the centre</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-11">
+  <div class="holehead">
+    <div class="hn">11</div>
+    <div class="hm">
+      <span>Par 5</span><span>513 yd</span>
+      <span>HCP 9</span><span>833 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714987/River_s_Edge_-_Hole_11_green_jjvuaq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714987/River_s_Edge_-_Hole_11_green_jjvuaq.png" alt="Hole 11 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough with darker western patches</dd></div><div class="f"><dt>Trees</dt><dd>Conifers east and north with shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east and north with shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Gravel and boulder edging with road east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Flagstick in the west</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799051/River_s_Edge_-_Hole_11_fairway_roq6nq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799051/River_s_Edge_-_Hole_11_fairway_roq6nq.png" alt="Hole 11 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with faint diagonal stripes and pale patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Single tree south-centre casting a western shadow; trees north and west; sagebrush east; tree shadow north-east</dd></div><div class="f"><dt>Shadow</dt><dd>Single tree south-centre casting a western shadow; tree shadow north-east</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>House north-west</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-12">
+  <div class="holehead">
+    <div class="hn">12</div>
+    <div class="hm">
+      <span>Par 4</span><span>402 yd</span>
+      <span>HCP 5</span><span>2,029 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714988/River_s_Edge_-_Hole_12_green_agugzn.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714988/River_s_Edge_-_Hole_12_green_agugzn.png" alt="Hole 12 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Patch of mid-green mown turf</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Present: pond with rock edging west</dd></div><div class="f"><dt>Collar</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Dry grass and sagebrush east; trees south-east with canopy shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Trees south-east with canopy shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Paved path west</dd></div><div class="f"><dt>Structures</dt><dd>Houses north-east</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry grass and sagebrush east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799052/River_s_Edge_-_Hole_12_fairway_i7abx9.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799052/River_s_Edge_-_Hole_12_fairway_i7abx9.png" alt="Hole 12 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler dry patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Rows of pines east casting western shadows; trees south-west</dd></div><div class="f"><dt>Shadow</dt><dd>Rows of pines east casting western shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Row of houses along the eastern edge</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry rough; bare ground east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-13">
+  <div class="holehead">
+    <div class="hn">13</div>
+    <div class="hm">
+      <span>Par 4</span><span>392 yd</span>
+      <span>HCP 15</span><span>3,073 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714988/River_s_Edge_-_Hole_13_green_jir9cx.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714988/River_s_Edge_-_Hole_13_green_jir9cx.png" alt="Hole 13 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and striped rough with dry grass east</dd></div><div class="f"><dt>Trees</dt><dd>Conifers north and south with shadow along both edges</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers north and south with shadow along both edges</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path west</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Mown collar and striped rough with dry grass east</dd></div><div class="f"><dt>At capture</dt><dd>Utility vehicle; flagstick and person</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799053/River_s_Edge_-_Hole_13_fairway_ucc2wq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799053/River_s_Edge_-_Hole_13_fairway_ucc2wq.png" alt="Hole 13 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway band to the west; paler rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker in the centre beneath a tree</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Bunker in the centre beneath a tree; pines east with western shadows; trees west; shrubs on bare ground east</dd></div><div class="f"><dt>Shadow</dt><dd>Pines east with western shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Houses north-east</dd></div><div class="f"><dt>Bare ground</dt><dd>Shrubs on bare ground east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-14">
+  <div class="holehead">
+    <div class="hn">14</div>
+    <div class="hm">
+      <span>Par 3</span><span>181 yd</span>
+      <span>HCP 17</span><span>3,229 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714989/River_s_Edge_-_Hole_14_green_g74zsd.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714989/River_s_Edge_-_Hole_14_green_g74zsd.png" alt="Hole 14 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches; south and south-west</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the north</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Trees east with south-eastern shadow</dd></div><div class="f"><dt>Shadow</dt><dd>Trees east with south-eastern shadow</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Road east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Cart and flagstick</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799054/River_s_Edge_-_Hole_14_fairway_i9ul02.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799054/River_s_Edge_-_Hole_14_fairway_i9ul02.png" alt="Hole 14 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler streaks leading to a putting surface north-east; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Three bunkers around the green</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees north-west and south with shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Trees north-west and south with shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Road with crosswalk east</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Two carts</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-15">
+  <div class="holehead">
+    <div class="hn">15</div>
+    <div class="hm">
+      <span>Par 4</span><span>442 yd</span>
+      <span>HCP 3</span><span>1,898 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714989/River_s_Edge_-_Hole_15_green_ketl82.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714989/River_s_Edge_-_Hole_15_green_ketl82.png" alt="Hole 15 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with faint darker blotches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Dry ground with sagebrush and juniper east and west</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry ground with sagebrush and juniper east and west</dd></div><div class="f"><dt>At capture</dt><dd>Cart and two people on the western side</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799054/River_s_Edge_-_Hole_15_fairway_orttym.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799054/River_s_Edge_-_Hole_15_fairway_orttym.png" alt="Hole 15 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with darker mottling</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and pines east and west; conifer shadows east</dd></div><div class="f"><dt>Shadow</dt><dd>Conifer shadows east</dd></div><div class="f"><dt>Cart path</dt><dd>Dirt path east</dd></div><div class="f"><dt>Structures</dt><dd>House in the south-west corner</dd></div><div class="f"><dt>Bare ground</dt><dd>Rough with dry patches west; dirt path east</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-16">
+  <div class="holehead">
+    <div class="hn">16</div>
+    <div class="hm">
+      <span>Par 3</span><span>213 yd</span>
+      <span>HCP 13</span><span>2,671 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714990/River_s_Edge_-_Hole_16_green_mlvdvh.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714990/River_s_Edge_-_Hole_16_green_mlvdvh.png" alt="Hole 16 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green mown turf in the north-west</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunkers to the north and south-east</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Dense trees east and west with shadow across most of the frame</dd></div><div class="f"><dt>Shadow</dt><dd>Dense trees east and west with shadow across most of the frame</dd></div><div class="f"><dt>Cart path</dt><dd>Paths</dd></div><div class="f"><dt>Structures</dt><dd>Absent</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799055/River_s_Edge_-_Hole_16_fairway_oikb62.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799055/River_s_Edge_-_Hole_16_fairway_oikb62.png" alt="Hole 16 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler dry streaks; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Bunker north beneath trees</dd></div><div class="f"><dt>Water</dt><dd>Present: rock-edged pond north-east</dd></div><div class="f"><dt>Trees</dt><dd>Bunker north beneath trees; trees west and north with shadows</dd></div><div class="f"><dt>Shadow</dt><dd>Trees west and north with shadows</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths west and east</dd></div><div class="f"><dt>Structures</dt><dd>House</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Mower centre</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-17">
+  <div class="holehead">
+    <div class="hn">17</div>
+    <div class="hm">
+      <span>Par 5</span><span>512 yd</span>
+      <span>HCP 7</span><span>1,345 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714990/River_s_Edge_-_Hole_17_green_oq1fxu.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714990/River_s_Edge_-_Hole_17_green_oq1fxu.png" alt="Hole 17 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green putting surface with lighter northern patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Mown collar and rough</dd></div><div class="f"><dt>Trees</dt><dd>Sagebrush and juniper east and west; bare tree shadow across the northern half</dd></div><div class="f"><dt>Shadow</dt><dd>Bare tree shadow across the northern half</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path west</dd></div><div class="f"><dt>Structures</dt><dd>House east</dd></div><div class="f"><dt>Bare ground</dt><dd>Bare tree shadow across the northern half</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799056/River_s_Edge_-_Hole_17_fairway_dhe8bz.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799056/River_s_Edge_-_Hole_17_fairway_dhe8bz.png" alt="Hole 17 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with paler patches</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Pines on bare ground west; conifers east casting a western shadow across the fairway</dd></div><div class="f"><dt>Shadow</dt><dd>Conifers east casting a western shadow across the fairway</dd></div><div class="f"><dt>Cart path</dt><dd>Absent</dd></div><div class="f"><dt>Structures</dt><dd>Houses along the eastern edge</dd></div><div class="f"><dt>Bare ground</dt><dd>Dry rough west and east; pines on bare ground west</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article>
+<article class="hole" id="hole-18">
+  <div class="holehead">
+    <div class="hn">18</div>
+    <div class="hm">
+      <span>Par 4</span><span>396 yd</span>
+      <span>HCP 11</span><span>137 ft from clubhouse</span>
+    </div>
+  </div>
+  <div class="pair">
+    <div class="pane">
+      <p class="paneh">Green</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714991/River_s_Edge_-_Hole_18_green_jr8bx2.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790714991/River_s_Edge_-_Hole_18_green_jr8bx2.png" alt="Hole 18 green"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway turf through the centre; parking lot</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Absent</dd></div><div class="f"><dt>Collar</dt><dd>Absent</dd></div><div class="f"><dt>Trees</dt><dd>Trees with shadow north</dd></div><div class="f"><dt>Shadow</dt><dd>Trees with shadow north</dd></div><div class="f"><dt>Cart path</dt><dd>Cart paths and parked carts west</dd></div><div class="f"><dt>Structures</dt><dd>Clubhouse</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Mown turf with a flagstick south-east; cart paths and parked carts west; several people</dd></div></dl>
+    </div>
+    <div class="pane">
+      <p class="paneh">Landing zone</p>
+      <a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799057/River_s_Edge_-_Hole_18_fairway_xjxxpq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790799057/River_s_Edge_-_Hole_18_fairway_xjxxpq.png" alt="Hole 18 landing zone"></a>
+      <dl class="fields"><div class="f"><dt>Surface</dt><dd>Mid-green fairway with darker mottled patches; rough</dd></div><div class="f"><dt>Bunkers</dt><dd>Absent</dd></div><div class="f"><dt>Water</dt><dd>Present: rock-edged pond south-west</dd></div><div class="f"><dt>Trees</dt><dd>Trees and grasses west; shrubs east</dd></div><div class="f"><dt>Shadow</dt><dd>Absent</dd></div><div class="f"><dt>Cart path</dt><dd>Cart path in the south-east corner</dd></div><div class="f"><dt>Structures</dt><dd>Structure in the north-west corner</dd></div><div class="f"><dt>Bare ground</dt><dd>Absent</dd></div><div class="f"><dt>At capture</dt><dd>Absent</dd></div></dl>
+    </div>
+  </div>
+  
+</article></div>
+</section>
+<section id="water" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Water</p><h2>Ponds and shoreline</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>RE-WTR-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807273/River_s_Edge_-_Water_vertical_dvlnic.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807273/River_s_Edge_-_Water_vertical_dvlnic.png" alt="Water"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807272/River_s_Edge_-_Water_oblique_glwbto.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807272/River_s_Edge_-_Water_oblique_glwbto.png" alt="Water oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Shape</dt><dd>Curved, north-south with bend east at centre</dd></div><div class="f"><dt>Shoreline</dt><dd>Rock-lined western shore; tree-lined eastern shore; small outflow at northeastern end</dd></div><div class="f"><dt>Bank face</dt><dd>Tan ground with rocks on western bank; trees at waterline on eastern bank</dd></div><div class="f"><dt>Holes touching</dt><dd>9, 10</dd></div><div class="f"><dt>Surrounds</dt><dd>Paved path and mown turf west; mown turf and green north; conifers east; structures in southeastern corner</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="residences">
+  <div class="wrap">
+    <p class="eyebrow">The residential edge</p>
+    <h2>Where the course meets private property</h2><div class="rule red"></div>
+    
+    <div class="cards"><article class="card">
+  <h3>RE-RES-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807268/River_s_Edge_-_Residence_vertical_emfi2s.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807268/River_s_Edge_-_Residence_vertical_emfi2s.png" alt="Residence"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807266/River_s_Edge_-_Residence_oblique_o8mwnr.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807266/River_s_Edge_-_Residence_oblique_o8mwnr.png" alt="Residence oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>2</dd></div><div class="f"><dt>Vegetation at wall</dt><dd>Deciduous and conifer trees at northeastern corner; shrubs at southeastern corner</dd></div><div class="f"><dt>Against the walls</dt><dd>Tan bare ground and dry grass between eastern wall and path</dd></div><div class="f"><dt>Cleared ground</dt><dd>Dry grass and tan ground west of driveway</dd></div><div class="f"><dt>Driveway</dt><dd>Paved, west of structures, joins cul-de-sac north</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking west</dd></div></dl>
+</article></div>
+    <p class="small">Selection: water by surface area, largest first; residences by proximity to played turf, closest first; paths: bridges, then street crossings, then junctions; tees by yardage spread on that hole, largest first</p>
+  </div>
+</section>
+<section id="paths" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Access</p><h2>Crossings and junctions</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>RE-PTH-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807263/River_s_Edge_-_Path_vertical_j5416d.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807263/River_s_Edge_-_Path_vertical_j5416d.png" alt="Path"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Type</dt><dd>Bridge</dd></div><div class="f"><dt>Surface</dt><dd>Plank deck; paved approach south</dd></div><div class="f"><dt>Connects</dt><dd>Path north to paved path south across water channel</dd></div><div class="f"><dt>Surrounds</dt><dd>Water west and east of deck; rock and trees east; dry grass and mown turf southwest; trees west</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="clubhouse">
+  <div class="wrap">
+    <p class="eyebrow">Arrival</p><h2>Clubhouse and arrival</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>RE-CLB-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807257/River_s_Edge_-_Clubhouse_vertical_thzfgd.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807257/River_s_Edge_-_Clubhouse_vertical_thzfgd.png" alt="Clubhouse and arrival"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807256/River_s_Edge_-_Clubhouse_oblique_xgr1o4.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807256/River_s_Edge_-_Clubhouse_oblique_xgr1o4.png" alt="Clubhouse and arrival oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1 multi-gable structure at centre</dd></div><div class="f"><dt>Surface</dt><dd>Paved</dd></div><div class="f"><dt>Circulation</dt><dd>Striped lot southwest, runs off western and southern edges; about 30 vehicles in southwestern lot; seating on deck east of structure; carts on paths east</dd></div><div class="f"><dt>Surrounds</dt><dd>Dry turf northwest; practice green east; paths and greens east; round lawn south; rock edging east; rock edging and planted beds south and east of structure</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking west</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="practice">
+  <div class="wrap">
+    <p class="eyebrow">Practice</p><h2>Practice areas</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>RE-PRA-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807265/River_s_Edge_-_Practice_vertical_wzwiiq.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807265/River_s_Edge_-_Practice_vertical_wzwiiq.png" alt="Practice areas"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807264/River_s_Edge_-_Practice_oblique_bkpara.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807264/River_s_Edge_-_Practice_oblique_bkpara.png" alt="Practice areas oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>3 structures: clubhouse northwest, 2 structures in southeastern corner</dd></div><div class="f"><dt>Surface</dt><dd>Turf</dd></div><div class="f"><dt>Circulation</dt><dd>Striped lot west, runs off western edge; carts on paths east and south of green; vehicles in western lot</dd></div><div class="f"><dt>Surrounds</dt><dd>Clubhouse and round lawn northwest; paths north, east and south; mown turf and green northeast; trees east</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking south</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="maintenance">
+  <div class="wrap">
+    <p class="eyebrow">Maintenance</p><h2>Maintenance compound</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>RE-MNT-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807260/River_s_Edge_-_Maintenance_vertical_ahxguk.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807260/River_s_Edge_-_Maintenance_vertical_ahxguk.png" alt="Maintenance compound"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807259/River_s_Edge_-_Maintenance_oblique_gdstil.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807259/River_s_Edge_-_Maintenance_oblique_gdstil.png" alt="Maintenance compound oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Structures</dt><dd>1 shop at centre; walled bay at southern edge</dd></div><div class="f"><dt>Surface</dt><dd>Gravel</dd></div><div class="f"><dt>Objects</dt><dd>Vehicles east of shop; vehicles and equipment in row along northern edge</dd></div><div class="f"><dt>Yard contents</dt><dd>Equipment in row along northern edge; stacked materials and bins south of shop; walled bay with pale material at southern edge; log pile southwest</dd></div><div class="f"><dt>Equipment outside</dt><dd>Present: equipment in row along northern edge; stacked materials and bins south of shop; walled bay with pale material at southern edge; log pile southwest</dd></div><div class="f"><dt>Surrounds</dt><dd>Trees and tan ground west; unpaved lane east; mown turf in northwestern corner and eastern edge</dd></div><div class="f"><dt>Oblique view</dt><dd>Looking south</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="tees" class="bone">
+  <div class="wrap">
+    <p class="eyebrow">Tees</p><h2>Tee complex</h2><div class="rule red"></div>
+    <div class="cards"><article class="card">
+  <h3>RE-TEE-01</h3>
+  <div class="cardimgs"><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807270/River_s_Edge_-_Tee_vertical_dop9kc.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807270/River_s_Edge_-_Tee_vertical_dop9kc.png" alt="Tee"></a><a class="shot " href="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807269/River_s_Edge_-_Tee_oblique_mhpfgn.png" target="_blank" rel="noopener"><img loading="lazy" src="https://res.cloudinary.com/dtqswjo5v/image/upload/v1790807269/River_s_Edge_-_Tee_oblique_mhpfgn.png" alt="Tee oblique"></a></div>
+  
+  <dl class="fields"><div class="f"><dt>Tee boxes</dt><dd>1 round pad east of cart path</dd></div><div class="f"><dt>Surface</dt><dd>Mown turf under conifer shadow; paler mown bands north</dd></div><div class="f"><dt>Surrounds</dt><dd>Pond in northwestern corner; conifers east and south; tan ground and shrubs east; rock edging in northeastern corner; residences east</dd></div><div class="f"><dt>Cart path</dt><dd>Paved, curves along western edge</dd></div></dl>
+</article></div>
+  </div>
+</section>
+<section id="trees">
+  <div class="wrap narrow">
+    <p class="eyebrow">Trees</p><h2>Canopy</h2><div class="rule red"></div>
+    <dl class="fields wide"><div class="f"><dt>Within falling distance of tees</dt><dd>Falling distance defined as canopy within 50 ft of the tee surface (crown height not measurable from a vertical); tee frame: pond in northwestern corner; conifers east and south; tan ground and shrubs east; rock edging in northeastern corner; residences east</dd></div><div class="f"><dt>Within falling distance of paths</dt><dd>Falling distance defined as canopy within 50 ft of the path surface; path frame: water west and east of deck; rock and trees east; dry grass and mown turf southwest; trees west</dd></div><div class="f"><dt>Grey or leafless crowns</dt><dd>Not_examined: a count requires a full-course mosaic</dd></div></dl>
+    <p class="small">Falling distance is defined here as canopy within 50 ft of the surface.
+    Crown height cannot be measured from a vertical frame.</p>
+  </div>
+</section>
+<section id="benchmark" class="bone">
+  <div class="wrap narrow">
+    <p class="eyebrow">Benchmark</p><h2>Measured against other courses</h2>
+    <div class="rule red"></div>
+    <table class="bm">
+      <thead><tr><th>Measure</th><th class="n">River's Edge Golf Course</th><th class="n">Range, other courses</th></tr></thead>
+      <tbody><tr><td>Canopy cover</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Turf continuity — largest patch</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Water surface</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Path length per hole</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Structures within 50 ft of turf</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Bunkers</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr><tr><td>Parking stalls</td><td class="n"><span class="na">—</span></td><td class="n na">—</td></tr></tbody>
+    </table>
+    <p class="small">0 of 7 measures recorded. The comparison column fills as
+    further courses are mapped to the same method.</p>
+  </div>
+</section>
+<section id="limits" class="dark">
+  <div class="wrap">
+    <p class="eyebrow light">Limits</p>
+    <h2>What this imagery cannot establish</h2><div class="rule red"></div>
+    <p class="lede">Every report of this kind has a boundary. These are the questions a
+    single aerial capture cannot answer, and what would answer each one.</p>
+    <table class="limits">
+      <thead><tr><th>Not established</th><th>Why</th><th>What would resolve it</th></tr></thead>
+      <tbody><tr><td><b>Gate control</b></td><td>Gates, locks and access control hardware are not resolvable from vertical or single oblique frames</td><td>Site walk or club access-control inventory</td></tr><tr><td><b>Camera coverage and field of view</b></td><td>Cameras are too small to resolve and field of view cannot be seen from imagery</td><td>Security system plan or on-site camera survey</td></tr><tr><td><b>Bridge load ratings</b></td><td>Ratings are not visible in imagery</td><td>Engineering records or posted signage</td></tr><tr><td><b>Hydrant locations and flow</b></td><td>Hydrants are not resolvable under canopy; flow is not visible</td><td>Fire district / water utility hydrant map and flow test data</td></tr><tr><td><b>Irrigation pipe and valve positions</b></td><td>Buried; heads and valve boxes not resolvable at frame scale</td><td>Irrigation as-built drawings from the superintendent</td></tr><tr><td><b>Water depth</b></td><td>Depth is not visible from imagery</td><td>Bathymetric survey or club records</td></tr><tr><td><b>Ownership and property lines</b></td><td>Parcel lines are not visible in imagery</td><td>Deschutes County parcel data</td></tr><tr><td><b>Drive and path widths under the resolution limit</b></td><td>Paths under canopy are hidden and narrow edges are finer than frame resolution</td><td>Higher-zoom capture or field measurement</td></tr><tr><td><b>Cause of turf tone variation</b></td><td>Tone differences are visible but causes are not</td><td>Superintendent records, soil and irrigation data</td></tr><tr><td><b>Course-wide measurements (canopy cover, turf patches, water acres, path length, structures within 50 ft, bunkers, parking stalls, extents)</b></td><td>Only point frames exist for this course; no full-course mosaic was captured and no new captures were allowed for this build</td><td>Full-course Nearmap vertical mosaic at a verified GSD, then classify turf, canopy, water, sand and pavement</td></tr><tr><td><b>Additional water features, residences, paths and tees</b></td><td>Only one pin per category was captured</td><td>Further Nearmap verticals and obliques per the selection rules</td></tr><tr><td><b>Ground slope and drainage direction</b></td><td>Single vertical and oblique frames do not show elevation</td><td>Lidar or survey elevation model</td></tr><tr><td><b>Fuel and chemical storage</b></td><td>Contents of structures are not visible</td><td>Superintendent inventory or site visit</td></tr><tr><td><b>Practice green versus hole 18 green</b></td><td>The practice pin may sit on the hole 18 green; frames alone do not settle which green it is</td><td>Club course map or site confirmation</td></tr></tbody>
+    </table>
+  </div>
+</section><footer><div class="wrap"><b>River's Edge Golf Course</b>  &middot;  Property intelligence report  &middot;  Imagery &copy; Nearmap, captured 2026-07-02  &middot;  Analysis by Ahart Intelligence for Vyanet Property Intel</div></footer>
+<script>
+(function(){
+  var box = document.getElementById('holebox');
+  if(!box) return;
+  var holes = [].slice.call(box.querySelectorAll('.hole'));
+  var btns  = [].slice.call(document.querySelectorAll('.hb'));
+  function show(v){
+    var all = (v === 'all');
+    holes.forEach(function(h){
+      h.style.display = (all || h.id === 'hole-' + v) ? '' : 'none';
+    });
+    btns.forEach(function(b){
+      b.classList.toggle('on', b.dataset.h === String(v));
+    });
+    if(!all) history.replaceState(null,'','#hole-'+v);
+  }
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      show(b.dataset.h);
+      var nav = document.getElementById('holenav');
+      if(nav){
+        var y = nav.getBoundingClientRect().top + window.pageYOffset - 56;
+        window.scrollTo({top:y, behavior:'smooth'});
+      }
+    });
+  });
+  document.addEventListener('keydown', function(ev){
+    if(ev.target.tagName === 'INPUT') return;
+    var cur = document.querySelector('.hb.on');
+    if(!cur || cur.dataset.h === 'all') return;
+    var i = btns.indexOf(cur);
+    if(ev.key === 'ArrowRight' && i < btns.length - 2) btns[i+1].click();
+    if(ev.key === 'ArrowLeft'  && i > 0) btns[i-1].click();
+  });
+  var m = location.hash.match(/^#hole-(\d+)$/);
+  show(m ? m[1] : (holes.length ? holes[0].id.replace('hole-','') : 'all'));
+  window.addEventListener('beforeprint', function(){ show('all'); });
+})();
+</script>
+</body></html>

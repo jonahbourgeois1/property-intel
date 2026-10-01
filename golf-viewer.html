@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — one map for every broken-out golf course (v1.1.2)
+  golf-viewer.html — one map for every broken-out golf course (v1.1.3)
 
   Not linked from the responder hub. A course dropdown sits in the
   header. ?sheet= selects which course starts open. The list of courses is
@@ -18,6 +18,10 @@
   Click a numbered marker for a card (same idea as the 2D camera card
   in viewer.html): image, pin name, description. Click the image
   to expand it.
+
+  Report opens the hardcoded property-intelligence page for the
+  selected course (golf-reports/*.html). Courses without a file
+  leave the button disabled.
 
   The right rail has three filters: Greens, Fairways, Additional.
   A name that starts with "Green" or "Fairway" (Green 12, Fairway 3)
@@ -57,11 +61,57 @@
     -webkit-font-smoothing: antialiased;
   }
   header {
-    display: flex; align-items: baseline; gap: 14px;
+    display: flex; align-items: center; gap: 14px;
     padding: 14px 20px;
     border-bottom: 1px solid var(--line);
     background: var(--panel);
   }
+  #reportBtn {
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #reportBtn:hover { border-color: var(--hot); color: var(--hot); }
+  #reportBtn:disabled { opacity: 0.4; cursor: default; color: var(--ink-faint); }
+  #reportOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: #fff;
+    flex-direction: column;
+  }
+  #reportOverlay.open { display: flex; }
+  .report-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--panel);
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+  }
+  .report-bar span { font-weight: 600; font-size: 14px; }
+  #reportClose {
+    margin-left: auto;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  #reportClose:hover { border-color: var(--hot); color: var(--hot); }
+  #reportFrame { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
   header .kicker {
     font-family: var(--mono);
     font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
@@ -275,6 +325,7 @@
     <label class="course-pick">
       <select id="courseTabs" aria-label="Course"></select>
     </label>
+    <button type="button" id="reportBtn" disabled>Report</button>
     <h1 id="title"><span id="courseName">Awbrey Glen</span> <span class="addr" id="addr"></span></h1>
     <span class="count" id="count"></span>
     <span class="build" id="build"></span>
@@ -309,6 +360,13 @@
       <div id="pin-pop-hint">click image to expand</div>
     </div>
   </div>
+  <div id="reportOverlay">
+    <div class="report-bar">
+      <span id="reportTitle"></span>
+      <button type="button" id="reportClose">Back to map</button>
+    </div>
+    <iframe id="reportFrame" title="Course report"></iframe>
+  </div>
   <div id="pin-lightbox">
     <img id="pin-lb-img" alt="">
     <div id="pin-lb-title"></div>
@@ -317,7 +375,15 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.1.2';
+  var BUILD = 'v1.1.3';
+  var COURSE_REPORTS = {
+    'Awbrey Glen Golf Course': 'golf-reports/awbrey-glen.html',
+    'Bend Golf Club': 'golf-reports/bend-golf-club.html',
+    'Broken Top Club': 'golf-reports/broken-top.html',
+    'Old Back Nine Golf Course': 'golf-reports/old-back-nine.html',
+    "River's Edge Golf Course": 'golf-reports/rivers-edge.html',
+    'Tetherow Golf Club': 'golf-reports/tetherow.html'
+  };
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 
@@ -737,6 +803,7 @@
       };
     });
     fillHeader();
+    refreshReport();
     renderFilters();
     updateCount();
     renderList();
@@ -786,6 +853,7 @@
     updateCount();
     renderList();
     renderTabs();
+    refreshReport();
     syncUrl();
     var label = name;
     for (var i = 0; i < courses.length; i++) {
@@ -817,6 +885,50 @@
     syncUrl();
   }
 
+  function reportPath(name) {
+    return COURSE_REPORTS[name] || '';
+  }
+
+  function courseLabel() {
+    for (var i = 0; i < courses.length; i++) {
+      if (courses[i].sheet === sheetName) return courses[i].name || sheetName;
+    }
+    return (course && course.name) || sheetName || 'Report';
+  }
+
+  function refreshReport() {
+    var path = reportPath(sheetName);
+    var btn = document.getElementById('reportBtn');
+    if (btn) {
+      btn.disabled = !path;
+      btn.title = path ? 'Property intelligence report' : 'No report for this course yet';
+    }
+    var box = document.getElementById('reportOverlay');
+    if (!box || box.className !== 'open') return;
+    if (!path) { closeReport(); return; }
+    showReport(path);
+  }
+
+  function showReport(path) {
+    var frame = document.getElementById('reportFrame');
+    var title = document.getElementById('reportTitle');
+    var box = document.getElementById('reportOverlay');
+    if (title) title.textContent = courseLabel();
+    if (frame && path && frame.getAttribute('src') !== path) frame.setAttribute('src', path);
+    if (box) box.className = 'open';
+  }
+
+  function openReport() {
+    var path = reportPath(sheetName);
+    if (!path) return;
+    showReport(path);
+  }
+
+  function closeReport() {
+    var box = document.getElementById('reportOverlay');
+    if (box) box.className = '';
+  }
+
   window.hidePinPopup = hidePinPopup;
   window.expandPinPopup = expandPinPopup;
   window.closePinLightbox = closePinLightbox;
@@ -831,6 +943,11 @@
       setPinGroup(btn.getAttribute('data-group'));
     });
   }
+
+  var reportBtn = document.getElementById('reportBtn');
+  if (reportBtn) reportBtn.addEventListener('click', openReport);
+  var reportClose = document.getElementById('reportClose');
+  if (reportClose) reportClose.addEventListener('click', closeReport);
 
   var courseSelect = document.getElementById('courseTabs');
   if (courseSelect) {
@@ -848,6 +965,8 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
+    var report = document.getElementById('reportOverlay');
+    if (report && report.className === 'open') { closeReport(); return; }
     var box = document.getElementById('pin-lightbox');
     if (box && box.className === 'open') { closePinLightbox(); return; }
     hidePinPopup();
@@ -904,6 +1023,11 @@
       if (courses[i].sheet === start) { found = true; break; }
     }
     selectCourse(found ? start : courses[0].sheet, true);
+  }
+
+  if (fromUrl && reportPath(fromUrl)) {
+    sheetName = fromUrl;
+    refreshReport();
   }
 
   showLoading('Loading courses…');
