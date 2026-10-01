@@ -1,0 +1,1248 @@
+window.PI_STATUS = {
+  "as_of": "2026-09-26",
+  "as_of_utc": "2026-09-26T00:00:55Z",
+  "repo": "jonahbourgeois1/property-intel",
+  "ref": "origin/main",
+  "head": {
+    "sha": "7a46760bc6e5ce3e176ad826449d373979745d71",
+    "short": "7a46760",
+    "message": "Publish taxlot county coverage dashboard at /taxlot-coverage/ (#32)",
+    "author_date": "2026-09-25T16:20:20Z"
+  },
+  "sources": {
+    "git_log_since": "2026-09-25",
+    "iso_week": "2026-W39",
+    "changelog": "docs/NEARMAP_CHANGELOG.md (v1 Nearmap only; project CHANGELOG.md and CONTEXT absent)",
+    "context": null,
+    "property_intel_v2": "404 from this token; OneDrive v2 docs/ops not mounted",
+    "note": "index.html embeds this snapshot so a stale sibling status.js without ## 2026-09-26 cannot hide today"
+  },
+  "weekly": {
+    "label": "2026-W39",
+    "start": "2026-09-21",
+    "end": "2026-09-27",
+    "shipped": [
+      {
+        "sha": "2c321370b55dd228fa992048bf7687266ff4af43",
+        "short": "2c32137",
+        "message": "Let a drone-test row sync before analysis and open the Vyanet viewer from FR Link.",
+        "author_date": "2026-09-21T19:52:21Z",
+        "evidence": "HUB_BUILD 1.8.31 → 1.8.33 (no 1.8.32 on main); viewer.html v2.10.9 → v2.10.11. Copied drone-test.gs / menu.gs / records.gs — not a deploy. live-viewer BUILD stays 1.1.11"
+      },
+      {
+        "sha": "e2540224b45d82159d7013cf9c797ca5ace82331",
+        "short": "e254022",
+        "message": "Sync drone-test — 9/21/2026, 3:02:11 PM",
+        "author_date": "2026-09-21T20:02:11Z",
+        "evidence": "drone-test 3→13 (ten new data/drone-test/{id}.json) plus matching data/index updates; sync-owned"
+      },
+      {
+        "sha": "8998986154b461cb96040127f16ede78b7f15833",
+        "short": "8998986",
+        "message": "Sync drone-test — 9/21/2026, 3:13:39 PM",
+        "author_date": "2026-09-21T20:13:40Z",
+        "evidence": "empty tree (no file delta)"
+      },
+      {
+        "sha": "d78a37d067916aa739814b380871efb4b6873fa4",
+        "short": "d78a37d",
+        "message": "Sync drone-test — 9/21/2026, 3:24:30 PM",
+        "author_date": "2026-09-21T20:24:30Z",
+        "evidence": "trimmed new drone-test JSON; added data/pins/ (0→13 files); sync-owned"
+      },
+      {
+        "sha": "3032bb90376c0e919d3022f8ebd22af292f97332",
+        "short": "3032bb9",
+        "message": "Point each hub at its CHEKT account so Live opens that site's cameras.",
+        "author_date": "2026-09-21T20:56:10Z",
+        "evidence": "13 data/index/{id}.json updates; sync-owned hubs"
+      },
+      {
+        "sha": "f7cac108d22e261088e460c8afb82abb96319b9f",
+        "short": "f7cac10",
+        "message": "Hide Nearmap on customer hub links.",
+        "author_date": "2026-09-21T21:16:34Z",
+        "evidence": "HUB_BUILD 1.8.33 → 1.8.34; viewer.html v2.10.11 → v2.10.12; live=1 hides Nearmap. Copied drone-test.gs / menu.gs / records.gs — not a deploy"
+      },
+      {
+        "sha": "ddfb80d0e4f4fbf6f7a9296b1ec6d1d05253a5c3",
+        "short": "ddfb80d",
+        "message": "Sync drone-test — 9/21/2026, 4:23:01 PM",
+        "author_date": "2026-09-21T21:23:02Z",
+        "evidence": "12 data/index/{id}.json flag refreshes; last Sync/Publish on origin/main"
+      },
+      {
+        "sha": "bc42ca2654975575ec70a0a1a4badb7f42dc1246",
+        "short": "bc42ca2",
+        "message": "Show the same Property Analysis and Drone sheet on the 2D and 3D rails.",
+        "author_date": "2026-09-21T21:36:30Z",
+        "evidence": "viewer.html v2.10.12 → v2.10.13; model-viewer.html; no .gs"
+      },
+      {
+        "sha": "29a5a756b77c13d0fa2014a513844343f35df303",
+        "short": "29a5a75",
+        "message": "Merge remote-tracking branch 'origin/main' into live-nearmap-flag",
+        "author_date": "2026-09-21T21:37:24Z",
+        "evidence": "merge of bc42ca2 + ddfb80d; no unique file delta beyond those parents"
+      },
+      {
+        "sha": "7036412a71977ca24cd16a62a186a1e420aa854c",
+        "short": "7036412",
+        "message": "Put the drone sheet in Property Analysis and drop the extra Drone tab.",
+        "author_date": "2026-09-21T21:51:42Z",
+        "evidence": "viewer.html v2.10.13 → v2.10.14; model-viewer.html; no .gs"
+      },
+      {
+        "sha": "6b6cd8605430aefeb423f8e9dae660310b340fc9",
+        "short": "6b6cd86",
+        "message": "Show each listed property's cameras as pins on its map.",
+        "author_date": "2026-09-21T22:20:51Z",
+        "evidence": "HUB_BUILD 1.8.34 → 1.8.35; cameras/json files added this commit (net 3→12 after later same-afternoon delete of 744a3639…)"
+      },
+      {
+        "sha": "d3572b336b4316edaf6322cf19bb5287226fbd79",
+        "short": "d3572b3",
+        "message": "Keep Matt King's cameras off Vyanet Bend and put Butler's pins on the house.",
+        "author_date": "2026-09-21T22:49:39Z",
+        "evidence": "HUB_BUILD 1.8.35 → 1.8.36; viewer.html v2.10.14 → v2.10.15; deleted data/cameras/json/744a3639…"
+      },
+      {
+        "sha": "a339e877b1ba9ade5a3892751c26635cec46216a",
+        "short": "a339e87",
+        "message": "Stop Vyanet Bend Live from opening the King residence cameras.",
+        "author_date": "2026-09-21T22:57:20Z",
+        "evidence": "HUB_BUILD 1.8.36 → 1.8.37; viewer.html v2.10.15 → v2.10.16; live-viewer BUILD stays 1.1.11"
+      },
+      {
+        "sha": "c5f4a69b3838a6d0c051303286547d40b3220010",
+        "short": "c5f4a69",
+        "message": "Stop Vyanet Bend from opening the King residence on a view-id retry.",
+        "author_date": "2026-09-21T23:06:10Z",
+        "evidence": "HUB_BUILD 1.8.37 → 1.8.38; viewer.html v2.10.16 → v2.10.17"
+      },
+      {
+        "sha": "b05a03563e73a64630e7aa515cf196feb5d48c30",
+        "short": "b05a035",
+        "message": "Send the property id on Live requests so Vyanet Bend opens its hardcoded CHEKT site.",
+        "author_date": "2026-09-21T23:43:28Z",
+        "evidence": "HUB_BUILD 1.8.38 → 1.8.39; viewer.html v2.10.17 → v2.10.18"
+      },
+      {
+        "sha": "0f57c681880305b2fe8f0151eb8578b73e562379",
+        "short": "0f57c68",
+        "message": "Hardcode each property's CHEKT site id on its index and keep site 4802 off Vyanet Bend.",
+        "author_date": "2026-09-21T23:51:04Z",
+        "evidence": "HUB_BUILD 1.8.39 → 1.8.40; viewer.html v2.10.18 → v2.10.19; 15 data/index site-id stamps"
+      },
+      {
+        "sha": "8ea7c1df48bc8b3bdd04facc95f3ccd128df888c",
+        "short": "8ea7c1d",
+        "message": "Set Vyanet Bend's index to CHEKT site 8093, the Bend office.",
+        "author_date": "2026-09-22T00:00:26Z",
+        "evidence": "HUB_BUILD stays 1.8.40. HEAD. data/index/744a3639… + INDEX_AND_CAMERAS_CONTRACT.md"
+      },
+      {
+        "sha": "cbed444cee83714bedfb62bd26daa00c231d7dd1",
+        "short": "cbed444",
+        "message": "Place Vyanet Bend's four office cameras on the two metal roofs.",
+        "author_date": "2026-09-22T00:21:01Z",
+        "evidence": "Re-added data/cameras/json/744a3639… (cameras/json 12→13; d3572b3 had deleted it earlier 9/21). Hub stays 1.8.40. INDEX_AND_CAMERAS_CONTRACT.md. No .gs"
+      },
+      {
+        "sha": "376c5b1938a777b039bdf24bee8b396a23691e78",
+        "short": "376c5b1",
+        "message": "Draw the Butler Residence outline around the house and the dirt lot.",
+        "author_date": "2026-09-22T00:33:13Z",
+        "evidence": "Updated existing data/drone-test/85b8ae1f… (count stays 13). Copied drone-test.gs to keep stored parcel_ring on full sync — not a deploy. Hub stays 1.8.40"
+      },
+      {
+        "sha": "2bce4463a4b1129c920ac8e54c450eeeb285a236",
+        "short": "2bce446",
+        "message": "PPS home image uses the drone-sheet overhead; move Sutherlin camera 1 onto the roof.",
+        "author_date": "2026-09-22T01:05:21Z",
+        "evidence": "HUB_BUILD 1.8.40 → 1.8.41; viewer.html stays v2.10.19; live-viewer BUILD stays 1.1.11. Edited existing cameras/json/f34caa15… (count stays 13)"
+      },
+      {
+        "sha": "132652d25b80bc6c9c852ba3151b217610fb366e",
+        "short": "132652d",
+        "message": "2D lot lines fall back to the CloudFront county layers; drone-sheet hero for Bend, Roseburg, Myrtle Creek.",
+        "author_date": "2026-09-22T01:30:02Z",
+        "evidence": "HUB_BUILD 1.8.41 → 1.8.42; viewer.html v2.10.19 → v2.10.20; live-viewer BUILD stays 1.1.11. No .gs"
+      },
+      {
+        "sha": "41f31e4b2b316fcd3193fa131bfbc5cd48429584",
+        "short": "41f31e4",
+        "message": "Delete data/drone/35ba5fb366a3e74ad850fd67dbecb76a.json",
+        "author_date": "2026-09-22T18:18:50Z",
+        "evidence": "drone 134→133; sync-owned delete; one data/drone/{id}.json removed"
+      },
+      {
+        "sha": "a06c776fd9cfa217d43ca342cf4323c007998d3c",
+        "short": "a06c776",
+        "message": "Publish Responder Intel — 91 properties — 9/22/2026, 1:19:49 PM",
+        "author_date": "2026-09-22T18:19:50Z",
+        "evidence": "empty tree (same as parent 41f31e4; no file delta)"
+      },
+      {
+        "sha": "ea6804680ed1612c3446377db9885cb8761f3265",
+        "short": "ea68046",
+        "message": "Delete data/responder-drone/35ba5fb366a3e74ad850fd67dbecb76a.json",
+        "author_date": "2026-09-22T19:15:25Z",
+        "evidence": "responder-drone 137→136; HEAD. Sync-owned delete of matching responder-drone record"
+      },
+      {
+        "sha": "2c154a735dcdc221621582ecab97a38baddd6f86",
+        "short": "2c154a7",
+        "message": "Add the customer portal map so a CRM address opens a satellite lot view.",
+        "author_date": "2026-09-23T19:15:18Z",
+        "evidence": "Added customer-map.html (323 lines). No hub/viewer bump. Co-authored-by Cursor. Same-afternoon 05de967 deleted the file."
+      },
+      {
+        "sha": "05de9678a9ba4f89885d3568419a91f79c0dfa22",
+        "short": "05de967",
+        "message": "Remove the portal map page from this repo.",
+        "author_date": "2026-09-23T20:09:04Z",
+        "evidence": "Deleted customer-map.html. Commit body: Zoho portal pages now live in vyanet-ops/drones under docs/portal. This clone cannot see that repo. git diff --name-status ea68046..origin/main is empty. HEAD."
+      },
+      {
+        "sha": "76e8d3139ee23a39933f8e0520e101d59eb46fe4",
+        "short": "76e8d31",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:01:01 PM",
+        "author_date": "2026-09-24T22:01:01Z",
+        "evidence": "Added data/responder-drone/85767318… (30 lines). Sync-owned. First of six new responder-drone records."
+      },
+      {
+        "sha": "f5aaa92b47e7dc9c7b1c7ea7749339f87ea69f20",
+        "short": "f5aaa92",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:01:29 PM",
+        "author_date": "2026-09-24T22:01:29Z",
+        "evidence": "Added data/responder-drone/6d0d13a9…. Sync-owned."
+      },
+      {
+        "sha": "efa0d81249a1e3991fac13b1960ea48fc0ad9477",
+        "short": "efa0d81",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:01:46 PM",
+        "author_date": "2026-09-24T22:01:46Z",
+        "evidence": "Added data/responder-drone/4ef7f96c…. Sync-owned."
+      },
+      {
+        "sha": "9a406689888669db6f04f785fd82d08da4671377",
+        "short": "9a40668",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:02:07 PM",
+        "author_date": "2026-09-24T22:02:07Z",
+        "evidence": "Added data/responder-drone/7c45ad33…. Sync-owned."
+      },
+      {
+        "sha": "a01bd104b04eb3343de1e42d8279178485eaccdf",
+        "short": "a01bd10",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:02:42 PM",
+        "author_date": "2026-09-24T22:02:43Z",
+        "evidence": "Added data/responder-drone/a09eb1c2…. Sync-owned."
+      },
+      {
+        "sha": "c80f73d2d9ecf5f5f3dfa1309b9965713125fe5f",
+        "short": "c80f73d",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:03:03 PM",
+        "author_date": "2026-09-24T22:03:03Z",
+        "evidence": "Added data/responder-drone/990246b5…. After these six adds, responder-drone 136→142. Sync-owned."
+      },
+      {
+        "sha": "eb11b24d6bfd2523dd2703a78e014da5fc28fb43",
+        "short": "eb11b24",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:00 PM",
+        "author_date": "2026-09-24T22:20:00Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "09195df8907a68a0af731bc6bb7d50cb84788e97",
+        "short": "09195df",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:08 PM",
+        "author_date": "2026-09-24T22:20:09Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "865ac5371872e16d961bcf09c3275ee4c206ee50",
+        "short": "865ac53",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:15 PM",
+        "author_date": "2026-09-24T22:20:15Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "ba594cd44df15b0f800b379cac0607060a9d3cc6",
+        "short": "ba594cd",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:23 PM",
+        "author_date": "2026-09-24T22:20:24Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "5d2ec6be5e005330fa7fc3e3a48383c87a1026c8",
+        "short": "5d2ec6b",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:33 PM",
+        "author_date": "2026-09-24T22:20:33Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "c2125ec72703feb839c8281beeefe5cf7f061c76",
+        "short": "c2125ec",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:40 PM",
+        "author_date": "2026-09-24T22:20:40Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "bba046e03424b950cf1bc134e6e8939c81583f09",
+        "short": "bba046e",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:49 PM",
+        "author_date": "2026-09-24T22:20:49Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "071c0309079135c64535b381fab7f6afdbbe424d",
+        "short": "071c030",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:57 PM",
+        "author_date": "2026-09-24T22:20:58Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "1a06f29975d46bd7fabba66fe97f1a8a41ddbb38",
+        "short": "1a06f29",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:04 PM",
+        "author_date": "2026-09-24T22:21:05Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "ca51cb4711fe71836470026b91116e795461dee4",
+        "short": "ca51cb4",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:12 PM",
+        "author_date": "2026-09-24T22:21:12Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "175408a784191b93a5d5eb4986c2a98fff010208",
+        "short": "175408a",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:20 PM",
+        "author_date": "2026-09-24T22:21:20Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "19f1e1875c814de2f2c5a2decad589b11a1014e2",
+        "short": "19f1e18",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:27 PM",
+        "author_date": "2026-09-24T22:21:28Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "493cb7b9e6a44a9758848a55f899193bc42a946d",
+        "short": "493cb7b",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:35 PM",
+        "author_date": "2026-09-24T22:21:35Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "7e3c44aa8233a839b464fa2cb783fc60fde99e96",
+        "short": "7e3c44a",
+        "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:42 PM",
+        "author_date": "2026-09-24T22:21:43Z",
+        "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+      },
+      {
+        "sha": "63aa425ee764dbc29ba26d7b7ee1c2e29b303fdd",
+        "short": "63aa425",
+        "message": "Sync Drone — 9/24/2026, 5:26:11 PM",
+        "author_date": "2026-09-24T22:26:12Z",
+        "evidence": "HEAD. Added six matching data/drone/{id}.json (drone 133→139) and 15 existing drone address-only updates. Sync-owned. Last Sync/Publish on origin/main."
+      },
+      {
+        "sha": "35d5a21be2ef20fa1960ef5c99faee520e90e492",
+        "short": "35d5a21",
+        "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:10 AM",
+        "author_date": "2026-09-25T15:49:10Z",
+        "evidence": "Added data/responder-drone/57d3f326… (30 lines). Sync-owned. First of three new responder-drone records."
+      },
+      {
+        "sha": "55b9d5fa4d92dff38fb19baafefb09a6140f09b3",
+        "short": "55b9d5f",
+        "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:26 AM",
+        "author_date": "2026-09-25T15:49:26Z",
+        "evidence": "Added data/responder-drone/28bc2dc0…. Sync-owned."
+      },
+      {
+        "sha": "5e0e87095b48d490d1db2a96dc31439237ad77ef",
+        "short": "5e0e870",
+        "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:40 AM",
+        "author_date": "2026-09-25T15:49:40Z",
+        "evidence": "Added data/responder-drone/6e097661…. After these three adds, responder-drone 142→145. Sync-owned. Last Sync/Publish on origin/main."
+      },
+      {
+        "sha": "7a46760bc6e5ce3e176ad826449d373979745d71",
+        "short": "7a46760",
+        "message": "Publish taxlot county coverage dashboard at /taxlot-coverage/ (#32)",
+        "author_date": "2026-09-25T16:20:20Z",
+        "evidence": "PR #32 MERGED. Added taxlot-coverage/ (166 files, +35463). counties.json meta 160 counties / 15 states / 21797 sites; status_counts inspected 122, deferred-tail 34, no-source 2, blocked-license 2. Cloud agent bc-a361408c (sand). HEAD. No hub/viewer bump. No .gs"
+      }
+    ],
+    "still_open": [
+      {
+        "item": "Desktop/web/local chats still not listed; one sand-source Cloud agent was listed",
+        "evidence": "list-cloud-agents createdAfter 2026-09-24 returned this cron (bc-9945b981), 9/25 Log Bot bc-931a5ca8, 9/24 Log Bot bc-99e04970, and sand-source Add taxlot-coverage Pages dashboard bc-a361408c (merged PR #32). desktop/web/local sources returned 0"
+      },
+      {
+        "item": "Daily log PRs #1, #3–#31 still DRAFT; docs/ops/ not on main",
+        "evidence": "gh pr list: #1 and #3–#31 OPEN DRAFT (titles ops: daily log 2026-08-27 through 2026-09-25). #32 MERGED (taxlot-coverage). origin/main has no docs/ops"
+      },
+      {
+        "item": "Nearmap Apps Script deploy / S3 edits write unverified",
+        "evidence": "7dd6050/4937ac0/07b62a1 copied apps scripts/nearmap.gs; 4937ac0 also copied config.gs — file copies, not a deploy. nearmap.gs last copy remains 07b62a1. No .gs copy after 376c5b1 (drone-test.gs). 542bd09 published data/nearmap/d9f759d7351db3886c79dd689c41e3c0.json (20 elements), still one file. This clone cannot see the Apps Script editor or the S3 edits object; paste + new deployment and checkS3EditsWrite are not evidenced."
+      }
+    ],
+    "watchouts": [
+      "Apps Script editor-save is not a new deployment; .gs copies in git are not a deploy. No .gs copy after 376c5b1. nearmap.gs last copy remains 07b62a1; config.gs last Nearmap copy remains 4937ac0. satellite.gs last copy remains d688a65; no satellite.gs copy after that. MOCKINGBIRD row 277 is the first check after a real satellite.gs deploy.",
+      "Public data/*.json is sync-owned. Last Sync/Publish on origin/main is 5e0e870 Publish Responder Intel (2026-09-25 10:49 -0500): three new responder-drone records (35d5a21, 55b9d5f, 5e0e870; 142→145). No matching Sync Drone. 7a46760 added taxlot-coverage/ (not a data/ sync). Nearmap JSON unchanged after 542bd09. No satellite/plane Sync/Publish. Recount 2026-09-26: satellite 506, plane 22, drone 139, drone-test 13, lane tiles 332, gis 3, hoa 5, responder-drone 145, nearmap 1, cameras/json 13, pins 13.",
+      "pins-catalog.json still has role= on every pin after the 256-pin update (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001-1150 in the golf.gs seed); golf.gs header says never merge it into pins-catalog.json."
+    ],
+    "completion_percent": null,
+    "pipelines": [
+      {
+        "id": "viewers",
+        "name": "Responder viewers (v1 Pages)",
+        "status": "on main",
+        "evidence": "origin/main 7a46760; HUB_BUILD 1.8.42 (132652d); viewer.html VERSION v2.10.20 (132652d); element-review BUILD v6.8.20; golf-review BUILD v1.0.4; nearmap-review BUILD v1.7.18 (5fddc0f); nearmap-viewer BUILD v1.1.16 (20cb487); live-viewer BUILD 1.1.11 (ba89172; last touch 2bce446/132652d with no bump). 35d5a21..5e0e870 are sync-owned data/ only; 7a46760 is taxlot-coverage/, not a viewer version change."
+      },
+      {
+        "id": "sync",
+        "name": "Apps Script → GitHub data sync",
+        "status": "last Sync/Publish 2026-09-25 three Publish Responder Intel; responder-drone 142→145",
+        "evidence": "5e0e870 Publish Responder Intel (2026-09-25 10:49 -0500) last Sync/Publish on origin/main. Three new responder-drone records (35d5a21, 55b9d5f, 5e0e870). No matching Sync Drone. No satellite/plane Sync/Publish. No .gs copy. Editor-save is not a deploy."
+      },
+      {
+        "id": "satellite",
+        "name": "Satellite Pass 1 / review / Pass 2",
+        "status": "viewers on main; deploy unverified",
+        "evidence": "element-review.html BUILD v6.8.20 unchanged after 7a46760. satellite.gs copy last changed in d688a65; file copy is not a deploy. No satellite.gs copy 2026-09-03..2026-09-26."
+      },
+      {
+        "id": "nearmap",
+        "name": "Nearmap trial (review + viewer + hub)",
+        "status": "review v1.7.18 + viewer v1.1.16 + hub 1.8.42 on main; one published JSON; Apps Script deploy / S3 edits unverified",
+        "evidence": "5fddc0f review v1.7.18. 20cb487 viewer v1.1.16. Hub stays 1.8.42 (132652d). 542bd09 published data/nearmap/{id}.json unchanged. nearmap.gs last copy 07b62a1. This clone cannot verify S3."
+      },
+      {
+        "id": "golf",
+        "name": "Golf review (sheet-only)",
+        "status": "on main; Apps Script deploy unverified",
+        "evidence": "golf-review.html BUILD v1.0.4 on origin/main 8b1d0d4; unchanged after 7a46760. Seed 150 pins ids 1001-1150; GOLF_MAX_PINS=200 in config.gs copy. golf.gs header: no data/golf/, never merge into pins-catalog.json. .gs copies are not a deploy."
+      },
+      {
+        "id": "plane",
+        "name": "Plane capture (ingest → eligibility → clip → render)",
+        "status": "not in this clone",
+        "evidence": "property-intel-v2 404 from this token. CHANGELOG and CONTEXT absent."
+      },
+      {
+        "id": "live",
+        "name": "Live CHEKT",
+        "status": "on main",
+        "evidence": "Hub stays 1.8.42 (132652d). live-viewer.html BUILD stays 1.1.11. 35d5a21..5e0e870 are responder-drone Publish; 7a46760 is taxlot-coverage/. Unchanged CHEKT gateway not re-probed."
+      },
+      {
+        "id": "taxlot",
+        "name": "Taxlot county coverage dashboard",
+        "status": "on main at /taxlot-coverage/",
+        "evidence": "7a46760 / PR #32 MERGED 2026-09-25T16:20:20Z. taxlot-coverage/data/counties.json meta: 160 counties, 15 states, 21797 sites; status_counts inspected 122 / deferred-tail 34 / no-source 2 / blocked-license 2. 160 county record files. Cloud agent bc-a361408c. README live path https://responder-intel.vyanet.com/taxlot-coverage/. This cron did not re-probe the live host."
+      },
+      {
+        "id": "photo",
+        "name": "Photo intake",
+        "status": "not in this clone",
+        "evidence": "no photo-intake source in this v1 checkout. c65c8b1 NEXT_SESSION names intake as the 2026-09-16 planned session; that brief is still the last evidence. 2c154a7/05de967 are a Zoho portal map page add/remove on this repo, not a photo-intake transport ship. 05de967 claims the pages live in vyanet-ops/drones — unverified here."
+      }
+    ],
+    "in_progress": [
+      {
+        "item": "Daily ops page (docs/ops/) still off main",
+        "evidence": "Draft PRs #1, #3–#31. origin/main has no docs/ops. #32 merged taxlot-coverage, not docs/ops."
+      },
+      {
+        "item": "Log Bot cannot see desktop/web/local chats",
+        "evidence": "list-cloud-agents desktop/web/local sources returned 0 in this environment. One sand-source agent (bc-a361408c taxlot-coverage) was listed and merged as PR #32."
+      },
+      {
+        "item": "v2 pipeline tree not mounted for Log Bot",
+        "evidence": "property-intel-v2 404; OneDrive Desktop/property-intel-v2/docs/ops not writable from this VM."
+      },
+      {
+        "item": "Golf Apps Script deploy unverified",
+        "evidence": "a8b3ceb..8b1d0d4 committed golf.gs/config.gs/menu.gs/critique-api.gs copies. Editor-save is not a deploy. No golf-review or golf.gs commits after 8b1d0d4."
+      },
+      {
+        "item": "satellite.gs / critique-api.gs deploy unverified after 9/01 evening + 9/02 copies",
+        "evidence": "d688a65 copied satellite.gs and critique-api.gs; da8dedf copied critique-api.gs. File copies are not a deploy. No satellite.gs copy after d688a65. MOCKINGBIRD row 277 is the first check after a real satellite.gs deploy."
+      },
+      {
+        "item": "Nearmap Apps Script deploy / S3 edits write unverified",
+        "evidence": "7dd6050/4937ac0/07b62a1 copied apps scripts/nearmap.gs; 4937ac0 also copied config.gs — file copies, not a deploy. nearmap.gs last copy remains 07b62a1. No .gs copy after 376c5b1 (drone-test.gs). 542bd09 published data/nearmap/d9f759d7351db3886c79dd689c41e3c0.json (20 elements), still one file. This clone cannot see the Apps Script editor or the S3 edits object; paste + new deployment and checkS3EditsWrite are not evidenced."
+      },
+      {
+        "item": "drone-test.gs deploy unverified after 376c5b1 copy",
+        "evidence": "376c5b1 copied apps scripts/drone-test.gs (keeps stored parcel_ring on full sync). File copy is not a deploy. No later .gs copy. This clone cannot see the Apps Script editor; paste + new deployment is not evidenced. Earlier copies remain 2c32137 / f7cac10 / 144cfec."
+      }
+    ]
+  },
+  "days": [
+    "2026-09-26",
+    "2026-09-25",
+    "2026-09-24",
+    "2026-09-23",
+    "2026-09-22",
+    "2026-09-21",
+    "2026-09-20",
+    "2026-09-19",
+    "2026-09-18",
+    "2026-09-17",
+    "2026-09-16",
+    "2026-09-15",
+    "2026-09-14",
+    "2026-09-13",
+    "2026-09-12",
+    "2026-09-11",
+    "2026-09-10",
+    "2026-09-09",
+    "2026-09-08",
+    "2026-09-07",
+    "2026-09-06",
+    "2026-09-05",
+    "2026-09-04",
+    "2026-09-03",
+    "2026-09-02",
+    "2026-09-01",
+    "2026-08-31",
+    "2026-08-30",
+    "2026-08-29",
+    "2026-08-28",
+    "2026-08-27",
+    "2026-08-26",
+    "2026-08-25"
+  ],
+  "shipped_today": [
+    {
+      "sha": "35d5a21be2ef20fa1960ef5c99faee520e90e492",
+      "short": "35d5a21",
+      "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:10 AM",
+      "author_date": "2026-09-25T15:49:10Z",
+      "evidence": "Added data/responder-drone/57d3f326… (30 lines). Sync-owned. First of three new responder-drone records."
+    },
+    {
+      "sha": "55b9d5fa4d92dff38fb19baafefb09a6140f09b3",
+      "short": "55b9d5f",
+      "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:26 AM",
+      "author_date": "2026-09-25T15:49:26Z",
+      "evidence": "Added data/responder-drone/28bc2dc0…. Sync-owned."
+    },
+    {
+      "sha": "5e0e87095b48d490d1db2a96dc31439237ad77ef",
+      "short": "5e0e870",
+      "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:40 AM",
+      "author_date": "2026-09-25T15:49:40Z",
+      "evidence": "Added data/responder-drone/6e097661…. After these three adds, responder-drone 142→145. Sync-owned. Last Sync/Publish on origin/main."
+    },
+    {
+      "sha": "7a46760bc6e5ce3e176ad826449d373979745d71",
+      "short": "7a46760",
+      "message": "Publish taxlot county coverage dashboard at /taxlot-coverage/ (#32)",
+      "author_date": "2026-09-25T16:20:20Z",
+      "evidence": "PR #32 MERGED. Added taxlot-coverage/ (166 files, +35463). counties.json meta 160 counties / 15 states / 21797 sites; status_counts inspected 122, deferred-tail 34, no-source 2, blocked-license 2. Cloud agent bc-a361408c (sand). HEAD. No hub/viewer bump. No .gs"
+    }
+  ],
+  "shipped_this_week": [
+    {
+      "sha": "2c321370b55dd228fa992048bf7687266ff4af43",
+      "short": "2c32137",
+      "message": "Let a drone-test row sync before analysis and open the Vyanet viewer from FR Link.",
+      "author_date": "2026-09-21T19:52:21Z",
+      "evidence": "HUB_BUILD 1.8.31 → 1.8.33 (no 1.8.32 on main); viewer.html v2.10.9 → v2.10.11. Copied drone-test.gs / menu.gs / records.gs — not a deploy. live-viewer BUILD stays 1.1.11"
+    },
+    {
+      "sha": "e2540224b45d82159d7013cf9c797ca5ace82331",
+      "short": "e254022",
+      "message": "Sync drone-test — 9/21/2026, 3:02:11 PM",
+      "author_date": "2026-09-21T20:02:11Z",
+      "evidence": "drone-test 3→13 (ten new data/drone-test/{id}.json) plus matching data/index updates; sync-owned"
+    },
+    {
+      "sha": "8998986154b461cb96040127f16ede78b7f15833",
+      "short": "8998986",
+      "message": "Sync drone-test — 9/21/2026, 3:13:39 PM",
+      "author_date": "2026-09-21T20:13:40Z",
+      "evidence": "empty tree (no file delta)"
+    },
+    {
+      "sha": "d78a37d067916aa739814b380871efb4b6873fa4",
+      "short": "d78a37d",
+      "message": "Sync drone-test — 9/21/2026, 3:24:30 PM",
+      "author_date": "2026-09-21T20:24:30Z",
+      "evidence": "trimmed new drone-test JSON; added data/pins/ (0→13 files); sync-owned"
+    },
+    {
+      "sha": "3032bb90376c0e919d3022f8ebd22af292f97332",
+      "short": "3032bb9",
+      "message": "Point each hub at its CHEKT account so Live opens that site's cameras.",
+      "author_date": "2026-09-21T20:56:10Z",
+      "evidence": "13 data/index/{id}.json updates; sync-owned hubs"
+    },
+    {
+      "sha": "f7cac108d22e261088e460c8afb82abb96319b9f",
+      "short": "f7cac10",
+      "message": "Hide Nearmap on customer hub links.",
+      "author_date": "2026-09-21T21:16:34Z",
+      "evidence": "HUB_BUILD 1.8.33 → 1.8.34; viewer.html v2.10.11 → v2.10.12; live=1 hides Nearmap. Copied drone-test.gs / menu.gs / records.gs — not a deploy"
+    },
+    {
+      "sha": "ddfb80d0e4f4fbf6f7a9296b1ec6d1d05253a5c3",
+      "short": "ddfb80d",
+      "message": "Sync drone-test — 9/21/2026, 4:23:01 PM",
+      "author_date": "2026-09-21T21:23:02Z",
+      "evidence": "12 data/index/{id}.json flag refreshes; last Sync/Publish on origin/main"
+    },
+    {
+      "sha": "bc42ca2654975575ec70a0a1a4badb7f42dc1246",
+      "short": "bc42ca2",
+      "message": "Show the same Property Analysis and Drone sheet on the 2D and 3D rails.",
+      "author_date": "2026-09-21T21:36:30Z",
+      "evidence": "viewer.html v2.10.12 → v2.10.13; model-viewer.html; no .gs"
+    },
+    {
+      "sha": "29a5a756b77c13d0fa2014a513844343f35df303",
+      "short": "29a5a75",
+      "message": "Merge remote-tracking branch 'origin/main' into live-nearmap-flag",
+      "author_date": "2026-09-21T21:37:24Z",
+      "evidence": "merge of bc42ca2 + ddfb80d; no unique file delta beyond those parents"
+    },
+    {
+      "sha": "7036412a71977ca24cd16a62a186a1e420aa854c",
+      "short": "7036412",
+      "message": "Put the drone sheet in Property Analysis and drop the extra Drone tab.",
+      "author_date": "2026-09-21T21:51:42Z",
+      "evidence": "viewer.html v2.10.13 → v2.10.14; model-viewer.html; no .gs"
+    },
+    {
+      "sha": "6b6cd8605430aefeb423f8e9dae660310b340fc9",
+      "short": "6b6cd86",
+      "message": "Show each listed property's cameras as pins on its map.",
+      "author_date": "2026-09-21T22:20:51Z",
+      "evidence": "HUB_BUILD 1.8.34 → 1.8.35; cameras/json files added this commit (net 3→12 after later same-afternoon delete of 744a3639…)"
+    },
+    {
+      "sha": "d3572b336b4316edaf6322cf19bb5287226fbd79",
+      "short": "d3572b3",
+      "message": "Keep Matt King's cameras off Vyanet Bend and put Butler's pins on the house.",
+      "author_date": "2026-09-21T22:49:39Z",
+      "evidence": "HUB_BUILD 1.8.35 → 1.8.36; viewer.html v2.10.14 → v2.10.15; deleted data/cameras/json/744a3639…"
+    },
+    {
+      "sha": "a339e877b1ba9ade5a3892751c26635cec46216a",
+      "short": "a339e87",
+      "message": "Stop Vyanet Bend Live from opening the King residence cameras.",
+      "author_date": "2026-09-21T22:57:20Z",
+      "evidence": "HUB_BUILD 1.8.36 → 1.8.37; viewer.html v2.10.15 → v2.10.16; live-viewer BUILD stays 1.1.11"
+    },
+    {
+      "sha": "c5f4a69b3838a6d0c051303286547d40b3220010",
+      "short": "c5f4a69",
+      "message": "Stop Vyanet Bend from opening the King residence on a view-id retry.",
+      "author_date": "2026-09-21T23:06:10Z",
+      "evidence": "HUB_BUILD 1.8.37 → 1.8.38; viewer.html v2.10.16 → v2.10.17"
+    },
+    {
+      "sha": "b05a03563e73a64630e7aa515cf196feb5d48c30",
+      "short": "b05a035",
+      "message": "Send the property id on Live requests so Vyanet Bend opens its hardcoded CHEKT site.",
+      "author_date": "2026-09-21T23:43:28Z",
+      "evidence": "HUB_BUILD 1.8.38 → 1.8.39; viewer.html v2.10.17 → v2.10.18"
+    },
+    {
+      "sha": "0f57c681880305b2fe8f0151eb8578b73e562379",
+      "short": "0f57c68",
+      "message": "Hardcode each property's CHEKT site id on its index and keep site 4802 off Vyanet Bend.",
+      "author_date": "2026-09-21T23:51:04Z",
+      "evidence": "HUB_BUILD 1.8.39 → 1.8.40; viewer.html v2.10.18 → v2.10.19; 15 data/index site-id stamps"
+    },
+    {
+      "sha": "8ea7c1df48bc8b3bdd04facc95f3ccd128df888c",
+      "short": "8ea7c1d",
+      "message": "Set Vyanet Bend's index to CHEKT site 8093, the Bend office.",
+      "author_date": "2026-09-22T00:00:26Z",
+      "evidence": "HUB_BUILD stays 1.8.40. HEAD. data/index/744a3639… + INDEX_AND_CAMERAS_CONTRACT.md"
+    },
+    {
+      "sha": "cbed444cee83714bedfb62bd26daa00c231d7dd1",
+      "short": "cbed444",
+      "message": "Place Vyanet Bend's four office cameras on the two metal roofs.",
+      "author_date": "2026-09-22T00:21:01Z",
+      "evidence": "Re-added data/cameras/json/744a3639… (cameras/json 12→13; d3572b3 had deleted it earlier 9/21). Hub stays 1.8.40. INDEX_AND_CAMERAS_CONTRACT.md. No .gs"
+    },
+    {
+      "sha": "376c5b1938a777b039bdf24bee8b396a23691e78",
+      "short": "376c5b1",
+      "message": "Draw the Butler Residence outline around the house and the dirt lot.",
+      "author_date": "2026-09-22T00:33:13Z",
+      "evidence": "Updated existing data/drone-test/85b8ae1f… (count stays 13). Copied drone-test.gs to keep stored parcel_ring on full sync — not a deploy. Hub stays 1.8.40"
+    },
+    {
+      "sha": "2bce4463a4b1129c920ac8e54c450eeeb285a236",
+      "short": "2bce446",
+      "message": "PPS home image uses the drone-sheet overhead; move Sutherlin camera 1 onto the roof.",
+      "author_date": "2026-09-22T01:05:21Z",
+      "evidence": "HUB_BUILD 1.8.40 → 1.8.41; viewer.html stays v2.10.19; live-viewer BUILD stays 1.1.11. Edited existing cameras/json/f34caa15… (count stays 13)"
+    },
+    {
+      "sha": "132652d25b80bc6c9c852ba3151b217610fb366e",
+      "short": "132652d",
+      "message": "2D lot lines fall back to the CloudFront county layers; drone-sheet hero for Bend, Roseburg, Myrtle Creek.",
+      "author_date": "2026-09-22T01:30:02Z",
+      "evidence": "HUB_BUILD 1.8.41 → 1.8.42; viewer.html v2.10.19 → v2.10.20; live-viewer BUILD stays 1.1.11. No .gs"
+    },
+    {
+      "sha": "41f31e4b2b316fcd3193fa131bfbc5cd48429584",
+      "short": "41f31e4",
+      "message": "Delete data/drone/35ba5fb366a3e74ad850fd67dbecb76a.json",
+      "author_date": "2026-09-22T18:18:50Z",
+      "evidence": "drone 134→133; sync-owned delete; one data/drone/{id}.json removed"
+    },
+    {
+      "sha": "a06c776fd9cfa217d43ca342cf4323c007998d3c",
+      "short": "a06c776",
+      "message": "Publish Responder Intel — 91 properties — 9/22/2026, 1:19:49 PM",
+      "author_date": "2026-09-22T18:19:50Z",
+      "evidence": "empty tree (same as parent 41f31e4; no file delta)"
+    },
+    {
+      "sha": "ea6804680ed1612c3446377db9885cb8761f3265",
+      "short": "ea68046",
+      "message": "Delete data/responder-drone/35ba5fb366a3e74ad850fd67dbecb76a.json",
+      "author_date": "2026-09-22T19:15:25Z",
+      "evidence": "responder-drone 137→136; HEAD. Sync-owned delete of matching responder-drone record"
+    },
+    {
+      "sha": "2c154a735dcdc221621582ecab97a38baddd6f86",
+      "short": "2c154a7",
+      "message": "Add the customer portal map so a CRM address opens a satellite lot view.",
+      "author_date": "2026-09-23T19:15:18Z",
+      "evidence": "Added customer-map.html (323 lines). No hub/viewer bump. Co-authored-by Cursor. Same-afternoon 05de967 deleted the file."
+    },
+    {
+      "sha": "05de9678a9ba4f89885d3568419a91f79c0dfa22",
+      "short": "05de967",
+      "message": "Remove the portal map page from this repo.",
+      "author_date": "2026-09-23T20:09:04Z",
+      "evidence": "Deleted customer-map.html. Commit body: Zoho portal pages now live in vyanet-ops/drones under docs/portal. This clone cannot see that repo. git diff --name-status ea68046..origin/main is empty. HEAD."
+    },
+    {
+      "sha": "76e8d3139ee23a39933f8e0520e101d59eb46fe4",
+      "short": "76e8d31",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:01:01 PM",
+      "author_date": "2026-09-24T22:01:01Z",
+      "evidence": "Added data/responder-drone/85767318… (30 lines). Sync-owned. First of six new responder-drone records."
+    },
+    {
+      "sha": "f5aaa92b47e7dc9c7b1c7ea7749339f87ea69f20",
+      "short": "f5aaa92",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:01:29 PM",
+      "author_date": "2026-09-24T22:01:29Z",
+      "evidence": "Added data/responder-drone/6d0d13a9…. Sync-owned."
+    },
+    {
+      "sha": "efa0d81249a1e3991fac13b1960ea48fc0ad9477",
+      "short": "efa0d81",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:01:46 PM",
+      "author_date": "2026-09-24T22:01:46Z",
+      "evidence": "Added data/responder-drone/4ef7f96c…. Sync-owned."
+    },
+    {
+      "sha": "9a406689888669db6f04f785fd82d08da4671377",
+      "short": "9a40668",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:02:07 PM",
+      "author_date": "2026-09-24T22:02:07Z",
+      "evidence": "Added data/responder-drone/7c45ad33…. Sync-owned."
+    },
+    {
+      "sha": "a01bd104b04eb3343de1e42d8279178485eaccdf",
+      "short": "a01bd10",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:02:42 PM",
+      "author_date": "2026-09-24T22:02:43Z",
+      "evidence": "Added data/responder-drone/a09eb1c2…. Sync-owned."
+    },
+    {
+      "sha": "c80f73d2d9ecf5f5f3dfa1309b9965713125fe5f",
+      "short": "c80f73d",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:03:03 PM",
+      "author_date": "2026-09-24T22:03:03Z",
+      "evidence": "Added data/responder-drone/990246b5…. After these six adds, responder-drone 136→142. Sync-owned."
+    },
+    {
+      "sha": "eb11b24d6bfd2523dd2703a78e014da5fc28fb43",
+      "short": "eb11b24",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:00 PM",
+      "author_date": "2026-09-24T22:20:00Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "09195df8907a68a0af731bc6bb7d50cb84788e97",
+      "short": "09195df",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:08 PM",
+      "author_date": "2026-09-24T22:20:09Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "865ac5371872e16d961bcf09c3275ee4c206ee50",
+      "short": "865ac53",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:15 PM",
+      "author_date": "2026-09-24T22:20:15Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "ba594cd44df15b0f800b379cac0607060a9d3cc6",
+      "short": "ba594cd",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:23 PM",
+      "author_date": "2026-09-24T22:20:24Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "5d2ec6be5e005330fa7fc3e3a48383c87a1026c8",
+      "short": "5d2ec6b",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:33 PM",
+      "author_date": "2026-09-24T22:20:33Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "c2125ec72703feb839c8281beeefe5cf7f061c76",
+      "short": "c2125ec",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:40 PM",
+      "author_date": "2026-09-24T22:20:40Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "bba046e03424b950cf1bc134e6e8939c81583f09",
+      "short": "bba046e",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:49 PM",
+      "author_date": "2026-09-24T22:20:49Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "071c0309079135c64535b381fab7f6afdbbe424d",
+      "short": "071c030",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:20:57 PM",
+      "author_date": "2026-09-24T22:20:58Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "1a06f29975d46bd7fabba66fe97f1a8a41ddbb38",
+      "short": "1a06f29",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:04 PM",
+      "author_date": "2026-09-24T22:21:05Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "ca51cb4711fe71836470026b91116e795461dee4",
+      "short": "ca51cb4",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:12 PM",
+      "author_date": "2026-09-24T22:21:12Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "175408a784191b93a5d5eb4986c2a98fff010208",
+      "short": "175408a",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:20 PM",
+      "author_date": "2026-09-24T22:21:20Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "19f1e1875c814de2f2c5a2decad589b11a1014e2",
+      "short": "19f1e18",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:27 PM",
+      "author_date": "2026-09-24T22:21:28Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "493cb7b9e6a44a9758848a55f899193bc42a946d",
+      "short": "493cb7b",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:35 PM",
+      "author_date": "2026-09-24T22:21:35Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "7e3c44aa8233a839b464fa2cb783fc60fde99e96",
+      "short": "7e3c44a",
+      "message": "Publish Responder Intel — 1 property — 9/24/2026, 5:21:42 PM",
+      "author_date": "2026-09-24T22:21:43Z",
+      "evidence": "2-line address-only update on existing data/responder-drone/{id}.json (street-only → city/state/ZIP). Count stays 142. Sync-owned."
+    },
+    {
+      "sha": "63aa425ee764dbc29ba26d7b7ee1c2e29b303fdd",
+      "short": "63aa425",
+      "message": "Sync Drone — 9/24/2026, 5:26:11 PM",
+      "author_date": "2026-09-24T22:26:12Z",
+      "evidence": "HEAD. Added six matching data/drone/{id}.json (drone 133→139) and 15 existing drone address-only updates. Sync-owned. Last Sync/Publish on origin/main."
+    },
+    {
+      "sha": "35d5a21be2ef20fa1960ef5c99faee520e90e492",
+      "short": "35d5a21",
+      "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:10 AM",
+      "author_date": "2026-09-25T15:49:10Z",
+      "evidence": "Added data/responder-drone/57d3f326… (30 lines). Sync-owned. First of three new responder-drone records."
+    },
+    {
+      "sha": "55b9d5fa4d92dff38fb19baafefb09a6140f09b3",
+      "short": "55b9d5f",
+      "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:26 AM",
+      "author_date": "2026-09-25T15:49:26Z",
+      "evidence": "Added data/responder-drone/28bc2dc0…. Sync-owned."
+    },
+    {
+      "sha": "5e0e87095b48d490d1db2a96dc31439237ad77ef",
+      "short": "5e0e870",
+      "message": "Publish Responder Intel — 1 property — 9/25/2026, 10:49:40 AM",
+      "author_date": "2026-09-25T15:49:40Z",
+      "evidence": "Added data/responder-drone/6e097661…. After these three adds, responder-drone 142→145. Sync-owned. Last Sync/Publish on origin/main."
+    },
+    {
+      "sha": "7a46760bc6e5ce3e176ad826449d373979745d71",
+      "short": "7a46760",
+      "message": "Publish taxlot county coverage dashboard at /taxlot-coverage/ (#32)",
+      "author_date": "2026-09-25T16:20:20Z",
+      "evidence": "PR #32 MERGED. Added taxlot-coverage/ (166 files, +35463). counties.json meta 160 counties / 15 states / 21797 sites; status_counts inspected 122, deferred-tail 34, no-source 2, blocked-license 2. Cloud agent bc-a361408c (sand). HEAD. No hub/viewer bump. No .gs"
+    }
+  ],
+  "still_open": [
+    {
+      "item": "Desktop/web/local chats still not listed; one sand-source Cloud agent was listed",
+      "evidence": "list-cloud-agents createdAfter 2026-09-24 returned this cron (bc-9945b981), 9/25 Log Bot bc-931a5ca8, 9/24 Log Bot bc-99e04970, and sand-source Add taxlot-coverage Pages dashboard bc-a361408c (merged PR #32). desktop/web/local sources returned 0"
+    },
+    {
+      "item": "Daily log PRs #1, #3–#31 still DRAFT; docs/ops/ not on main",
+      "evidence": "gh pr list: #1 and #3–#31 OPEN DRAFT (titles ops: daily log 2026-08-27 through 2026-09-25). #32 MERGED (taxlot-coverage). origin/main has no docs/ops"
+    },
+    {
+      "item": "Nearmap Apps Script deploy / S3 edits write unverified",
+      "evidence": "7dd6050/4937ac0/07b62a1 copied apps scripts/nearmap.gs; 4937ac0 also copied config.gs — file copies, not a deploy. nearmap.gs last copy remains 07b62a1. No .gs copy after 376c5b1 (drone-test.gs). 542bd09 published data/nearmap/d9f759d7351db3886c79dd689c41e3c0.json (20 elements), still one file. This clone cannot see the Apps Script editor or the S3 edits object; paste + new deployment and checkS3EditsWrite are not evidenced."
+    },
+    {
+      "item": "customer-map.html left this repo; vyanet-ops/drones location unverified",
+      "evidence": "05de967 commit body says Zoho portal pages now live in vyanet-ops/drones under docs/portal. customer-map.html is absent on origin/main. This token/clone cannot see vyanet-ops/drones."
+    }
+  ],
+  "open": [
+    {
+      "item": "Desktop/web/local chats still not listed; one sand-source Cloud agent was listed",
+      "evidence": "list-cloud-agents createdAfter 2026-09-24 returned this cron (bc-9945b981), 9/25 Log Bot bc-931a5ca8, 9/24 Log Bot bc-99e04970, and sand-source Add taxlot-coverage Pages dashboard bc-a361408c (merged PR #32). desktop/web/local sources returned 0"
+    },
+    {
+      "item": "Daily log PRs #1, #3–#31 still DRAFT; docs/ops/ not on main",
+      "evidence": "gh pr list: #1 and #3–#31 OPEN DRAFT (titles ops: daily log 2026-08-27 through 2026-09-25). #32 MERGED (taxlot-coverage). origin/main has no docs/ops"
+    },
+    {
+      "item": "Nearmap Apps Script deploy / S3 edits write unverified",
+      "evidence": "7dd6050/4937ac0/07b62a1 copied apps scripts/nearmap.gs; 4937ac0 also copied config.gs — file copies, not a deploy. nearmap.gs last copy remains 07b62a1. No .gs copy after 376c5b1 (drone-test.gs). 542bd09 published data/nearmap/d9f759d7351db3886c79dd689c41e3c0.json (20 elements), still one file. This clone cannot see the Apps Script editor or the S3 edits object; paste + new deployment and checkS3EditsWrite are not evidenced."
+    },
+    {
+      "item": "customer-map.html left this repo; vyanet-ops/drones location unverified",
+      "evidence": "05de967 commit body says Zoho portal pages now live in vyanet-ops/drones under docs/portal. customer-map.html is absent on origin/main. This token/clone cannot see vyanet-ops/drones."
+    }
+  ],
+  "watchouts": [
+    "Apps Script editor-save is not a new deployment; .gs copies in git are not a deploy. No .gs copy after 376c5b1. nearmap.gs last copy remains 07b62a1; config.gs last Nearmap copy remains 4937ac0. satellite.gs last copy remains d688a65; no satellite.gs copy after that. MOCKINGBIRD row 277 is the first check after a real satellite.gs deploy.",
+    "Public data/*.json is sync-owned. Last Sync/Publish on origin/main is 5e0e870 Publish Responder Intel (2026-09-25 10:49 -0500): three new responder-drone records (35d5a21, 55b9d5f, 5e0e870; 142→145). No matching Sync Drone. 7a46760 added taxlot-coverage/ (not a data/ sync). Nearmap JSON unchanged after 542bd09. No satellite/plane Sync/Publish. Recount 2026-09-26: satellite 506, plane 22, drone 139, drone-test 13, lane tiles 332, gis 3, hoa 5, responder-drone 145, nearmap 1, cameras/json 13, pins 13.",
+    "pins-catalog.json still has role= on every pin after the 256-pin update (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001-1150 in the golf.gs seed); golf.gs header says never merge it into pins-catalog.json."
+  ],
+  "week_label": "2026-W39",
+  "completion_percent": null,
+  "percent": null,
+  "completion_percent_reason": "not reported; no measured evidence",
+  "log_markdown": "# Property Intel daily log\n\nEvidence-only. Newest day at the top. This cloud checkout is public `jonahbourgeois1/property-intel` (v1). Completeness % omitted unless measured. Do not flatten catalog `role=`. Editor-save ≠ deploy. `data/*.json` is sync-owned. MOCKINGBIRD row 277 after a real `satellite.gs` deploy.\n\n## 2026-09-26\n\nNo author-date 2026-09-26 Central commits on `origin/main`. Head is `7a46760` (2026-09-25 11:20 -0500). Yesterday's 00:01 UTC log (draft PR **#31**, `cursor/property-intel-daily-log-bd27`, `b9a9300`) stopped at `63aa425`. Four commits landed after that cron (author-date 2026-09-25 10:49 through 11:20 -0500): three Publish Responder Intel plus merged PR **#32** taxlot-coverage dashboard. ISO week **2026-W39**.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-26T00:00:55Z (`bc-9945b981`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` (createdAfter 2026-09-24) returned four runs: this cron, yesterday's Log Bot `bc-931a5ca8`, 9/24 Log Bot `bc-99e04970`, and sand-source **Add taxlot-coverage Pages dashboard** `bc-a361408c` (merged as PR **#32**). Desktop/web/local sources returned 0.\n\n### Shipped\n- `35d5a21` Publish Responder Intel — 1 property — 9/25/2026, 10:49:10 AM. Added `data/responder-drone/57d3f326…` (30 lines). Sync-owned. Author-date 2026-09-25 10:49 -0500.\n- `55b9d5f` Publish Responder Intel — 1 property — 9/25/2026, 10:49:26 AM. Added `data/responder-drone/28bc2dc0…`. Sync-owned.\n- `5e0e870` Publish Responder Intel — 1 property — 9/25/2026, 10:49:40 AM. Added `data/responder-drone/6e097661…`. After these three adds, responder-drone **142 → 145**. Sync-owned. Author-date 2026-09-25 10:49 -0500.\n- `7a46760` Publish taxlot county coverage dashboard at `/taxlot-coverage/` (PR **#32**, MERGED 2026-09-25T16:20:20Z). HEAD. Added `taxlot-coverage/` (166 files, +35463). `taxlot-coverage/data/counties.json` meta: 160 counties, 15 states, 21797 sites; status_counts inspected 122 / deferred-tail 34 / no-source 2 / blocked-license 2 (`updated_at` 2026-09-25T02:39:43Z). 160 `data/records/{id}.json` files. Cloud agent `bc-a361408c` (source sand). No hub/viewer bump. No `.gs`. Author-date 2026-09-25 11:20 -0500. Co-authored via Cursor PR body.\n\nNo viewer/hub bump. Element-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. live-viewer BUILD stays **1.1.11**. Hub stays **1.8.42**. `viewer.html` stays **v2.10.20**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `.gs` copy. Recount: satellite 506, plane 22, drone 139, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 145, nearmap 1, cameras/json 13, pins 13. Taxlot-coverage records 160 (not a `data/` sync layer).\n\n### Still open\n- Desktop/web/local chats still not listed (`list-cloud-agents` those sources returned 0). One sand-source Cloud agent was listed this run: `bc-a361408c` taxlot-coverage (merged PR **#32**).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), **#25** (`ops: daily log 2026-09-19`), **#26** (`ops: daily log 2026-09-20`), **#27** (`ops: daily log 2026-09-21`), **#28** (`ops: daily log 2026-09-22`), **#29** (`ops: daily log 2026-09-23`), **#30** (`ops: daily log 2026-09-24`), and **#31** (`ops: daily log 2026-09-25`) are still DRAFT; `docs/ops/` is not on `main`. PR **#32** merged.\n- Nearmap `nearmap.gs` / `config.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). No `.gs` copy after yesterday's log. `nearmap.gs` last copy remains `07b62a1`. `drone-test.gs` last copy remains `376c5b1`.\n- `05de967` says the portal map now lives in `vyanet-ops/drones` under `docs/portal`. This clone cannot verify that repo.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies today. No `satellite.gs` deploy evidence; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `5e0e870` Publish Responder Intel (three new responder-drone records; **142 → 145**). No matching Sync Drone after those three. `7a46760` is a Pages dashboard under `taxlot-coverage/`, not a `data/` sync. Nearmap record unchanged after `542bd09`. No satellite/plane Sync/Publish. Recount 2026-09-26: satellite 506, plane 22, drone 139, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 145, nearmap 1, cameras/json 13, pins 13.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-25\n\nNo author-date 2026-09-25 Central commits on `origin/main`. Head is `63aa425` (2026-09-24 17:26 -0500). Yesterday's 00:01 UTC log (draft PR **#30**, `cursor/property-intel-daily-log-15a8`, `bdffe4f`) stopped at `05de967`. Twenty-one commits landed after that cron (author-date 2026-09-24 17:01 through 17:26 -0500): twenty Publish Responder Intel plus one Sync Drone. ISO week **2026-W39**.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-25T00:01:30Z (`bc-931a5ca8`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/24 `bc-99e04970`, 9/23 `bc-2c1146c1`, 9/22 `bc-02c34e0f`, 9/21 `bc-c92fb2e8`, 9/20 `bc-a9f1f52b`, 9/19 `bc-442bbe46`, 9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `76e8d31` Publish Responder Intel — 1 property — 9/24/2026, 5:01:01 PM. Added `data/responder-drone/85767318…` (30 lines). Sync-owned. Author-date 2026-09-24 17:01 -0500.\n- `f5aaa92` Publish Responder Intel — 1 property — 9/24/2026, 5:01:29 PM. Added `data/responder-drone/6d0d13a9…`. Sync-owned.\n- `efa0d81` Publish Responder Intel — 1 property — 9/24/2026, 5:01:46 PM. Added `data/responder-drone/4ef7f96c…`. Sync-owned.\n- `9a40668` Publish Responder Intel — 1 property — 9/24/2026, 5:02:07 PM. Added `data/responder-drone/7c45ad33…`. Sync-owned.\n- `a01bd10` Publish Responder Intel — 1 property — 9/24/2026, 5:02:42 PM. Added `data/responder-drone/a09eb1c2…`. Sync-owned.\n- `c80f73d` Publish Responder Intel — 1 property — 9/24/2026, 5:03:03 PM. Added `data/responder-drone/990246b5…`. After these six adds, responder-drone **136 → 142**.\n- `eb11b24`…`7e3c44a` fourteen Publish Responder Intel (one property each, 5:20:00–5:21:42 PM): `eb11b24` `09195df` `865ac53` `ba594cd` `5d2ec6b` `c2125ec` `bba046e` `071c030` `1a06f29` `ca51cb4` `175408a` `19f1e18` `493cb7b` `7e3c44a`. Each is a 2-line `address` update on an existing `data/responder-drone/{id}.json` (street-only → city/state/ZIP). Count stays 142. Sync-owned. Author-dates 2026-09-24 17:20–17:21 -0500.\n- `63aa425` Sync Drone — 9/24/2026, 5:26:11 PM. HEAD. Added six matching `data/drone/{id}.json` (drone **133 → 139**) and updated fifteen existing drone records (`address` only). Sync-owned. Author-date 2026-09-24 17:26 -0500.\n\nNo viewer/hub bump. Element-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. live-viewer BUILD stays **1.1.11**. Hub stays **1.8.42**. `viewer.html` stays **v2.10.20**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `.gs` copy. Recount: satellite 506, plane 22, drone 139, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 142, nearmap 1, cameras/json 13, pins 13.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), **#25** (`ops: daily log 2026-09-19`), **#26** (`ops: daily log 2026-09-20`), **#27** (`ops: daily log 2026-09-21`), **#28** (`ops: daily log 2026-09-22`), **#29** (`ops: daily log 2026-09-23`), and **#30** (`ops: daily log 2026-09-24`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). No `.gs` copy after yesterday's log. `nearmap.gs` last copy remains `07b62a1`. `drone-test.gs` last copy remains `376c5b1`.\n- `05de967` says the portal map now lives in `vyanet-ops/drones` under `docs/portal`. This clone cannot verify that repo.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies today. No `satellite.gs` deploy evidence; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `63aa425` Sync Drone (after twenty Publish Responder Intel). Six new responder-drone records then six matching drone records; drone **133 → 139**, responder-drone **136 → 142**. Fourteen existing responder-drone and fifteen existing drone records gained city/state/ZIP on `address` only. Nearmap record unchanged after `542bd09`. No satellite/plane Sync/Publish. Recount 2026-09-25: satellite 506, plane 22, drone 139, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 142, nearmap 1, cameras/json 13, pins 13.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-24\n\nNo author-date 2026-09-24 Central commits on `origin/main`. Head is `05de967` (2026-09-23 15:09 -0500). Yesterday's 00:04 UTC log (draft PR **#29**, `cursor/property-intel-daily-log-703f`, `897d45e`) stopped at `ea68046`. Two commits landed after that cron (author-date 2026-09-23 14:15 and 15:09 -0500): add `customer-map.html`, then delete it the same afternoon. `git diff --name-status ea68046..origin/main` is empty — no lasting file on this repo. ISO week **2026-W39** includes those two commits.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-24T00:01:44Z (`bc-99e04970`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/23 `bc-2c1146c1`, 9/22 `bc-02c34e0f`, 9/21 `bc-c92fb2e8`, 9/20 `bc-a9f1f52b`, 9/19 `bc-442bbe46`, 9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `2c154a7` Add the customer portal map so a CRM address opens a satellite lot view. Added `customer-map.html` (323 lines). No hub/viewer bump. Co-authored-by Cursor. Author-date 2026-09-23 14:15 -0500.\n- `05de967` Remove the portal map page from this repo. Deleted `customer-map.html`. Commit body: \"The Zoho portal pages now live in vyanet-ops/drones under docs/portal.\" HEAD. This clone cannot see `vyanet-ops/drones`. Author-date 2026-09-23 15:09 -0500.\n\nNet tree vs `ea68046` is empty. Element-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. live-viewer BUILD stays **1.1.11**. Hub stays **1.8.42**. `viewer.html` stays **v2.10.20**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `.gs` copy. Recount unchanged: satellite 506, plane 22, drone 133, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 136, nearmap 1, cameras/json 13, pins 13.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), **#25** (`ops: daily log 2026-09-19`), **#26** (`ops: daily log 2026-09-20`), **#27** (`ops: daily log 2026-09-21`), **#28** (`ops: daily log 2026-09-22`), and **#29** (`ops: daily log 2026-09-23`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). No `.gs` copy after yesterday's log. `nearmap.gs` last copy remains `07b62a1`. `drone-test.gs` last copy remains `376c5b1`.\n- `05de967` says the portal map now lives in `vyanet-ops/drones` under `docs/portal`. This clone cannot verify that repo.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies today. No `satellite.gs` deploy evidence; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is still `a06c776` Publish Responder Intel (empty tree after `41f31e4` deleted one `data/drone/` record, drone **134 → 133**). `ea68046` deleted the matching `data/responder-drone/` record (responder-drone **137 → 136**). Today's two commits touched only `customer-map.html` (add then delete); no `data/` delta. Nearmap record unchanged after `542bd09`. Recount 2026-09-24: satellite 506, plane 22, drone 133, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 136, nearmap 1, cameras/json 13, pins 13.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-23\n\nHead is `ea68046` (2026-09-22 14:15 -0500). Yesterday's 00:04 UTC log (draft PR **#28**, `cursor/property-intel-daily-log-95ee`, `af6ab11`) stopped at `8ea7c1d`. Seven commits landed after that cron: four late 9/21 evening (author-date 2026-09-21 19:21 through 20:30 -0500) plus three author-date 2026-09-22 Central commits. ISO week **2026-W39** now includes those ships.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-23T00:04:52Z (`bc-2c1146c1`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/22 `bc-02c34e0f`, 9/21 `bc-c92fb2e8`, 9/20 `bc-a9f1f52b`, 9/19 `bc-442bbe46`, 9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `cbed444` Place Vyanet Bend's four office cameras on the two metal roofs. Re-added `data/cameras/json/744a3639…` (cameras/json **12 → 13**; same file `d3572b3` had deleted earlier on 9/21). Hub stays **1.8.40**. Also `docs/INDEX_AND_CAMERAS_CONTRACT.md`. No `.gs`. Author-date 2026-09-21 19:21 -0500. Co-authored-by Cursor.\n- `376c5b1` Draw the Butler Residence outline around the house and the dirt lot. Updates existing `data/drone-test/85b8ae1f…` (drone-test count stays 13). Copy `apps scripts/drone-test.gs` keeps a stored `parcel_ring` on full sync — not a deploy. Hub stays **1.8.40**. Author-date 2026-09-21 19:33 -0500. Co-authored-by Cursor.\n- `2bce446` PPS home image uses the drone-sheet overhead; move Sutherlin camera 1 onto the roof. Hub **1.8.40 → 1.8.41**. Edits existing `data/cameras/json/f34caa15…` (cameras/json stays 13). `property.js`, `live-viewer.html` (BUILD stays **1.1.11**), `model-viewer.html`, `vyanet-viewer.html`. `viewer.html` VERSION stays **v2.10.19**. Author-date 2026-09-21 20:05 -0500. Co-authored-by Cursor.\n- `132652d` 2D lot lines fall back to the CloudFront county layers; drone-sheet hero for Bend, Roseburg, Myrtle Creek. Hub **1.8.41 → 1.8.42**. `viewer.html` **v2.10.19 → v2.10.20**. Also `property.js`, `live-viewer.html` (BUILD stays **1.1.11**), `model-viewer.html`, `vyanet-viewer.html`. No `.gs`. Author-date 2026-09-21 20:30 -0500. Co-authored-by Cursor.\n- `41f31e4` Delete `data/drone/35ba5fb3…`. drone **134 → 133**. Sync-owned delete. Author-date 2026-09-22 13:18 -0500.\n- `a06c776` Publish Responder Intel — 91 properties — 9/22/2026, 1:19:49 PM. Empty tree (same as parent `41f31e4`; no file delta). Author-date 2026-09-22 13:19 -0500.\n- `ea68046` Delete `data/responder-drone/35ba5fb3…`. responder-drone **137 → 136**. HEAD. Author-date 2026-09-22 14:15 -0500.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. live-viewer BUILD stays **1.1.11**. Hub is now **1.8.42**. `viewer.html` is **v2.10.20**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `satellite.gs` copy. Recount after these ships: satellite 506, plane 22, drone 133, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 136, nearmap 1, cameras/json 13, pins 13.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), **#25** (`ops: daily log 2026-09-19`), **#26** (`ops: daily log 2026-09-20`), **#27** (`ops: daily log 2026-09-21`), and **#28** (`ops: daily log 2026-09-22`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). Today's `.gs` copy is `drone-test.gs` (`376c5b1`) — not a deploy. `nearmap.gs` last copy remains `07b62a1`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copy today (`drone-test.gs` in `376c5b1`) is not a deploy. No `satellite.gs` deploy evidence; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `a06c776` Publish Responder Intel (empty tree after `41f31e4` deleted one `data/drone/` record, drone **134 → 133**). `ea68046` deleted the matching `data/responder-drone/` record (responder-drone **137 → 136**). Cameras JSON is git files **12 → 13** after `cbed444` re-added `744a3639…`. `376c5b1` edited an existing drone-test record (count stays 13). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 133, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 136, nearmap 1, cameras/json 13, pins 13.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-22\n\nNo author-date 2026-09-22 Central commits on `origin/main`. Head is `8ea7c1d` (2026-09-21 19:00 -0500 / 2026-09-22 00:00:26Z). Yesterday's 00:04 UTC log (draft PR **#27**, `cursor/property-intel-daily-log-f4e9`, `ab878b5`) stopped at `ba89172` and recorded nothing shipped on 9/21; the seventeen commits below landed after that cron (author-date 2026-09-21 14:52 through 19:00 -0500). ISO week **2026-W39** now has those ships.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-22T00:04:47Z (`bc-02c34e0f`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/21 `bc-c92fb2e8`, 9/20 `bc-a9f1f52b`, 9/19 `bc-442bbe46`, 9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `2c32137` Let a drone-test row sync before analysis and open the Vyanet viewer from FR Link. Hub **1.8.31 → 1.8.33** (no 1.8.32 commit on main). `viewer.html` VERSION **v2.10.9 → v2.10.11** (no v2.10.10 commit on main). Copies `apps scripts/drone-test.gs`, `menu.gs`, `records.gs` — not a deploy. Also `js/vyanet-viewer/property.js`, `live-viewer.html` (BUILD stays **1.1.11**), `model-viewer.html`, `vyanet-viewer.html`. Author-date 2026-09-21 14:52 -0500. Co-authored-by Cursor.\n- `e254022` Sync drone-test — 9/21/2026, 3:02:11 PM. Added ten `data/drone-test/{id}.json` (drone-test **3 → 13**) and updated matching `data/index/` hubs. Sync-owned. Author-date 2026-09-21 15:02 -0500.\n- `8998986` Sync drone-test — 9/21/2026, 3:13:39 PM. Empty tree (no file delta). Author-date 2026-09-21 15:13 -0500.\n- `d78a37d` Sync drone-test — 9/21/2026, 3:24:30 PM. Trimmed the new drone-test records and added thirteen `data/pins/{id}.json` (pins tree **0 → 13**). Sync-owned. Author-date 2026-09-21 15:24 -0500.\n- `3032bb9` Point each hub at its CHEKT account so Live opens that site's cameras. Thirteen `data/index/{id}.json` updates. Sync-owned / git index edits. Author-date 2026-09-21 15:56 -0500.\n- `f7cac10` Hide Nearmap on customer hub links. `live=1` drops the Nearmap button, hero, and lot cover. Hub **1.8.33 → 1.8.34**. `viewer.html` **v2.10.11 → v2.10.12**. Copies `drone-test.gs` / `menu.gs` / `records.gs` again — not a deploy. Also `property.js`, `nearmap-viewer.html`, `vyanet-viewer.html`. Author-date 2026-09-21 16:16 -0500. Co-authored-by Cursor.\n- `ddfb80d` Sync drone-test — 9/21/2026, 4:23:01 PM. Twelve `data/index/{id}.json` flag refreshes. Sync-owned. Author-date 2026-09-21 16:23 -0500.\n- `bc42ca2` Show the same Property Analysis and Drone sheet on the 2D and 3D rails. `viewer.html` **v2.10.12 → v2.10.13**. `model-viewer.html`. No `.gs`. Author-date 2026-09-21 16:36 -0500.\n- `29a5a75` Merge `origin/main` into `live-nearmap-flag`. Merge of already-listed parents (`bc42ca2` + `ddfb80d`); no unique file delta beyond those ships. Author-date 2026-09-21 16:37 -0500.\n- `7036412` Put the drone sheet in Property Analysis and drop the extra Drone tab. `viewer.html` **v2.10.13 → v2.10.14**. `model-viewer.html`. No `.gs`. Author-date 2026-09-21 16:51 -0500.\n- `6b6cd86` Show each listed property's cameras as pins on its map. Hub **1.8.34 → 1.8.35**. Added ten `data/cameras/json/{id}.json` in this commit (one, `744a3639…`, was deleted later the same afternoon in `d3572b3`; cameras/json ends **3 → 12**). Also `property.js`, viewers, `docs/INDEX_AND_CAMERAS_CONTRACT.md`. Author-date 2026-09-21 17:20 -0500. Co-authored-by Cursor.\n- `d3572b3` Keep Matt King's cameras off Vyanet Bend and put Butler's pins on the house. Hub **1.8.35 → 1.8.36**. `viewer.html` **v2.10.14 → v2.10.15**. Deleted the same-afternoon `data/cameras/json/744a3639…` file. Author-date 2026-09-21 17:49 -0500. Co-authored-by Cursor.\n- `a339e87` Stop Vyanet Bend Live from opening the King residence cameras. Hub **1.8.36 → 1.8.37**. `viewer.html` **v2.10.15 → v2.10.16**. live-viewer BUILD stays **1.1.11**. Author-date 2026-09-21 17:57 -0500. Co-authored-by Cursor.\n- `c5f4a69` Stop Vyanet Bend from opening the King residence on a view-id retry. Hub **1.8.37 → 1.8.38**. `viewer.html` **v2.10.16 → v2.10.17**. Author-date 2026-09-21 18:06 -0500. Co-authored-by Cursor.\n- `b05a035` Send the property id on Live requests so Vyanet Bend opens its hardcoded CHEKT site. Hub **1.8.38 → 1.8.39**. `viewer.html` **v2.10.17 → v2.10.18**. Author-date 2026-09-21 18:43 -0500. Co-authored-by Cursor.\n- `0f57c68` Hardcode each property's CHEKT site id on its index and keep site 4802 off Vyanet Bend. Hub **1.8.39 → 1.8.40**. `viewer.html` **v2.10.18 → v2.10.19**. Fifteen `data/index/{id}.json` site-id stamps. Author-date 2026-09-21 18:51 -0500. Co-authored-by Cursor.\n- `8ea7c1d` Set Vyanet Bend's index to CHEKT site 8093, the Bend office. Hub stays **1.8.40**. HEAD. `data/index/744a3639…` + contract. Author-date 2026-09-21 19:00 -0500 (2026-09-22 00:00:26Z).\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. live-viewer BUILD stays **1.1.11** (touched, no bump). Hub is now **1.8.40**. `viewer.html` is **v2.10.19**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `satellite.gs` copy. Recount after these ships: satellite 506, plane 22, drone 134, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 12, pins 13.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), **#25** (`ops: daily log 2026-09-19`), **#26** (`ops: daily log 2026-09-20`), and **#27** (`ops: daily log 2026-09-21`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). Today's `.gs` copies are `drone-test.gs` / `menu.gs` / `records.gs` (`2c32137`, `f7cac10`) — not a deploy. `nearmap.gs` last copy remains `07b62a1`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies today (`drone-test.gs`, `menu.gs`, `records.gs` in `2c32137` and `f7cac10`) are not a deploy. No `satellite.gs` deploy evidence; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `ddfb80d` Sync drone-test (after `e254022` wrote ten new drone-test records, `8998986` empty, `d78a37d` added thirteen `data/pins/` files). Cameras JSON files are git files (3→12 after `6b6cd86` adds and `d3572b3` deleted `744a3639…`). Index CHEKT site-id stamps in `3032bb9` / `0f57c68` / `8ea7c1d` are git edits of sync-owned hubs. Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 13, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 12, pins 13.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-21\n\nNothing shipped today on `origin/main`. Head remains `ba89172` (2026-09-17 11:46 -0500).\n\nYesterday's 00:17 UTC log (draft PR **#26**, `cursor/property-intel-daily-log-53e2`, `7336fff`) already recorded `origin/main` at `ba89172` and nothing shipped on 9/20. No author-date 2026-09-18, 2026-09-19, 2026-09-20, or 2026-09-21 commits on `origin/main`. The only git event after that log is `7336fff` `ops: daily log 2026-09-20` on draft PR **#26** — not on `main`. ISO week rolled to **2026-W39** (empty shipped; 9/14–9/17 ships stay in W38).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-21T00:04:32Z (`bc-c92fb2e8`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/20 `bc-a9f1f52b`, 9/19 `bc-442bbe46`, 9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-21.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), **#25** (`ops: daily log 2026-09-19`), and **#26** (`ops: daily log 2026-09-20`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `144cfec` added `drone-test.gs` / `records.gs` / `shared.gs` copies — not a deploy. No `.gs` / `data/` commits after `ba89172`. `f70f275` edited the existing cameras git file — not a Sync/Publish.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `0c70e0e` Sync Drone (empty tree after `0bffe00` wrote six new drone records). `f70f275` is a git cameras-file edit (contract: cameras are git files; drone-test sync republishes as-is). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 3, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-20\n\nNothing shipped today on `origin/main`. Head remains `ba89172` (2026-09-17 11:46 -0500).\n\nYesterday's 00:03 UTC log (draft PR **#25**, `cursor/property-intel-daily-log-a141`, `a5c8369`) already recorded `origin/main` at `ba89172` and nothing shipped on 9/19. No author-date 2026-09-18, 2026-09-19, or 2026-09-20 commits on `origin/main`. The only git event after that log is `a5c8369` `ops: daily log 2026-09-19` on draft PR **#25** — not on `main`. ISO week **2026-W38** ends today (ships from 9/14–9/17 still listed).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-20T00:17:37Z (`bc-a9f1f52b`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/19 `bc-442bbe46`, 9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-20.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), **#24** (`ops: daily log 2026-09-18`), and **#25** (`ops: daily log 2026-09-19`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `144cfec` added `drone-test.gs` / `records.gs` / `shared.gs` copies — not a deploy. No `.gs` / `data/` commits after `ba89172`. `f70f275` edited the existing cameras git file — not a Sync/Publish.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `0c70e0e` Sync Drone (empty tree after `0bffe00` wrote six new drone records). `f70f275` is a git cameras-file edit (contract: cameras are git files; drone-test sync republishes as-is). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 3, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-19\n\nNothing shipped today on `origin/main`. Head remains `ba89172` (2026-09-17 11:46 -0500).\n\nYesterday's 00:04 UTC log (draft PR **#24**, `cursor/property-intel-daily-log-fcd5`, `e41042b`) already recorded `origin/main` at `ba89172` and the three live-camera ships after the 9/17 cron. No author-date 2026-09-18 or 2026-09-19 commits on `origin/main`. The only git event after that log is `e41042b` `ops: daily log 2026-09-18` on draft PR **#24** — not on `main`. ISO week remains **2026-W38** (ships from 9/14–9/17 still listed).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-19T00:03:16Z (`bc-442bbe46`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/18 `bc-b7ee273e`, 9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-19.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), **#23** (`ops: daily log 2026-09-17`), and **#24** (`ops: daily log 2026-09-18`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `144cfec` added `drone-test.gs` / `records.gs` / `shared.gs` copies — not a deploy. No `.gs` / `data/` commits after `ba89172`. `f70f275` edited the existing cameras git file — not a Sync/Publish.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `0c70e0e` Sync Drone (empty tree after `0bffe00` wrote six new drone records). `f70f275` is a git cameras-file edit (contract: cameras are git files; drone-test sync republishes as-is). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 3, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-18\n\nNo author-date 2026-09-18 commits on `origin/main`. Head is `ba89172` (2026-09-17 11:46 -0500). Yesterday's 00:04 UTC log (draft PR **#23**, `cursor/property-intel-daily-log-cfe5`, `260cc6a`) stopped at `0c70e0e` and recorded nothing shipped on 9/17; the three commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-18T00:04:33Z (`bc-b7ee273e`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/17 `bc-d9831f88`, 9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `f70f275` Place estimated Gud Cultures camera pins on the 2D/3D mappings from the nadir and live views. Updates existing `data/cameras/json/1512452d9e6e0f1cf0a32255a4392b12.json` (cameras/json count stays 3; 15 cameras, placement `estimated-nadir`; CHEKT `BLDG 3 *` labels follow live `BLDG 5 *`). Hub stays **1.8.25**. live-viewer stays **1.1.5**. Also `docs/INDEX_AND_CAMERAS_CONTRACT.md`. No `.gs`. Author-date 2026-09-17 09:43 -0500. Co-authored-by Cursor.\n- `f2f9f2f` Start every live camera on All and show last-clip stills when CHEKT MJPEG never sends a frame. Hub **1.8.25 → 1.8.28** (no 1.8.26/1.8.27 commits on main). `live-viewer.html` BUILD **1.1.5 → 1.1.8** (no 1.1.6/1.1.7 commits on main). Also `js/vyanet-viewer/property.js`, `model-viewer.html`, `viewer.html`, `vyanet-viewer.html`, contract. No `.gs` / Sync/Publish. Author-date 2026-09-17 10:37 -0500. Co-authored-by Cursor.\n- `ba89172` Fall back hung CHEKT MJPEG to snapshot JPEG polling so Parcel 3 shows current live stills. Hub **1.8.28 → 1.8.31** (no 1.8.29/1.8.30 commits on main). `live-viewer.html` BUILD **1.1.8 → 1.1.11** (no 1.1.9/1.1.10 commits on main). HEAD. Same viewer files + contract. No `.gs` / Sync/Publish. Author-date 2026-09-17 11:46 -0500. Co-authored-by Cursor.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. Hub is now **1.8.31**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `satellite.gs` copy.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), **#22** (`ops: daily log 2026-09-16`), and **#23** (`ops: daily log 2026-09-17`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `144cfec` added `drone-test.gs` / `records.gs` / `shared.gs` copies — not a deploy. No `.gs` copies after `0c70e0e`. `f70f275` edited the existing cameras git file — not a Sync/Publish.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `0c70e0e` Sync Drone (empty tree after `0bffe00` wrote six new drone records). `f70f275` is a git cameras-file edit (contract: cameras are git files; drone-test sync republishes as-is). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 3, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-17\n\nNothing shipped today on `origin/main`. Head remains `0c70e0e` (2026-09-15 19:11 -0500).\n\nYesterday's 00:20 UTC log (draft PR **#22**, `cursor/property-intel-daily-log-236f`, `a4ada5f`) already recorded `origin/main` at `0c70e0e` and the live-camera / drone / audit ships after the 9/15 cron. No author-date 2026-09-16 or 2026-09-17 commits on `origin/main`. The only git event after that log is `a4ada5f` `ops: daily log 2026-09-16` on draft PR **#22** — not on `main`. ISO week remains **2026-W38** (ships from 9/14–9/15 still listed).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-17T00:01:48Z (`bc-d9831f88`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/16 `bc-8b42d9e1`, 9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-17.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), **#21** (`ops: daily log 2026-09-15`), and **#22** (`ops: daily log 2026-09-16`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `144cfec` added `drone-test.gs` / `records.gs` / `shared.gs` copies — not a deploy. No `.gs` / `data/` commits after `0c70e0e`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `0c70e0e` Sync Drone (empty tree after `0bffe00` wrote six new drone records). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 3, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-16\n\nNo author-date 2026-09-16 commits on `origin/main`. Head is `0c70e0e` (2026-09-15 19:11 -0500). Yesterday's 00:08 UTC log (draft PR **#21**, `cursor/property-intel-daily-log-2fc1`, `c248db3`) stopped at `20cb487` and recorded the two Nearmap ships after the 9/14 cron; the commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-16T00:20:18Z (`bc-8b42d9e1`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/15 `bc-573716b9`, 9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `d61f2e1` Ship hub **1.8.22** live cameras: device_id wall, parcel filters, and click-to-expand. Adds `data/cameras/json/1512452d9e6e0f1cf0a32255a4392b12.json` (cameras/json 2→3). `live-viewer.html` BUILD **1.1.4**. Also `docs/INDEX_AND_CAMERAS_CONTRACT.md`, `model-viewer.html`, `viewer.html`. Author-date 2026-09-14 20:16 -0500. Co-authored-by Cursor.\n- `144cfec` Publish Gud Cultures drone-test onto Pages so the hub 3D tab can load the GLB. Adds `data/drone-test/a8c17256f61e60b5521b372e4801852b.json` (drone-test 2→3). Same commit copied `apps scripts/drone-test.gs`, first `apps scripts/records.gs` (1984 lines), and `apps scripts/shared.gs` — **file copies, not a deploy**. Also `docs/RECORDS_CONTRACT.md`. Author-date 2026-09-14 20:50 -0500. Co-authored-by Cursor.\n- `64602a1` Sync drone-test — three `data/index/{id}.json` updates. Author-date 2026-09-14 21:03 -0500. `jonahbourgeois1`.\n- `08ae1bf` Start live MJPEG per parcel so Parcel 2 can connect; show CHEKT offline. Hub **1.8.22 → 1.8.23**. Author-date 2026-09-15 11:37 -0500. Co-authored-by Cursor.\n- `096f1a6` Merge `main` (brings `64602a1` index files into the live-camera line). Not a product change.\n- `f03adb6` Open Live on All and start every online CHEKT camera without a parcel click. Hub **1.8.23 → 1.8.24**. Author-date 2026-09-15 11:47 -0500. Co-authored-by Cursor.\n- `b2785c3` Keep Live MJPEG bound when switching parcel tabs so feeds do not reconnect. Hub **1.8.24 → 1.8.25**. `live-viewer.html` BUILD **1.1.4 → 1.1.5**. HEAD hub. Author-date 2026-09-15 11:54 -0500. Co-authored-by Cursor.\n- `c124c0e` Publish Responder Intel — 92 properties. Tree evidence: 5 existing `data/responder-drone/{id}.json` (6 line changes). Count stays 137. Author-date 2026-09-15 13:22 -0500. `jonahbourgeois1`.\n- `9aa003d` docs/audit: data map of all 33 processes (redacted) + interactive bubble-map (`docs/audit/DATA_MAP.md` / `.html`, `build_html.py`). Author-date 2026-09-15 14:52 -0500. Co-authored-by Cursor.\n- `f9f80ea` docs/audit: hand-off labels wrap to two lines, placed clear of bubbles. Author-date 2026-09-15 15:28 -0500. Co-authored-by Cursor.\n- `9f46627` docs/audit: planned Nearmap-first pipeline map (12 processes, 29 hand-offs) + Current/Planned switch. Author-date 2026-09-15 16:00 -0500. Co-authored-by Cursor.\n- `c65c8b1` docs/audit: hand-off brief for the 2026-09-16 intake groundwork session (`docs/audit/NEXT_SESSION_2026-09-16.md`). Author-date 2026-09-15 16:14 -0500. Co-authored-by Cursor.\n- `160525a` Publish Responder Intel — 1 property. One `data/responder-drone/{id}.json` (1 line). Count stays 137. Author-date 2026-09-15 18:57 -0500. `jonahbourgeois1`.\n- `0bffe00` Sync Drone. Six new `data/drone/{id}.json` (drone 128→134) plus six updates. Author-date 2026-09-15 19:01 -0500. `jonahbourgeois1`.\n- `b932d36` + `0c70e0e` Publish Responder Intel — 1 property, then Sync Drone. Empty: same tree as `0bffe00`. HEAD.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. Nearmap review stays **v1.7.18**; viewer stays **v1.1.16**. Hub is now **1.8.25**. `data/nearmap/` still one published JSON (`542bd09`). No satellite/plane Sync/Publish. No `satellite.gs` copy.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), **#20** (`ops: daily log 2026-09-14`), and **#21** (`ops: daily log 2026-09-15`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `144cfec` added `drone-test.gs` / `records.gs` / `shared.gs` copies — not a deploy.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies today (`drone-test.gs`, first `records.gs`, `shared.gs` in `144cfec`) are not a deploy. `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `0c70e0e` Sync Drone (empty tree after `0bffe00` wrote six new drone records). Nearmap record unchanged after `542bd09`. Recount: satellite 506, plane 22, drone 134, drone-test 3, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1, cameras/json 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-15\n\nNo author-date 2026-09-15 commits on `origin/main`. Head is `20cb487` (2026-09-14 16:25 -0500). Yesterday's 00:02 UTC log (draft PR **#20**, `cursor/property-intel-daily-log-1576`, `169886c`) stopped at `04ba593` and recorded nothing shipped on 9/14; the two commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-15T00:08:11Z (`bc-573716b9`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/14 `bc-701853c6`, 9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `5fddc0f` Restore Google satellite around the Nearmap review nadir. `nearmap-review.html` BUILD **v1.7.17 → v1.7.18**. Removes the v1.7.17 empty MapType so Google `satellite` tiles show around the opaque nadir JPEG (`tilt: 0`). Viewer stays **v1.1.13** in this commit. Hub stays **1.8.17**. Also `docs/NEARMAP_CHANGELOG.md` / contract / runbook. No `.gs` / `data/`. Author-date 2026-09-14 12:05 -0500. Co-authored-by Cursor.\n- `20cb487` Serve Macalpine Fire Risk in the live Nearmap viewer. `nearmap-viewer.html` BUILD **v1.1.13 → v1.1.16** (no v1.1.14/v1.1.15 commits on main; `docs/NEARMAP_CHANGELOG.md` records v1.1.14 as a 2026-09-11 entry and v1.1.15 as local scratch in this same commit). Adds optional `ai/firerisk.json` on the Wildfire tab; `tools/nearmap/promote.py --files` / `--url` for sidecar-only uploads; `js/vyanet-viewer/nearmap-lot.js` parcel fetch uses the browser cache. Changelog says it did not write GitHub `data/` — confirmed: this commit touches no `data/` or `apps scripts/`. Author-date 2026-09-14 16:25 -0500. Co-authored-by Cursor.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. No satellite/plane/drone Sync/Publish. `data/nearmap/` still one published JSON (`542bd09`). Changelog also records operator AWS work (Ahartsi five + registry 7 deliveries; local scratch packs) — this clone cannot verify S3.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), **#19** (`ops: daily log 2026-09-13`), and **#20** (`ops: daily log 2026-09-14`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `5fddc0f`/`20cb487` added no `.gs` / `data/` copy. Changelog says Sheet Import was not run from that machine and `NEARMAP_DELIVERY_HUB` still Macalpine → Jones and Columbia only — not verified here.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copy in today's two commits. `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `2fcc1be` Publish Responder Intel — 1 property. Nearmap record unchanged after `542bd09`/`68961de`. No satellite/plane/drone `data/` sync. Recount: satellite 506, plane 22, drone 128, drone-test 2, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-14\n\nNothing shipped today on `origin/main`. Head remains `04ba593` (2026-09-11 15:39 -0500).\n\nYesterday's 00:19 UTC log (draft PR **#19**, `cursor/property-intel-daily-log-6eda`, `459ac33`) already recorded `origin/main` at `04ba593` and the three Nearmap review ships after the 9/12 cron. No author-date 2026-09-12, 2026-09-13, or 2026-09-14 commits on `origin/main`. The only git event after that log is `459ac33` `ops: daily log 2026-09-13` on draft PR **#19** — not on `main`. ISO week rolled to **2026-W38** (empty shipped).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-14T00:00:44Z (`bc-701853c6`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/13 `bc-152d50fe`, 9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-14.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), **#18** (`ops: daily log 2026-09-12`), and **#19** (`ops: daily log 2026-09-13`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). No `.gs` / `data/` commits after `04ba593`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `2fcc1be` Publish Responder Intel — 1 property. Nearmap record unchanged after `542bd09`/`68961de`. No satellite/plane/drone `data/` sync. Recount: satellite 506, plane 22, drone 128, drone-test 2, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-13\n\nNo author-date 2026-09-12 or 2026-09-13 commits on `origin/main`. Head is `04ba593` (2026-09-11 15:39 -0500). Yesterday's 00:10 UTC log (draft PR **#18**, `cursor/property-intel-daily-log-fbce`, `4e61771`) stopped at `07b62a1` and recorded no author-date 2026-09-12 commits; the three commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-13T00:15:45Z (`bc-152d50fe`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/12 `bc-01255360`, 9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `b9700af` Fix Nearmap review scroll and Draw brush pick. `nearmap-review.html` BUILD **v1.7.6 → v1.7.8** (no v1.7.7 commit on main). Changelog titles in this commit: pin-editor frame lock; region brush pick (no 10 m snap). Viewer stays **v1.1.13**. Hub stays **1.8.17**. No `.gs` / `data/`. Author-date 2026-09-11 12:25 -0500. Co-authored-by Cursor.\n- `edcd836` Fix Nearmap Draw: filled grow, cursor, and overlay targeting. BUILD **v1.7.8 → v1.7.16** (no v1.7.9–v1.7.10 commits on main; `docs/NEARMAP_CHANGELOG.md` records v1.7.11–v1.7.16 in this same commit). Also `tools/nearmap/review_server.py`. Viewer stays **v1.1.13**. No `.gs` / `data/`. Author-date 2026-09-11 14:56 -0500. Co-authored-by Cursor.\n- `04ba593` Speed up Nearmap review open by overlapping Maps, nadir, and original regions. BUILD **v1.7.16 → v1.7.17**. HEAD. Viewer stays **v1.1.13**. Hub stays **1.8.17**. No `.gs` / `data/`. Author-date 2026-09-11 15:39 -0500. Co-authored-by Cursor.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. No satellite/plane/drone Sync/Publish. `data/nearmap/` still one published JSON (`542bd09`).\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), **#17** (`ops: daily log 2026-09-11`), and **#18** (`ops: daily log 2026-09-12`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `b9700af`/`edcd836`/`04ba593` added no `.gs` copy.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copy in today's three commits. `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `2fcc1be` Publish Responder Intel — 1 property. Nearmap record unchanged after `542bd09`/`68961de`. No satellite/plane/drone `data/` sync. Recount: satellite 506, plane 22, drone 128, drone-test 2, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-12\n\nNo author-date 2026-09-12 commits on `origin/main`. Head is `07b62a1` (2026-09-11 09:14 -0500). Yesterday's 00:02 UTC log (draft PR **#17**, `cursor/property-intel-daily-log-b231`, `a5ecf19`) stopped at `68961de` and recorded no author-date 2026-09-11 commits; the seven commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-12T00:10:18Z (`bc-01255360`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/11 `bc-56175265`, 9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `6a6b387` `bca8b2b` `2b1ea3c` `5da7838` `97714e5` `2fcc1be` Publish Responder Intel — 1 property (six commits, 8:58–9:01 -0500). Each added one `data/responder-drone/{id}.json`. Recount 131 → 137. Sync-owned. `jonahbourgeois1`.\n- `07b62a1` Show Nearmap Pass 3 FR/WF concern pins and descriptions on the product viewer. `nearmap-viewer.html` BUILD **v1.1.7 → v1.1.13** (no v1.1.8–v1.1.12 commits on main; `docs/NEARMAP_CHANGELOG.md` records those versions as 2026-09-10 entries in this same commit). Hub stays **1.8.17**. Review stays **v1.7.6**. Same commit copied `apps scripts/nearmap.gs` — **file copy, not a deploy**. Author-date 2026-09-11 09:14 -0500. Co-authored-by Cursor.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. No satellite/plane/drone Sync/Publish. `data/nearmap/` still one published JSON (`542bd09`).\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), **#16** (`ops: daily log 2026-09-10`), and **#17** (`ops: daily log 2026-09-11`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` still one file (row 2). `07b62a1` added another `nearmap.gs` copy — not a deploy.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copy today (`nearmap.gs` in `07b62a1`) is not a deploy. `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `2fcc1be` Publish Responder Intel — 1 property (six new `data/responder-drone/` files after `6a6b387`). Nearmap record unchanged after `542bd09`/`68961de`. No satellite/plane/drone `data/` sync. Recount: satellite 506, plane 22, drone 128, drone-test 2, Lane 332 tiles, gis 3, hoa 5, responder-drone 137, nearmap 1.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-11\n\nNo author-date 2026-09-11 commits on `origin/main`. Head is `68961de` (2026-09-10 14:28 -0500). Yesterday's 00:04 UTC log (draft PR **#16**, `cursor/property-intel-daily-log-6f76`, `0b25a4e`) stopped at `c925508` and recorded no author-date 2026-09-10 commits; the five commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-11T00:02:10Z (`bc-56175265`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/10 `bc-db7958ae`, 9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `7dd6050` Clip Nearmap to the taxlot and keep observed facts when clip is off. `nearmap-viewer.html` BUILD **v1.1.2 → v1.1.5** (no v1.1.3/v1.1.4 commits on main). Hub **1.8.16 → 1.8.17**. Adds `js/vyanet-viewer/nearmap-lot.js`, `test-nearmap-lot.mjs`, and `tools/nearmap/lot_clip.py`. Review BUILD stays **v1.6.11**. Same commit copied `apps scripts/nearmap.gs` — **file copy, not a deploy**. Author-date 2026-09-10 10:56 -0500. Co-authored-by Cursor.\n- `4937ac0` Pass 2 Nearmap pins use region class names; place and delete only on painted regions. `nearmap-review.html` BUILD **v1.6.11 → v1.7.6** (no v1.7.0–v1.7.5 commits on main). Viewer **v1.1.5 → v1.1.7**. Same commit copied `apps scripts/nearmap.gs` and `config.gs` (`NM_MAX_PINS = 20` is Pass 1 only; Pass 2 is uncapped) — **file copies, not a deploy**. Catalog `role=` untouched. Author-date 2026-09-10 13:23 -0500. Co-authored-by Cursor.\n- `542bd09` Sync Nearmap — row 2. First published `data/nearmap/{id}.json` on `main` (`d9f759d7351db3886c79dd689c41e3c0`; 20 elements). Author-date 2026-09-10 14:01 -0500. `jonahbourgeois1`.\n- `c32f8a8` + `68961de` Sync Nearmap — row 2 again (14:06 and 14:28 -0500). Empty: same tree as `542bd09`. HEAD.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. No satellite/plane/drone Sync/Publish.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), **#15** (`ops: daily log 2026-09-09`), and **#16** (`ops: daily log 2026-09-10`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `config.gs` / `menu.gs` copies are on `main`; paste + new deployment and S3 edits write (`checkS3EditsWrite`) are not evidenced in this clone. Published `data/nearmap/{id}.json` now exists (row 2, one file).\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies today (`nearmap.gs` in `7dd6050`/`4937ac0`, `config.gs` in `4937ac0`) are not a deploy. `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `68961de` Sync Nearmap — row 2 (empty tree after `542bd09` wrote the record). No satellite/plane/drone `data/` sync. Recount: satellite 506, plane 22, drone 128, drone-test 2, Lane 332 tiles, gis 3, hoa 5, responder-drone 131, nearmap 1.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-10\n\nNo author-date 2026-09-10 commits on `origin/main`. Head is `c925508` (2026-09-09 18:10 -0500). Yesterday's 00:04 UTC log (draft PR **#15**, `cursor/property-intel-daily-log-04fc`, `6382d09`) stopped at `949f6d6` and recorded nothing shipped on 9/09; the 28 commits below landed after that cron (one author-date 2026-09-08 that was not on `origin/main` at the 9/09 cron, then 27 author-date 2026-09-09).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-10T00:04:11Z (`bc-db7958ae`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/09 `bc-134f8307`, 9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `f2c9c34` Show the Nearmap map before AI polygons so the review page opens reliably. `nearmap-review.html` BUILD **v1.2.1**. Author-date 2026-09-08 09:29 -0500. Not on `origin/main` at the 9/09 cron. Co-authored-by Cursor.\n- `413b886` Draw-only paint/erase on vendor regions; original/edits folders; testing-mode default. BUILD **v1.3.29**. First `apps scripts/nearmap.gs` copy, `data/nearmap/.gitkeep`, and `tools/nearmap/*`. **File copy, not a deploy.** Author-date 2026-09-09 12:13 -0500.\n- `3250ab7` Sheet mode on the original/edits folder format. BUILD **v1.4.0**.\n- `83dcac7` Pin at the interior point of irregular shapes. BUILD **v1.4.1**.\n- `8c8f5c5` Two editors on one page (regions / pins). BUILD **v1.5.0**. Also copied `menu.gs`.\n- `dd7d539` Regions edits push via Contents API with real error text; single-flight Save. BUILD **v1.5.1**.\n- `fed22d4` Save retries once on an Apps Script HTML error page. BUILD **v1.5.2**.\n- `c5a0485` Copy JSON is mode-aware. BUILD **v1.5.3**.\n- `786c251` + `926ba98` Nearmap regions — site VY-IN-002 (1 changed, 15 removed). Transient `data/nearmap/edits/` JSON; later removed.\n- `c73442d` Regions edits go Apps Script → S3; GitHub out of the regions path. BUILD **v1.6.0**. Deletes `data/nearmap/edits/`.\n- `caa39b5` Pin at the deepest interior point (max edge clearance). BUILD **v1.6.1**.\n- `16ac486` … `54d0c8b` Hole geometry and gap-close (`v1.6.2`–`v1.6.11`). HEAD review BUILD **v1.6.11** (Revert changes vs Revert to original).\n- `51dc3d5` Nearmap viewer **v1.0.0** (2D / 3D / obliques, AI layers in both) + `tools/nearmap/mesh_to_glb.py`. More `nearmap.gs` / `menu.gs` copies — **not a deploy**.\n- `2d26d36` Viewer **v1.0.1**: 3D camera/controls match model-viewer.\n- `ce346ce` Viewer **v1.0.2**: re-read regions on tab focus and Reload.\n- `c45d69c` Viewer **v1.0.3**: 3D fills cap the whole footprint like 2D.\n- `5e36083` Put Nearmap in the Vyanet hub with draped 3D fills. Hub **1.8.15**.\n- `c925508` Open Nearmap full-page from the hub; drop Property Facts from that rail. Hub **1.8.16**; `nearmap-viewer.html` BUILD **v1.1.2**. HEAD.\n\nElement-review remains **v6.8.20**. Golf remains **v1.0.4**. No Sync/Publish satellite/plane/drone commits. Viewer commits are Co-authored-by Cursor; the two VY-IN-002 regions commits are `jonahbourgeois1`.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), **#14** (`ops: daily log 2026-09-08`), and **#15** (`ops: daily log 2026-09-09`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap `nearmap.gs` / `menu.gs` copies are on `main`; paste + new deployment, S3 edits write (`checkS3EditsWrite`), and published `data/nearmap/{id}.json` are not evidenced in this clone.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies today (`nearmap.gs`, `menu.gs`) are not a deploy. `satellite.gs` last copy remains `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). Transient Nearmap edits JSON for VY-IN-002 was added then deleted in `c73442d` (S3-only). HEAD `data/nearmap/` is only `.gitkeep`. Recount: satellite 506, plane 22, drone 128, drone-test 2, Lane 332 tiles, gis 3.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-09\n\nNothing shipped today on `origin/main`. Head remains `949f6d6` (2026-09-07 12:29 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-09T00:04:42Z (`bc-134f8307`). Yesterday's 00:03 UTC log (draft PR **#14**, `cursor/property-intel-daily-log-6e97`, `0921740`) already recorded `origin/main` at `949f6d6` and the two Nearmap ships after the 9/07 cron. No author-date 2026-09-08 or 2026-09-09 commits on `origin/main`. The only git event after that log is `0921740` `ops: daily log 2026-09-08` on draft PR **#14** — not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/08 `bc-bbc69d44`, 9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-09.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), **#13** (`ops: daily log 2026-09-07`), and **#14** (`ops: daily log 2026-09-08`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap trial: review page is on `main`; Apps Script paste/deploy, Pass 1, and `data/nearmap/{id}.json` sync are not evidenced in this clone (`docs/NEARMAP_CHANGELOG.md` Status lines still list those as operator steps).\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). No satellite/plane/drone/nearmap `data/` sync after yesterday's log. Head still has the three `data/gis/{id}.json` files from `4b35668`. No `data/nearmap/` records.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-08\n\nNo author-date 2026-09-08 commits on `origin/main`. Head is `949f6d6` (2026-09-07 12:29 -0500). Yesterday's 00:03 UTC log (draft PR **#13**, `cursor/property-intel-daily-log-e481`) stopped at `da8dedf` and recorded nothing shipped on 9/07; the two commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-08T00:01:26Z (`bc-bbc69d44`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/07 `bc-cd56ff85`, 9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `8be883d` Publish `nearmap-review.html` so GitHub Pages can serve Nearmap Pass 1 QA. BUILD **v1.0.1**. Isolated trial page (sibling of golf-review / element-review; not on VIEW_ORDER). Author-date 2026-09-07 11:29 -0500. Co-authored-by Cursor.\n- `949f6d6` Per-layer Nearmap AI colors and hint centroids on the review page. `nearmap-review.html` BUILD **v1.2.0** (no v1.1.0 commit on main). Same commit added `docs/NEARMAP_CHANGELOG.md`. Author-date 2026-09-07 12:29 -0500. Co-authored-by Cursor.\n\nNeither commit touched `apps scripts/`, `data/`, element-review, golf-review, or the hub. Hub remains **1.8.14**. ER remains **v6.8.20**. Golf remains **v1.0.4**. No Sync/Publish satellite/plane/drone commits. `nearmap.gs` is not in this clone; `data/nearmap/` has no published JSON.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), **#12** (`ops: daily log 2026-09-06`), and **#13** (`ops: daily log 2026-09-07`) are still DRAFT; `docs/ops/` is not on `main`.\n- Nearmap trial: review page is on `main`; Apps Script paste/deploy, Pass 1, and `data/nearmap/{id}.json` sync are not evidenced in this clone (`docs/NEARMAP_CHANGELOG.md` Status lines still list those as operator steps).\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). The two Nearmap commits did not touch `data/`. Head still has the three `data/gis/{id}.json` files from `4b35668`. No `data/nearmap/` records.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-07\n\nNothing shipped today on `origin/main`. Head remains `da8dedf` (2026-09-02 16:43 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-07T00:03:55Z (`bc-cd56ff85`). Yesterday's 00:16 UTC log (draft PR **#12**, `cursor/bc-34e087f8-2e0e-4559-8504-282e90c95654-84fb`, `3c89fa4`) already recorded `origin/main` at `da8dedf`. No author-date 2026-09-03 through 2026-09-07 commits on `origin/main`. The only git event after that log is `3c89fa4` `ops: daily log 2026-09-06` on draft PR **#12** — not on `main`. ISO week rolled to **2026-W37** (empty shipped). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/06 `bc-34e087f8`, 9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-07.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), **#11** (`ops: daily log 2026-09-05`), and **#12** (`ops: daily log 2026-09-06`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). No satellite/plane/drone `data/` sync after yesterday's log. Head still has the three `data/gis/{id}.json` files from `4b35668`.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-06\n\nNothing shipped today on `origin/main`. Head remains `da8dedf` (2026-09-02 16:43 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-06T00:16:03Z (`bc-34e087f8`). Yesterday's 00:07 UTC log (draft PR **#11**, `cursor/property-intel-daily-log-5d78`, `f057564`) already recorded `origin/main` at `da8dedf`. No author-date 2026-09-03, 2026-09-04, 2026-09-05, or 2026-09-06 commits on `origin/main`. The only git event after that log is `f057564` `ops: daily log 2026-09-05` on draft PR **#11** — not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/05 `bc-5c01f7f0`, 9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-06.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), **#10** (`ops: daily log 2026-09-04`), and **#11** (`ops: daily log 2026-09-05`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). No satellite/plane/drone `data/` sync after yesterday's log. Head still has the three `data/gis/{id}.json` files from `4b35668`.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-05\n\nNothing shipped today on `origin/main`. Head remains `da8dedf` (2026-09-02 16:43 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-05T00:07:22Z (`bc-5c01f7f0`). Yesterday's 00:04 UTC log (draft PR **#10**, `cursor/property-intel-daily-log-b7f8`, `2f04aa1`) already recorded `origin/main` at `da8dedf`. No author-date 2026-09-03, 2026-09-04, or 2026-09-05 commits on `origin/main`. The only git event after that log is `2f04aa1` `ops: daily log 2026-09-04` on draft PR **#10** — not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/04 `bc-7fb90f35`, 9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-05.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), **#9** (`ops: daily log 2026-09-03`), and **#10** (`ops: daily log 2026-09-04`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). No satellite/plane/drone `data/` sync after yesterday's log. Head still has the three `data/gis/{id}.json` files from `4b35668`.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-04\n\nNothing shipped today on `origin/main`. Head remains `da8dedf` (2026-09-02 16:43 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-04T00:04:43Z (`bc-7fb90f35`). Yesterday's 00:03 UTC log (draft PR **#9**, `cursor/property-intel-daily-log-4466`, `a83c8fd`) already recorded `origin/main` at `da8dedf` and the seven ships after the 9/02 cron. No author-date 2026-09-03 or 2026-09-04 commits on `origin/main`. The only git event after that log is `a83c8fd` `ops: daily log 2026-09-03` on draft PR **#9** — not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/03 `bc-b1bc2328`, 9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-09-04.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), **#8** (`ops: daily log 2026-09-02`), and **#9** (`ops: daily log 2026-09-03`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). No satellite/plane/drone `data/` sync after yesterday's log. Head still has the three `data/gis/{id}.json` files from `4b35668`.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-03\n\nNo author-date 2026-09-03 commits on `origin/main`. Head is `da8dedf` (2026-09-02 16:43 -0500). Yesterday's 00:01 UTC log (draft PR **#8**, `cursor/property-intel-daily-log-3473`) stopped at `8b1d0d4` and recorded no author-date 2026-09-02 commits; the seven commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-03T00:03:15Z (`bc-b1bc2328`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/02 `bc-7de4187d`, 9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `d688a65` Pin identity is the marker number, not catalog id, so duplicate pins survive moves and removes. `element-review.html` BUILD **v6.8.11 → v6.8.13** (no v6.8.12 commit on main). Same commit copied `apps scripts/critique-api.gs` and `satellite.gs` — **file copies, not a deploy**. Author-date 2026-09-01 19:02 -0500 (2026-09-02T00:02:30Z, after yesterday's cron start).\n- `be175c0` Surface a stale server build on submit (min v6.8.2 for duplicate-pin identity). `element-review.html` BUILD **v6.8.14**. Author-date 2026-09-01 19:12 -0500.\n- `4987718` Fifth reviewer **DPC Prime** in the dropdown; `sandbox=1` routes GET/POST to Satellite Sandbox + Element Critique Sandbox (header dates this to v6.8.15; BUILD on the commit is **v6.8.17** — no v6.8.15/v6.8.16 commits on main). Author-date 2026-09-02 16:02 -0500.\n- `f1b002d` Rename the fifth reviewer to **DPC:** so the label matches the critique sheet. BUILD **v6.8.18**. Author-date 2026-09-02 16:11 -0500.\n- `6252628` Rename the fifth reviewer to **DPC'** (apostrophe, not a colon). BUILD **v6.8.19**. Author-date 2026-09-02 16:13 -0500.\n- `4b35668` Hub **1.8.14**: known GIS property facts on the Private rail (`js/vyanet-viewer/gis-facts.js`; assessor, DOGAMI, fire, flood, WUI). Three `data/gis/{id}.json` files plus `data/gis/.gitkeep`. Contract writer is Apps Script `gisFileForSync_` — not a Sync/Publish commit. Also updated `docs/INDEX_AND_CAMERAS_CONTRACT.md`, fixtures, `vyanet-viewer.html`, `viewer.html`, `model-viewer.html`, `test-vyanet-viewer.py`, and copied `apps scripts/shared.gs` — **file copy, not a deploy**. Author-date 2026-09-02 16:22 -0500.\n- `da8dedf` \"Show pins\" dropdown so reviewers can compare Bedrock and prior rounds. `element-review.html` BUILD **v6.8.20**. Same commit copied `apps scripts/critique-api.gs` — **file copy, not a deploy**. Author-date 2026-09-02 16:43 -0500.\n\nGolf remains **v1.0.4**. No Sync/Publish satellite/plane/drone commits. All seven Co-authored-by Cursor.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), **#7** (`ops: daily log 2026-09-01`), and **#8** (`ops: daily log 2026-09-02`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git today (`satellite.gs` + `critique-api.gs` in `d688a65`, `shared.gs` in `4b35668`, `critique-api.gs` in `da8dedf`) are not a deploy. `satellite.gs` changed in `d688a65`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last Sync/Publish on `origin/main` is `187a608` Sync Drone (2026-08-28). `4b35668` added three `data/gis/{id}.json` files (GIS facts panel; writer `gisFileForSync_`). No satellite/plane/drone `data/` sync.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-02\n\nNo author-date 2026-09-02 commits on `origin/main`. Head is `8b1d0d4` (2026-09-01 18:06 -0500). Yesterday's 00:06 UTC log (`74df029` on draft PR **#7**) stopped at `064658b` and recorded no author-date 2026-09-01 commits; the five commits below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-02T00:01:16Z (`bc-7de4187d`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (9/01 `bc-76a61999`, 8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\", \"Summarize yesterday log bot\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `a8b3ceb` Sheet-only golf review pipeline: `golf-review.html` BUILD **v1.0.0**, plus copies of `apps scripts/golf.gs`, `config.gs`, `menu.gs`, and `critique-api.gs`. Golf courses skip the satellite nadir screenshot and Bedrock pass; reviewers place an independent catalog (seed ids 1001–1150, 150 pins; `GOLF_MAX_PINS = 200` in the `config.gs` copy) as `{id, lat, lng}` on a live map and save only to the Golf tab. Publish (`data/golf/`) is out of scope in the `golf.gs` header. **File copies, not an Apps Script deployment.** Author-date 2026-09-01 13:19 -0500.\n- `30d546a` Yellow nadir pin at the geocoded golf address; also apply Elements Reviewed checkboxes on an empty Golf tab. `golf-review.html` BUILD **v1.0.1**. Same commit copied `apps scripts/golf.gs`. Author-date 2026-09-01 13:39 -0500.\n- `de7ad60` Blue dot for the golf address and a spinner until map tiles load. `golf-review.html` BUILD **v1.0.2**. Author-date 2026-09-01 13:44 -0500.\n- `2617114` Golf map starts from URL `?lat=&lng=` instead of waiting on Apps Script. `golf-review.html` BUILD **v1.0.3**. Author-date 2026-09-01 17:11 -0500.\n- `8b1d0d4` Duplicate catalog pins stay separate instances when adding or dragging (a second Roof or Parking was matching on catalog id alone). `element-review.html` BUILD **v6.8.10 → v6.8.11**; `golf-review.html` BUILD **v1.0.4**. Same commit copied `apps scripts/critique-api.gs` and `satellite.gs` — **file copies, not a deploy**. Author-date 2026-09-01 18:06 -0500.\n\nHub remains **1.8.13**. No `data/` sync commits. All five Co-authored-by Cursor.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), **#6** (`ops: daily log 2026-08-31`), and **#7** (`ops: daily log 2026-09-01`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git today (`golf.gs`, `config.gs`, `menu.gs`, `critique-api.gs`, `satellite.gs`) are not a deploy. `satellite.gs` changed in `8b1d0d4`; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. Last sync on `origin/main` is `187a608` Sync Drone (2026-08-28). None of the five commits touched `data/`.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it. Golf catalog is a separate Golf Pins sheet (ids 1001+); the `golf.gs` header says never merge it into `pins-catalog.json`.\n\n## 2026-09-01\n\nNo author-date 2026-09-01 commits on `origin/main`. Head is `064658b` (2026-08-31 12:19 -0500). Yesterday's 00:06 UTC log (`d046d39` on draft PR **#6**) stopped at `53346bd` and recorded nothing shipped on 8/31; the hub change below landed after that cron.\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-09-01T00:03:44Z (`bc-76a61999`). Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed this cron plus prior Log Bot runs (8/31 `bc-f631c354`, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) and three internal agents (\"Summarize yesterday log bot\", \"Search 8/28 transcript for dashboard\", \"Find original ops dashboard schema\"). Desktop/web/local sources returned 0.\n\n### Shipped\n- `064658b` Hub **1.8.13**: property CHEKT moved under Private (nested 3D / 2D / Live / Plugins). Community gets its own Map / Live bar with an empty Community Live slot so neighborhood cameras can land later without sharing the property feed. `js/vyanet-viewer/property.js` `HUB_BUILD = '1.8.13'`. Same commit updated `vyanet-viewer.html`, `test-vyanet-viewer.py`, and `docs/INDEX_AND_CAMERAS_CONTRACT.md`. Co-authored-by Cursor. Author-date 2026-08-31 12:19 -0500.\n\nNot on `main`: 8/31 Log Bot follow-ups on draft PR **#6** (`4b4b06b`, `34d6a59`, `0d8fe5f`, `f69689d`) restyled `docs/ops/index.html` to the charcoal/gold board and put Daily log back under pipelines.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` desktop/web/local sources returned 0).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), **#5** (`ops: daily log 2026-08-30`), and **#6** (`ops: daily log 2026-08-31`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. No sync commits on `main` since `187a608` (2026-08-28). `064658b` did not touch `data/`.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-31\n\nNothing shipped today on `origin/main`. Head remains `53346bd` (2026-08-28 16:22 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-31T00:04:39Z (`bc-f631c354`). Yesterday's 00:23 UTC log already recorded that `origin/main` was still `53346bd`. No author-date 2026-08-29, 2026-08-30, or 2026-08-31 commits on `origin/main`. The only git event after that log is `7a40c02` `ops: daily log 2026-08-30` on draft PR **#5** (`cursor/property-intel-daily-log-3f6c`) — not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) plus internal \"Summarize yesterday log bot\". Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-08-31.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), and **#5** (`ops: daily log 2026-08-30`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. No sync commits on `main` since yesterday's log.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-30\n\nNothing shipped today on `origin/main`. Head remains `53346bd` (2026-08-28 16:22 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-30T00:20:58Z (`bc-eb481f27`). Yesterday's 00:16 UTC log already recorded the 8/28 afternoon work through `53346bd`. No author-date 2026-08-29 or 2026-08-30 commits on `origin/main`. The only git event after that log is `44da289` `ops: daily log 2026-08-29` on draft PR **#4** (`cursor/property-intel-daily-log-0704`) — not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) plus internal \"Summarize yesterday log bot\". Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-08-30.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), and **#4** (`ops: daily log 2026-08-29`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. No sync commits on `main` since yesterday's log.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-29\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-29T00:16:28Z (`bc-8dc1a78f`). Head of `origin/main` is `53346bd` (2026-08-28 16:22 -0500). Yesterday's 00:13 UTC log stopped at `606537c` and had no author-date 2026-08-28 commits; everything below is 2026-08-28 09:00–16:22 -0500. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`) plus internal \"Summarize yesterday log bot\".\n\n### Shipped\n- `53346bd` Hub **1.8.12**: Community iframe cache-bust so it drops the cached v2.3.4 `hoa-viewer`. `js/vyanet-viewer/property.js` `HUB_BUILD = '1.8.12'`.\n- `e3952cf` Community no longer fetches the deleted monolithic `data/index.json` (that 404 blanked the map). `hoa-viewer.html` loads each HOA member from `data/index/{id}.json` with satellite fallback.\n- `260c239` Match 2D camera pins to 3D: same popup, live LEDs, and 72-hour clip dots. Same commit set hub **1.8.11**, copied `apps scripts/shared.gs` (**file copy, not a deploy**), and deleted the duplicate Eugene cameras file `data/cameras/json/8eea64e5…` so HEAD has **2** camera json files.\n- `b44575a` Reviewers can pin outside the nadir crop (percentages may be <0 or >100) and open Google Earth from Element Review. `element-review.html` BUILD **v6.8.10**. Same commit copied `apps scripts/satellite.gs`, `plane.gs`, `drone-test.gs`, `critique-api.gs`, `shared.gs` — **file copies, not an Apps Script deployment**.\n- `cfde3ab` (merged `e4863fb`) Stop Lane road leftovers from painting as the property line (`nadir-geo.js` prefers `MAPTAXLOT` then `TAXLOT`).\n- Apps Script–style syncs on 8/28 (sync-owned `data/`): six `Publish Responder Intel — 1 property` (`ee91147` … `47def97`) and `187a608` Sync Drone (six `data/drone/{id}.json` plus index hubs).\n\nNot on HEAD: `100b135` added an on-page ER oblique pane (BUILD v6.8.11) and `0cf943b` reverted it the same afternoon; BUILD remains **v6.8.10**.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`) and **#3** (`ops: daily log 2026-08-28`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git (`satellite.gs` in `b44575a`, `shared.gs` in `b44575a` and `260c239`) are not a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned (six responder-intel publishes + Sync Drone + camera json delete/edit in `260c239`; next sync can overwrite).\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-28\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-28T00:13:41Z. No commits with author date 2026-08-28. Head of `origin/main` is `606537c` (2026-08-27 16:53 -0500). Everything below landed after yesterday's 00:03 UTC log (author dates 2026-08-27 11:18–16:53 -0500). CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/27, 8/26) plus internal \"Summarize yesterday log bot\".\n\n### Shipped\n- `5c79788` merge of PR **#2** (`cursor/vyanet-viewer-gate-home`). Hub 1.6.4 lineage is on `main`. That branch has no commits not already on `main`.\n- `df985c1` Hub **1.7.3**: Eugene cameras on the live hub; four CHEKT feeds joined to stills. `js/vyanet-viewer/property.js` `HUB_BUILD = '1.7.3'`.\n- `9a754fb` Hub **1.7.2**: Eugene cameras, FR 3D pins, CHEKT live by address. Also copied `apps scripts/critique-api.gs`, `drone-test.gs`, `plane.gs`, `prompts.gs`, `shared.gs` — **file copies, not an Apps Script deployment**.\n- `6e693f0` + `11c0394`: Vyanet Eugene camera stills under `data/cameras/images/{id}/`; metadata settled at `data/cameras/json/{id}.json` (3 json files on HEAD).\n- `a302173` Redraw element-review pins immediately after rerun. `element-review.html` BUILD **v6.8.8**.\n- `9442d72` Drone-test element review georeferences CloudFront nadirs and identifies the row by taxlot.\n- `91556e6` Lane County lot-line tiles (`data/parcels/lane_*.geojson`, 332 files) and both-county grids in viewers.\n- `1f02d1b` Stop drawing the element-review pin-range box; allow reviewer duplicate pins; school cap **20** (`SCHOOL_PIN_LIMIT = 20`; `SAT_MAX_PINS` stays 12 in the `satellite.gs` copy). Same commit copied `apps scripts/satellite.gs` — **not a deploy**.\n- Apps Script–style syncs on 8/27 (sync-owned `data/`): six `Sync drone-test` (`e614910` … `0ef3f6f`) and `0b51828` Sync Row — Vyanet Eugene.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PR **#1** (`ops: daily log 2026-08-27`, `cursor/property-intel-daily-log-4f45`) is still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git (`satellite.gs` in `1f02d1b`, plus `9a754fb`) are not a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned (drone-test + Eugene row + camera JSON landed via git; next sync can overwrite).\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-27\n\nNothing shipped today on `origin/main`. Head remains `06c9714` (2026-08-26 16:31 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-27T00:03:07Z, then follow-ups to wire the `file://` weekly page. v2 / OneDrive `docs/ops` is not mounted on this VM (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs. CHANGELOG/CONTEXT not in this clone.\n\n### Shipped\nNone on 2026-08-27.\n\n### Still open\n- Vyanet Viewer hub **1.6.4** on `origin/cursor/vyanet-viewer-gate-home` (`161a860`) not merged; `main` hub **1.0.3**.\n- Chat direction not visible in the Log Bot environment.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git are not a deploy. No `satellite.gs` deploy evidence today.\n- Public `data/*.json` is sync-owned.\n- Catalog `role=` still present on all 256 pins after `06c9714`; do not flatten it.\n\n## 2026-08-26\n\nFirst write of this day into this `log.md` (8/26 Log Bot run `bc-45e4c56a` did not commit `docs/ops/`).\n\n### Shipped\n- `06c9714` \"Update pins-catalog.json\". Catalog `version` `2026-07-15` → `2026-08-26`; `pin_count` 239 → 256. Notes: pins 240–256 appended; `#30` Entry → Vehicle Entrance; `account_type` widened on `#30` / `#33` / `#127`. All 256 pins still have `role` (195 primary, 61 concern). Actions `33015751649` and Pages `33015750965` succeeded.\n- Last Apps Script–style property sync remains `86e00ef` (2026-08-24 drone-test). No satellite/plane/responder-intel `data/` sync this day.\n\n### Still open\n- `161a860` \"Ship Vyanet Viewer hub through 1.6.4: live tab, dashboard, and 3D cameras\" on `cursor/vyanet-viewer-gate-home`, not on `main`.\n- No GitHub pull requests listed on this repo.\n\n### Watchouts\nStanding rules above. No `satellite.gs` deploy evidence.\n\n## 2026-08-25\n\nReconstructed from v1 git (this VM cannot read the original OneDrive 8/25 block). If your local `log.md` already has a fuller 8/25 section, keep that block and leave this one as the git evidence.\n\n### Shipped\n- `8662883` \"Identify element-review critiques by site_no instead of address.\" `element-review.html` BUILD **v6.8.2**. Duplicate lots were rejected as ambiguous when the review link only carried addr; links now include `site_no`. Same commit added `apps scripts/*.gs` copies to the public repo — **file copy, not an Apps Script deployment**.\n- `fb9a0f2` merge of `main`.\n\n### Still open (that day)\n- `d32bb4a` \"Add gate and home shell to the Vyanet Viewer hub (1.1.1)\" on `cursor/vyanet-viewer-gate-home`, not merged to `main` (later advanced to 1.6.4 on 8/26).\n\n### Watchouts\n`.gs` in git ≠ deployed. `data/*.json` is sync-owned.\n",
+  "pipelines": [
+    {
+      "id": "viewers",
+      "name": "Responder viewers (v1 Pages)",
+      "status": "on main",
+      "evidence": "origin/main 7a46760; HUB_BUILD 1.8.42 (132652d); viewer.html VERSION v2.10.20 (132652d); element-review BUILD v6.8.20; golf-review BUILD v1.0.4; nearmap-review BUILD v1.7.18 (5fddc0f); nearmap-viewer BUILD v1.1.16 (20cb487); live-viewer BUILD 1.1.11 (ba89172; last touch 2bce446/132652d with no bump). 35d5a21..5e0e870 are sync-owned data/ only; 7a46760 is taxlot-coverage/, not a viewer version change."
+    },
+    {
+      "id": "sync",
+      "name": "Apps Script → GitHub data sync",
+      "status": "last Sync/Publish 2026-09-25 three Publish Responder Intel; responder-drone 142→145",
+      "evidence": "5e0e870 Publish Responder Intel (2026-09-25 10:49 -0500) last Sync/Publish on origin/main. Three new responder-drone records (35d5a21, 55b9d5f, 5e0e870). No matching Sync Drone. No satellite/plane Sync/Publish. No .gs copy. Editor-save is not a deploy."
+    },
+    {
+      "id": "satellite",
+      "name": "Satellite Pass 1 / review / Pass 2",
+      "status": "viewers on main; deploy unverified",
+      "evidence": "element-review.html BUILD v6.8.20 unchanged after 7a46760. satellite.gs copy last changed in d688a65; file copy is not a deploy. No satellite.gs copy 2026-09-03..2026-09-26."
+    },
+    {
+      "id": "nearmap",
+      "name": "Nearmap trial (review + viewer + hub)",
+      "status": "review v1.7.18 + viewer v1.1.16 + hub 1.8.42 on main; one published JSON; Apps Script deploy / S3 edits unverified",
+      "evidence": "5fddc0f review v1.7.18. 20cb487 viewer v1.1.16. Hub stays 1.8.42 (132652d). 542bd09 published data/nearmap/{id}.json unchanged. nearmap.gs last copy 07b62a1. This clone cannot verify S3."
+    },
+    {
+      "id": "golf",
+      "name": "Golf review (sheet-only)",
+      "status": "on main; Apps Script deploy unverified",
+      "evidence": "golf-review.html BUILD v1.0.4 on origin/main 8b1d0d4; unchanged after 7a46760. Seed 150 pins ids 1001-1150; GOLF_MAX_PINS=200 in config.gs copy. golf.gs header: no data/golf/, never merge into pins-catalog.json. .gs copies are not a deploy."
+    },
+    {
+      "id": "plane",
+      "name": "Plane capture (ingest → eligibility → clip → render)",
+      "status": "not in this clone",
+      "evidence": "property-intel-v2 404 from this token. CHANGELOG and CONTEXT absent."
+    },
+    {
+      "id": "live",
+      "name": "Live CHEKT",
+      "status": "on main",
+      "evidence": "Hub stays 1.8.42 (132652d). live-viewer.html BUILD stays 1.1.11. 35d5a21..5e0e870 are responder-drone Publish; 7a46760 is taxlot-coverage/. Unchanged CHEKT gateway not re-probed."
+    },
+    {
+      "id": "taxlot",
+      "name": "Taxlot county coverage dashboard",
+      "status": "on main at /taxlot-coverage/",
+      "evidence": "7a46760 / PR #32 MERGED 2026-09-25T16:20:20Z. taxlot-coverage/data/counties.json meta: 160 counties, 15 states, 21797 sites; status_counts inspected 122 / deferred-tail 34 / no-source 2 / blocked-license 2. 160 county record files. Cloud agent bc-a361408c. README live path https://responder-intel.vyanet.com/taxlot-coverage/. This cron did not re-probe the live host."
+    },
+    {
+      "id": "photo",
+      "name": "Photo intake",
+      "status": "not in this clone",
+      "evidence": "no photo-intake source in this v1 checkout. c65c8b1 NEXT_SESSION names intake as the 2026-09-16 planned session; that brief is still the last evidence. 2c154a7/05de967 are a Zoho portal map page add/remove on this repo, not a photo-intake transport ship. 05de967 claims the pages live in vyanet-ops/drones — unverified here."
+    }
+  ],
+  "in_progress": [
+    {
+      "item": "Daily ops page (docs/ops/) still off main",
+      "evidence": "Draft PRs #1, #3–#31. origin/main has no docs/ops. #32 merged taxlot-coverage, not docs/ops."
+    },
+    {
+      "item": "Log Bot cannot see desktop/web/local chats",
+      "evidence": "list-cloud-agents desktop/web/local sources returned 0 in this environment. One sand-source agent (bc-a361408c taxlot-coverage) was listed and merged as PR #32."
+    },
+    {
+      "item": "v2 pipeline tree not mounted for Log Bot",
+      "evidence": "property-intel-v2 404; OneDrive Desktop/property-intel-v2/docs/ops not writable from this VM."
+    },
+    {
+      "item": "Golf Apps Script deploy unverified",
+      "evidence": "a8b3ceb..8b1d0d4 committed golf.gs/config.gs/menu.gs/critique-api.gs copies. Editor-save is not a deploy. No golf-review or golf.gs commits after 8b1d0d4."
+    },
+    {
+      "item": "satellite.gs / critique-api.gs deploy unverified after 9/01 evening + 9/02 copies",
+      "evidence": "d688a65 copied satellite.gs and critique-api.gs; da8dedf copied critique-api.gs. File copies are not a deploy. No satellite.gs copy after d688a65. MOCKINGBIRD row 277 is the first check after a real satellite.gs deploy."
+    },
+    {
+      "item": "Nearmap Apps Script deploy / S3 edits write unverified",
+      "evidence": "7dd6050/4937ac0/07b62a1 copied apps scripts/nearmap.gs; 4937ac0 also copied config.gs — file copies, not a deploy. nearmap.gs last copy remains 07b62a1. No .gs copy after 376c5b1 (drone-test.gs). 542bd09 published data/nearmap/d9f759d7351db3886c79dd689c41e3c0.json (20 elements), still one file. This clone cannot see the Apps Script editor or the S3 edits object; paste + new deployment and checkS3EditsWrite are not evidenced."
+    },
+    {
+      "item": "drone-test.gs deploy unverified after 376c5b1 copy",
+      "evidence": "376c5b1 copied apps scripts/drone-test.gs (keeps stored parcel_ring on full sync). File copy is not a deploy. No later .gs copy. This clone cannot see the Apps Script editor; paste + new deployment is not evidenced. Earlier copies remain 2c32137 / f7cac10 / 144cfec."
+    }
+  ],
+  "board": {
+    "title": "Property Intel",
+    "summary": "Captured 4 origin/main commits after yesterday's 00:01 UTC log (PR #31, b9a9300) which had stopped at 63aa425. Head now 7a46760 (2026-09-25 11:20 -0500). Three Publish Responder Intel added responder-drone records (142→145). PR #32 merged taxlot-coverage/ (160 counties, 15 states, 21797 sites; inspected 122). Hub stays 1.8.42; viewer.html stays v2.10.20; live-viewer stays 1.1.11. ER v6.8.20, golf v1.0.4, Nearmap review v1.7.18 / viewer v1.1.16. ISO week 2026-W39. No author-date 2026-09-26 commits.",
+    "as_of": "2026-09-26",
+    "last_write": "2026-09-26 00:00 UTC",
+    "source": "Public v1 · docs/ops",
+    "kpis": [
+      {
+        "label": "Satellite records published",
+        "value": "506",
+        "sub": "target 30000 properties",
+        "evidence": "len(data/satellite/*.json)=506 recount 2026-09-26"
+      },
+      {
+        "label": "Plane-rendered properties",
+        "value": "22",
+        "sub": "target 44 Highlands roster",
+        "evidence": "len(data/plane/*.json)=22 recount 2026-09-26 (was 20 on 2026-08-25)"
+      },
+      {
+        "label": "Ranked open items",
+        "value": "17",
+        "sub": "still open of 18 listed",
+        "evidence": "2026-08-25 board. Original 18-item list is not in this clone; no evidence those items closed. Recount 2026-09-26 unchanged."
+      },
+      {
+        "label": "EagleView access",
+        "value": "Not granted",
+        "sub": "30-day eval clock has not started",
+        "evidence": "2026-08-25 board; no grant file in this checkout. Recount 2026-09-26 unchanged."
+      }
+    ],
+    "pipelines": [
+      {
+        "name": "1 — Ingest",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Capture ingest (5 gates, pyramid, manifest last)",
+            "note": "1-ingest/ingest_capture.py in production."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Promote to serving + registry (plane path)",
+            "note": "Works for plane captures. Operator still stamps parcels_ref by hand."
+          },
+          {
+            "status": "not_started",
+            "label": "NOT-STARTED",
+            "title": "Parameterize promote for drone prefix / type",
+            "note": "Still hardcoded. Eugene used option B: plane prefix + type plane. Do not stamp type:drone until the four Lambdas are redeployed."
+          }
+        ]
+      },
+      {
+        "name": "2 — Parcels",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Deschutes county published",
+            "note": "109,474 features."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Lane County source GeoJSON on disk",
+            "note": "407 MB file gitignored. Must never be committed."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Inspect → counties.json lane → publish → probe",
+            "note": "2026-08-31: 332 viewer tiles on GitHub Pages (8/27 board: 159,131 features, 323 shards). Join MAPTAXLOT. CDN probe was 5/5. Owner fields stripped."
+          }
+        ]
+      },
+      {
+        "name": "3 — Eligibility",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "One opacity function for eligibility and render",
+            "note": "Render gate imports 3-eligibility/eligibility_check.capture_coverage."
+          },
+          {
+            "status": "blocked",
+            "label": "BLOCKED",
+            "title": "Eugene origin taxlot below 80% clip/render gate",
+            "note": "Taxlot 1704233002104 is 65% opaque. Capture vyanet-eugene-2026-08-19 is in serving as type plane, parcels_ref lane."
+          }
+        ]
+      },
+      {
+        "name": "4 — Clip / render",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Drone captures parcel-clipped like plane",
+            "note": "Whole-mesh drone GLB path is superseded. parcels_ref required on every capture."
+          },
+          {
+            "status": "not_started",
+            "label": "NOT-STARTED",
+            "title": "load_captures() plane|drone edit not deployed",
+            "note": "Drone-typed captures stay invisible to clip/render until it ships. Re-baseline the row-3 oracle after."
+          },
+          {
+            "status": "unknown",
+            "label": "UNKNOWN",
+            "title": "Row-3 render oracle (18775 Macalpine Loop)",
+            "note": "Not re-run from this checkout. Expected: ok=true, tier ENTRANCE, alpha=231.3°, nadir 148/156."
+          }
+        ]
+      },
+      {
+        "name": "5 — Satellite",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Pass 1 emits the twenty; reruns keep all 239",
+            "note": "Two vocabularies by design. Do not unify. Catalog role= still on all 256 pins (195 primary, 61 concern)."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "MOCKINGBIRD row 277 redo",
+            "note": "First check after any real satellite.gs deploy. Critique add-loss guard still missing. Editor-save ≠ deploy."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Pass 1 placement-failure diagnostics",
+            "note": "Corner-stack hypothesis: unit mismatch + clamp relocation."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Reviewer revisit lists",
+            "note": "Ross 88 / Eleanor 27. School cap is 20 as of 2026-08-27. SAT_MAX_PINS stays 12 in the satellite.gs copy."
+          }
+        ]
+      },
+      {
+        "name": "6 — Live video + viewers",
+        "items": [
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Live CHEKT on the hub",
+            "note": "origin/main ba89172; HUB_BUILD 1.8.31 after f70f275 estimated Gud Cultures pins / f2f9f2f Live on All + last-clip stills / ba89172 hung-MJPEG snapshot poll; live-viewer.html BUILD 1.1.11."
+          },
+          {
+            "status": "done",
+            "label": "DONE",
+            "title": "Element Review outside-crop pins + Earth",
+            "note": "element-review.html BUILD v6.8.20 unchanged after ba89172 (Show pins + DPC' + sandbox=1; duplicate identity is marker number since d688a65)."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Golf review (sheet-only)",
+            "note": "golf-review.html BUILD v1.0.4 on origin/main 8b1d0d4; unchanged after ba89172. Seed 150 pins ids 1001-1150; GOLF_MAX_PINS=200 in the config.gs copy. .gs copies are not a deploy. No data/golf/."
+          },
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Nearmap trial review page",
+            "note": "nearmap-review.html BUILD v1.7.18 (5fddc0f); nearmap-viewer.html BUILD v1.1.16 (20cb487); hub 1.8.31 from live-camera ships. First published data/nearmap/{id}.json in 542bd09 (20 elements). nearmap.gs last copy 07b62a1; not a deploy."
+          },
+          {
+            "status": "blocked",
+            "label": "BLOCKED",
+            "title": "responder-intel.html flat pixelToLatLng",
+            "note": "0.488% N-S stretch. Migrate to nadir-geo; do not copy the flat helper."
+          }
+        ]
+      },
+      {
+        "name": "7 — Photo intake + EagleView",
+        "items": [
+          {
+            "status": "in_progress",
+            "label": "IN PROGRESS",
+            "title": "Photo-intake transport",
+            "note": "Zoho Forms closed. Creator probe 2 ready; fallback own page + S3 presigned POST. c65c8b1 names intake as the 2026-09-16 planned session; that brief is not a transport ship. No commit after ba89172."
+          },
+          {
+            "status": "blocked",
+            "label": "BLOCKED",
+            "title": "EagleView access",
+            "note": "Not granted. 30-day eval clock has not started. License rights (analyze/cache/derive/resell) and 3D-mesh questions first. No grant file in this checkout. Recount 2026-09-21 unchanged."
+          }
+        ]
+      }
+    ]
+  }
+};
