@@ -1,5 +1,5 @@
 // Merge rules, URL shape, and page structure for camera-pin-editor 1.0.5.
-import { readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
@@ -240,6 +240,19 @@ ok('seeded wellman has no scratch fields', (() => {
     !raw.includes('"review"') && !raw.includes('sub_review') && !raw.includes('confidence');
 })());
 ok('gud production pins kept', readFileSync(join(camDir, GUD + '.json'), 'utf8').includes('gud-cultures-2026-05-29'));
+ok('butler still attached', (() => {
+  const id = '305a44231fd0ee62c93819812e58bd38';
+  const doc = JSON.parse(readFileSync(join(camDir, id + '.json'), 'utf8'));
+  const photo = doc.cameras[0].photo;
+  return doc.cameras[0].lat === 44.0701631 && doc.cameras[0].label === 'DRIVEWAY' &&
+    photo === 'data/cameras/images/' + id + '/cam-01.jpg' && existsSync(join(root, photo));
+})());
+ok('wellman still attached', (() => {
+  const id = '0bff28782e679ea68ce2994c5c2932f7';
+  const doc = JSON.parse(readFileSync(join(camDir, id + '.json'), 'utf8'));
+  const photo = doc.cameras[0].photo;
+  return photo === 'data/cameras/images/' + id + '/cam-01.jpg' && existsSync(join(root, photo));
+})());
 ok('gud catalog count', byId[GUD] && byId[GUD].cameras === 15 && byId[GUD].cameras_file === GUD);
 ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras === 11 && byId[EUGENE].cameras_file === EUGENE_CAMS);
 ok('jones catalog file', byId[JONES] && byId[JONES].cameras === 14 && byId[JONES].cameras_file === JONES);

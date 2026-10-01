@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Show the review stills in the editor
+
+**What.** Set `photo` on cameras that had a captured still and copied that JPEG to `data/cameras/images/{fileId}/{cam-id}.jpg`. Pins, labels, live blocks, and placement notes were not changed. Jones and Eugene already had photos; those files and images were left alone. Cameras with no captured JPEG stay “No still”.
+
+**Why.** The editor draws a thumbnail only from `camera.photo`. The Chekt review stills lived under scratch and were not on the cameras files, so every row said “No still”.
+
+**Files.** `data/cameras/json/*.json` (photo field only where a still existed), `data/cameras/images/**/*.jpg`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Butler `305a44231…` cam-01 stays at lat 44.0701631 and its photo path is the new JPEG. Gud’s placement note still names `gud-cultures-2026-05-29`.
+
+**Status.** Pages after this commit is on `main`.
+
 ### 2026-09-30 — Seed Chekt pin files that production did not have
 
 **What.** Wrote 143 new `data/cameras/json/{hub}.json` files from the pin-review proposals. The 13 cameras files that already existed were left as they were. Eugene still uses `4a484f8c…`. Jones still uses `6de88883…`. Scratch fields (`review`, `sub_review`, `confidence`, `note`) are not in the new files. The Chekt account list now counts cameras from those files.
