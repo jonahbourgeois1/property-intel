@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Property Intel</title>
+<style>
+  :root {
+    --bg: #17191e;
+    --card: #20242c;
+    --text: #f3f4f6;
+    --muted: #9aa3ad;
+    --gold: #c4a36a;
+    --line: rgba(255, 255, 255, 0.08);
+    --done: #3d9b63;
+    --wip: #c4a36a;
+    --blocked: #c45c52;
+    --empty: #8b929c;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+    min-height: 100%;
+  }
+  body { max-width: 1080px; margin: 0 auto; padding: 40px 32px 80px; }
+  .top { display: flex; justify-content: space-between; gap: 32px; align-items: flex-start; }
+  h1 {
+    font-size: 36px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .summary {
+    color: var(--muted);
+    font-size: 14.5px;
+    line-height: 1.55;
+    margin-top: 12px;
+    max-width: 620px;
+  }
+  .meta {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 1.75;
+    text-align: right;
+    white-space: nowrap;
+    padding-top: 6px;
+  }
+  .meta b { color: var(--text); font-weight: 600; }
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin: 32px 0 22px;
+  }
+  .kpi {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 18px 16px;
+  }
+  .kpi .k {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    font-variant: small-caps;
+    text-transform: lowercase;
+  }
+  .kpi .v {
+    font-size: 34px;
+    font-weight: 600;
+    margin-top: 10px;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  .kpi .s { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    color: var(--muted);
+    font-size: 13px;
+    margin: 4px 0 28px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .sq {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    display: inline-block;
+    flex: 0 0 11px;
+  }
+  .sq.done { background: var(--done); }
+  .sq.in_progress { background: var(--wip); }
+  .sq.blocked { background: var(--blocked); }
+  .sq.not_started { background: transparent; border: 1.5px solid #d0d4da; }
+  .sq.unknown { background: transparent; border: 1.5px dashed #d0d4da; }
+  h2 {
+    color: var(--text);
+    font-size: 13px;
+    letter-spacing: 0.16em;
+    font-variant: small-caps;
+    text-transform: lowercase;
+    font-weight: 600;
+    margin: 4px 0 2px;
+  }
+  .group { margin-top: 26px; }
+  .group h3 {
+    color: var(--gold);
+    font-size: 16px;
+    font-weight: 600;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--gold);
+  }
+  .item {
+    display: grid;
+    grid-template-columns: 14px 1fr;
+    gap: 12px;
+    padding: 14px 2px 2px;
+    align-items: start;
+  }
+  .item .sq { margin-top: 5px; }
+  .item .title { font-size: 15px; font-weight: 600; line-height: 1.35; }
+  .item .title .st {
+    margin-right: 8px;
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+  }
+  .item .note {
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.5;
+    margin-top: 4px;
+  }
+  #err {
+    display: none;
+    border: 1px solid var(--blocked);
+    color: #f0b4b0;
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  #err.visible { display: block; }
+  h2.log-h { margin-top: 48px; }
+  .lede {
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin: 10px 0 6px;
+    max-width: 760px;
+  }
+  .lede p + p { margin-top: 8px; }
+  .day {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px 14px;
+    margin-top: 14px;
+  }
+  .day-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--gold);
+    margin-bottom: 12px;
+  }
+  .day-head h3 {
+    color: var(--gold);
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .pill {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    font-variant: small-caps;
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+  .day-intro { color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+  .day-intro p + p { margin-top: 8px; }
+  .day h4 {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    font-variant: small-caps;
+    text-transform: lowercase;
+    font-weight: 600;
+    margin: 16px 0 6px;
+  }
+  .day ul { list-style: none; }
+  .day li {
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+  }
+  .day li:first-of-type { border-top: 0; padding-top: 0; }
+  .day p.block { color: var(--muted); font-size: 13.5px; line-height: 1.55; padding: 4px 0; }
+  .day .empty { color: var(--muted); }
+  code, .sha { color: var(--gold); font-family: inherit; font-size: 0.95em; }
+  @media (max-width: 800px) {
+    .kpis { grid-template-columns: 1fr 1fr; }
+    .top { flex-direction: column; }
+    .meta { text-align: left; white-space: normal; }
+  }
+</style>
+<script>
+window.PI_STATUS_EMBEDDED = {"as_of":"2026-08-31","as_of_utc":"2026-08-31T14:17:46Z","repo":"jonahbourgeois1/property-intel","ref":"origin/main","head":{"sha":"53346bd43e8865eb2971cded9780b2544d4f793f","short":"53346bd","message":"Bump hub to 1.8.12 so the Community iframe drops its cached v2.3.4 hoa-viewer.","author_date":"2026-08-28T21:22:27Z"},"sources":{"git_log_since":"2026-08-30","iso_week":"2026-W36","changelog":null,"context":null,"property_intel_v2":"404 from this token; OneDrive v2 docs/ops not mounted","note":"index.html embeds this snapshot so a stale sibling status.js without ## 2026-08-31 cannot hide today"},"weekly":{"label":"2026-W36","start":"2026-08-31","end":"2026-09-06","shipped":[],"still_open":[{"item":"Chat direction not visible to Log Bot","evidence":"list-cloud-agents returned this cron (bc-f631c354), 8/30 bc-eb481f27, 8/29 bc-8dc1a78f, 8/28 bc-ede78703, 8/27 bc-d4995744, 8/26 bc-45e4c56a, plus internal Summarize yesterday log bot; desktop/web/local sources returned 0"},{"item":"Daily log PRs #1, #3, #4, #5, and #6 still DRAFT; docs/ops/ not on main","evidence":"gh pr list: #1 cursor/property-intel-daily-log-4f45 DRAFT; #3 cursor/property-intel-daily-log-299e DRAFT; #4 cursor/property-intel-daily-log-0704 DRAFT; #5 cursor/property-intel-daily-log-3f6c DRAFT; #6 cursor/property-intel-daily-log-866d DRAFT; origin/main has no docs/ops"}],"watchouts":["Apps Script editor-save is not a new deployment; .gs copies in git are not a deploy. No .gs copies and no satellite.gs deploy evidence on 2026-08-31; MOCKINGBIRD row 277 is the first check after a real deploy.","Public data/*.json is sync-owned. No sync commits on origin/main since 53346bd (2026-08-28T21:22:27Z).","pins-catalog.json still has role= on every pin after the 256-pin update (195 primary, 61 concern); do not flatten it."],"completion_percent":null,"pipelines":[{"id":"viewers","name":"Responder viewers (v1 Pages)","status":"on main","evidence":"origin/main 53346bd; HUB_BUILD 1.8.12; element-review BUILD v6.8.10"},{"id":"sync","name":"Apps Script \u2192 GitHub data sync","status":"last sync 2026-08-28","evidence":"187a608 Sync Drone; six Publish Responder Intel ee91147..47def97. Editor-save is not a deploy."},{"id":"satellite","name":"Satellite Pass 1 / review / Pass 2","status":"viewers on main; deploy unverified","evidence":"element-review.html on HEAD. satellite.gs copies in git are not a deploy. No satellite.gs deploy evidence 2026-08-29..31."},{"id":"plane","name":"Plane capture (ingest \u2192 eligibility \u2192 clip \u2192 render)","status":"not in this clone","evidence":"property-intel-v2 404 from this token. CHANGELOG and CONTEXT absent."},{"id":"live","name":"Live CHEKT","status":"on main","evidence":"live-viewer.html and hub 1.8.12 on origin/main."},{"id":"photo","name":"Photo intake","status":"not in this clone","evidence":"no photo-intake source in this v1 checkout."}],"in_progress":[{"item":"Daily ops page (docs/ops/) still off main","evidence":"Draft PRs #1, #3, #4, #5, #6. origin/main has no docs/ops."},{"item":"Log Bot cannot see desktop/web/local chats","evidence":"list-cloud-agents desktop/web/local sources returned 0 in this environment."},{"item":"v2 pipeline tree not mounted for Log Bot","evidence":"property-intel-v2 404; OneDrive Desktop/property-intel-v2/docs/ops not writable from this VM."}]},"days":["2026-08-31","2026-08-30","2026-08-29","2026-08-28","2026-08-27","2026-08-26","2026-08-25"],"shipped_today":[],"shipped_this_week":[],"still_open":[{"item":"Chat direction not visible to Log Bot","evidence":"list-cloud-agents returned this cron (bc-f631c354), 8/30 bc-eb481f27, 8/29 bc-8dc1a78f, 8/28 bc-ede78703, 8/27 bc-d4995744, 8/26 bc-45e4c56a, plus internal Summarize yesterday log bot; desktop/web/local sources returned 0"},{"item":"Daily log PRs #1, #3, #4, #5, and #6 still DRAFT; docs/ops/ not on main","evidence":"gh pr list: #1 cursor/property-intel-daily-log-4f45 DRAFT; #3 cursor/property-intel-daily-log-299e DRAFT; #4 cursor/property-intel-daily-log-0704 DRAFT; #5 cursor/property-intel-daily-log-3f6c DRAFT; #6 cursor/property-intel-daily-log-866d DRAFT; origin/main has no docs/ops"}],"open":[{"item":"Chat direction not visible to Log Bot","evidence":"list-cloud-agents returned this cron (bc-f631c354), 8/30 bc-eb481f27, 8/29 bc-8dc1a78f, 8/28 bc-ede78703, 8/27 bc-d4995744, 8/26 bc-45e4c56a, plus internal Summarize yesterday log bot; desktop/web/local sources returned 0"},{"item":"Daily log PRs #1, #3, #4, #5, and #6 still DRAFT; docs/ops/ not on main","evidence":"gh pr list: #1 cursor/property-intel-daily-log-4f45 DRAFT; #3 cursor/property-intel-daily-log-299e DRAFT; #4 cursor/property-intel-daily-log-0704 DRAFT; #5 cursor/property-intel-daily-log-3f6c DRAFT; #6 cursor/property-intel-daily-log-866d DRAFT; origin/main has no docs/ops"}],"watchouts":["Apps Script editor-save is not a new deployment; .gs copies in git are not a deploy. No .gs copies and no satellite.gs deploy evidence on 2026-08-31; MOCKINGBIRD row 277 is the first check after a real deploy.","Public data/*.json is sync-owned. No sync commits on origin/main since 53346bd (2026-08-28T21:22:27Z).","pins-catalog.json still has role= on every pin after the 256-pin update (195 primary, 61 concern); do not flatten it."],"week_label":"2026-W36","completion_percent":null,"percent":null,"completion_percent_reason":"not reported; no measured evidence","log_markdown":"# Property Intel daily log\n\nEvidence-only. Newest day at the top. This cloud checkout is public `jonahbourgeois1/property-intel` (v1). Completeness % omitted unless measured. Do not flatten catalog `role=`. Editor-save \u2260 deploy. `data/*.json` is sync-owned. MOCKINGBIRD row 277 after a real `satellite.gs` deploy.\n\n## 2026-08-31\n\nNothing shipped today on `origin/main`. Head remains `53346bd` (2026-08-28 16:22 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-31T00:04:39Z (`bc-f631c354`). Yesterday's 00:23 UTC log already recorded that `origin/main` was still `53346bd`. No author-date 2026-08-29, 2026-08-30, or 2026-08-31 commits on `origin/main`. The only git event after that log is `7a40c02` `ops: daily log 2026-08-30` on draft PR **#5** (`cursor/property-intel-daily-log-3f6c`) \u2014 not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/30 `bc-eb481f27`, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) plus internal \"Summarize yesterday log bot\". Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-08-31.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), **#4** (`ops: daily log 2026-08-29`), and **#5** (`ops: daily log 2026-08-30`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. No sync commits on `main` since yesterday's log.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-30\n\nNothing shipped today on `origin/main`. Head remains `53346bd` (2026-08-28 16:22 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-30T00:20:58Z (`bc-eb481f27`). Yesterday's 00:16 UTC log already recorded the 8/28 afternoon work through `53346bd`. No author-date 2026-08-29 or 2026-08-30 commits on `origin/main`. The only git event after that log is `44da289` `ops: daily log 2026-08-29` on draft PR **#4** (`cursor/property-intel-daily-log-0704`) \u2014 not on `main`. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/29 `bc-8dc1a78f`, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`, 8/26 `bc-45e4c56a`) plus internal \"Summarize yesterday log bot\". Desktop/web/local sources returned 0.\n\n### Shipped\nNone on 2026-08-30.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`), **#3** (`ops: daily log 2026-08-28`), and **#4** (`ops: daily log 2026-08-29`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. No `.gs` copies and no `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned. No sync commits on `main` since yesterday's log.\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-29\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-29T00:16:28Z (`bc-8dc1a78f`). Head of `origin/main` is `53346bd` (2026-08-28 16:22 -0500). Yesterday's 00:13 UTC log stopped at `606537c` and had no author-date 2026-08-28 commits; everything below is 2026-08-28 09:00\u201316:22 -0500. Template still says v2/master; this clone is public v1. CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/28 `bc-ede78703`, 8/27 `bc-d4995744`) plus internal \"Summarize yesterday log bot\".\n\n### Shipped\n- `53346bd` Hub **1.8.12**: Community iframe cache-bust so it drops the cached v2.3.4 `hoa-viewer`. `js/vyanet-viewer/property.js` `HUB_BUILD = '1.8.12'`.\n- `e3952cf` Community no longer fetches the deleted monolithic `data/index.json` (that 404 blanked the map). `hoa-viewer.html` loads each HOA member from `data/index/{id}.json` with satellite fallback.\n- `260c239` Match 2D camera pins to 3D: same popup, live LEDs, and 72-hour clip dots. Same commit set hub **1.8.11**, copied `apps scripts/shared.gs` (**file copy, not a deploy**), and deleted the duplicate Eugene cameras file `data/cameras/json/8eea64e5\u2026` so HEAD has **2** camera json files.\n- `b44575a` Reviewers can pin outside the nadir crop (percentages may be \u003c0 or >100) and open Google Earth from Element Review. `element-review.html` BUILD **v6.8.10**. Same commit copied `apps scripts/satellite.gs`, `plane.gs`, `drone-test.gs`, `critique-api.gs`, `shared.gs` \u2014 **file copies, not an Apps Script deployment**.\n- `cfde3ab` (merged `e4863fb`) Stop Lane road leftovers from painting as the property line (`nadir-geo.js` prefers `MAPTAXLOT` then `TAXLOT`).\n- Apps Script\u2013style syncs on 8/28 (sync-owned `data/`): six `Publish Responder Intel \u2014 1 property` (`ee91147` \u2026 `47def97`) and `187a608` Sync Drone (six `data/drone/{id}.json` plus index hubs).\n\nNot on HEAD: `100b135` added an on-page ER oblique pane (BUILD v6.8.11) and `0cf943b` reverted it the same afternoon; BUILD remains **v6.8.10**.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PRs **#1** (`ops: daily log 2026-08-27`) and **#3** (`ops: daily log 2026-08-28`) are still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git (`satellite.gs` in `b44575a`, `shared.gs` in `b44575a` and `260c239`) are not a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned (six responder-intel publishes + Sync Drone + camera json delete/edit in `260c239`; next sync can overwrite).\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-28\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-28T00:13:41Z. No commits with author date 2026-08-28. Head of `origin/main` is `606537c` (2026-08-27 16:53 -0500). Everything below landed after yesterday's 00:03 UTC log (author dates 2026-08-27 11:18\u201316:53 -0500). CHANGELOG/CONTEXT and `property-intel-v2` are not in this clone (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs (this cron, 8/27, 8/26) plus internal \"Summarize yesterday log bot\".\n\n### Shipped\n- `5c79788` merge of PR **#2** (`cursor/vyanet-viewer-gate-home`). Hub 1.6.4 lineage is on `main`. That branch has no commits not already on `main`.\n- `df985c1` Hub **1.7.3**: Eugene cameras on the live hub; four CHEKT feeds joined to stills. `js/vyanet-viewer/property.js` `HUB_BUILD = '1.7.3'`.\n- `9a754fb` Hub **1.7.2**: Eugene cameras, FR 3D pins, CHEKT live by address. Also copied `apps scripts/critique-api.gs`, `drone-test.gs`, `plane.gs`, `prompts.gs`, `shared.gs` \u2014 **file copies, not an Apps Script deployment**.\n- `6e693f0` + `11c0394`: Vyanet Eugene camera stills under `data/cameras/images/{id}/`; metadata settled at `data/cameras/json/{id}.json` (3 json files on HEAD).\n- `a302173` Redraw element-review pins immediately after rerun. `element-review.html` BUILD **v6.8.8**.\n- `9442d72` Drone-test element review georeferences CloudFront nadirs and identifies the row by taxlot.\n- `91556e6` Lane County lot-line tiles (`data/parcels/lane_*.geojson`, 332 files) and both-county grids in viewers.\n- `1f02d1b` Stop drawing the element-review pin-range box; allow reviewer duplicate pins; school cap **20** (`SCHOOL_PIN_LIMIT = 20`; `SAT_MAX_PINS` stays 12 in the `satellite.gs` copy). Same commit copied `apps scripts/satellite.gs` \u2014 **not a deploy**.\n- Apps Script\u2013style syncs on 8/27 (sync-owned `data/`): six `Sync drone-test` (`e614910` \u2026 `0ef3f6f`) and `0b51828` Sync Row \u2014 Vyanet Eugene.\n\n### Still open\n- Chat direction still not visible in the Log Bot environment (`list-cloud-agents` returned only Log Bot automations + one internal summarizer).\n- Daily log PR **#1** (`ops: daily log 2026-08-27`, `cursor/property-intel-daily-log-4f45`) is still DRAFT; `docs/ops/` is not on `main`.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git (`satellite.gs` in `1f02d1b`, plus `9a754fb`) are not a deploy. No `satellite.gs` deploy evidence today; MOCKINGBIRD row 277 is the first check after a real deploy.\n- Public `data/*.json` is sync-owned (drone-test + Eugene row + camera JSON landed via git; next sync can overwrite).\n- Catalog `role=` still present on all 256 pins after `06c9714` (195 primary, 61 concern); do not flatten it.\n\n## 2026-08-27\n\nNothing shipped today on `origin/main`. Head remains `06c9714` (2026-08-26 16:31 -0500).\n\nLog Bot cron `41611cd5-a0bb-11f1-b532-320a589b8025` at 2026-08-27T00:03:07Z, then follow-ups to wire the `file://` weekly page. v2 / OneDrive `docs/ops` is not mounted on this VM (`property-intel-v2` 404). `list-cloud-agents` listed only Log Bot runs. CHANGELOG/CONTEXT not in this clone.\n\n### Shipped\nNone on 2026-08-27.\n\n### Still open\n- Vyanet Viewer hub **1.6.4** on `origin/cursor/vyanet-viewer-gate-home` (`161a860`) not merged; `main` hub **1.0.3**.\n- Chat direction not visible in the Log Bot environment.\n\n### Watchouts\n- Apps Script editor-save is not a new deployment. `.gs` copies in git are not a deploy. No `satellite.gs` deploy evidence today.\n- Public `data/*.json` is sync-owned.\n- Catalog `role=` still present on all 256 pins after `06c9714`; do not flatten it.\n\n## 2026-08-26\n\nFirst write of this day into this `log.md` (8/26 Log Bot run `bc-45e4c56a` did not commit `docs/ops/`).\n\n### Shipped\n- `06c9714` \"Update pins-catalog.json\". Catalog `version` `2026-07-15` \u2192 `2026-08-26`; `pin_count` 239 \u2192 256. Notes: pins 240\u2013256 appended; `#30` Entry \u2192 Vehicle Entrance; `account_type` widened on `#30` / `#33` / `#127`. All 256 pins still have `role` (195 primary, 61 concern). Actions `33015751649` and Pages `33015750965` succeeded.\n- Last Apps Script\u2013style property sync remains `86e00ef` (2026-08-24 drone-test). No satellite/plane/responder-intel `data/` sync this day.\n\n### Still open\n- `161a860` \"Ship Vyanet Viewer hub through 1.6.4: live tab, dashboard, and 3D cameras\" on `cursor/vyanet-viewer-gate-home`, not on `main`.\n- No GitHub pull requests listed on this repo.\n\n### Watchouts\nStanding rules above. No `satellite.gs` deploy evidence.\n\n## 2026-08-25\n\nReconstructed from v1 git (this VM cannot read the original OneDrive 8/25 block). If your local `log.md` already has a fuller 8/25 section, keep that block and leave this one as the git evidence.\n\n### Shipped\n- `8662883` \"Identify element-review critiques by site_no instead of address.\" `element-review.html` BUILD **v6.8.2**. Duplicate lots were rejected as ambiguous when the review link only carried addr; links now include `site_no`. Same commit added `apps scripts/*.gs` copies to the public repo \u2014 **file copy, not an Apps Script deployment**.\n- `fb9a0f2` merge of `main`.\n\n### Still open (that day)\n- `d32bb4a` \"Add gate and home shell to the Vyanet Viewer hub (1.1.1)\" on `cursor/vyanet-viewer-gate-home`, not merged to `main` (later advanced to 1.6.4 on 8/26).\n\n### Watchouts\n`.gs` in git \u2260 deployed. `data/*.json` is sync-owned.\n","pipelines":[{"id":"viewers","name":"Responder viewers (v1 Pages)","status":"on main","evidence":"origin/main 53346bd; HUB_BUILD 1.8.12; element-review BUILD v6.8.10"},{"id":"sync","name":"Apps Script \u2192 GitHub data sync","status":"last sync 2026-08-28","evidence":"187a608 Sync Drone; six Publish Responder Intel ee91147..47def97. Editor-save is not a deploy."},{"id":"satellite","name":"Satellite Pass 1 / review / Pass 2","status":"viewers on main; deploy unverified","evidence":"element-review.html on HEAD. satellite.gs copies in git are not a deploy. No satellite.gs deploy evidence 2026-08-29..31."},{"id":"plane","name":"Plane capture (ingest \u2192 eligibility \u2192 clip \u2192 render)","status":"not in this clone","evidence":"property-intel-v2 404 from this token. CHANGELOG and CONTEXT absent."},{"id":"live","name":"Live CHEKT","status":"on main","evidence":"live-viewer.html and hub 1.8.12 on origin/main."},{"id":"photo","name":"Photo intake","status":"not in this clone","evidence":"no photo-intake source in this v1 checkout."}],"in_progress":[{"item":"Daily ops page (docs/ops/) still off main","evidence":"Draft PRs #1, #3, #4, #5, #6. origin/main has no docs/ops."},{"item":"Log Bot cannot see desktop/web/local chats","evidence":"list-cloud-agents desktop/web/local sources returned 0 in this environment."},{"item":"v2 pipeline tree not mounted for Log Bot","evidence":"property-intel-v2 404; OneDrive Desktop/property-intel-v2/docs/ops not writable from this VM."}],"board":{"title":"Property Intel","summary":"Production satellite + plane pipelines; live video shipped; Lane parcels published; photo transport and EagleView access still block scale-out.","as_of":"2026-08-31","last_write":"2026-08-31 09:17:46 CT","source":"Public v1 \u00b7 docs/ops","kpis":[{"label":"Satellite records published","value":"506","sub":"target 30000 properties","evidence":"len(data/satellite/*.json)=506"},{"label":"Plane-rendered properties","value":"22","sub":"target 44 Highlands roster","evidence":"len(data/plane/*.json)=22 (was 20 on 2026-08-25)"},{"label":"Ranked open items","value":"17","sub":"still open of 18 listed","evidence":"2026-08-25 board. Original 18-item list is not in this clone; no evidence those items closed."},{"label":"EagleView access","value":"Not granted","sub":"30-day eval clock has not started","evidence":"2026-08-25 board; no grant file in this checkout"}],"pipelines":[{"name":"1 \u2014 Ingest","items":[{"status":"done","label":"DONE","title":"Capture ingest (5 gates, pyramid, manifest last)","note":"1-ingest/ingest_capture.py in production."},{"status":"done","label":"DONE","title":"Promote to serving + registry (plane path)","note":"Works for plane captures. Operator still stamps parcels_ref by hand."},{"status":"not_started","label":"NOT-STARTED","title":"Parameterize promote for drone prefix / type","note":"Still hardcoded. Eugene used option B: plane prefix + type plane. Do not stamp type:drone until the four Lambdas are redeployed."}]},{"name":"2 \u2014 Parcels","items":[{"status":"done","label":"DONE","title":"Deschutes county published","note":"109,474 features."},{"status":"done","label":"DONE","title":"Lane County source GeoJSON on disk","note":"407 MB file gitignored. Must never be committed."},{"status":"done","label":"DONE","title":"Inspect \u2192 counties.json lane \u2192 publish \u2192 probe","note":"2026-08-31: 332 viewer tiles on GitHub Pages (8/27 board: 159,131 features, 323 shards). Join MAPTAXLOT. CDN probe was 5/5. Owner fields stripped."}]},{"name":"3 \u2014 Eligibility","items":[{"status":"done","label":"DONE","title":"One opacity function for eligibility and render","note":"Render gate imports 3-eligibility/eligibility_check.capture_coverage."},{"status":"blocked","label":"BLOCKED","title":"Eugene origin taxlot below 80% clip/render gate","note":"Taxlot 1704233002104 is 65% opaque. Capture vyanet-eugene-2026-08-19 is in serving as type plane, parcels_ref lane."}]},{"name":"4 \u2014 Clip / render","items":[{"status":"done","label":"DONE","title":"Drone captures parcel-clipped like plane","note":"Whole-mesh drone GLB path is superseded. parcels_ref required on every capture."},{"status":"not_started","label":"NOT-STARTED","title":"load_captures() plane|drone edit not deployed","note":"Drone-typed captures stay invisible to clip/render until it ships. Re-baseline the row-3 oracle after."},{"status":"unknown","label":"UNKNOWN","title":"Row-3 render oracle (18775 Macalpine Loop)","note":"Not re-run from this checkout. Expected: ok=true, tier ENTRANCE, alpha=231.3\u00b0, nadir 148/156."}]},{"name":"5 \u2014 Satellite","items":[{"status":"done","label":"DONE","title":"Pass 1 emits the twenty; reruns keep all 239","note":"Two vocabularies by design. Do not unify. Catalog role= still on all 256 pins (195 primary, 61 concern)."},{"status":"in_progress","label":"IN PROGRESS","title":"MOCKINGBIRD row 277 redo","note":"First check after any real satellite.gs deploy. Critique add-loss guard still missing. Editor-save \u2260 deploy."},{"status":"in_progress","label":"IN PROGRESS","title":"Pass 1 placement-failure diagnostics","note":"Corner-stack hypothesis: unit mismatch + clamp relocation."},{"status":"in_progress","label":"IN PROGRESS","title":"Reviewer revisit lists","note":"Ross 88 / Eleanor 27. School cap is 20 as of 2026-08-27. SAT_MAX_PINS stays 12 in the satellite.gs copy."}]},{"name":"6 \u2014 Live video + viewers","items":[{"status":"done","label":"DONE","title":"Live CHEKT on the hub","note":"origin/main 53346bd; HUB_BUILD 1.8.12; live-viewer.html on main."},{"status":"done","label":"DONE","title":"Element Review outside-crop pins + Earth","note":"element-review.html BUILD v6.8.10 on HEAD."},{"status":"blocked","label":"BLOCKED","title":"responder-intel.html flat pixelToLatLng","note":"0.488% N-S stretch. Migrate to nadir-geo; do not copy the flat helper."}]},{"name":"7 \u2014 Photo intake + EagleView","items":[{"status":"in_progress","label":"IN PROGRESS","title":"Photo-intake transport","note":"Zoho Forms closed. Creator probe 2 ready; fallback own page + S3 presigned POST."},{"status":"blocked","label":"BLOCKED","title":"EagleView access","note":"Not granted. 30-day eval clock has not started. License rights (analyze/cache/derive/resell) and 3D-mesh questions first."}]}]}};
+(function () {
+  window.PI_STATUS = window.PI_STATUS_EMBEDDED;
+})();
+</script>
+</head>
+<body>
+<div id="err"></div>
+<div class="top">
+  <div>
+    <h1 id="title">Property Intel</h1>
+    <p class="summary" id="summary"></p>
+  </div>
+  <div class="meta" id="meta"></div>
+</div>
+<div class="kpis" id="kpis"></div>
+<div class="legend">
+  <span><i class="sq done"></i> done</span>
+  <span><i class="sq in_progress"></i> in progress</span>
+  <span><i class="sq blocked"></i> blocked</span>
+  <span><i class="sq not_started"></i> not started</span>
+  <span><i class="sq unknown"></i> unknown</span>
+</div>
+<h2>Pipelines</h2>
+<div id="pipelines"></div>
+<h2 class="log-h">Daily log</h2>
+<div class="lede" id="lede"></div>
+<div id="log"></div>
+<script>
+(function () {
+  var s = window.PI_STATUS;
+  var err = document.getElementById('err');
+  if (!s || typeof s !== 'object') {
+    err.textContent = 'No snapshot in this HTML.';
+    err.className = 'visible';
+    return;
+  }
+  var b = s.board || {};
+  document.getElementById('title').textContent = b.title || 'Property Intel';
+  document.getElementById('summary').textContent = b.summary || '';
+
+  var meta = document.getElementById('meta');
+  meta.textContent = '';
+  function addMeta(label, value) {
+    meta.appendChild(document.createTextNode(label + ' '));
+    var strong = document.createElement('b');
+    strong.textContent = value;
+    meta.appendChild(strong);
+    meta.appendChild(document.createElement('br'));
+  }
+  addMeta('As of', b.as_of || s.as_of || '');
+  addMeta('Last status write', b.last_write || '');
+  meta.appendChild(document.createTextNode(b.source || 'docs/ops'));
+
+  var kpis = document.getElementById('kpis');
+  kpis.textContent = '';
+  (b.kpis || []).forEach(function (k) {
+    var d = document.createElement('div');
+    d.className = 'kpi';
+    var lab = document.createElement('div');
+    lab.className = 'k';
+    lab.textContent = k.label || '';
+    var val = document.createElement('div');
+    val.className = 'v';
+    val.textContent = k.value || '—';
+    var sub = document.createElement('div');
+    sub.className = 's';
+    sub.textContent = k.sub || '';
+    d.appendChild(lab);
+    d.appendChild(val);
+    d.appendChild(sub);
+    kpis.appendChild(d);
+  });
+
+  var root = document.getElementById('pipelines');
+  root.textContent = '';
+  (b.pipelines || []).forEach(function (g) {
+    var wrap = document.createElement('div');
+    wrap.className = 'group';
+    var h = document.createElement('h3');
+    h.textContent = g.name;
+    wrap.appendChild(h);
+    (g.items || []).forEach(function (it) {
+      if (!it || !it.title) return;
+      var row = document.createElement('div');
+      row.className = 'item';
+      var sq = document.createElement('i');
+      sq.className = 'sq ' + (it.status || 'unknown');
+      var body = document.createElement('div');
+      var t = document.createElement('div');
+      t.className = 'title';
+      var st = document.createElement('span');
+      st.className = 'st';
+      st.textContent = it.label || String(it.status || '').replace('_', '-').toUpperCase();
+      t.appendChild(st);
+      t.appendChild(document.createTextNode(' ' + it.title));
+      body.appendChild(t);
+      if (it.note) {
+        var n = document.createElement('div');
+        n.className = 'note';
+        n.textContent = it.note;
+        body.appendChild(n);
+      }
+      row.appendChild(sq);
+      row.appendChild(body);
+      wrap.appendChild(row);
+    });
+    root.appendChild(wrap);
+  });
+
+  function appendInline(el, raw) {
+    var re = /(`[^`]+`|\*\*[^*]+\*\*|\b[0-9a-f]{7,40}\b)/g;
+    var last = 0;
+    var m;
+    raw = String(raw);
+    while ((m = re.exec(raw))) {
+      if (m.index > last) el.appendChild(document.createTextNode(raw.slice(last, m.index)));
+      var tok = m[0];
+      var span;
+      if (tok.charAt(0) === '`') {
+        span = document.createElement('code');
+        span.textContent = tok.slice(1, -1);
+      } else if (tok.slice(0, 2) === '**') {
+        span = document.createElement('strong');
+        span.textContent = tok.slice(2, -2);
+      } else {
+        span = document.createElement('span');
+        span.className = 'sha';
+        span.textContent = tok;
+      }
+      el.appendChild(span);
+      last = m.index + tok.length;
+    }
+    if (last < raw.length) el.appendChild(document.createTextNode(raw.slice(last)));
+  }
+  function parseDays(md) {
+    if (!md) return [];
+    var parts = String(md).split(/^## (\d{4}-\d{2}-\d{2})\s*$/m);
+    var days = [];
+    for (var i = 1; i < parts.length; i += 2) {
+      days.push({ date: parts[i], body: parts[i + 1] || '' });
+    }
+    return days;
+  }
+  function parseSections(body) {
+    var intro = [];
+    var sections = [];
+    var cur = null;
+    String(body || '').split('\n').forEach(function (line) {
+      var h = line.match(/^###\s+(.+?)\s*$/);
+      if (h) {
+        cur = { title: h[1], lines: [] };
+        sections.push(cur);
+        return;
+      }
+      if (cur) cur.lines.push(line);
+      else intro.push(line);
+    });
+    return { intro: intro.join('\n').trim(), sections: sections };
+  }
+  function renderParagraphs(parent, text) {
+    if (!text) return;
+    text.split(/\n{2,}/).forEach(function (block) {
+      var p = document.createElement('p');
+      appendInline(p, block.replace(/\n/g, ' ').trim());
+      parent.appendChild(p);
+    });
+  }
+  function renderSection(parent, section) {
+    var h = document.createElement('h4');
+    h.textContent = section.title;
+    parent.appendChild(h);
+    var bullets = [];
+    var other = [];
+    section.lines.forEach(function (line) {
+      var b = line.match(/^\s*-\s+(.*)$/);
+      if (b) bullets.push(b[1]);
+      else if (line.trim()) other.push(line.trim());
+    });
+    if (!bullets.length && !other.length) {
+      var empty = document.createElement('p');
+      empty.className = 'block empty';
+      empty.textContent = 'None.';
+      parent.appendChild(empty);
+      return;
+    }
+    other.forEach(function (line) {
+      var p = document.createElement('p');
+      p.className = 'block';
+      appendInline(p, line);
+      parent.appendChild(p);
+    });
+    if (bullets.length) {
+      var ul = document.createElement('ul');
+      bullets.forEach(function (b) {
+        var li = document.createElement('li');
+        appendInline(li, b);
+        ul.appendChild(li);
+      });
+      parent.appendChild(ul);
+    }
+  }
+  function pillFor(parsed) {
+    var shipped = parsed.sections.filter(function (sec) {
+      return /^shipped/i.test(sec.title);
+    })[0];
+    if (!shipped) return 'log day';
+    var hasBullet = shipped.lines.some(function (line) { return /^\s*-\s+/.test(line); });
+    return hasBullet ? 'shipped' : 'nothing shipped';
+  }
+  var preamble = String(s.log_markdown || '').split(/^## \d{4}-\d{2}-\d{2}\s*$/m)[0] || '';
+  preamble = preamble.replace(/^# [^\n]+\n+/, '').trim();
+  var lede = document.getElementById('lede');
+  lede.textContent = '';
+  if (preamble) {
+    preamble.split(/\n{2,}/).forEach(function (block) {
+      var p = document.createElement('p');
+      p.textContent = block.replace(/\n/g, ' ').trim();
+      lede.appendChild(p);
+    });
+  }
+  var logRoot = document.getElementById('log');
+  logRoot.textContent = '';
+  var days = parseDays(s.log_markdown);
+  if (!days.length) {
+    var none = document.createElement('p');
+    none.className = 'empty';
+    none.textContent = 'No daily log in this snapshot.';
+    logRoot.appendChild(none);
+  } else {
+    days.forEach(function (day) {
+      var parsed = parseSections(day.body);
+      var art = document.createElement('article');
+      art.className = 'day';
+      var head = document.createElement('div');
+      head.className = 'day-head';
+      var dh = document.createElement('h3');
+      dh.textContent = day.date;
+      var pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.textContent = pillFor(parsed);
+      head.appendChild(dh);
+      head.appendChild(pill);
+      art.appendChild(head);
+      if (parsed.intro) {
+        var intro = document.createElement('div');
+        intro.className = 'day-intro';
+        renderParagraphs(intro, parsed.intro);
+        art.appendChild(intro);
+      }
+      parsed.sections.forEach(function (sec) { renderSection(art, sec); });
+      logRoot.appendChild(art);
+    });
+  }
+})();
+</script>
+</body>
+</html>
