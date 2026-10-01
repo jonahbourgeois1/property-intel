@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Seed Chekt pin files that production did not have
+
+**What.** Wrote 143 new `data/cameras/json/{hub}.json` files from the pin-review proposals. The 13 cameras files that already existed were left as they were. Eugene still uses `4a484f8c…`. Jones still uses `6de88883…`. Scratch fields (`review`, `sub_review`, `confidence`, `note`) are not in the new files. The Chekt account list now counts cameras from those files.
+
+**Why.** The hosted editor can only open a hub that already has a cameras file. The proposals lived under `_scratch` and never became production files.
+
+**Files.** `data/cameras/json/*.json` (new files only), `camera-pin-properties.json`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Gud’s placement note still names capture `gud-cultures-2026-05-29`. Wellman `0bff2878…` is a new file with 3 cameras and no scratch fields.
+
+**Status.** Pages after this commit is on `main`. The records bucket copy is a separate Apps Script step (`Copy cameras + GIS from GitHub`). Save still needs the camera-pins deployment if that version is not live.
+
 ### 2026-09-30 — List the Chekt tab (cam-edit 1.0.5)
 
 **What.** The bare editor URL lists the Chekt accounts (158), with each row’s CHEKT camera count. A missing `data/cameras/json/` file no longer means the account has no cameras. Save still does not create a pin file.

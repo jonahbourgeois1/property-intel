@@ -232,10 +232,17 @@ const props = committed.properties || [];
 const byId = {};
 props.forEach((row) => { byId[row.id] = row; });
 ok('catalog is the chekt tab', props.length === 158 && !byId[NOT_CHEKT]);
-ok('achterhof is a chekt account', byId[ACHTERHOF] && byId[ACHTERHOF].cameras === 4 && byId[ACHTERHOF].cameras_file === '');
+ok('achterhof is a chekt account', byId[ACHTERHOF] && byId[ACHTERHOF].cameras === 4 && byId[ACHTERHOF].cameras_file === ACHTERHOF);
+ok('seeded wellman has no scratch fields', (() => {
+  const doc = JSON.parse(readFileSync(join(camDir, '0bff28782e679ea68ce2994c5c2932f7.json'), 'utf8'));
+  const raw = JSON.stringify(doc);
+  return doc.property === '0bff28782e679ea68ce2994c5c2932f7' && doc.cameras.length === 3 &&
+    !raw.includes('"review"') && !raw.includes('sub_review') && !raw.includes('confidence');
+})());
+ok('gud production pins kept', readFileSync(join(camDir, GUD + '.json'), 'utf8').includes('gud-cultures-2026-05-29'));
 ok('gud catalog count', byId[GUD] && byId[GUD].cameras === 15 && byId[GUD].cameras_file === GUD);
-ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras === 4 && byId[EUGENE].cameras_file === EUGENE_CAMS);
-ok('jones catalog file', byId[JONES] && byId[JONES].cameras === 12 && byId[JONES].cameras_file === JONES);
+ok('eugene catalog file', byId[EUGENE] && byId[EUGENE].cameras === 11 && byId[EUGENE].cameras_file === EUGENE_CAMS);
+ok('jones catalog file', byId[JONES] && byId[JONES].cameras === 14 && byId[JONES].cameras_file === JONES);
 ok('catalog cameras first', props.length > 0 && props[0].cameras > 0 &&
   props.filter((row) => row.cameras > 0).length === props.filter((row, i, all) => {
     const lastWith = all.reduce((n, row2, j) => row2.cameras > 0 ? j : n, -1);
