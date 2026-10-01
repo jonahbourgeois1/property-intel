@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — one map for every broken-out golf course (v1.1.4)
+  golf-viewer.html — one map for every broken-out golf course (v1.1.5)
 
   Not linked from the responder hub. A course dropdown sits in the
   header. ?sheet= selects which course starts open. The list of courses is
@@ -14,13 +14,12 @@
     GET ?route=golf-course&sheet=
 
   Each course sheet's Open map link on row 1 opens this page on that
-  course. Nothing is saved from this page.
-  Click a numbered marker for a card. Click the description to edit
-  it. Drag the marker to move the pin. Save appears only after the
-  description or the position differs from the last filed state, and
-  it hides again when both are back. Save appends one row to the
-  golf-critique sheet. It does not add or delete pins, and it does
-  not rewrite the course sheet. The button will not post until
+  course. Save pins in the header files every changed pin. The card
+  Save files the open pin. Either button appears only after a
+  description or a position differs from the last filed state, and
+  it hides again when both are back. Save appends one golf-critique
+  row per pin. It does not add or delete pins, and it does not
+  rewrite the course sheet. The buttons will not post until
   ?route=ping reports golf_critique.
 
   Report opens the hardcoded property-intelligence page for the
@@ -84,6 +83,33 @@
   }
   #reportBtn:hover { border-color: var(--hot); color: var(--hot); }
   #reportBtn:disabled { opacity: 0.4; cursor: default; color: var(--ink-faint); }
+  #savePinsBtn {
+    display: none;
+    flex: 0 0 auto;
+    border: 1px solid var(--marker);
+    background: var(--marker);
+    color: var(--marker-ink);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #savePinsBtn.on { display: inline-block; }
+  #savePinsBtn:disabled { opacity: 0.55; cursor: default; }
+  #savePinsNote {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 360px;
+    font-size: 12px;
+    color: #6ee7a8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #savePinsNote:not(:empty) { flex: 1 1 180px; }
+  #savePinsNote.err { color: var(--bad); }
   #reportOverlay {
     display: none;
     position: fixed;
@@ -365,6 +391,8 @@
       <select id="courseTabs" aria-label="Course"></select>
     </label>
     <button type="button" id="reportBtn" disabled>Report</button>
+    <button type="button" id="savePinsBtn">Save pins</button>
+    <span id="savePinsNote"></span>
     <h1 id="title"><span id="courseName">Awbrey Glen</span> <span class="addr" id="addr"></span></h1>
     <span class="count" id="count"></span>
     <span class="build" id="build"></span>
@@ -417,7 +445,7 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.1.4';
+  var BUILD = 'v1.1.5';
   var COURSE_REPORTS = {
     'Awbrey Glen Golf Course': 'golf-reports/awbrey-glen.html',
     'Bend Golf Club': 'golf-reports/bend-golf-club.html',
@@ -658,10 +686,8 @@
           pin.lat = pos.lat();
           pin.lng = pos.lng();
         }
-        if (popupIdx === i) {
-          updatePinPopup();
-          syncSaveButton();
-        }
+        if (popupIdx === i) updatePinPopup();
+        syncSaveButton();
       });
       markers.push(marker);
       bounds.extend(marker.getPosition());
@@ -775,10 +801,27 @@
 
   function syncSaveButton() {
     var btn = document.getElementById('pin-pop-save');
-    if (!btn) return;
+    var top = document.getElementById('savePinsBtn');
     var pin = popupIdx >= 0 ? pins[popupIdx] : null;
-    btn.className = pin && pinChanged(pin) ? 'on' : '';
-    if (!btn.classList.contains('saving')) btn.disabled = false;
+    var n = 0;
+    for (var i = 0; i < pins.length; i++) if (pinChanged(pins[i])) n++;
+    if (btn && !btn.classList.contains('saving')) {
+      btn.className = pin && pinChanged(pin) ? 'on' : '';
+      btn.disabled = false;
+    }
+    if (top && !top.classList.contains('saving')) {
+      top.className = n ? 'on' : '';
+      top.disabled = false;
+      top.textContent = n > 1 ? ('Save pins (' + n + ')') : 'Save pins';
+    }
+  }
+
+  function setSaveNote(text, kind) {
+    var note = document.getElementById('savePinsNote');
+    if (!note) return;
+    note.textContent = text || '';
+    note.className = kind || '';
+    note.title = text || '';
   }
 
   function beginDescEdit() {
@@ -798,17 +841,13 @@
     status.className = kind || '';
   }
 
-  function savePinCritique() {
-    var pin = popupIdx >= 0 ? pins[popupIdx] : null;
-    if (!pin || !pinChanged(pin)) { syncSaveButton(); return; }
-    if (!golfCritiqueReady) {
-      setPinStatus('golf-critique is not deployed yet. Paste golf.gs and critique-api.gs, then deploy a new version.', 'err');
-      return;
-    }
-    var btn = document.getElementById('pin-pop-save');
-    var next = currentDesc();
-    if (btn) { btn.disabled = true; btn.className = 'on saving'; }
-    setPinStatus('Saving…', '');
+  function pinDraft(pin) {
+    if (popupIdx >= 0 && pins[popupIdx] === pin) return currentDesc();
+    return String(pin.description || '').trim();
+  }
+
+  function filePin(pin) {
+    var next = pinDraft(pin);
     var body = {
       route: 'golf-critique',
       view: 'golf-critique',
@@ -826,7 +865,7 @@
       new_description: next,
       version: BUILD
     };
-    fetch(GOLF_API_URL + '?route=golf-critique', {
+    return fetch(GOLF_API_URL + '?route=golf-critique', {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(body),
@@ -851,24 +890,79 @@
         pin.origLng = round6(pin.lng);
         pin.lat = pin.origLat;
         pin.lng = pin.origLng;
-        fillDesc(pin);
-        if (btn) btn.classList.remove('saving');
-        syncSaveButton();
-        setPinStatus(j.message || 'Filed to golf-critique.', 'ok');
-      })
-      .catch(function (err) {
-        if (btn) { btn.classList.remove('saving'); btn.disabled = false; }
-        syncSaveButton();
-        setPinStatus(err && err.message ? err.message : 'Save failed', 'err');
+        if (popupIdx >= 0 && pins[popupIdx] === pin) fillDesc(pin);
+        return j;
       });
   }
 
+  function savePinCritique() {
+    var pin = popupIdx >= 0 ? pins[popupIdx] : null;
+    if (!pin || !pinChanged(pin)) { syncSaveButton(); return; }
+    savePinList([pin]);
+  }
+
+  function savePinChanges() {
+    var list = [];
+    for (var i = 0; i < pins.length; i++) if (pinChanged(pins[i])) list.push(pins[i]);
+    if (!list.length) { syncSaveButton(); return; }
+    savePinList(list);
+  }
+
+  function savePinList(list) {
+    if (!golfCritiqueReady) {
+      var wait = 'golf-critique is not deployed yet. Paste golf.gs and critique-api.gs, then deploy a new version.';
+      setPinStatus(wait, 'err');
+      setSaveNote(wait, 'err');
+      return;
+    }
+    var btn = document.getElementById('pin-pop-save');
+    var top = document.getElementById('savePinsBtn');
+    if (btn) { btn.disabled = true; btn.classList.add('saving'); }
+    if (top) { top.disabled = true; top.classList.add('on'); top.classList.add('saving'); top.textContent = 'Saving…'; }
+    setPinStatus('Saving…', '');
+    setSaveNote('Saving…', '');
+    var i = 0;
+    var last = '';
+    function step() {
+      if (i >= list.length) {
+        if (btn) btn.classList.remove('saving');
+        if (top) { top.classList.remove('saving'); top.textContent = 'Save pins'; }
+        syncSaveButton();
+        setPinStatus('Saved', 'ok');
+        setSaveNote(last || ('Filed ' + list.length + ' pin' + (list.length === 1 ? '' : 's') + '.'), 'ok');
+        return;
+      }
+      filePin(list[i]).then(function (j) {
+        last = (j && j.message) || last;
+        i++;
+        step();
+      }).catch(function (err) {
+        if (btn) btn.classList.remove('saving');
+        if (top) { top.classList.remove('saving'); top.textContent = 'Save pins'; }
+        syncSaveButton();
+        var msg = err && err.message ? err.message : 'Save failed';
+        setPinStatus(msg, 'err');
+        setSaveNote(msg, 'err');
+      });
+    }
+    step();
+  }
+
   function hidePinPopup() {
+    if (popupIdx >= 0 && pins[popupIdx]) {
+      var desc = document.getElementById('pin-pop-desc');
+      if (desc && desc.getAttribute('contenteditable') === 'true') {
+        var text = String(desc.innerText || '').replace(/\u00a0/g, ' ').trim();
+        if (text === 'No description yet') text = '';
+        pins[popupIdx].description = text;
+      }
+    }
     popupIdx = -1;
     var el = document.getElementById('pin-popup');
     if (el) el.style.display = 'none';
     closePinLightbox();
     renderList();
+    syncSaveButton();
   }
 
   function expandPinPopup() {
@@ -1032,12 +1126,14 @@
     markers.forEach(function (m) { m.setMap(null); });
     markers = [];
     pins = [];
+    setSaveNote('', '');
     renderFilters();
     updateCount();
     renderList();
     renderTabs();
     refreshReport();
     syncUrl();
+    syncSaveButton();
     var label = name;
     for (var i = 0; i < courses.length; i++) {
       if (courses[i].sheet === name) { label = courses[i].name || name; break; }
@@ -1158,6 +1254,8 @@
   }
   var saveBtn = document.getElementById('pin-pop-save');
   if (saveBtn) saveBtn.addEventListener('click', savePinCritique);
+  var savePinsBtn = document.getElementById('savePinsBtn');
+  if (savePinsBtn) savePinsBtn.addEventListener('click', savePinChanges);
 
   var courseSelect = document.getElementById('courseTabs');
   if (courseSelect) {
