@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Done marks, notes, and the lot line (cam-edit 1.0.8)
+
+**What.** Each account on the full list has a Done checkbox and a notes box. Those stay in this browser. On a property, the map draws that account’s parcel boundary in red, from the same parcel tiles as the client viewer. A property with no saved pins frames the lot after the address geocode.
+
+**Why.** Reviewers need to mark a property finished and leave a note without opening it. The pin map had no lot line, so the house and the parcel edge were hard to tell apart.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Local list: check Done, type a note, reload, both remain. Local Butler and Battin maps show a red parcel outline.
+
+**Status.** Pages after this commit is on `main`.
+
 ### 2026-09-30 — Do not map a missing pin to the ocean (cam-edit 1.0.7)
 
 **What.** A camera with `lat`/`lng` null stays off the map. The map centers on the index coordinates, or geocodes the Chekt account address, instead of `0, 0`. Clicking the map drops the selected unplaced camera. The account name from the Chekt list fills in when `data/index` has no name.

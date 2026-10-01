@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.7)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.8)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -272,20 +272,41 @@
   #indexSearch { min-width: min(100%, 320px); }
   .index-row {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 12px;
-    align-items: center;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px 12px;
+    align-items: start;
     padding: 10px 12px;
     margin: 0 0 8px;
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--panel);
     color: inherit;
-    text-decoration: none;
-    max-width: 880px;
+    max-width: 960px;
   }
-  .index-row:hover, .index-row:focus { border-color: var(--accent); outline: none; }
-  .index-row .count { color: var(--muted); font-size: 12px; text-align: right; }
+  .index-row.done { border-color: #2f6b4f; }
+  .index-row .row-link {
+    color: inherit;
+    text-decoration: none;
+    min-width: 0;
+  }
+  .index-row .row-link:hover, .index-row .row-link:focus { color: var(--accent); outline: none; }
+  .index-done {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+    padding-top: 2px;
+    white-space: nowrap;
+  }
+  .index-done input { width: auto; margin: 0; }
+  .index-note {
+    grid-column: 2 / -1;
+    width: 100%;
+    min-height: 38px;
+    resize: vertical;
+  }
+  .index-row .count { color: var(--muted); font-size: 12px; text-align: right; padding-top: 2px; }
   .index-row.none { opacity: 0.72; }
   @media (max-width: 860px) {
     #app { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
@@ -297,7 +318,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.7</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.8</span>
   <span class="spacer"></span>
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
@@ -355,13 +376,17 @@
   <img id="stillLbImg" alt="">
   <div id="stillLbCap"></div>
 </div>
+<script src="nadir-geo.js"></script>
 <script type="module">
 import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
-  validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair
-} from './js/camera-pin-editor.js?v=1.0.7';
+  validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair,
+  REVIEW_STORE_KEY, reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
+} from './js/camera-pin-editor.js?v=1.0.8';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
+var PARCEL_CDN_COUNTIES = ['josephine', 'linn', 'douglas', 'lane', 'deschutes'];
 var CAMERA_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
 var HEADING_TIP_M = 18;
 
@@ -385,6 +410,7 @@ var state = {
   mapsStarted: false
 };
 var indexRows = [];
+var reviewState = {};
 
 var $ = function (id) { return document.getElementById(id); };
 
@@ -836,7 +862,9 @@ function initMap() {
   }
   state.map.addListener('click', dropSelectedPin);
   google.maps.event.addListenerOnce(state.map, 'idle', function () { redraw(); });
-  if (!placed.length) locateAccount();
+  var linePts = propertyLinePoints();
+  if (linePts.length) loadPropertyLine(linePts, !placed.length);
+  if (!placed.length && !coordPair(state.index)) locateAccount();
 }
 
 function ensureOverlay(cam) {
@@ -870,6 +898,7 @@ function locateAccount() {
   if (fromIndex && state.map) {
     state.map.setCenter(fromIndex);
     state.map.setZoom(19);
+    loadPropertyLine([fromIndex], true);
     return;
   }
   var url = new URL('camera-pin-properties.json', window.location.href);
@@ -892,6 +921,8 @@ function locateAccount() {
       if (state.cameras.some(function (c) { return coordPair(c); })) return;
       state.map.setCenter(results[0].geometry.location);
       state.map.setZoom(19);
+      var loc = results[0].geometry.location;
+      loadPropertyLine([{ lat: loc.lat(), lng: loc.lng() }], true);
     });
   });
 }
@@ -899,6 +930,137 @@ function locateAccount() {
 function showMapError(text) {
   $('mapFallback').hidden = false;
   $('mapFallbackText').textContent = text;
+}
+
+function boundsHold(b, lat, lng) {
+  return !!b && lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east;
+}
+
+function extendGeo(coords, bounds) {
+  if (!coords || !coords.length) return;
+  if (typeof coords[0] === 'number') {
+    bounds.extend({ lng: coords[0], lat: coords[1] });
+    return;
+  }
+  for (var i = 0; i < coords.length; i++) extendGeo(coords[i], bounds);
+}
+
+function propertyLinePoints() {
+  var pts = [];
+  state.cameras.forEach(function (c) {
+    var pair = coordPair(c);
+    if (pair) pts.push(pair);
+  });
+  if (!pts.length) {
+    var idx = coordPair(state.index);
+    if (idx) pts.push(idx);
+  }
+  return pts;
+}
+
+function drawPropertyLine(feats, frame) {
+  if (!state.map || !feats || !feats.length) return;
+  state.map.data.forEach(function (f) { state.map.data.remove(f); });
+  state.map.data.addGeoJson({ type: 'FeatureCollection', features: feats });
+  state.map.data.setStyle({
+    strokeColor: '#e23b3b',
+    strokeWeight: 3,
+    fillOpacity: 0,
+    clickable: false
+  });
+  if (!frame) return;
+  var bounds = new google.maps.LatLngBounds();
+  feats.forEach(function (feat) {
+    if (feat.geometry) extendGeo(feat.geometry.coordinates, bounds);
+  });
+  if (!bounds.isEmpty()) state.map.fitBounds(bounds, 48);
+}
+
+function lotKey(feat) {
+  var p = (feat && feat.properties) || {};
+  return String(p.MAPTAXLOT || p.TAXLOT || p.ACCTNO || '');
+}
+
+function lotsInTiles(geos, points) {
+  var feats = [];
+  var seen = {};
+  points.forEach(function (pt) {
+    for (var i = 0; i < geos.length; i++) {
+      if (!geos[i] || !window.NadirGeo) continue;
+      var feat = window.NadirGeo.parcelMatch(geos[i], pt.lat, pt.lng);
+      if (!feat) continue;
+      var key = lotKey(feat) || ('lot-' + feats.length);
+      if (seen[key]) break;
+      seen[key] = true;
+      feats.push(feat);
+      break;
+    }
+  });
+  return feats;
+}
+
+function loadPropertyLineCdn(points) {
+  var chain = Promise.resolve([]);
+  points.forEach(function (pt) {
+    chain = chain.then(function (feats) {
+      var inner = Promise.resolve(null);
+      PARCEL_CDN_COUNTIES.forEach(function (county) {
+        inner = inner.then(function (found) {
+          if (found) return found;
+          return fetchJson(PARCEL_CDN + 'reference/parcels/' + county + '/index.json').then(function (index) {
+            if (!index || !boundsHold(index.bounds, pt.lat, pt.lng)) return null;
+            var shards = (index.shards || []).filter(function (s) { return boundsHold(s.bounds, pt.lat, pt.lng); });
+            var shardChain = Promise.resolve(null);
+            shards.forEach(function (shard) {
+              shardChain = shardChain.then(function (hit) {
+                if (hit) return hit;
+                return fetchJson(PARCEL_CDN + shard.key).then(function (geo) {
+                  if (!geo || !window.NadirGeo) return null;
+                  return window.NadirGeo.parcelMatch(geo, pt.lat, pt.lng);
+                });
+              });
+            });
+            return shardChain;
+          });
+        });
+      });
+      return inner.then(function (feat) {
+        if (!feat) return feats;
+        var key = lotKey(feat);
+        if (key && feats.some(function (f) { return lotKey(f) === key; })) return feats;
+        feats.push(feat);
+        return feats;
+      });
+    });
+  });
+  return chain;
+}
+
+function loadPropertyLine(points, frame) {
+  if (!state.map || !window.NadirGeo || !points || !points.length) return;
+  var names = [];
+  points.forEach(function (pt) {
+    PARCEL_COUNTIES.forEach(function (county) {
+      var name = parcelTileName(pt.lat, pt.lng, county);
+      if (names.indexOf(name) === -1) names.push(name);
+    });
+  });
+  var geos = [];
+  var chain = Promise.resolve();
+  names.forEach(function (name) {
+    chain = chain.then(function () {
+      return fetchJson(dataRoot() + 'parcels/' + name).then(function (geo) {
+        if (geo) geos.push(geo);
+      });
+    });
+  });
+  chain.then(function () {
+    var feats = lotsInTiles(geos, points);
+    if (feats.length) return feats;
+    return loadPropertyLineCdn(points);
+  }).then(function (feats) {
+    if (feats && feats.length) drawPropertyLine(feats, frame);
+  });
 }
 
 function loadMaps() {
@@ -1088,6 +1250,44 @@ function showIndex() {
   $('indexLink').href = indexHref();
 }
 
+function loadReview() {
+  try {
+    reviewState = reviewStateFromJson(localStorage.getItem(REVIEW_STORE_KEY));
+  } catch (e) {
+    reviewState = {};
+  }
+}
+
+function saveReview() {
+  try {
+    localStorage.setItem(REVIEW_STORE_KEY, JSON.stringify(reviewState));
+  } catch (e) {}
+}
+
+function reviewOf(id) {
+  return reviewState[id] || { done: false, note: '' };
+}
+
+function setReview(id, patch) {
+  var cur = reviewOf(id);
+  var next = reviewEntry({
+    done: patch.done != null ? patch.done : cur.done,
+    note: patch.note != null ? patch.note : cur.note
+  });
+  if (!next.done && !next.note) delete reviewState[id];
+  else reviewState[id] = next;
+  saveReview();
+}
+
+function reviewDoneCount() {
+  var n = 0;
+  for (var i = 0; i < indexRows.length; i++) {
+    var id = normHubId(indexRows[i] && indexRows[i].id);
+    if (id && reviewOf(id).done) n++;
+  }
+  return n;
+}
+
 function renderIndex() {
   var q = ($('indexSearch').value || '').trim().toLowerCase();
   var list = $('indexList');
@@ -1099,20 +1299,31 @@ function renderIndex() {
     var id = normHubId(row.id);
     if (!id) continue;
     if (Number(row.cameras) > 0) withCams++;
-    var blob = ((row.name || '') + ' ' + (row.address || '') + ' ' + id + ' ' + (row.cameras_file || '')).toLowerCase();
+    var mark = reviewOf(id);
+    var blob = ((row.name || '') + ' ' + (row.address || '') + ' ' + id + ' ' +
+      (row.cameras_file || '') + ' ' + mark.note).toLowerCase();
     if (q && blob.indexOf(q) === -1) continue;
     shown++;
+    var item = document.createElement('div');
+    item.className = 'index-row' + (Number(row.cameras) > 0 ? '' : ' none') + (mark.done ? ' done' : '');
+    var doneLabel = document.createElement('label');
+    doneLabel.className = 'index-done';
+    var box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = mark.done;
+    box.setAttribute('aria-label', 'Done: ' + (row.name || id));
+    doneLabel.appendChild(box);
+    doneLabel.appendChild(document.createTextNode('Done'));
     var link = document.createElement('a');
-    link.className = 'index-row' + (Number(row.cameras) > 0 ? '' : ' none');
+    link.className = 'row-link';
     link.href = propertyHref(id);
-    var left = document.createElement('div');
     var name = document.createElement('div');
     name.textContent = row.name || id;
     var addr = document.createElement('div');
     addr.className = 'muted';
     addr.textContent = row.address || id;
-    left.appendChild(name);
-    left.appendChild(addr);
+    link.appendChild(name);
+    link.appendChild(addr);
     var count = document.createElement('div');
     count.className = 'count';
     var n = Number(row.cameras) || 0;
@@ -1125,16 +1336,41 @@ function renderIndex() {
     } else {
       count.textContent = 'No cameras file';
     }
-    link.appendChild(left);
-    link.appendChild(count);
-    list.appendChild(link);
+    var area = document.createElement('textarea');
+    area.className = 'index-note';
+    area.rows = 2;
+    area.placeholder = 'Notes';
+    area.value = mark.note;
+    area.setAttribute('aria-label', 'Notes: ' + (row.name || id));
+    box.addEventListener('change', function (ev) {
+      var hub = ev.currentTarget.getAttribute('data-hub');
+      var on = ev.currentTarget.checked;
+      setReview(hub, { done: on });
+      ev.currentTarget.closest('.index-row').classList.toggle('done', on);
+      writeIndexCount(shown, withCams);
+    });
+    box.setAttribute('data-hub', id);
+    area.addEventListener('input', function (ev) {
+      setReview(ev.currentTarget.getAttribute('data-hub'), { note: ev.currentTarget.value });
+    });
+    area.setAttribute('data-hub', id);
+    item.appendChild(doneLabel);
+    item.appendChild(link);
+    item.appendChild(count);
+    item.appendChild(area);
+    list.appendChild(item);
   }
-  $('indexCount').textContent = shown + ' shown · ' + indexRows.length + ' Chekt accounts · ' + withCams + ' with cameras';
+  writeIndexCount(shown, withCams);
+}
+
+function writeIndexCount(shown, withCams) {
+  $('indexCount').textContent = shown + ' shown · ' + indexRows.length + ' Chekt accounts · ' +
+    withCams + ' with cameras · ' + reviewDoneCount() + ' done';
 }
 
 function bootIndex() {
   showIndex();
-  $('indexBlurb').textContent = 'Chekt accounts. The count is that account’s CHEKT cameras. A row can have cameras and still have no saved pin file. Client links stay vyanet-viewer.html?property=…&live=1.';
+  $('indexBlurb').textContent = 'Chekt accounts. Check Done when the pins are finished, and use the note for anything the next pass should know. Done and notes stay in this browser. Client links stay vyanet-viewer.html?property=…&live=1.';
   setStatus('Loading properties…', '');
   var url = new URL('camera-pin-properties.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
@@ -1173,6 +1409,7 @@ function exampleBlock() {
 
 function boot() {
   $('indexLink').href = indexHref();
+  loadReview();
   if (!propertyId) {
     bootIndex();
     return;

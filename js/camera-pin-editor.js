@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.7';
+export const BUILD = '1.0.8';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -29,6 +29,32 @@ export const CAMERAS_JSON_CANONICAL = {
 export function normHubId(value) {
   const id = String(value || '').trim().toLowerCase();
   return /^[a-f0-9]{32}$/.test(id) ? id : '';
+}
+
+export const REVIEW_STORE_KEY = 'cam-edit-review-v1';
+const REVIEW_NOTE_MAX = 2000;
+
+export function reviewEntry(raw) {
+  const src = raw && typeof raw === 'object' ? raw : {};
+  return {
+    done: src.done === true,
+    note: String(src.note == null ? '' : src.note).slice(0, REVIEW_NOTE_MAX)
+  };
+}
+
+// Keep only real hub ids. Drop empty rows so a cleared note does not linger.
+export function reviewStateFromJson(text) {
+  let parsed;
+  try { parsed = JSON.parse(text || ''); } catch (e) { return {}; }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  const out = {};
+  Object.keys(parsed).forEach((key) => {
+    const id = normHubId(key);
+    if (!id) return;
+    const entry = reviewEntry(parsed[key]);
+    if (entry.done || entry.note) out[id] = entry;
+  });
+  return out;
 }
 
 export function editorHubUrl() {
@@ -188,6 +214,20 @@ export function coordPair(obj) {
   if (!isFinite(lat) || !isFinite(lng)) return null;
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
   return { lat: lat, lng: lng };
+}
+
+// Same grid as viewer.html PARCEL_COUNTIES. GitHub tiles are data/parcels/{name}.
+export const PARCEL_COUNTIES = [
+  { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 },
+  { name: 'lane', lat0: 43.40, lng0: -124.20, step: 0.07 },
+  { name: 'josephine', lat0: 41.90, lng0: -124.20, step: 0.07 }
+];
+
+export function parcelTileName(lat, lng, county) {
+  const step = county.step;
+  const latCell = Math.floor((lat - county.lat0) / step) * step + county.lat0;
+  const lngCell = Math.floor((lng - county.lng0) / step) * step + county.lng0;
+  return county.name + '_' + latCell.toFixed(2) + '_' + lngCell.toFixed(2) + '.geojson';
 }
 
 export function haversineM(lat1, lng1, lat2, lng2) {

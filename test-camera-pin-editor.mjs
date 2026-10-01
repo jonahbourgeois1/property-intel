@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.7.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.8.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -7,7 +7,7 @@ import vm from 'vm';
 import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading,
-  coordPair
+  coordPair, reviewEntry, reviewStateFromJson, parcelTileName, PARCEL_COUNTIES
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -28,10 +28,20 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.7');
+ok('build', BUILD === '1.0.8');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
 ok('blank coord is unplaced', coordPair({ lat: '', lng: '' }) === null);
 ok('real coord kept', coordPair({ lat: 44.07, lng: -123.09 }).lat === 44.07);
+ok('review keeps a done note', reviewStateFromJson(JSON.stringify({
+  '1512452d9e6e0f1cf0a32255a4392b12': { done: true, note: 'checked doors' }
+}))['1512452d9e6e0f1cf0a32255a4392b12'].note === 'checked doors');
+ok('review drops an empty row', Object.keys(reviewStateFromJson(JSON.stringify({
+  '1512452d9e6e0f1cf0a32255a4392b12': { done: false, note: '' }
+}))).length === 0);
+ok('review ignores a bad id', Object.keys(reviewStateFromJson('{"nope":{"done":true}}')).length === 0);
+ok('review entry is a checkbox', reviewEntry({ done: 1, note: 'x' }).done === false);
+ok('lane parcel tile', parcelTileName(44.070, -123.092, PARCEL_COUNTIES[1]) === 'lane_44.03_-123.15.geojson');
+ok('bend parcel tile', parcelTileName(44.068, -121.291, PARCEL_COUNTIES[0]) === 'deschutes_44.03_-121.31.geojson');
 ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');
