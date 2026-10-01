@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Golf Viewer — Property Intel</title>
 <!--
-  golf-viewer.html — one map for every broken-out golf course (v1.1.1)
+  golf-viewer.html — one map for every broken-out golf course (v1.1.2)
 
   Not linked from the responder hub. A course dropdown sits in the
   header. ?sheet= selects which course starts open. The list of courses is
@@ -18,6 +18,12 @@
   Click a numbered marker for a card (same idea as the 2D camera card
   in viewer.html): image, pin name, description. Click the image
   to expand it.
+
+  The right rail has three filters: Greens, Fairways, Additional.
+  A name that starts with "Green" or "Fairway" (Green 12, Fairway 3)
+  goes in that group. Every other label is additional. The list and
+  the map both show only the selected group. Marker numbers stay the
+  sheet pin numbers. ?group=green|fairway|feature reopens that filter.
 
   Maps key: the same browser Maps JavaScript key as golf-review.html.
   config.js GEOCODE_KEY is a different key and Google rejects it here.
@@ -127,12 +133,46 @@
   }
   .panel h2 {
     margin: 0;
-    padding: 14px 18px 10px;
+    padding: 14px 18px 0;
     font-family: var(--mono);
     font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
     color: var(--ink-faint);
+  }
+  .pin-filters {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 10px 12px 8px;
     border-bottom: 1px solid var(--line);
   }
+  .pin-filters button {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--panel-2);
+    color: var(--ink-dim);
+    border-radius: 8px;
+    padding: 7px 4px 6px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    line-height: 1.15;
+  }
+  .pin-filters button:hover { border-color: var(--ink-dim); }
+  .pin-filters button .n {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-faint);
+  }
+  .pin-filters button.on {
+    color: var(--marker-ink);
+    background: var(--marker);
+    border-color: var(--marker);
+  }
+  .pin-filters button.on .n { color: var(--marker-ink); }
   .panel-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 8px 12px 16px; }
   #pinList { list-style: none; margin: 0; padding: 0; }
   #pinList li {
@@ -249,6 +289,11 @@
     </section>
     <aside class="panel">
       <h2>Pins</h2>
+      <div class="pin-filters" id="pinFilters" role="tablist" aria-label="Pin group">
+        <button type="button" id="filterGreen" role="tab" data-group="green">Greens</button>
+        <button type="button" id="filterFairway" role="tab" data-group="fairway">Fairways</button>
+        <button type="button" id="filterFeature" role="tab" data-group="feature">Additional</button>
+      </div>
       <div class="panel-scroll">
         <ul id="pinList"></ul>
       </div>
@@ -272,7 +317,7 @@
   </div>
 <script>
 (function () {
-  var BUILD = 'v1.1.1';
+  var BUILD = 'v1.1.2';
   var GOLF_API_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 
@@ -298,6 +343,38 @@
   }
 
   var fromUrl = qp('sheet').trim();
+  var groupFromUrl = qp('group').trim().toLowerCase();
+  var pinGroup = (groupFromUrl === 'fairway' || groupFromUrl === 'feature' || groupFromUrl === 'green')
+    ? groupFromUrl
+    : 'green';
+
+  var PIN_GROUPS = [
+    { id: 'green', label: 'Greens', word: 'greens', empty: 'No greens on this course.' },
+    { id: 'fairway', label: 'Fairways', word: 'fairways', empty: 'No fairways on this course.' },
+    { id: 'feature', label: 'Additional', word: 'additional', empty: 'No additional features on this course.' }
+  ];
+
+  function pinKind(pin) {
+    var name = String(pin && pin.name || '').trim().toLowerCase();
+    if (/^greens?\b/.test(name)) return 'green';
+    if (/^fairways?\b/.test(name)) return 'fairway';
+    return 'feature';
+  }
+
+  function groupMeta(id) {
+    for (var i = 0; i < PIN_GROUPS.length; i++) {
+      if (PIN_GROUPS[i].id === id) return PIN_GROUPS[i];
+    }
+    return PIN_GROUPS[0];
+  }
+
+  function countKind(kind) {
+    var n = 0;
+    for (var i = 0; i < pins.length; i++) {
+      if (pinKind(pins[i]) === kind) n++;
+    }
+    return n;
+  }
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, function (c) {
@@ -351,18 +428,38 @@
     };
   }
 
+  function renderFilters() {
+    PIN_GROUPS.forEach(function (g) {
+      var btn = document.querySelector('#pinFilters button[data-group="' + g.id + '"]');
+      if (!btn) return;
+      btn.className = g.id === pinGroup ? 'on' : '';
+      btn.setAttribute('aria-selected', g.id === pinGroup ? 'true' : 'false');
+      btn.replaceChildren();
+      var label = document.createElement('span');
+      label.textContent = g.label;
+      var n = document.createElement('span');
+      n.className = 'n';
+      n.textContent = String(countKind(g.id));
+      btn.appendChild(label);
+      btn.appendChild(n);
+    });
+  }
+
   function renderList() {
     var host = document.getElementById('pinList');
     if (!host) return;
     host.innerHTML = '';
     if (!pins.length) {
-      var empty = document.createElement('div');
-      empty.className = 'empty-note';
-      empty.textContent = 'No pins on this sheet yet.';
-      host.appendChild(empty);
+      var none = document.createElement('div');
+      none.className = 'empty-note';
+      none.textContent = 'No pins on this sheet yet.';
+      host.appendChild(none);
       return;
     }
+    var shown = 0;
     pins.forEach(function (pin, i) {
+      if (pinKind(pin) !== pinGroup) return;
+      shown++;
       var li = document.createElement('li');
       li.id = 'pin-row-' + i;
       if (i === popupIdx) li.className = 'on';
@@ -386,11 +483,19 @@
       li.addEventListener('click', function () { selectPin(i); });
       host.appendChild(li);
     });
+    if (!shown) {
+      var empty = document.createElement('div');
+      empty.className = 'empty-note';
+      empty.textContent = groupMeta(pinGroup).empty;
+      host.appendChild(empty);
+    }
   }
 
   function updateCount() {
     var el = document.getElementById('count');
-    if (el) el.innerHTML = '<b>' + pins.length + '</b> pins';
+    if (!el) return;
+    var meta = groupMeta(pinGroup);
+    el.innerHTML = '<b>' + countKind(pinGroup) + '</b> ' + escapeHtml(meta.word);
   }
 
   function fillHeader() {
@@ -408,10 +513,13 @@
     if (!map) return;
     var bounds = new google.maps.LatLngBounds();
     var any = false;
+    var visible = 0;
     pins.forEach(function (pin, i) {
+      if (pinKind(pin) !== pinGroup) return;
       var lat = Number(pin.lat);
       var lng = Number(pin.lng);
       if (!isFinite(lat) || !isFinite(lng)) return;
+      visible++;
       var marker = new google.maps.Marker({
         map: map,
         position: { lat: lat, lng: lng },
@@ -432,7 +540,7 @@
       any = true;
     });
     if (any) {
-      if (pins.length === 1) {
+      if (visible === 1) {
         map.setCenter(bounds.getCenter());
         map.setZoom(18);
       } else {
@@ -552,7 +660,11 @@
 
   function initMap() {
     if (map) return;
-    var first = pins[0];
+    var first = null;
+    for (var fi = 0; fi < pins.length; fi++) {
+      if (pinKind(pins[fi]) === pinGroup) { first = pins[fi]; break; }
+    }
+    if (!first) first = pins[0];
     var center = first
       ? { lat: Number(first.lat), lng: Number(first.lng) }
       : { lat: Number(course && course.lat), lng: Number(course && course.lng) };
@@ -625,6 +737,7 @@
       };
     });
     fillHeader();
+    renderFilters();
     updateCount();
     renderList();
     renderTabs();
@@ -669,11 +782,11 @@
     markers.forEach(function (m) { m.setMap(null); });
     markers = [];
     pins = [];
+    renderFilters();
+    updateCount();
     renderList();
     renderTabs();
-    if (window.history && history.replaceState) {
-      history.replaceState(null, '', window.location.pathname + '?sheet=' + encodeURIComponent(name));
-    }
+    syncUrl();
     var label = name;
     for (var i = 0; i < courses.length; i++) {
       if (courses[i].sheet === name) { label = courses[i].name || name; break; }
@@ -682,9 +795,42 @@
     loadCourse(0, gen);
   }
 
+  function syncUrl() {
+    if (!sheetName || !window.history || !history.replaceState) return;
+    history.replaceState(null, '', window.location.pathname +
+      '?sheet=' + encodeURIComponent(sheetName) +
+      '&group=' + encodeURIComponent(pinGroup));
+  }
+
+  function setPinGroup(kind) {
+    if (kind !== 'green' && kind !== 'fairway' && kind !== 'feature') kind = 'green';
+    var changed = kind !== pinGroup;
+    pinGroup = kind;
+    if (popupIdx >= 0) {
+      var open = pins[popupIdx];
+      if (!open || pinKind(open) !== pinGroup) hidePinPopup();
+    }
+    renderFilters();
+    updateCount();
+    renderList();
+    if (changed && map) dropMarkers();
+    syncUrl();
+  }
+
   window.hidePinPopup = hidePinPopup;
   window.expandPinPopup = expandPinPopup;
   window.closePinLightbox = closePinLightbox;
+
+  renderFilters();
+
+  var filterHost = document.getElementById('pinFilters');
+  if (filterHost) {
+    filterHost.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest ? e.target.closest('button') : null;
+      if (!btn || !filterHost.contains(btn)) return;
+      setPinGroup(btn.getAttribute('data-group'));
+    });
+  }
 
   var courseSelect = document.getElementById('courseTabs');
   if (courseSelect) {
