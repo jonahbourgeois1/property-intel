@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-09-30 — Enlarge a still on click (cam-edit 1.0.6)
+
+**What.** Clicking the selected still, or a camera’s thumbnail in the right-hand list, opens that JPEG large over the page. Close, Escape, or a click on the dark backdrop puts it away. The pin list and the map stay as they were.
+
+**Why.** The panel still is a short crop, so a driveway or door frame is hard to read while placing the pin.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs` (build 1.0.6, lightbox ids, `node --check` on the page module).
+
+**Status.** Pages after this commit is on `main`.
+
 ### 2026-09-30 — Show the review stills in the editor
 
 **What.** Set `photo` on cameras that had a captured still and copied that JPEG to `data/cameras/images/{fileId}/{cam-id}.jpg`. Pins, labels, live blocks, and placement notes were not changed. Jones and Eugene already had photos; those files and images were left alone. Cameras with no captured JPEG stay “No still”.

@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.5.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.6.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -27,7 +27,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.5');
+ok('build', BUILD === '1.0.6');
 ok('hub url', editorHubUrl() === 'https://responder-intel.vyanet.com/camera-pin-editor.html');
 ok('client url', clientLiveUrl(SAMPLE) ===
   'https://responder-intel.vyanet.com/vyanet-viewer.html?property=' + SAMPLE + '&live=1');
@@ -168,6 +168,8 @@ const lookRe = /getElementById\('([^']+)'\)|\$\('([^']+)'\)/g;
 while ((m = lookRe.exec(script))) lookups.push(m[1] || m[2]);
 const missing = lookups.filter((id) => !ids.has(id));
 ok('ids exist', missing.length === 0, missing.join(','));
+ok('still lightbox', html.includes('id="stillLightbox"') && script.includes('function openStill') &&
+  script.includes('function closeStill'));
 
 const fnRe = /^\s*function\s+([A-Za-z0-9_]+)\s*\(/gm;
 const fns = [];

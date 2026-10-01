@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.5)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.6)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -169,6 +169,35 @@
     justify-content: center;
     color: var(--muted);
   }
+  #stillImg { cursor: zoom-in; }
+  .thumb { cursor: zoom-in; }
+  #stillLightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.86);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 24px 72px;
+  }
+  #stillLightbox[hidden] { display: none; }
+  #stillLbImg {
+    width: min(1400px, 94vw);
+    height: calc(100vh - 128px);
+    object-fit: contain;
+    border-radius: 8px;
+    background: transparent;
+  }
+  #stillLbClose { position: absolute; top: 16px; right: 16px; }
+  #stillLbCap {
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 18px;
+    text-align: center;
+    color: #fff;
+  }
   label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
   label input { width: 100%; margin-top: 4px; }
   .fields { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -268,7 +297,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.5</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.6</span>
   <span class="spacer"></span>
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
@@ -305,7 +334,7 @@
       <a id="clientLink" href="" target="_blank" rel="noopener"></a>
     </div>
     <div id="list"></div>
-    <img id="stillImg" alt="" hidden>
+    <img id="stillImg" alt="" hidden title="Click to enlarge">
     <div id="stillEmpty" hidden>No still</div>
     <div id="detailName"></div>
     <div class="muted" id="detailMeta"></div>
@@ -321,11 +350,16 @@
     <p class="muted">Drag a pin to move it. Drag the handle on the selected pin to set heading. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Z</kbd> redo, <kbd>J</kbd>/<kbd>K</kbd> next camera. A move past 5 km is refused and the pin stays put.</p>
   </aside>
 </div>
+<div id="stillLightbox" hidden>
+  <button type="button" id="stillLbClose">Close</button>
+  <img id="stillLbImg" alt="">
+  <div id="stillLbCap"></div>
+</div>
 <script type="module">
 import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl
-} from './js/camera-pin-editor.js?v=1.0.5';
+} from './js/camera-pin-editor.js?v=1.0.6';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var CAMERA_SAVE_URL = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
@@ -482,6 +516,21 @@ function syncDetail(forceInputs) {
   });
 }
 
+function openStill(cam) {
+  var src = stillSrc(cam && cam.photo);
+  if (!src) return;
+  var img = $('stillLbImg');
+  img.alt = cam.label || cam.id || '';
+  img.src = src;
+  $('stillLbCap').textContent = cam.label || cam.id || '';
+  $('stillLightbox').hidden = false;
+}
+
+function closeStill() {
+  $('stillLightbox').hidden = true;
+  $('stillLbImg').removeAttribute('src');
+}
+
 function selectCam(id) {
   state.selected = id;
   var rows = document.querySelectorAll('.cam-row');
@@ -505,6 +554,7 @@ function renderList() {
     thumb.className = src ? 'thumb' : 'thumb-empty';
     if (src) {
       thumb.alt = '';
+      thumb.title = 'Click to enlarge';
       thumb.src = src;
       thumb.onerror = function () {
         var ph = document.createElement('div');
@@ -525,7 +575,10 @@ function renderList() {
     text.appendChild(coord);
     btn.appendChild(thumb);
     btn.appendChild(text);
-    btn.addEventListener('click', function () { selectCam(cam.id); });
+    btn.addEventListener('click', function (ev) {
+      selectCam(cam.id);
+      if (ev.target && ev.target.classList && ev.target.classList.contains('thumb')) openStill(cam);
+    });
     list.appendChild(btn);
   });
   if (state.selected) selectCam(state.selected);
@@ -1146,7 +1199,20 @@ $('indexSearch').addEventListener('input', renderIndex);
 $('mapWrap').addEventListener('pointermove', onPointerMove);
 $('mapWrap').addEventListener('pointerup', endDrag);
 $('mapWrap').addEventListener('pointercancel', endDrag);
+$('stillImg').addEventListener('click', function () {
+  var cam = findCam(state.selected);
+  if (cam) openStill(cam);
+});
+$('stillLbClose').addEventListener('click', closeStill);
+$('stillLightbox').addEventListener('click', function (ev) {
+  if (ev.target === $('stillLightbox')) closeStill();
+});
 document.addEventListener('keydown', function (ev) {
+  if (ev.key === 'Escape' && !$('stillLightbox').hidden) {
+    ev.preventDefault();
+    closeStill();
+    return;
+  }
   if (!editing()) return;
   var tag = ev.target && ev.target.tagName;
   var typing = tag === 'INPUT' || tag === 'TEXTAREA';
