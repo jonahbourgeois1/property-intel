@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Adams",
   "portfolio_sites": 4,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Adams'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/adams-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/adams-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/adams-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/adams-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/adams-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/adams-wa"
   },
   "metrics": {
     "feature_count": 13719,
@@ -58,12 +60,12 @@
     "shard_count": 135
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:44:15Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/adams-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/adams-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -112,7 +114,17 @@
       "at": "2026-09-25T02:19:54Z",
       "action": "normalize_shards_complete",
       "detail": "features=13719 shards=135 max_shard_bytes=1796206 index_sha256=17ef37a54e3193ae1e384aadc107a35b838694ffcebbfb4b44ec0cbaf6a3ff64 dir=/workspace/parcel-staging/scratch/adams-wa/normalized sum_counts=13719 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/adams-wa/ (id-only strip; NOT license-cleared; no S3). features=13719 shards=135"
+    },
+    {
+      "at": "2026-10-05T20:44:15Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/adams-wa/; CF invalidation I48ZTOTR6HGSGEJBV3KR81YTD3 on EQJBJ6X237VQF paths /reference/parcels/adams-wa/* and /reference/parcels/adams-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Adams County (adams-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B."
+  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Adams County (adams-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/adams-wa/ with CloudFront invalidation I48ZTOTR6HGSGEJBV3KR81YTD3."
 }

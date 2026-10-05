@@ -3,7 +3,7 @@
   "state": "ID",
   "county": "Boundary",
   "portfolio_sites": 4,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
   "source_layer": "IDWR Reference/Parcels FeatureServer/0 where COUNTY='Boundary'",
@@ -45,7 +45,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/boundary-id/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/boundary-id/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/boundary-id/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/boundary-id/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/boundary-id/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/boundary-id"
   },
   "metrics": {
     "feature_count": 10884,
@@ -54,12 +56,12 @@
     "shard_count": 96
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:44:54Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/boundary-id/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/boundary-id/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -108,7 +110,17 @@
       "at": "2026-09-25T02:19:43Z",
       "action": "normalize_shards_complete",
       "detail": "features=10884 shards=96 max_shard_bytes=874063 index_sha256=5c3715316ef5025ab3058bcc02e469c5cb075c626a1d11a5d37e854c480b9fbd dir=/workspace/parcel-staging/scratch/boundary-id/normalized sum_counts=10884 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/boundary-id/ (id-only strip; NOT license-cleared; no S3). features=10884 shards=96"
+    },
+    {
+      "at": "2026-10-05T20:44:54Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/boundary-id/; CF invalidation IBG1HQKPJV94OP5ZNJ09LOJUL7 on EQJBJ6X237VQF paths /reference/parcels/boundary-id/* and /reference/parcels/boundary-id/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 4 fabric-deferred: Idaho statewide IDWR parcels filtered to Boundary County (boundary-id). Was deferred-tail; fabric covers. OWNER stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 4 fabric-deferred: Idaho statewide IDWR parcels filtered to Boundary County (boundary-id). Was deferred-tail; fabric covers. OWNER stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/boundary-id/ with CloudFront invalidation IBG1HQKPJV94OP5ZNJ09LOJUL7."
 }

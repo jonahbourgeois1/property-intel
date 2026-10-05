@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Pend Oreille",
   "portfolio_sites": 10,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='PendOreille'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/pend-oreille-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/pend-oreille-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/pend-oreille-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/pend-oreille-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/pend-oreille-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/pend-oreille-wa"
   },
   "metrics": {
     "feature_count": 16852,
@@ -58,12 +60,12 @@
     "shard_count": 114
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:52:05Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/pend-oreille-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/pend-oreille-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T01:54:23Z",
       "action": "normalize_shards_complete",
       "detail": "features=16852 shards=114 max_shard_bytes=962391 index_sha256=83eeba268ef4c30fe0e74dd455f6b51264d8b951b8175fc0a30a7d57d3e63e93 dir=/workspace/parcel-staging/scratch/pend-oreille-wa/normalized sum_counts=16852 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/pend-oreille-wa/ (id-only strip; NOT license-cleared; no S3). features=16852 shards=114"
+    },
+    {
+      "at": "2026-10-05T20:52:05Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/pend-oreille-wa/; CF invalidation IHSNS69R7NO56943NPTEL3476 on EQJBJ6X237VQF paths /reference/parcels/pend-oreille-wa/* and /reference/parcels/pend-oreille-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: WA statewide WDFW parcels filtered to PendOreille County (pend-oreille-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to PendOreille County (pend-oreille-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/pend-oreille-wa/ with CloudFront invalidation IHSNS69R7NO56943NPTEL3476."
 }

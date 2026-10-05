@@ -3,7 +3,7 @@
   "state": "AZ",
   "county": "Maricopa",
   "portfolio_sites": 837,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": "2026-09-21",
   "source_url": "https://www.arcgis.com/sharing/rest/content/items/c937f17330f64e64abd41976fc8bb17f/data",
   "source_layer": "Maricopa Assessor Parcels_All.shp (ArcGIS item c937f17330f64e64abd41976fc8bb17f Parcels.zip)",
@@ -55,7 +55,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/maricopa-az/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/maricopa-az/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/maricopa-az/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/maricopa-az/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/maricopa-az/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/maricopa-az"
   },
   "metrics": {
     "feature_count": 1760494,
@@ -64,12 +66,12 @@
     "shard_count": 867
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:50:56Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/maricopa-az/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/maricopa-az/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -133,7 +135,17 @@
       "at": "2026-09-24T22:14:20Z",
       "action": "normalize_shards_complete",
       "detail": "features=1760494 shards=867 max_shard_bytes=3999915 index_sha256=825b1746c37ec9dc7189ebc46d0c9eebb38b2f2085142bbb6f82d88f9812f0d6 dir=/workspace/parcel-staging/scratch/maricopa-az/normalized sum_counts=1760494 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/maricopa-az/ (id-only strip; NOT license-cleared; no S3). features=1760494 shards=867"
+    },
+    {
+      "at": "2026-10-05T20:50:56Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/maricopa-az/; CF invalidation IET3SX4KUZZ9U3G2RCC01EXWLJ on EQJBJ6X237VQF paths /reference/parcels/maricopa-az/* and /reference/parcels/maricopa-az/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: Maricopa Assessor bulk Parcels.zip shapefile (not MapServer pagination). MapServer/0 returnCountOnly\u22483.32M vs shapefile\u22481.76M \u2014 staged official countywide extract. Stripped situs street/city/zip. No AWS/CDN/Grant B."
+  "notes": "Wave 2: Maricopa Assessor bulk Parcels.zip shapefile (not MapServer pagination). MapServer/0 returnCountOnly\u22483.32M vs shapefile\u22481.76M \u2014 staged official countywide extract. Stripped situs street/city/zip. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/maricopa-az/ with CloudFront invalidation IET3SX4KUZZ9U3G2RCC01EXWLJ."
 }

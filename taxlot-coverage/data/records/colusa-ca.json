@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Colusa",
   "portfolio_sites": 23,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://www.countyofcolusaca.gov/DocumentCenter/View/6965/Colusa-County-Tax-Parc",
   "source_layer": "Colusa County Tax Parcels 2025 shapefile (GIS Download Library)",
@@ -53,7 +53,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/colusa-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/colusa-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/colusa-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/colusa-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/colusa-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/colusa-ca"
   },
   "metrics": {
     "feature_count": 15062,
@@ -62,12 +64,12 @@
     "shard_count": 72
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:45:34Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/colusa-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/colusa-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -111,7 +113,17 @@
       "at": "2026-09-25T01:06:31Z",
       "action": "normalize_shards_complete",
       "detail": "features=15062 shards=72 max_shard_bytes=1802964 index_sha256=13d67f245a5a088cd4037a99585cad9c3d07b22b48b9801b35f33343e19aea1e dir=/workspace/parcel-staging/scratch/colusa-ca/normalized sum_counts=15062 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/colusa-ca/ (id-only strip; NOT license-cleared; no S3). features=15062 shards=72"
+    },
+    {
+      "at": "2026-10-05T20:45:34Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/colusa-ca/; CF invalidation IF5G86J989KP3QM71TFMM4NMMA on EQJBJ6X237VQF paths /reference/parcels/colusa-ca/* and /reference/parcels/colusa-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Colusa CA official Tax Parcels 2025 shapefile from DocumentCenter/View/6965. Stripped ASSESSOR/SITUS_1/SITUS_2. Reprojected NAD83 CA SP II ft \u2192 EPSG:4326. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Colusa CA official Tax Parcels 2025 shapefile from DocumentCenter/View/6965. Stripped ASSESSOR/SITUS_1/SITUS_2. Reprojected NAD83 CA SP II ft \u2192 EPSG:4326. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/colusa-ca/ with CloudFront invalidation IF5G86J989KP3QM71TFMM4NMMA."
 }

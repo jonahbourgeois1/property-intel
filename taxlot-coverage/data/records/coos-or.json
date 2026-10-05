@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Coos",
   "portfolio_sites": 6,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services.arcgis.com/or6I5QjRIBzpPc8G/arcgis/rest/services/GIS_Online_March_2026/FeatureServer/4",
   "source_layer": "GIS_Online_March_2026 / March_2026_Parcels",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/coos-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/coos-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/coos-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/coos-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/coos-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/coos-or"
   },
   "metrics": {
     "feature_count": 42410,
@@ -58,12 +60,12 @@
     "shard_count": 130
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:45:39Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/coos-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/coos-or/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -102,7 +104,17 @@
       "at": "2026-09-24T20:58:33Z",
       "action": "normalize_shards_complete",
       "detail": "features=42410 shards=130 max_shard_bytes=3835506 index_sha256=47b6bbbfb781123aede91b84394b7eadade0a8464f2e0d60895e13ac4d9cc801 dir=/workspace/parcel-staging/scratch/coos-or/normalized sum_counts=42410 pct_delta_vs_metrics=0.005% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/coos-or/ (id-only strip; NOT license-cleared; no S3). features=42410 shards=130"
+    },
+    {
+      "at": "2026-10-05T20:45:39Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/coos-or/; CF invalidation ICGONLMT7C36Q216A9FUTBFZD4 on EQJBJ6X237VQF paths /reference/parcels/coos-or/* and /reference/parcels/coos-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/coos-or/ with CloudFront invalidation ICGONLMT7C36Q216A9FUTBFZD4."
 }

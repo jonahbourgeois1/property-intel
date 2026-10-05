@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Orange",
   "portfolio_sites": 22,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://www.ocgis.com/arcpub/rest/services/Map_Layers/Parcels/MapServer/0",
   "source_layer": "OC Survey Map_Layers/Parcels MapServer/0",
@@ -44,7 +44,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/orange-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/orange-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/orange-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/orange-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/orange-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/orange-ca"
   },
   "metrics": {
     "feature_count": 702987,
@@ -53,12 +55,12 @@
     "shard_count": 206
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:51:49Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/orange-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/orange-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -102,7 +104,17 @@
       "at": "2026-09-25T01:27:03Z",
       "action": "normalize_shards_complete",
       "detail": "features=702987 shards=206 max_shard_bytes=3977629 index_sha256=75afa970413821d73eb5940a3582089ba3ef56bdb0a8f91bfe31e5b5f67a125b dir=/workspace/parcel-staging/scratch/orange-ca/normalized sum_counts=702987 pct_delta_vs_metrics=0.002% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/orange-ca/ (id-only strip; NOT license-cleared; no S3). features=702987 shards=206"
+    },
+    {
+      "at": "2026-10-05T20:51:49Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/orange-ca/; CF invalidation IB3O2LTO5N2WTHUOENK1REDYIU on EQJBJ6X237VQF paths /reference/parcels/orange-ca/* and /reference/parcels/orange-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Orange CA ocgis Parcels; SITE_ADDRESS stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Orange CA ocgis Parcels; SITE_ADDRESS stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/orange-ca/ with CloudFront invalidation IB3O2LTO5N2WTHUOENK1REDYIU."
 }

@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Sacramento",
   "portfolio_sites": 6,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services1.arcgis.com/5NARefyPVtAeuJPU/arcgis/rest/services/Parcels/FeatureServer/0",
   "source_layer": "Sacramento County Parcels FeatureServer/0 (5NARefyPVtAeuJPU)",
@@ -58,7 +58,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/sacramento-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/sacramento-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/sacramento-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/sacramento-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/sacramento-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/sacramento-ca"
   },
   "metrics": {
     "feature_count": 502164,
@@ -67,12 +69,12 @@
     "shard_count": 243
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:53:08Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/sacramento-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/sacramento-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -116,7 +118,17 @@
       "at": "2026-09-25T02:11:35Z",
       "action": "normalize_shards_complete",
       "detail": "features=502164 shards=243 max_shard_bytes=3970915 index_sha256=45a8cf6803b58bf70a554f6457a6187c74a35fc6aadcf4ed05266c84f08b119e dir=/workspace/parcel-staging/scratch/sacramento-ca/normalized sum_counts=502164 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/sacramento-ca/ (id-only strip; NOT license-cleared; no S3). features=502164 shards=243"
+    },
+    {
+      "at": "2026-10-05T20:53:08Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/sacramento-ca/; CF invalidation I8REA03Z7IEQ38MVI9BDK8TN0Z on EQJBJ6X237VQF paths /reference/parcels/sacramento-ca/* and /reference/parcels/sacramento-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Sacramento CA Parcels AGOL; situs STREET_NBR/STREET_NAM/CITY/ZIP stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Sacramento CA Parcels AGOL; situs STREET_NBR/STREET_NAM/CITY/ZIP stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/sacramento-ca/ with CloudFront invalidation I8REA03Z7IEQ38MVI9BDK8TN0Z."
 }

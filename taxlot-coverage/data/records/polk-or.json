@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Polk",
   "portfolio_sites": 30,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services6.arcgis.com/5P1A4d8638S82qKd/arcgis/rest/services/LWC_Taxlots_WFL1/FeatureServer/1",
   "source_layer": "LWC Benton_Polk_Taxlots_Combined filtered ORTaxlot LIKE '27%' (Polk)",
@@ -46,7 +46,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/polk-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/polk-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/polk-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/polk-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/polk-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/polk-or"
   },
   "metrics": {
     "feature_count": 35314,
@@ -55,12 +57,12 @@
     "shard_count": 48
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:52:37Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/polk-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/polk-or/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -99,7 +101,17 @@
       "at": "2026-09-24T20:57:04Z",
       "action": "normalize_shards_complete",
       "detail": "features=35314 shards=48 max_shard_bytes=3752292 index_sha256=938e1793e3ea9d55bb9f27d73b0ae5d28d0c048ba04c2773edad3e7a4bd2725c dir=/workspace/parcel-staging/scratch/polk-or/normalized sum_counts=35314 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/polk-or/ (id-only strip; NOT license-cleared; no S3). features=35314 shards=48"
+    },
+    {
+      "at": "2026-10-05T20:52:37Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/polk-or/; CF invalidation ICA17E41QMNNZY89HP4U2AM5N1 on EQJBJ6X237VQF paths /reference/parcels/polk-or/* and /reference/parcels/polk-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. Polk Assessor MapServer returned HTTP 500; used Luckiamute Watershed Council Benton/Polk merge filtered by ORMAP county prefix 27."
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. Polk Assessor MapServer returned HTTP 500; used Luckiamute Watershed Council Benton/Polk merge filtered by ORMAP county prefix 27. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/polk-or/ with CloudFront invalidation ICA17E41QMNNZY89HP4U2AM5N1."
 }

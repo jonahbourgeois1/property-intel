@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Trinity",
   "portfolio_sites": 8,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services2.arcgis.com/32siQkg0O6da8zFF/arcgis/rest/services/Parcel_Service/FeatureServer/0",
   "source_layer": "Trinity County Parcel_Service FeatureServer/0 (tcrcd.gis_TC)",
@@ -55,7 +55,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/trinity-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/trinity-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/trinity-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/trinity-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/trinity-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/trinity-ca"
   },
   "metrics": {
     "feature_count": 16620,
@@ -64,12 +66,12 @@
     "shard_count": 186
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:55:29Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/trinity-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/trinity-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -113,7 +115,17 @@
       "at": "2026-09-25T02:00:37Z",
       "action": "normalize_shards_complete",
       "detail": "features=16620 shards=186 max_shard_bytes=1895402 index_sha256=72ec4a594e3761288ee3583eb3498ad6c40fedb0efe35926e9a84fe3d8f9122f dir=/workspace/parcel-staging/scratch/trinity-ca/normalized sum_counts=16620 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/trinity-ca/ (id-only strip; NOT license-cleared; no S3). features=16620 shards=186"
+    },
+    {
+      "at": "2026-10-05T20:55:29Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/trinity-ca/; CF invalidation I4J7LBB478YKRAEF561O628531 on EQJBJ6X237VQF paths /reference/parcels/trinity-ca/* and /reference/parcels/trinity-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Trinity CA Parcel_Service. Stripped STREET_*/COMMUNITY/ZIP/OLD_ADDRESS/POST_OFFICE. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Trinity CA Parcel_Service. Stripped STREET_*/COMMUNITY/ZIP/OLD_ADDRESS/POST_OFFICE. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/trinity-ca/ with CloudFront invalidation I4J7LBB478YKRAEF561O628531."
 }

@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Spokane",
   "portfolio_sites": 2033,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services1.arcgis.com/ozNll27nt9ZtPWOn/arcgis/rest/services/Parcels/FeatureServer/0",
   "source_layer": "Spokane County Parcels FeatureServer/0 (open data catalog)",
@@ -56,7 +56,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/spokane-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/spokane-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/spokane-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/spokane-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/spokane-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/spokane-wa"
   },
   "metrics": {
     "feature_count": 214531,
@@ -65,12 +67,12 @@
     "shard_count": 247
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:54:56Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/spokane-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/spokane-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -114,7 +116,17 @@
       "at": "2026-09-24T21:07:23Z",
       "action": "normalize_shards_complete",
       "detail": "features=214531 shards=247 max_shard_bytes=3998810 index_sha256=b35517523a24c6a0b178e04bd914cf3c646c0c5f623ef156a9b6c8202cbd124d dir=/workspace/parcel-staging/scratch/spokane-wa/normalized sum_counts=214531 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/spokane-wa/ (id-only strip; NOT license-cleared; no S3). features=214531 shards=247"
+    },
+    {
+      "at": "2026-10-05T20:54:56Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/spokane-wa/; CF invalidation I1NVID4D9MT4XIQRVEVNRQ2KFC on EQJBJ6X237VQF paths /reference/parcels/spokane-wa/* and /reference/parcels/spokane-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: Spokane County open-data parcels (not WA statewide ownership fabric). Stripped site_address/assessed/value/exemption fields. No AWS/CDN/Grant B."
+  "notes": "Wave 2: Spokane County open-data parcels (not WA statewide ownership fabric). Stripped site_address/assessed/value/exemption fields. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/spokane-wa/ with CloudFront invalidation I1NVID4D9MT4XIQRVEVNRQ2KFC."
 }

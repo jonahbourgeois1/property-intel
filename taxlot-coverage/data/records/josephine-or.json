@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Josephine",
   "portfolio_sites": 91,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.co.josephine.or.us/arcgis/rest/services/Assessor/Assessor_Taxlots/FeatureServer/0",
   "source_layer": "Assessor/Assessor_Taxlots FeatureServer/0",
@@ -45,7 +45,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/josephine-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/josephine-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/josephine-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/josephine-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/josephine-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/josephine-or"
   },
   "metrics": {
     "feature_count": 41992,
@@ -54,16 +56,16 @@
     "shard_count": 99
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/josephine/index.json",
-    "s3_prefix": "s3://property-intel-tiles/reference/parcels/josephine/"
+    "published_at": "2026-10-05T20:48:32Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/josephine-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/josephine-or/"
   },
   "cadence_days": 90,
   "next_check": null,
-  "notes": "Viewer tiles exist; pipeline-gap pending license + Grant B.",
+  "notes": "Viewer tiles exist; pipeline-gap pending license + Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/josephine-or/ with CloudFront invalidation I7A2DJK0GAYDIV8C6NIFOJ6O6L.",
   "retrieval_log": [
     {
       "at": "2026-09-24T18:29:32Z",
@@ -119,6 +121,16 @@
       "at": "2026-09-24T20:11:15Z",
       "action": "normalize_shards_complete",
       "detail": "features=41992 shards=99 max_shard_bytes=2989461 index_sha256=c0c3126d589f93fed6bc97cf99e40291c63298606f65872c729a3d2141a3006b dir=/workspace/parcel-staging/scratch/josephine-or/normalized sum_counts=41992 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/josephine-or/ (id-only strip; NOT license-cleared; no S3). features=41992 shards=99"
+    },
+    {
+      "at": "2026-10-05T20:48:32Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/josephine-or/; CF invalidation I7A2DJK0GAYDIV8C6NIFOJ6O6L on EQJBJ6X237VQF paths /reference/parcels/josephine-or/* and /reference/parcels/josephine-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ]
 }

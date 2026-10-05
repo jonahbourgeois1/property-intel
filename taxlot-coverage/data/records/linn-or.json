@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Linn",
   "portfolio_sites": 608,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": "2026-09-18",
   "source_url": "https://gis.co.linn.or.us/arcgis/rest/services/AssessmentTax/pub_taxlots_web/MapServer/0",
   "source_layer": "AssessmentTax/pub_taxlots_web MapServer layer 0 (Tax Lots)",
@@ -45,7 +45,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/linn-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/linn-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/linn-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/linn-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/linn-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/linn-or"
   },
   "metrics": {
     "feature_count": 54598,
@@ -54,16 +56,16 @@
     "shard_count": 148
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/linn/index.json",
-    "s3_prefix": "s3://property-intel-tiles/reference/parcels/linn/"
+    "published_at": "2026-10-05T20:50:12Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/linn-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/linn-or/"
   },
   "cadence_days": 90,
   "next_check": null,
-  "notes": "Viewer tiles exist; pipeline-gap for shards until Grant B AND license clearance.",
+  "notes": "Viewer tiles exist; pipeline-gap for shards until Grant B AND license clearance. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/linn-or/ with CloudFront invalidation I4O7ZT0N5TGN9RT2HSOJGIIO0W.",
   "retrieval_log": [
     {
       "at": "2026-09-24T18:29:32Z",
@@ -119,6 +121,16 @@
       "at": "2026-09-24T20:11:10Z",
       "action": "normalize_shards_complete",
       "detail": "features=54598 shards=148 max_shard_bytes=1877058 index_sha256=6dfd71f3cf1aac5f9d0efad0663e6db4d15c81c2522e0049122138a9342286aa dir=/workspace/parcel-staging/scratch/linn-or/normalized sum_counts=54598 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/linn-or/ (id-only strip; NOT license-cleared; no S3). features=54598 shards=148"
+    },
+    {
+      "at": "2026-10-05T20:50:12Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/linn-or/; CF invalidation I4O7ZT0N5TGN9RT2HSOJGIIO0W on EQJBJ6X237VQF paths /reference/parcels/linn-or/* and /reference/parcels/linn-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ]
 }

@@ -3,7 +3,7 @@
   "state": "AZ",
   "county": "Cochise",
   "portfolio_sites": 11,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services6.arcgis.com/Yxem0VOcqSy8T6TE/arcgis/rest/services/Cad_Parcel_Geometry/FeatureServer/0",
   "source_layer": "Cochise Cad_Parcel_Geometry FeatureServer/0 (lean APN geometry)",
@@ -47,7 +47,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/cochise-az/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/cochise-az/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/cochise-az/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/cochise-az/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/cochise-az/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/cochise-az"
   },
   "metrics": {
     "feature_count": 124879,
@@ -56,12 +58,12 @@
     "shard_count": 277
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:45:30Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/cochise-az/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/cochise-az/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -105,7 +107,17 @@
       "at": "2026-09-25T01:51:31Z",
       "action": "normalize_shards_complete",
       "detail": "features=124879 shards=277 max_shard_bytes=3964280 index_sha256=80a3e53f8e367e87fce9244618460f29b4abd7d755afa36eff0a071ec9382ad5 dir=/workspace/parcel-staging/scratch/cochise-az/normalized sum_counts=124879 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/cochise-az/ (id-only strip; NOT license-cleared; no S3). features=124879 shards=277"
+    },
+    {
+      "at": "2026-10-05T20:45:30Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/cochise-az/; CF invalidation IDC69S5Z7OQHFFYLJPVVQ43C76 on EQJBJ6X237VQF paths /reference/parcels/cochise-az/* and /reference/parcels/cochise-az/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Cochise AZ Cad_Parcel_Geometry (not TaxLien subset). Cad_Parcel_TaxInfo has owner/situs/value \u2014 not used. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Cochise AZ Cad_Parcel_Geometry (not TaxLien subset). Cad_Parcel_TaxInfo has owner/situs/value \u2014 not used. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/cochise-az/ with CloudFront invalidation IDC69S5Z7OQHFFYLJPVVQ43C76."
 }

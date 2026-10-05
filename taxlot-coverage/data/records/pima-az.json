@@ -3,7 +3,7 @@
   "state": "AZ",
   "county": "Pima",
   "portfolio_sites": 837,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13",
   "source_layer": "Pima GISOpenData LandRecords MapServer/13 Parcels - Regional (Tax Code Only)",
@@ -52,7 +52,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/pima-az/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/pima-az/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/pima-az/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/pima-az/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/pima-az/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/pima-az"
   },
   "metrics": {
     "feature_count": 448363,
@@ -61,12 +63,12 @@
     "shard_count": 430
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:52:22Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/pima-az/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/pima-az/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -125,7 +127,17 @@
       "at": "2026-09-24T22:08:06Z",
       "action": "staging_download_start",
       "detail": "Research-only staging from https://gisdata.pima.gov/arcgis1/rest/services/GISOpenData/LandRecords/MapServer/13; where='1=1'; outFields=OBJECTID,PARCEL,AREA,BK,MP,PCL,PCL_R,BK_MP,X_HPGN,Y_HPGN,LON,LAT; outSR=4326; no AWS/CDN/Grant B."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/pima-az/ (id-only strip; NOT license-cleared; no S3). features=448363 shards=430"
+    },
+    {
+      "at": "2026-10-05T20:52:22Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/pima-az/; CF invalidation IEVBGXUEMOEIOY16RIYJ9XJSXU on EQJBJ6X237VQF paths /reference/parcels/pima-az/* and /reference/parcels/pima-az/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: Pima regional tax-code parcels (layer 13 preferred over layer 12 which carries MAIL*/FCV). No AWS/CDN/Grant B."
+  "notes": "Wave 2: Pima regional tax-code parcels (layer 13 preferred over layer 12 which carries MAIL*/FCV). No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/pima-az/ with CloudFront invalidation IEVBGXUEMOEIOY16RIYJ9XJSXU."
 }

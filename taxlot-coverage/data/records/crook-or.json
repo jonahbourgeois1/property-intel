@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Crook",
   "portfolio_sites": 84,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.crookcountyor.gov/server/rest/services/OpenData/TaxlotandTables/MapServer/0",
   "source_layer": "OpenData/TaxlotandTables MapServer/0 Taxlots",
@@ -46,7 +46,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/crook-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/crook-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/crook-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/crook-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/crook-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/crook-or"
   },
   "metrics": {
     "feature_count": 17596,
@@ -55,12 +57,12 @@
     "shard_count": 175
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:45:49Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/crook-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/crook-or/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -99,7 +101,17 @@
       "at": "2026-09-24T20:56:37Z",
       "action": "normalize_shards_complete",
       "detail": "features=17596 shards=175 max_shard_bytes=3008846 index_sha256=ac8a66739f727be54da7b5f437fa9b90193491b18a389e5085f0ef07f0b1f80f dir=/workspace/parcel-staging/scratch/crook-or/normalized sum_counts=17596 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/crook-or/ (id-only strip; NOT license-cleared; no S3). features=17596 shards=175"
+    },
+    {
+      "at": "2026-10-05T20:45:49Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/crook-or/; CF invalidation I1DCSO95EKJETWY7UCFB6EU9PH on EQJBJ6X237VQF paths /reference/parcels/crook-or/* and /reference/parcels/crook-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B."
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/crook-or/ with CloudFront invalidation I1DCSO95EKJETWY7UCFB6EU9PH."
 }

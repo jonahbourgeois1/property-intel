@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "San Miguel",
   "portfolio_sites": 996,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
   "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='San Miguel'",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/san-miguel-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/san-miguel-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/san-miguel-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/san-miguel-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/san-miguel-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/san-miguel-co"
   },
   "metrics": {
     "feature_count": 10732,
@@ -66,12 +68,12 @@
     "shard_count": 72
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:54:10Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/san-miguel-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/san-miguel-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-24T21:21:52Z",
       "action": "normalize_shards_complete",
       "detail": "features=10732 shards=72 max_shard_bytes=3776436 index_sha256=43bee9828eca0c7e0de0329ad7423f4c8780beb67736d91bd2df30fc1f59e690 dir=/workspace/parcel-staging/scratch/san-miguel-co/normalized sum_counts=10732 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/san-miguel-co/ (id-only strip; NOT license-cleared; no S3). features=10732 shards=72"
+    },
+    {
+      "at": "2026-10-05T20:54:10Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/san-miguel-co/; CF invalidation I7B6COD90VSQ92L0JU1VUVA4AB on EQJBJ6X237VQF paths /reference/parcels/san-miguel-co/* and /reference/parcels/san-miguel-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: CO statewide public parcel fabric filtered to San Miguel County. No AWS/CDN/Grant B."
+  "notes": "Wave 2: CO statewide public parcel fabric filtered to San Miguel County. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/san-miguel-co/ with CloudFront invalidation I7B6COD90VSQ92L0JU1VUVA4AB."
 }

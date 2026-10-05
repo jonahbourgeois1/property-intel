@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "San Bernardino",
   "portfolio_sites": 1695,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services.arcgis.com/aA3snZwJfFkVyDuP/arcgis/rest/services/Parcels_for_San_Bernardino_County/FeatureServer/0",
   "source_layer": "Parcels_for_San_Bernardino_County FeatureServer/0",
@@ -53,7 +53,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/san-bernardino-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/san-bernardino-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/san-bernardino-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/san-bernardino-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/san-bernardino-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/san-bernardino-ca"
   },
   "metrics": {
     "feature_count": 840119,
@@ -62,12 +64,12 @@
     "shard_count": 1113
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:53:29Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/san-bernardino-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/san-bernardino-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -126,7 +128,17 @@
       "at": "2026-09-24T21:49:17Z",
       "action": "normalize_shards_complete",
       "detail": "features=840119 shards=1113 max_shard_bytes=3886887 index_sha256=bdf468369c446d6e182dcf4ab55d3f0ae66aac12d6c52e6cdb1b523c9e371593 dir=/workspace/parcel-staging/scratch/san-bernardino-ca/normalized sum_counts=840119 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/san-bernardino-ca/ (id-only strip; NOT license-cleared; no S3). features=840119 shards=1113"
+    },
+    {
+      "at": "2026-10-05T20:53:29Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/san-bernardino-ca/; CF invalidation IENMQKJ8Q7KT0HRAV4UFMS1P5J on EQJBJ6X237VQF paths /reference/parcels/san-bernardino-ca/* and /reference/parcels/san-bernardino-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: SBC parcels; stripped OwnerName/LandValue/ImprovementValue/Exemption*. No AWS/CDN/Grant B."
+  "notes": "Wave 2: SBC parcels; stripped OwnerName/LandValue/ImprovementValue/Exemption*. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/san-bernardino-ca/ with CloudFront invalidation IENMQKJ8Q7KT0HRAV4UFMS1P5J."
 }

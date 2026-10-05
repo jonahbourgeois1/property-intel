@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Butte",
   "portfolio_sites": 558,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gisportal.buttecounty.net/arcgis/rest/services/Parcels/FeatureServer/0",
   "source_layer": "Butte County Parcels FeatureServer/0 Base_Parcels",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/butte-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/butte-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/butte-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/butte-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/butte-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/butte-ca"
   },
   "metrics": {
     "feature_count": 96236,
@@ -66,12 +68,12 @@
     "shard_count": 127
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:45:02Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/butte-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/butte-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-24T21:23:55Z",
       "action": "normalize_shards_complete",
       "detail": "features=96236 shards=127 max_shard_bytes=3644354 index_sha256=539b249242e9925f463df5d4a3af38d7c52eac8e1120261da4eac38d7c20888a dir=/workspace/parcel-staging/scratch/butte-ca/normalized sum_counts=96236 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/butte-ca/ (id-only strip; NOT license-cleared; no S3). features=96236 shards=127"
+    },
+    {
+      "at": "2026-10-05T20:45:02Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/butte-ca/; CF invalidation I12YMZ7I2LSRX43UFJ30GDH4TG on EQJBJ6X237VQF paths /reference/parcels/butte-ca/* and /reference/parcels/butte-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: Butte CA Base_Parcels; stripped Owner/Own2/Care_Of/mailing/situs/Land_Vl/Impr_Vl/Hmewnr_Exe. No AWS/CDN/Grant B."
+  "notes": "Wave 2: Butte CA Base_Parcels; stripped Owner/Own2/Care_Of/mailing/situs/Land_Vl/Impr_Vl/Hmewnr_Exe. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/butte-ca/ with CloudFront invalidation I12YMZ7I2LSRX43UFJ30GDH4TG."
 }

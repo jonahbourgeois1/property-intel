@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "Eagle",
   "portfolio_sites": 209,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
   "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Eagle'",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/eagle-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/eagle-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/eagle-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/eagle-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/eagle-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/eagle-co"
   },
   "metrics": {
     "feature_count": 25064,
@@ -66,12 +68,12 @@
     "shard_count": 85
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:46:32Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/eagle-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/eagle-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-24T22:53:43Z",
       "action": "normalize_shards_complete",
       "detail": "features=25064 shards=85 max_shard_bytes=2447180 index_sha256=f0c09db7166a08ae8d27b49b92b47b257be4df0a0b15cf577e1b54d4d17dd921 dir=/workspace/parcel-staging/scratch/eagle-co/normalized sum_counts=25064 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/eagle-co/ (id-only strip; NOT license-cleared; no S3). features=25064 shards=85"
+    },
+    {
+      "at": "2026-10-05T20:46:32Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/eagle-co/; CF invalidation I9GAEK9KB2KOUSIT151GCL1F7 on EQJBJ6X237VQF paths /reference/parcels/eagle-co/* and /reference/parcels/eagle-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: CO statewide public parcel fabric filtered to Eagle County (eagle-co). Owner/situs/value stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3: CO statewide public parcel fabric filtered to Eagle County (eagle-co). Owner/situs/value stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/eagle-co/ with CloudFront invalidation I9GAEK9KB2KOUSIT151GCL1F7."
 }

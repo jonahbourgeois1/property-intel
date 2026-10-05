@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Multnomah",
   "portfolio_sites": 185,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": "2026-02-06",
   "source_url": "https://services2.arcgis.com/McQ0OlIABe29rJJy/arcgis/rest/services/Taxlots_(Public)/FeatureServer/3",
   "source_layer": "Metro RLIS Taxlots (Public) FeatureServer/3 where COUNTY='M' (Multnomah)",
@@ -51,7 +51,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/multnomah-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/multnomah-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/multnomah-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/multnomah-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/multnomah-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/multnomah-or"
   },
   "metrics": {
     "feature_count": 283139,
@@ -60,12 +62,12 @@
     "shard_count": 116
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:51:29Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/multnomah-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/multnomah-or/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -104,7 +106,17 @@
       "at": "2026-09-24T20:57:01Z",
       "action": "normalize_shards_complete",
       "detail": "features=283139 shards=116 max_shard_bytes=3969726 index_sha256=e38e5c1d236e1b3be8ed461741eb5c5a02f12b06f886cd72637a0e25bbe1bb85 dir=/workspace/parcel-staging/scratch/multnomah-or/normalized sum_counts=283139 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/multnomah-or/ (id-only strip; NOT license-cleared; no S3). features=283139 shards=116"
+    },
+    {
+      "at": "2026-10-05T20:51:29Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/multnomah-or/; CF invalidation I2SCN91BGE3GTORIMR13ZHU1A8 on EQJBJ6X237VQF paths /reference/parcels/multnomah-or/* and /reference/parcels/multnomah-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 1: Metro RLIS used as county source for Multnomah only (not statewide fabric). No AWS/CDN/Grant B."
+  "notes": "Wave 1: Metro RLIS used as county source for Multnomah only (not statewide fabric). No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/multnomah-or/ with CloudFront invalidation I2SCN91BGE3GTORIMR13ZHU1A8."
 }

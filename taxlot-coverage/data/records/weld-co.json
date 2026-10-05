@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "Weld",
   "portfolio_sites": 12,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
   "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Weld'",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/weld-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/weld-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/weld-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/weld-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/weld-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/weld-co"
   },
   "metrics": {
     "feature_count": 163491,
@@ -66,12 +68,12 @@
     "shard_count": 270
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:56:03Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/weld-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/weld-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-25T01:47:45Z",
       "action": "normalize_shards_complete",
       "detail": "features=163491 shards=270 max_shard_bytes=3960325 index_sha256=3ff460a95cc32587355e7e47a932915d6465f52921c52df071e3bb506f3fe244 dir=/workspace/parcel-staging/scratch/weld-co/normalized sum_counts=163491 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/weld-co/ (id-only strip; NOT license-cleared; no S3). features=163491 shards=270"
+    },
+    {
+      "at": "2026-10-05T20:56:03Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/weld-co/; CF invalidation IT5VFAU94QBLA9C3IE1GJY3AY on EQJBJ6X237VQF paths /reference/parcels/weld-co/* and /reference/parcels/weld-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: CO statewide public parcel fabric filtered to Weld County (weld-co). Owner/situs/value stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: CO statewide public parcel fabric filtered to Weld County (weld-co). Owner/situs/value stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/weld-co/ with CloudFront invalidation IT5VFAU94QBLA9C3IE1GJY3AY."
 }

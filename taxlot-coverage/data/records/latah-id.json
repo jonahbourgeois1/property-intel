@@ -3,7 +3,7 @@
   "state": "ID",
   "county": "Latah",
   "portfolio_sites": 7,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.idwr.idaho.gov/hosting/rest/services/Reference/Parcels/FeatureServer/0",
   "source_layer": "IDWR Reference/Parcels FeatureServer/0 where COUNTY='Latah'",
@@ -45,7 +45,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/latah-id/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/latah-id/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/latah-id/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/latah-id/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/latah-id/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/latah-id"
   },
   "metrics": {
     "feature_count": 21259,
@@ -54,12 +56,12 @@
     "shard_count": 78
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:49:50Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/latah-id/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/latah-id/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -103,7 +105,17 @@
       "at": "2026-09-25T02:04:45Z",
       "action": "normalize_shards_complete",
       "detail": "features=21259 shards=78 max_shard_bytes=1972764 index_sha256=97ebd743c57a43003849ca28b11de98b19c22e1a9f05734ca1fe49f186c312fb dir=/workspace/parcel-staging/scratch/latah-id/normalized sum_counts=21259 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/latah-id/ (id-only strip; NOT license-cleared; no S3). features=21259 shards=78"
+    },
+    {
+      "at": "2026-10-05T20:49:50Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/latah-id/; CF invalidation IEK6S8XCIBI4DS905HERDUDHUP on EQJBJ6X237VQF paths /reference/parcels/latah-id/* and /reference/parcels/latah-id/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Idaho statewide IDWR parcels filtered to Latah County (latah-id). OWNER stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Idaho statewide IDWR parcels filtered to Latah County (latah-id). OWNER stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/latah-id/ with CloudFront invalidation IEK6S8XCIBI4DS905HERDUDHUP."
 }

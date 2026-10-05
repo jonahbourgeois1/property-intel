@@ -3,7 +3,7 @@
   "state": "HI",
   "county": "Maui",
   "portfolio_sites": 1363,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": "2026-04-15",
   "source_url": "https://geodata.hawaii.gov/arcgis/rest/services/ParcelsZoning/MapServer/25",
   "source_layer": "Hawaii Statewide TMKs MapServer/25 where county='Maui'",
@@ -54,7 +54,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/maui-hi/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/maui-hi/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/maui-hi/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/maui-hi/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/maui-hi/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/maui-hi"
   },
   "metrics": {
     "feature_count": 51245,
@@ -63,12 +65,12 @@
     "shard_count": 73
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:51:10Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/maui-hi/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/maui-hi/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -112,7 +114,17 @@
       "at": "2026-09-24T21:18:00Z",
       "action": "normalize_shards_complete",
       "detail": "features=51245 shards=73 max_shard_bytes=2864409 index_sha256=d4265e7219350f328030abbdcd04f141186ba9caa28309f687fb634f6fa91087 dir=/workspace/parcel-staging/scratch/maui-hi/normalized sum_counts=51245 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/maui-hi/ (id-only strip; NOT license-cleared; no S3). features=51245 shards=73"
+    },
+    {
+      "at": "2026-10-05T20:51:10Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/maui-hi/; CF invalidation I3234X74Q8S7RCEK9LDM0MFI1Y on EQJBJ6X237VQF paths /reference/parcels/maui-hi/* and /reference/parcels/maui-hi/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: Hawaii statewide TMK fabric filtered to Maui County. Not scraped map. No AWS/CDN/Grant B."
+  "notes": "Wave 2: Hawaii statewide TMK fabric filtered to Maui County. Not scraped map. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/maui-hi/ with CloudFront invalidation I3234X74Q8S7RCEK9LDM0MFI1Y."
 }

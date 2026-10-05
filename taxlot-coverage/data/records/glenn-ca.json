@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Glenn",
   "portfolio_sites": 70,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Glenn_County/FeatureServer/0",
   "source_layer": "Glenn_County FeatureServer/0 Glenn_County_ExportFeatures1",
@@ -52,7 +52,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/glenn-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/glenn-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/glenn-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/glenn-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/glenn-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/glenn-ca"
   },
   "metrics": {
     "feature_count": 15167,
@@ -61,12 +63,12 @@
     "shard_count": 80
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:47:04Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/glenn-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/glenn-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -110,7 +112,17 @@
       "at": "2026-09-24T22:20:42Z",
       "action": "normalize_shards_complete",
       "detail": "features=15167 shards=80 max_shard_bytes=2336553 index_sha256=1bd39a07dc290569d7dd6f44e153a1f2db48a15e614fedabf06ed926d5755456 dir=/workspace/parcel-staging/scratch/glenn-ca/normalized sum_counts=15167 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/glenn-ca/ (id-only strip; NOT license-cleared; no S3). features=15167 shards=80"
+    },
+    {
+      "at": "2026-10-05T20:47:04Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/glenn-ca/; CF invalidation IA1SNYGGDNHKR9JP08O5BA6TA1 on EQJBJ6X237VQF paths /reference/parcels/glenn-ca/* and /reference/parcels/glenn-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: Glenn CA parcels AGOL export. Stripped HOUSE_NUM/PREFIX_DIR/ST_*/FULL_ADD/City/ZIP_CODE. No AWS/CDN/Grant B."
+  "notes": "Wave 3: Glenn CA parcels AGOL export. Stripped HOUSE_NUM/PREFIX_DIR/ST_*/FULL_ADD/City/ZIP_CODE. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/glenn-ca/ with CloudFront invalidation IA1SNYGGDNHKR9JP08O5BA6TA1."
 }

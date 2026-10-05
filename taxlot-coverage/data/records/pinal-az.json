@@ -3,7 +3,7 @@
   "state": "AZ",
   "county": "Pinal",
   "portfolio_sites": 137,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://azwatermaps.azwater.gov/arcgis/rest/services/General/Parcels_for_TEST/FeatureServer/7",
   "source_layer": "ADWR General/Parcels_for_TEST FeatureServer/7 Pinal_Parcels",
@@ -52,7 +52,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/pinal-az/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/pinal-az/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/pinal-az/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/pinal-az/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/pinal-az/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/pinal-az"
   },
   "metrics": {
     "feature_count": 280169,
@@ -61,12 +63,12 @@
     "shard_count": 304
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:52:30Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/pinal-az/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/pinal-az/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -110,7 +112,17 @@
       "at": "2026-09-24T23:53:05Z",
       "action": "normalize_shards_complete",
       "detail": "features=280169 shards=304 max_shard_bytes=3981055 index_sha256=815aa9b5f97f0f4e74be4c8999d50513a656a4df07f7456fa34a571c85805166 dir=/workspace/parcel-staging/scratch/pinal-az/normalized sum_counts=280169 pct_delta_vs_metrics=0.001% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/pinal-az/ (id-only strip; NOT license-cleared; no S3). features=280169 shards=304"
+    },
+    {
+      "at": "2026-10-05T20:52:30Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/pinal-az/; CF invalidation IEDS3FW2YROAG1TBMQY7X5ROC6 on EQJBJ6X237VQF paths /reference/parcels/pinal-az/* and /reference/parcels/pinal-az/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: Pinal AZ via ADWR Pinal_Parcels (~280k). Casa Grande MapServer (~60k) rejected as incomplete. Stripped SITE_ADDRESS/SITE_CITY/SITE_ZIP/OWNER_NAME. No AWS/CDN/Grant B."
+  "notes": "Wave 3: Pinal AZ via ADWR Pinal_Parcels (~280k). Casa Grande MapServer (~60k) rejected as incomplete. Stripped SITE_ADDRESS/SITE_CITY/SITE_ZIP/OWNER_NAME. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/pinal-az/ with CloudFront invalidation IEDS3FW2YROAG1TBMQY7X5ROC6."
 }

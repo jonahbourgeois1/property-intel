@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "King",
   "portfolio_sites": 135,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='King'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/king-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/king-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/king-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/king-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/king-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/king-wa"
   },
   "metrics": {
     "feature_count": 635192,
@@ -58,12 +60,12 @@
     "shard_count": 495
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:48:44Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/king-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/king-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T00:04:37Z",
       "action": "normalize_shards_complete",
       "detail": "features=635192 shards=495 max_shard_bytes=3934784 index_sha256=0cfcfbadb2c11447b187c6d4f97ac3798a20c69ee26d6ce3dd2e9e12a8ae7966 dir=/workspace/parcel-staging/scratch/king-wa/normalized sum_counts=635192 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/king-wa/ (id-only strip; NOT license-cleared; no S3). features=635192 shards=495"
+    },
+    {
+      "at": "2026-10-05T20:48:44Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/king-wa/; CF invalidation ICGD8KNMN8RJO6OCCQZYKM2N17 on EQJBJ6X237VQF paths /reference/parcels/king-wa/* and /reference/parcels/king-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: WA statewide WDFW parcels filtered to King County (king-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3: WA statewide WDFW parcels filtered to King County (king-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/king-wa/ with CloudFront invalidation ICGD8KNMN8RJO6OCCQZYKM2N17."
 }

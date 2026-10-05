@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Siskiyou",
   "portfolio_sites": 101,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services3.arcgis.com/JmPiYilyU1x5zuxM/arcgis/rest/services/Siskiyou_Parcels_Public/FeatureServer/0",
   "source_layer": "Siskiyou_Parcels_Public FeatureServer/0",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/siskiyou-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/siskiyou-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/siskiyou-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/siskiyou-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/siskiyou-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/siskiyou-ca"
   },
   "metrics": {
     "feature_count": 53720,
@@ -66,12 +68,12 @@
     "shard_count": 347
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:54:30Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/siskiyou-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/siskiyou-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-25T00:06:25Z",
       "action": "normalize_shards_complete",
       "detail": "features=53720 shards=347 max_shard_bytes=2622922 index_sha256=ef03a10f1e3ca5b89c6662d5f88c50723d8f24b7e5d953014cfba3a7295d2b3e dir=/workspace/parcel-staging/scratch/siskiyou-ca/normalized sum_counts=53720 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/siskiyou-ca/ (id-only strip; NOT license-cleared; no S3). features=53720 shards=347"
+    },
+    {
+      "at": "2026-10-05T20:54:30Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/siskiyou-ca/; CF invalidation IBAYND256EBDBHE9QDEXKPQ7TZ on EQJBJ6X237VQF paths /reference/parcels/siskiyou-ca/* and /reference/parcels/siskiyou-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: Siskiyou CA public parcels AGOL. No AWS/CDN/Grant B."
+  "notes": "Wave 3: Siskiyou CA public parcels AGOL. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/siskiyou-ca/ with CloudFront invalidation IBAYND256EBDBHE9QDEXKPQ7TZ."
 }

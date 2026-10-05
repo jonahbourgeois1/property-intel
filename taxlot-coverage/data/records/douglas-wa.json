@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Douglas",
   "portfolio_sites": 4,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Douglas'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/douglas-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/douglas-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/douglas-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/douglas-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/douglas-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/douglas-wa"
   },
   "metrics": {
     "feature_count": 29832,
@@ -58,12 +60,12 @@
     "shard_count": 145
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:46:28Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/douglas-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/douglas-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -112,7 +114,17 @@
       "at": "2026-09-25T02:19:27Z",
       "action": "normalize_shards_complete",
       "detail": "features=29832 shards=145 max_shard_bytes=2461784 index_sha256=a8564a9f02e59e111f1bccc5d0bb246351d727187b31cee6a556d4e4cb059c77 dir=/workspace/parcel-staging/scratch/douglas-wa/normalized sum_counts=29832 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/douglas-wa/ (id-only strip; NOT license-cleared; no S3). features=29832 shards=145"
+    },
+    {
+      "at": "2026-10-05T20:46:28Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/douglas-wa/; CF invalidation IENL9C51W54LGRSK1BFLC2N3B0 on EQJBJ6X237VQF paths /reference/parcels/douglas-wa/* and /reference/parcels/douglas-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Douglas County (douglas-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B."
+  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Douglas County (douglas-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/douglas-wa/ with CloudFront invalidation IENL9C51W54LGRSK1BFLC2N3B0."
 }

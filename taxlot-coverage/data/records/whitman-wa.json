@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Whitman",
   "portfolio_sites": 20,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Whitman'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/whitman-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/whitman-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/whitman-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/whitman-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/whitman-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/whitman-wa"
   },
   "metrics": {
     "feature_count": 34997,
@@ -58,12 +60,12 @@
     "shard_count": 162
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:56:12Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/whitman-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/whitman-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T01:30:15Z",
       "action": "normalize_shards_complete",
       "detail": "features=34997 shards=162 max_shard_bytes=3598483 index_sha256=ec9280dfdce25f885d3595293c56a41b31830f7ba81673fe830fcd38e524936e dir=/workspace/parcel-staging/scratch/whitman-wa/normalized sum_counts=34997 pct_delta_vs_metrics=0.003% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/whitman-wa/ (id-only strip; NOT license-cleared; no S3). features=34997 shards=162"
+    },
+    {
+      "at": "2026-10-05T20:56:12Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/whitman-wa/; CF invalidation I2YO76DVIBASYWHWKJ9IQU2PQJ on EQJBJ6X237VQF paths /reference/parcels/whitman-wa/* and /reference/parcels/whitman-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Whitman County (whitman-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Whitman County (whitman-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/whitman-wa/ with CloudFront invalidation I2YO76DVIBASYWHWKJ9IQU2PQJ."
 }

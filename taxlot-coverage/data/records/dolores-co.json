@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "Dolores",
   "portfolio_sites": 6,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
   "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Dolores'",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/dolores-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/dolores-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/dolores-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/dolores-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/dolores-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/dolores-co"
   },
   "metrics": {
     "feature_count": 4513,
@@ -66,12 +68,12 @@
     "shard_count": 66
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:46:08Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/dolores-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/dolores-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-25T02:11:46Z",
       "action": "normalize_shards_complete",
       "detail": "features=4513 shards=66 max_shard_bytes=551305 index_sha256=1f74b8da4fbfaf00850aaa99ee6fe29521bff389fe36c92e73e6c476eba95c38 dir=/workspace/parcel-staging/scratch/dolores-co/normalized sum_counts=4513 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/dolores-co/ (id-only strip; NOT license-cleared; no S3). features=4513 shards=66"
+    },
+    {
+      "at": "2026-10-05T20:46:08Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/dolores-co/; CF invalidation I3DTJCRETNE78BO1NS9SJXWBB0 on EQJBJ6X237VQF paths /reference/parcels/dolores-co/* and /reference/parcels/dolores-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: CO statewide public parcel fabric filtered to Dolores County (dolores-co). Owner/situs/value stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: CO statewide public parcel fabric filtered to Dolores County (dolores-co). Owner/situs/value stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/dolores-co/ with CloudFront invalidation I3DTJCRETNE78BO1NS9SJXWBB0."
 }

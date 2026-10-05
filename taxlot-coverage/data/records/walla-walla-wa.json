@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Walla Walla",
   "portfolio_sites": 3,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Walla Walla'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/walla-walla-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/walla-walla-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/walla-walla-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/walla-walla-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/walla-walla-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/walla-walla-wa"
   },
   "metrics": {
     "feature_count": 31045,
@@ -58,12 +60,12 @@
     "shard_count": 105
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:55:45Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/walla-walla-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/walla-walla-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -112,7 +114,17 @@
       "at": "2026-09-25T02:20:28Z",
       "action": "normalize_shards_complete",
       "detail": "features=31045 shards=105 max_shard_bytes=2644122 index_sha256=c8f83d52f8b8328c987807829a1b4e0bf16ae7196c43c53dae8b5de92f75d643 dir=/workspace/parcel-staging/scratch/walla-walla-wa/normalized sum_counts=31045 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/walla-walla-wa/ (id-only strip; NOT license-cleared; no S3). features=31045 shards=105"
+    },
+    {
+      "at": "2026-10-05T20:55:45Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/walla-walla-wa/; CF invalidation I5R0L4HC6RATQURJF08N1M9MJ7 on EQJBJ6X237VQF paths /reference/parcels/walla-walla-wa/* and /reference/parcels/walla-walla-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Walla Walla County (walla-walla-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B."
+  "notes": "Wave 4 fabric-deferred: WA statewide WDFW parcels filtered to Walla Walla County (walla-walla-wa). Was deferred-tail; fabric covers. Not ownership fabric; no owner/value fields requested. douglas-wa \u2260 douglas-co/or. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/walla-walla-wa/ with CloudFront invalidation I5R0L4HC6RATQURJF08N1M9MJ7."
 }

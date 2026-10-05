@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Tehama",
   "portfolio_sites": 84,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services2.arcgis.com/3iNbxbY9zhyxPvde/arcgis/rest/services/PublicParcelsAGOL/FeatureServer/0",
   "source_layer": "Tehama PublicParcelsAGOL FeatureServer/0",
@@ -47,7 +47,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/tehama-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/tehama-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/tehama-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/tehama-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/tehama-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/tehama-ca"
   },
   "metrics": {
     "feature_count": 43095,
@@ -56,12 +58,12 @@
     "shard_count": 165
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:55:15Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/tehama-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/tehama-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -105,7 +107,17 @@
       "at": "2026-09-25T00:36:27Z",
       "action": "normalize_shards_complete",
       "detail": "features=43095 shards=165 max_shard_bytes=2727333 index_sha256=4ef8e4b24a0d25a096f6b556a9c7670968ac287f89f0402872aac2907043251f dir=/workspace/parcel-staging/scratch/tehama-ca/normalized sum_counts=43095 pct_delta_vs_metrics=0.002% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/tehama-ca/ (id-only strip; NOT license-cleared; no S3). features=43095 shards=165"
+    },
+    {
+      "at": "2026-10-05T20:55:15Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/tehama-ca/; CF invalidation ITUUFVOKKNJUWIRIXEJFNST2 on EQJBJ6X237VQF paths /reference/parcels/tehama-ca/* and /reference/parcels/tehama-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: Tehama CA PublicParcelsAGOL; stripped Situs1_1/Situs2_1. Shapefile alt: https://tehamartpa.org/wp-content/uploads/2026/02/Tehama-CountyParcels-November-2025.zip. No AWS/CDN/Grant B."
+  "notes": "Wave 3: Tehama CA PublicParcelsAGOL; stripped Situs1_1/Situs2_1. Shapefile alt: https://tehamartpa.org/wp-content/uploads/2026/02/Tehama-CountyParcels-November-2025.zip. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/tehama-ca/ with CloudFront invalidation ITUUFVOKKNJUWIRIXEJFNST2."
 }

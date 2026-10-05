@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "Montrose",
   "portfolio_sites": 22,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://mcmap.montrosecounty.net/server/rest/services/MontroseCounty/FeatureServer/47",
   "source_layer": "MontroseCounty FeatureServer/47 Parcel Line (not on CO statewide fabric)",
@@ -52,7 +52,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/montrose-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/montrose-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/montrose-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/montrose-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/montrose-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/montrose-co"
   },
   "metrics": {
     "feature_count": 29208,
@@ -61,12 +63,12 @@
     "shard_count": 109
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:51:24Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/montrose-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/montrose-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -110,7 +112,17 @@
       "at": "2026-09-25T01:29:40Z",
       "action": "normalize_shards_complete",
       "detail": "features=29208 shards=109 max_shard_bytes=3554004 index_sha256=57e52585bc9d3dd625bb65af4f82406aa0da487488acbc325e790309f79801d0 dir=/workspace/parcel-staging/scratch/montrose-co/normalized sum_counts=29208 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/montrose-co/ (id-only strip; NOT license-cleared; no S3). features=29208 shards=109"
+    },
+    {
+      "at": "2026-10-05T20:51:24Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/montrose-co/; CF invalidation I8HQK92NHYYJRK4FTYZQCWJUIF on EQJBJ6X237VQF paths /reference/parcels/montrose-co/* and /reference/parcels/montrose-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Montrose CO county FeatureServer/47 (not in Colorado_Public_Parcels). Stripped name/address/careof/full_add. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Montrose CO county FeatureServer/47 (not in Colorado_Public_Parcels). Stripped name/address/careof/full_add. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/montrose-co/ with CloudFront invalidation I8HQK92NHYYJRK4FTYZQCWJUIF."
 }

@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "Rio Blanco",
   "portfolio_sites": 12,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://gis.colorado.gov/public/rest/services/Address_and_Parcel/Colorado_Public_Parcels/FeatureServer/0",
   "source_layer": "Colorado_Public_Parcels FeatureServer/0 where countyName='Rio Blanco'",
@@ -57,7 +57,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/rio-blanco-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/rio-blanco-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/rio-blanco-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/rio-blanco-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/rio-blanco-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/rio-blanco-co"
   },
   "metrics": {
     "feature_count": 5103,
@@ -66,12 +68,12 @@
     "shard_count": 146
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:52:48Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/rio-blanco-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/rio-blanco-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -115,7 +117,17 @@
       "at": "2026-09-25T01:47:54Z",
       "action": "normalize_shards_complete",
       "detail": "features=5103 shards=146 max_shard_bytes=788389 index_sha256=57d7ca25bd7eb896040f32440044fcc29abde809778bcb54bd95a7b4fe00cfa0 dir=/workspace/parcel-staging/scratch/rio-blanco-co/normalized sum_counts=5103 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/rio-blanco-co/ (id-only strip; NOT license-cleared; no S3). features=5103 shards=146"
+    },
+    {
+      "at": "2026-10-05T20:52:48Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/rio-blanco-co/; CF invalidation I37CHWWWSQOOTX48FQYQOS2ZIT on EQJBJ6X237VQF paths /reference/parcels/rio-blanco-co/* and /reference/parcels/rio-blanco-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: CO statewide public parcel fabric filtered to Rio Blanco County (rio-blanco-co). Owner/situs/value stripped. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: CO statewide public parcel fabric filtered to Rio Blanco County (rio-blanco-co). Owner/situs/value stripped. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/rio-blanco-co/ with CloudFront invalidation I37CHWWWSQOOTX48FQYQOS2ZIT."
 }

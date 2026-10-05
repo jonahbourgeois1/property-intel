@@ -3,7 +3,7 @@
   "state": "OR",
   "county": "Umatilla",
   "portfolio_sites": 1,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services3.arcgis.com/pi8Rll0S1Iwgkq8o/arcgis/rest/services/Tax_Lot_04_30_2024/FeatureServer/4",
   "source_layer": "Pendleton Tax_Lot_04_30_2024 FeatureServer/4 (best available; may be city-centric)",
@@ -47,7 +47,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/umatilla-or/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/umatilla-or/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/umatilla-or/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/umatilla-or/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/umatilla-or/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/umatilla-or"
   },
   "metrics": {
     "feature_count": 44217,
@@ -56,12 +58,12 @@
     "shard_count": 195
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:55:35Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/umatilla-or/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/umatilla-or/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -100,7 +102,17 @@
       "at": "2026-09-24T20:59:20Z",
       "action": "normalize_shards_complete",
       "detail": "features=44217 shards=195 max_shard_bytes=3543080 index_sha256=798c7c2fd7309e34eee77ce858c0312aa6eefd735e4e6aa934ad7f6e042449b9 dir=/workspace/parcel-staging/scratch/umatilla-or/normalized sum_counts=44217 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/umatilla-or/ (id-only strip; NOT license-cleared; no S3). features=44217 shards=195"
+    },
+    {
+      "at": "2026-10-05T20:55:35Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/umatilla-or/; CF invalidation IC1XZSMNMZWD6JYTOQTQMPHRLI on EQJBJ6X237VQF paths /reference/parcels/umatilla-or/* and /reference/parcels/umatilla-or/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. No countywide Umatilla FeatureServer found; Pendleton-published taxlot layer used as interim."
+  "notes": "Wave 1: county/partner portal fallback (statewide fabric unavailable for this county). No AWS/CDN/Grant B. No countywide Umatilla FeatureServer found; Pendleton-published taxlot layer used as interim. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/umatilla-or/ with CloudFront invalidation IC1XZSMNMZWD6JYTOQTQMPHRLI."
 }

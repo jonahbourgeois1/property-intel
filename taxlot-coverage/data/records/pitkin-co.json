@@ -3,7 +3,7 @@
   "state": "CO",
   "county": "Pitkin",
   "portfolio_sites": 855,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://maps.pitkincounty.com/arcgis/rest/services/Hosted/Parcel_Boundary_Basic_Info/MapServer/1",
   "source_layer": "Pitkin County Parcel_Boundary_Basic_Info MapServer/1",
@@ -44,7 +44,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/pitkin-co/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/pitkin-co/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/pitkin-co/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/pitkin-co/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/pitkin-co/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/pitkin-co"
   },
   "metrics": {
     "feature_count": 19219,
@@ -53,12 +55,12 @@
     "shard_count": 45
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:52:33Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/pitkin-co/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/pitkin-co/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -102,7 +104,17 @@
       "at": "2026-09-24T21:22:12Z",
       "action": "normalize_shards_complete",
       "detail": "features=19219 shards=45 max_shard_bytes=3570056 index_sha256=3326bd8445f2bfbc6121115d12f99a5a199d4f3592cc018a3579b22ea4150894 dir=/workspace/parcel-staging/scratch/pitkin-co/normalized sum_counts=19219 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/pitkin-co/ (id-only strip; NOT license-cleared; no S3). features=19219 shards=45"
+    },
+    {
+      "at": "2026-10-05T20:52:33Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/pitkin-co/; CF invalidation I7K7NP9M85R7DTS0CL4RSZZINY on EQJBJ6X237VQF paths /reference/parcels/pitkin-co/* and /reference/parcels/pitkin-co/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 2: Pitkin County parcel boundary layer (owner_name omitted). No AWS/CDN/Grant B."
+  "notes": "Wave 2: Pitkin County parcel boundary layer (owner_name omitted). No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/pitkin-co/ with CloudFront invalidation I7K7NP9M85R7DTS0CL4RSZZINY."
 }

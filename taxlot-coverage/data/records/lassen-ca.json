@@ -3,7 +3,7 @@
   "state": "CA",
   "county": "Lassen",
   "portfolio_sites": 9,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://services.arcgis.com/q3Zg9ERurv23iysr/arcgis/rest/services/Lassen_Parcel_Final_Schema1/FeatureServer/0",
   "source_layer": "Lassen_Parcel_Final_Schema1 FeatureServer/0 (planning-enriched export)",
@@ -54,7 +54,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/lassen-ca/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/lassen-ca/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/lassen-ca/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/lassen-ca/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/lassen-ca/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/lassen-ca"
   },
   "metrics": {
     "feature_count": 47354,
@@ -63,12 +65,12 @@
     "shard_count": 265
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:49:46Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/lassen-ca/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/lassen-ca/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -112,7 +114,17 @@
       "at": "2026-09-25T01:56:47Z",
       "action": "normalize_shards_complete",
       "detail": "features=47354 shards=265 max_shard_bytes=3998584 index_sha256=548719b6a08244d43243d635c3261573dfa46c03a57f088f14eb0ce9b2db7d3f dir=/workspace/parcel-staging/scratch/lassen-ca/normalized sum_counts=47354 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/lassen-ca/ (id-only strip; NOT license-cleared; no S3). features=47354 shards=265"
+    },
+    {
+      "at": "2026-10-05T20:49:46Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/lassen-ca/; CF invalidation IEZJ6AG5FQVKAKTMW2G3J04L0 on EQJBJ6X237VQF paths /reference/parcels/lassen-ca/* and /reference/parcels/lassen-ca/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: Lassen CA Lassen_Parcel_Final_Schema1. Stripped HOUSE_NUM/ST_*/FULL_ADD/CITY/ZIP/OWNERSHIP/LAND_VAL/TAX. CalAgPermits Lassen/Parcels requires token. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: Lassen CA Lassen_Parcel_Final_Schema1. Stripped HOUSE_NUM/ST_*/FULL_ADD/CITY/ZIP/OWNERSHIP/LAND_VAL/TAX. CalAgPermits Lassen/Parcels requires token. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/lassen-ca/ with CloudFront invalidation IEZJ6AG5FQVKAKTMW2G3J04L0."
 }

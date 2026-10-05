@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Benton",
   "portfolio_sites": 24,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Benton'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/benton-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/benton-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/benton-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/benton-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/benton-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/benton-wa"
   },
   "metrics": {
     "feature_count": 79508,
@@ -58,12 +60,12 @@
     "shard_count": 155
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:44:38Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/benton-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/benton-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T01:08:58Z",
       "action": "normalize_shards_complete",
       "detail": "features=79508 shards=155 max_shard_bytes=3819200 index_sha256=99bdacbeb6913222e7d81bfbcc5887084a57ef4f60fa794de22702eab695c4d4 dir=/workspace/parcel-staging/scratch/benton-wa/normalized sum_counts=79508 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/benton-wa/ (id-only strip; NOT license-cleared; no S3). features=79508 shards=155"
+    },
+    {
+      "at": "2026-10-05T20:44:38Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/benton-wa/; CF invalidation IF0BV0VSANM0KH47II86RD6W1R on EQJBJ6X237VQF paths /reference/parcels/benton-wa/* and /reference/parcels/benton-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Benton County (benton-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Benton County (benton-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/benton-wa/ with CloudFront invalidation IF0BV0VSANM0KH47II86RD6W1R."
 }

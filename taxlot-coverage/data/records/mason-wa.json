@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Mason",
   "portfolio_sites": 7,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Mason'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/mason-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/mason-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/mason-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/mason-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/mason-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/mason-wa"
   },
   "metrics": {
     "feature_count": 60559,
@@ -58,12 +60,12 @@
     "shard_count": 74
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:51:06Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/mason-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/mason-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T02:04:17Z",
       "action": "normalize_shards_complete",
       "detail": "features=60559 shards=74 max_shard_bytes=3691626 index_sha256=64a530af8510f7a57428f4fae5d4798a5fa2db927de2f98a12eae3941dc67952 dir=/workspace/parcel-staging/scratch/mason-wa/normalized sum_counts=60559 pct_delta_vs_metrics=0.007% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/mason-wa/ (id-only strip; NOT license-cleared; no S3). features=60559 shards=74"
+    },
+    {
+      "at": "2026-10-05T20:51:06Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/mason-wa/; CF invalidation I497ICEHDGQFSEBQ0G3HCZTP4Q on EQJBJ6X237VQF paths /reference/parcels/mason-wa/* and /reference/parcels/mason-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Mason County (mason-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Mason County (mason-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/mason-wa/ with CloudFront invalidation I497ICEHDGQFSEBQ0G3HCZTP4Q."
 }

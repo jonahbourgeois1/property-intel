@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Stevens",
   "portfolio_sites": 45,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Stevens'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/stevens-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/stevens-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/stevens-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/stevens-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/stevens-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/stevens-wa"
   },
   "metrics": {
     "feature_count": 42940,
@@ -58,12 +60,12 @@
     "shard_count": 193
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:55:02Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/stevens-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/stevens-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T00:49:49Z",
       "action": "normalize_shards_complete",
       "detail": "features=42940 shards=193 max_shard_bytes=3061392 index_sha256=52426d2abb2b67955154ca2a605f0b20523aa56d69a08dfcdaaf4b9c35fd8852 dir=/workspace/parcel-staging/scratch/stevens-wa/normalized sum_counts=42940 pct_delta_vs_metrics=0.007% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/stevens-wa/ (id-only strip; NOT license-cleared; no S3). features=42940 shards=193"
+    },
+    {
+      "at": "2026-10-05T20:55:02Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/stevens-wa/; CF invalidation IDPMMY1OQCLDL8QZRMC6D4JXJ5 on EQJBJ6X237VQF paths /reference/parcels/stevens-wa/* and /reference/parcels/stevens-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3: WA statewide WDFW parcels filtered to Stevens County (stevens-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3: WA statewide WDFW parcels filtered to Stevens County (stevens-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/stevens-wa/ with CloudFront invalidation IDPMMY1OQCLDL8QZRMC6D4JXJ5."
 }

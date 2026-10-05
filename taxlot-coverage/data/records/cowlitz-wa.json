@@ -3,7 +3,7 @@
   "state": "WA",
   "county": "Cowlitz",
   "portfolio_sites": 6,
-  "status": "inspected",
+  "status": "published",
   "source_last_updated": null,
   "source_url": "https://geodataservices.wdfw.wa.gov/arcgis/rest/services/MapServices/Parcels/FeatureServer/0",
   "source_layer": "WDFW MapServices/Parcels FeatureServer/0 where COUNTY_NM='Cowlitz'",
@@ -49,7 +49,9 @@
     "raw_file": "/workspace/parcel-staging/scratch/cowlitz-wa/raw.ndjson",
     "normalized_file": "/workspace/parcel-staging/scratch/cowlitz-wa/normalized/index.json",
     "inspect_report": null,
-    "normalized_dir": "/workspace/parcel-staging/scratch/cowlitz-wa/normalized"
+    "normalized_dir": "/workspace/parcel-staging/scratch/cowlitz-wa/normalized",
+    "publish_ready_path": "/workspace/parcel-staging/publish-ready/cowlitz-wa/index.json",
+    "publish_ready_dir": "/workspace/parcel-staging/publish-ready/cowlitz-wa"
   },
   "metrics": {
     "feature_count": 57514,
@@ -58,12 +60,12 @@
     "shard_count": 98
   },
   "promote": {
-    "grant": null,
+    "grant": "B",
     "verified_at": null,
     "ready_to_promote_at": null,
-    "published_at": null,
-    "cdn_index": null,
-    "s3_prefix": null
+    "published_at": "2026-10-05T20:45:44Z",
+    "cdn_index": "https://d3fg47bqswi0rr.cloudfront.net/reference/parcels/cowlitz-wa/index.json",
+    "s3_prefix": "s3://property-intel-tiles/reference/parcels/cowlitz-wa/"
   },
   "cadence_days": 90,
   "next_check": null,
@@ -107,7 +109,17 @@
       "at": "2026-09-25T02:12:45Z",
       "action": "normalize_shards_complete",
       "detail": "features=57514 shards=98 max_shard_bytes=3328520 index_sha256=3911513cc756def4e6633427d60b3ed1ade61f21cd6afce8f00a9d17b5a37b0f dir=/workspace/parcel-staging/scratch/cowlitz-wa/normalized sum_counts=57514 pct_delta_vs_metrics=0.000% props_ok=True warnings=0 status downloaded -> inspected (sanity_pass=True). Research-only; no AWS/CDN."
+    },
+    {
+      "at": "2026-10-05T19:34:47Z",
+      "action": "prep_publish_package",
+      "detail": "Local AWS-shaped package at publish-ready/cowlitz-wa/ (id-only strip; NOT license-cleared; no S3). features=57514 shards=98"
+    },
+    {
+      "at": "2026-10-05T20:45:44Z",
+      "action": "cdn_publish",
+      "detail": "Grant B + license-gate OVERRIDE by Jonah. Uploaded shards then index.json to s3://property-intel-tiles/reference/parcels/cowlitz-wa/; CF invalidation I8TILCKGPHB73LTQU7T9WT17VF on EQJBJ6X237VQF paths /reference/parcels/cowlitz-wa/* and /reference/parcels/cowlitz-wa/index.json. policy.class remains unknown (override does not change recorded license class)."
     }
   ],
-  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Cowlitz County (cowlitz-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B."
+  "notes": "Wave 3B: WA statewide WDFW parcels filtered to Cowlitz County (cowlitz-wa). Not ownership fabric; no owner/value fields requested. No AWS/CDN/Grant B. | 2026-10-05: Jonah Grant B for all 122 inspected + explicit OVERRIDE license gate; uploaded to s3://property-intel-tiles/reference/parcels/cowlitz-wa/ with CloudFront invalidation I8TILCKGPHB73LTQU7T9WT17VF."
 }
