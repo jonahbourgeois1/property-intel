@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.12';
+export const BUILD = '1.0.14';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -116,23 +116,68 @@ export function reviewEntry(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
   return {
     done: src.done === true,
-    note: String(src.note == null ? '' : src.note).slice(0, REVIEW_NOTE_MAX)
+    note: String(src.note == null ? '' : src.note).slice(0, REVIEW_NOTE_MAX),
+    by: normActor(src.by),
+    at: String(src.at || '').trim()
   };
 }
 
-// Keep only real hub ids. Drop empty rows so a cleared note does not linger.
-export function reviewStateFromJson(text) {
-  let parsed;
-  try { parsed = JSON.parse(text || ''); } catch (e) { return {}; }
+export function reviewRecordsFromParsed(parsed) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  const src = (parsed.reviews && typeof parsed.reviews === 'object' && !Array.isArray(parsed.reviews))
+    ? parsed.reviews
+    : parsed;
   const out = {};
-  Object.keys(parsed).forEach((key) => {
+  Object.keys(src).forEach((key) => {
     const id = normHubId(key);
     if (!id) return;
-    const entry = reviewEntry(parsed[key]);
+    const entry = reviewEntry(src[key]);
     if (entry.done || entry.note) out[id] = entry;
   });
   return out;
+}
+
+// Keep only real hub ids. Drop empty rows so a cleared note does not linger.
+// Accepts a flat {hub: {done, note}} object or {version, reviews:{...}}.
+export function reviewStateFromJson(text) {
+  let parsed;
+  try { parsed = JSON.parse(text || ''); } catch (e) { return {}; }
+  return reviewRecordsFromParsed(parsed);
+}
+
+export function mergeReviewRecords(existing, edits, by, nowIso) {
+  const actor = normActor(by);
+  if (!actor) return fail('editor must be Jonah, Eleanor, Bot 1, or Bot 2');
+  if (!edits || typeof edits !== 'object' || Array.isArray(edits)) {
+    return fail('reviews object is required');
+  }
+  const next = {};
+  const src = existing && typeof existing === 'object' && !Array.isArray(existing) ? existing : {};
+  Object.keys(src).forEach((key) => {
+    const id = normHubId(key);
+    if (!id) return;
+    const entry = reviewEntry(src[key]);
+    if (entry.done || entry.note) next[id] = entry;
+  });
+  const updated = [];
+  const keys = Object.keys(edits);
+  if (!keys.length) return fail('reviews object is required');
+  const at = nowIso || new Date().toISOString();
+  for (let i = 0; i < keys.length; i++) {
+    const id = normHubId(keys[i]);
+    if (!id) return fail('each review needs a hub id');
+    const entry = reviewEntry(edits[keys[i]]);
+    if (!entry.done && !entry.note) {
+      if (next[id]) {
+        delete next[id];
+        updated.push(id);
+      }
+      continue;
+    }
+    next[id] = { done: entry.done, note: entry.note, by: actor, at: at };
+    updated.push(id);
+  }
+  return { ok: true, reviews: next, updated: updated, at: at, by: actor };
 }
 
 export function editorHubUrl() {

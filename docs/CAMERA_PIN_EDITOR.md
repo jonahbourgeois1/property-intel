@@ -4,6 +4,28 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-10-06 — Choose who is editing when the page opens (cam-edit 1.0.14)
+
+**What.** Opening the editor asks **Who is editing?** first. That choice fills **Editing as**. The last name used is highlighted. The header dropdown can still be changed later.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`.
+
+**Status.** Local, with the shared Done/notes work.
+
+### 2026-10-06 — Shared Done checkboxes and notes (cam-edit 1.0.13)
+
+**What.** Done and the account notes write `camera-pin-review.json` through Apps Script (`route=camera-pins-review-save`). Every editor sees the same marks. A name is required, same as pin Save. Notes debounce 800 ms. This browser’s old local notes are uploaded once if the shared file does not already have that hub.
+
+**Why.** localStorage was per browser, so Jonah and Eleanor could not see each other’s checks.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `apps scripts/camera-pins.gs`, `apps scripts/critique-api.gs`, `camera-pin-review.json`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Not verified live until Apps Script is pasted and a new deployment version is created, then this HTML is on `main`.
+
+**Status.** Ready to paste `camera-pins.gs` plus the `camera-pins-review-save` route in `critique-api.gs`, then push.
+
 ### 2026-10-06 — Property links open a new tab (cam-edit 1.0.12)
 
 **What.** Account-list and Recent-edits property links use `target=_blank`, same as the client live link on a pin page. The list or history page stays put.
@@ -240,6 +262,7 @@ The editor project is not in this repo’s runtime. Paste it, then deploy a new 
 
 ```javascript
 camera_pins: (typeof camerasEditorSave_ === 'function'),
+camera_pins_review: (typeof camerasEditorReviewSave_ === 'function'),
 ```
 
 4. In `critiqueApiPost_`, after the `golf-save` branch and before `return critiqueJsonOut_(critiquePost_(payload));`, add:
@@ -251,11 +274,17 @@ if (postRoute === 'camera-pins-save') {
   }
   return critiqueJsonOut_(camerasEditorSave_(payload));
 }
+if (postRoute === 'camera-pins-review-save') {
+  if (typeof camerasEditorReviewSave_ !== 'function') {
+    throw new Error('camerasEditorReviewSave_ is not defined — paste camera-pins.gs, save, and deploy a new version');
+  }
+  return critiqueJsonOut_(camerasEditorReviewSave_(payload));
+}
 ```
 
 5. Save the project (the disk icon).
 6. **Deploy → Manage deployments.** Open the pencil on the web app whose URL is the `/exec` already in `camera-pin-editor.html` (`AKfycbz…u7iKERA`). Set **Version** to **New version**. Deploy. Execute as: Me. Who has access: Anyone. Do not create a second web app unless you also change `CAMERA_SAVE_URL` in the HTML to that new `/exec` URL.
-7. Open the web app with `?route=ping`. The JSON must include `"camera_pins": true`. If it is missing, the deployment is still the old version.
+7. Open the web app with `?route=ping`. The JSON must include `"camera_pins": true` and `"camera_pins_review": true`. If either is missing, the deployment is still the old version.
 
 ## Smoke test
 

@@ -1778,6 +1778,7 @@ function critiqueApiGet_(e) {
                                 golf: true,
                                 golf_max_pins: (typeof GOLF_MAX_PINS === 'number') ? GOLF_MAX_PINS : 200,
                                 camera_pins: (typeof camerasEditorSave_ === 'function'),
+                                camera_pins_review: (typeof camerasEditorReviewSave_ === 'function'),
                                 server_time: new Date().toISOString() }, cb);
     }
     if (route === 'pin-freq') {
@@ -1830,6 +1831,12 @@ function critiqueApiPost_(e) {
         throw new Error('camerasEditorSave_ is not defined — paste camera-pins.gs, save, and deploy a new version');
       }
       return critiqueJsonOut_(camerasEditorSave_(payload));
+    }
+    if (postRoute === 'camera-pins-review-save') {
+      if (typeof camerasEditorReviewSave_ !== 'function') {
+        throw new Error('camerasEditorReviewSave_ is not defined — paste camera-pins.gs, save, and deploy a new version');
+      }
+      return critiqueJsonOut_(camerasEditorReviewSave_(payload));
     }
     return critiqueJsonOut_(critiquePost_(payload));
   } catch (err) {

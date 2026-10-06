@@ -28,6 +28,8 @@
 //   - Save names the editor: Jonah, Eleanor, Bot 1, or Bot 2. That name
 //     is appended to editor_history[] on the cameras file and to
 //     camera-pin-history.json (the shared activity list).
+//   - Done checkboxes and account notes are shared in camera-pin-review.json
+//     (route camera-pins-review-save). Not a cameras-file write. Not S3.
 // Drone-test sync reads this file back (camerasFileForSync_) and does
 // not rebuild pin geometry. pushAllToGitHub does not push this path.
 // ============================================================
@@ -39,6 +41,8 @@ var CAM_PIN_ACTORS = ['Jonah', 'Eleanor', 'Bot 1', 'Bot 2'];
 var CAM_PIN_HISTORY_MAX = 200;
 var CAM_PIN_HISTORY_LOG = 'camera-pin-history.json';
 var CAM_PIN_HISTORY_LOG_MAX = 2000;
+var CAM_PIN_REVIEW_LOG = 'camera-pin-review.json';
+var CAM_PIN_NOTE_MAX = 2000;
 
 // Mirror of js/vyanet-viewer/property.js CAMERA_HUB_SIBLINGS.
 var CAM_PIN_SIBLINGS = {
@@ -600,6 +604,101 @@ function camerasEditorSave_(payload) {
       commit: put.commit || '',
       by: actor
     }, file.path, file.content);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function camPinReviewEntry_(raw) {
+  var src = raw && typeof raw === 'object' ? raw : {};
+  var note = String(src.note == null ? '' : src.note);
+  if (note.length > CAM_PIN_NOTE_MAX) note = note.substring(0, CAM_PIN_NOTE_MAX);
+  return {
+    done: src.done === true,
+    note: note,
+    by: camPinNormActor_(src.by),
+    at: String(src.at || '')
+  };
+}
+
+function camPinReviewRecords_(parsed) {
+  var out = {};
+  if (!parsed || typeof parsed !== 'object') return out;
+  var src = (parsed.reviews && typeof parsed.reviews === 'object') ? parsed.reviews : parsed;
+  var keys = Object.keys(src);
+  for (var i = 0; i < keys.length; i++) {
+    var id = camPinNormId_(keys[i]);
+    if (!id) continue;
+    var entry = camPinReviewEntry_(src[keys[i]]);
+    if (entry.done || entry.note) out[id] = entry;
+  }
+  return out;
+}
+
+function camerasEditorReviewSave_(payload) {
+  payload = payload || {};
+  var actor = camPinNormActor_(payload.by);
+  if (!actor) {
+    return { ok: false, route: 'camera-pins-review-save', error: 'by must be Jonah, Eleanor, Bot 1, or Bot 2' };
+  }
+  var edits = payload.reviews;
+  if (!edits || typeof edits !== 'object') {
+    return { ok: false, route: 'camera-pins-review-save', error: 'reviews object is required' };
+  }
+  var editKeys = Object.keys(edits);
+  if (!editKeys.length) {
+    return { ok: false, route: 'camera-pins-review-save', error: 'reviews object is required' };
+  }
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000);
+  } catch (waitErr) {
+    return { ok: false, route: 'camera-pins-review-save', error: 'another save is running — try again' };
+  }
+  try {
+    var got = camPinGetRawJson_(CAM_PIN_REVIEW_LOG);
+    if (!got.ok) return { ok: false, route: 'camera-pins-review-save', error: got.error };
+    var existing = {};
+    var sha = '';
+    if (!got.missing && got.rec) {
+      existing = camPinReviewRecords_(got.rec);
+      sha = got.sha || '';
+    }
+    var next = {};
+    var have = Object.keys(existing);
+    for (var h = 0; h < have.length; h++) next[have[h]] = existing[have[h]];
+    var updated = [];
+    var at = new Date().toISOString();
+    for (var i = 0; i < editKeys.length; i++) {
+      var id = camPinNormId_(editKeys[i]);
+      if (!id) {
+        return { ok: false, route: 'camera-pins-review-save', error: 'each review needs a hub id' };
+      }
+      var entry = camPinReviewEntry_(edits[editKeys[i]]);
+      if (!entry.done && !entry.note) {
+        if (next[id]) {
+          delete next[id];
+          updated.push(id);
+        }
+        continue;
+      }
+      next[id] = { done: entry.done, note: entry.note, by: actor, at: at };
+      updated.push(id);
+    }
+    var doc = { version: 1, reviews: next };
+    var text = JSON.stringify(doc, null, 2) + '\n';
+    var put = camPinPutAny_(CAM_PIN_REVIEW_LOG, text, 'Camera pin review ' + updated.join(','), sha);
+    if (!put.ok && put.conflict) {
+      return { ok: false, route: 'camera-pins-review-save', error: 'review file changed during save — try again' };
+    }
+    if (!put.ok) return { ok: false, route: 'camera-pins-review-save', error: put.error };
+    return {
+      ok: true,
+      route: 'camera-pins-review-save',
+      by: actor,
+      at: at,
+      updated: updated
+    };
   } finally {
     lock.releaseLock();
   }

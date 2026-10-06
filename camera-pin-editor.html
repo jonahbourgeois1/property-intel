@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.12)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.14)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -95,6 +95,33 @@
     padding: 8px 20px 32px;
   }
   #gate a, aside a { color: var(--accent); }
+  #actorGate {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 13, 18, 0.82);
+    padding: 24px;
+  }
+  #actorGate .box {
+    max-width: 420px;
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px 22px;
+  }
+  #actorGate h2 { margin: 0 0 8px; font-size: 18px; }
+  .actor-gate-choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .actor-gate-choices button { padding: 12px 10px; }
+  .actor-gate-choices button.picked { border-color: var(--accent); background: #1e3a52; }
   code, .mono { font: 12px/1.45 ui-monospace, Consolas, monospace; }
   #app {
     flex: 1;
@@ -358,7 +385,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.12</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.14</span>
   <label class="actor-pick">Editing as
     <select id="actorSelect" aria-label="Editing as">
       <option value="">Choose editor…</option>
@@ -400,6 +427,18 @@
     <span id="historyCount" class="muted"></span>
   </div>
   <div id="historyFeed"></div>
+</div>
+<div id="actorGate" hidden>
+  <div class="box">
+    <h2>Who is editing?</h2>
+    <p class="muted" id="actorGateBlurb">This name goes on shared Saves, Done, and notes. You can change it later in Editing as.</p>
+    <div class="actor-gate-choices" id="actorGateChoices">
+      <button type="button" data-actor="Jonah">Jonah</button>
+      <button type="button" data-actor="Eleanor">Eleanor</button>
+      <button type="button" data-actor="Bot 1">Bot 1</button>
+      <button type="button" data-actor="Bot 2">Bot 2</button>
+    </div>
+  </div>
 </div>
 <div id="gate" hidden>
   <h2 id="gateTitle">This page needs a property link</h2>
@@ -454,7 +493,7 @@ import {
   REVIEW_STORE_KEY, ACTOR_STORE_KEY, EDITOR_ACTORS, normActor, historyEventsFromJson,
   lastEditForHub, eventTouchesHub,
   reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.12';
+} from './js/camera-pin-editor.js?v=1.0.14';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -483,6 +522,9 @@ var state = {
 };
 var indexRows = [];
 var reviewState = {};
+var pendingReviews = {};
+var reviewTimer = null;
+var reviewReady = false;
 var historyEvents = [];
 
 var $ = function (id) { return document.getElementById(id); };
@@ -543,11 +585,18 @@ function currentActor() {
   return normActor($('actorSelect').value);
 }
 
-function loadActor() {
-  try {
-    var stored = normActor(localStorage.getItem(ACTOR_STORE_KEY));
-    if (stored) $('actorSelect').value = stored;
-  } catch (e) {}
+function storedActor() {
+  try { return normActor(localStorage.getItem(ACTOR_STORE_KEY)); }
+  catch (e) { return ''; }
+}
+
+function applyActor(name) {
+  var actor = normActor(name);
+  if (!actor) return false;
+  $('actorSelect').value = actor;
+  saveActor();
+  refreshDirty();
+  return true;
 }
 
 function saveActor() {
@@ -556,6 +605,24 @@ function saveActor() {
     if (name) localStorage.setItem(ACTOR_STORE_KEY, name);
     else localStorage.removeItem(ACTOR_STORE_KEY);
   } catch (e) {}
+}
+
+function showActorGate(done) {
+  var last = storedActor();
+  var buttons = $('actorGateChoices').querySelectorAll('[data-actor]');
+  for (var i = 0; i < buttons.length; i++) {
+    buttons[i].classList.toggle('picked', buttons[i].getAttribute('data-actor') === last);
+  }
+  $('actorGate').hidden = false;
+  function pick(ev) {
+    var btn = ev.target.closest('[data-actor]');
+    if (!btn || !$('actorGateChoices').contains(btn)) return;
+    if (!applyActor(btn.getAttribute('data-actor'))) return;
+    $('actorGateChoices').removeEventListener('click', pick);
+    $('actorGate').hidden = true;
+    if (typeof done === 'function') done();
+  }
+  $('actorGateChoices').addEventListener('click', pick);
 }
 
 function formatWhen(iso) {
@@ -1472,18 +1539,32 @@ function showHistoryPage() {
   syncNavLinks();
 }
 
-function loadReview() {
+function loadLocalReview() {
   try {
-    reviewState = reviewStateFromJson(localStorage.getItem(REVIEW_STORE_KEY));
+    return reviewStateFromJson(localStorage.getItem(REVIEW_STORE_KEY));
   } catch (e) {
-    reviewState = {};
+    return {};
   }
 }
 
-function saveReview() {
+function saveLocalReview() {
   try {
     localStorage.setItem(REVIEW_STORE_KEY, JSON.stringify(reviewState));
   } catch (e) {}
+}
+
+function clearLocalReview() {
+  try { localStorage.removeItem(REVIEW_STORE_KEY); } catch (e) {}
+}
+
+function adoptLocalReview() {
+  var local = loadLocalReview();
+  Object.keys(local).forEach(function (id) {
+    if (!reviewState[id]) {
+      reviewState[id] = local[id];
+      pendingReviews[id] = true;
+    }
+  });
 }
 
 function reviewOf(id) {
@@ -1494,11 +1575,83 @@ function setReview(id, patch) {
   var cur = reviewOf(id);
   var next = reviewEntry({
     done: patch.done != null ? patch.done : cur.done,
-    note: patch.note != null ? patch.note : cur.note
+    note: patch.note != null ? patch.note : cur.note,
+    by: cur.by,
+    at: cur.at
   });
   if (!next.done && !next.note) delete reviewState[id];
   else reviewState[id] = next;
-  saveReview();
+  pendingReviews[id] = true;
+  if (!reviewReady) saveLocalReview();
+}
+
+function fetchReviewDoc() {
+  var url = new URL('camera-pin-review.json', window.location.href);
+  url.searchParams.set('t', String(Date.now()));
+  return fetchJson(url.href).then(function (doc) {
+    reviewState = reviewStateFromJson(JSON.stringify(doc || {}));
+    adoptLocalReview();
+  }).catch(function () {
+    reviewState = loadLocalReview();
+  });
+}
+
+function checkReviewEndpoint() {
+  return fetch(CAMERA_SAVE_URL + '?route=ping&_=' + Date.now(), { redirect: 'follow', cache: 'no-store' })
+    .then(function (res) { return res.text(); })
+    .then(function (text) {
+      var j = JSON.parse(text);
+      return !!(j && j.ok && j.camera_pins_review === true);
+    })
+    .catch(function () { return false; });
+}
+
+function flushReviews() {
+  if (reviewTimer) {
+    clearTimeout(reviewTimer);
+    reviewTimer = null;
+  }
+  if (!reviewReady) return;
+  var actor = currentActor();
+  if (!actor) {
+    if (Object.keys(pendingReviews).length) {
+      setStatus('Choose who is editing to share Done and notes.', '');
+    }
+    return;
+  }
+  var reviews = {};
+  var ids = Object.keys(pendingReviews);
+  if (!ids.length) return;
+  ids.forEach(function (id) {
+    var mark = reviewOf(id);
+    reviews[id] = { done: mark.done === true, note: mark.note || '' };
+  });
+  fetch(CAMERA_SAVE_URL + '?route=camera-pins-review-save', {
+    method: 'POST',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      route: 'camera-pins-review-save',
+      by: actor,
+      reviews: reviews
+    })
+  }).then(function (res) { return res.text(); })
+    .then(function (text) {
+      var j;
+      try { j = JSON.parse(text); } catch (e) { throw new Error('Review save did not return JSON'); }
+      if (!j || j.ok === false) throw new Error((j && j.error) || 'Review save failed');
+      ids.forEach(function (id) { delete pendingReviews[id]; });
+      if (!Object.keys(pendingReviews).length) clearLocalReview();
+      setStatus('Saved Done and notes as ' + (j.by || actor) + '.', 'ok');
+    })
+    .catch(function (err) {
+      setStatus(String(err.message || err), 'err');
+    });
+}
+
+function queueReviewSave() {
+  if (reviewTimer) clearTimeout(reviewTimer);
+  reviewTimer = setTimeout(flushReviews, 800);
 }
 
 function reviewDoneCount() {
@@ -1610,10 +1763,12 @@ function renderIndex() {
       setReview(hub, { done: on });
       ev.currentTarget.closest('.index-row').classList.toggle('done', on);
       writeIndexCount(shown, withCams);
+      flushReviews();
     });
     box.setAttribute('data-hub', id);
     area.addEventListener('input', function (ev) {
       setReview(ev.currentTarget.getAttribute('data-hub'), { note: ev.currentTarget.value });
+      queueReviewSave();
     });
     area.setAttribute('data-hub', id);
     item.appendChild(doneLabel);
@@ -1642,11 +1797,11 @@ function fetchHistoryLog() {
 
 function bootIndex() {
   showIndex();
-  $('indexBlurb').textContent = 'Chekt accounts. Choose your name (Jonah, Eleanor, Bot 1, or Bot 2) before Save. Recent edits is a separate page. Done and notes stay in this browser. Client links stay vyanet-viewer.html?property=…&live=1.';
+  $('indexBlurb').textContent = 'Chekt accounts. Choose your name (Jonah, Eleanor, Bot 1, or Bot 2) before Save. Done and notes are shared. Recent edits is a separate page. Client links stay vyanet-viewer.html?property=…&live=1.';
   setStatus('Loading properties…', '');
   var url = new URL('camera-pin-properties.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
-  Promise.all([fetchJson(url.href), fetchHistoryLog()]).then(function (pair) {
+  Promise.all([fetchJson(url.href), fetchHistoryLog(), fetchReviewDoc(), checkReviewEndpoint()]).then(function (pair) {
     var doc = pair[0];
     var rows = doc && Array.isArray(doc.properties) ? doc.properties : null;
     if (!rows) {
@@ -1657,8 +1812,16 @@ function bootIndex() {
       return;
     }
     indexRows = rows;
+    reviewReady = pair[3] === true;
     renderIndex();
-    setStatus('', '');
+    if (reviewReady) {
+      if (Object.keys(pendingReviews).length) flushReviews();
+      else setStatus('', '');
+    } else if (Object.keys(reviewState).length) {
+      setStatus('Done and notes stay in this browser until Apps Script is deployed with camera-pins-review-save.', '');
+    } else {
+      setStatus('', '');
+    }
   });
 }
 
@@ -1693,8 +1856,10 @@ function bootHistory() {
 
 function boot() {
   syncNavLinks();
-  loadReview();
-  loadActor();
+  showActorGate(bootAfterActor);
+}
+
+function bootAfterActor() {
   if (!propertyId && (params.get('history') === '1' || params.get('view') === 'history')) {
     bootHistory();
     return;
@@ -1793,6 +1958,7 @@ $('actorSelect').addEventListener('change', function () {
   if (!currentActor() && editing() && posesJson() !== state.savedJson) {
     setStatus('Choose who is editing before Save.', '');
   }
+  if (!editing()) flushReviews();
 });
 ['headingInput', 'fovInput', 'rangeInput'].forEach(function (id) {
   $(id).addEventListener('change', commitInputs);
