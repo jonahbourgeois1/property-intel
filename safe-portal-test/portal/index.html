@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<title>Vyanet SAFE — portal (mock)</title>
+<!--
+  safe-portal/portal/index.html — MOCK of the Zoho Creator customer portal
+  chrome around the SAFE pages.  safe-portal 0.5.0
+
+  In production this frame IS Zoho Creator: its header, its left page menu,
+  its content area. The portal is built around SAFE, so the menu is Home plus
+  the four components, and each menu item is a Zoho page that embeds ONE of
+  our HTML files: home.html · security.html · access.html · fire.html ·
+  emergency.html. This file only imitates that chrome so the pages can be
+  reviewed in place. The home page posts {type:'safe-nav', page, pin} when
+  one of its links is clicked so this menu follows.
+
+  Params: ?page=home|security|access|fire|emergency  &layout=a|b|c  &theme=light|dark
+          &p=residence
+  The layout / theme switches at the bottom of the menu are MOCK controls —
+  they reload the page iframe with the chosen variant. Writes nothing.
+-->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="../fixtures.js"></script>
+<style>
+  :root {
+    --top-h: 56px; --nav-w: 248px; --nav-w-min: 68px;
+    --nav-bg: #1c2433; --nav-bg2: #26304240; --nav-text: #c3cbd8; --nav-text2: #7f8ba0; --nav-active: #ffffff;
+    --bg: #f3f5f8; --surface: #fff; --border: rgba(16,24,40,0.09); --border2: rgba(16,24,40,0.18);
+    --text: #101828; --text2: #475467; --text3: #8a94a6;
+    --S: #3b82f6; --A: #f59e0b; --F: #ef4444; --E: #22c55e; --live: #ff3b3b;
+    --sans: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif; --mono: 'DM Mono', ui-monospace, Menlo, monospace;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body { font-family: var(--sans); background: var(--bg); color: var(--text); height: 100dvh; overflow: hidden; display: flex; flex-direction: column; -webkit-font-smoothing: antialiased; }
+  body.theme-dark { --bg: #0a0c0f; --surface: #12161b; --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.16); --text: #f0f2f5; --text2: #8a93a2; --text3: #555f6e; }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+
+  /* ---------- top bar (Zoho Creator app header) ---------- */
+  #top { height: var(--top-h); flex-shrink: 0; display: flex; align-items: center; gap: 14px; padding: 0 16px 0 12px; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 20; }
+  #menu-btn { width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; color: var(--text2); }
+  #menu-btn:hover { background: var(--bg); color: var(--text); }
+  #menu-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+  .app { display: flex; align-items: center; gap: 10px; }
+  .app .logo { width: 32px; height: 32px; border-radius: 8px; background: linear-gradient(135deg, #cd3333, #8b1e1e); color: #fff; display: grid; place-items: center; font: 700 15px var(--sans); letter-spacing: 0.02em; }
+  .app b { display: block; font-size: 14px; font-weight: 700; line-height: 1.15; }
+  .app b i { font-style: normal; } .app b i:nth-child(1) { color: var(--S); } .app b i:nth-child(2) { color: var(--A); } .app b i:nth-child(3) { color: var(--F); } .app b i:nth-child(4) { color: var(--E); }
+  .app span { font: 10.5px var(--mono); color: var(--text3); }
+  .sep { width: 1px; height: 26px; background: var(--border2); }
+  #prop { flex: 1; min-width: 0; }
+  #prop b { display: block; font-size: 13.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #prop span { font-size: 11.5px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .chip { font: 11px var(--mono); color: var(--text2); background: var(--bg); border: 1px solid var(--border); padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
+  .chip.live { color: var(--live); border-color: rgba(255,59,59,0.5); }
+  .chip.live::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--live); margin-right: 5px; vertical-align: 1px; animation: blink 1.2s infinite; }
+  @keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.25; } }
+  .icon-btn { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; color: var(--text2); position: relative; }
+  .icon-btn:hover { background: var(--bg); color: var(--text); }
+  .icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .icon-btn .dot { position: absolute; right: 7px; top: 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--F); border: 1.5px solid var(--surface); }
+  .user { display: flex; align-items: center; gap: 9px; padding: 4px 8px 4px 4px; border-radius: 10px; border: 1px solid var(--border); }
+  .user .av { width: 30px; height: 30px; border-radius: 50%; background: #e0e7ff; color: #3730a3; display: grid; place-items: center; font: 700 12px var(--sans); }
+  body.theme-dark .user .av { background: #312e81; color: #c7d2fe; }
+  .user b { display: block; font-size: 12.5px; font-weight: 600; line-height: 1.15; }
+  .user span { font: 10.5px var(--mono); color: var(--text3); }
+
+  /* ---------- body: left menu + page ---------- */
+  #body { flex: 1; min-height: 0; display: flex; }
+  #nav { width: var(--nav-w); flex-shrink: 0; background: var(--nav-bg); color: var(--nav-text); display: flex; flex-direction: column; transition: width 0.18s; overflow: hidden; }
+  body.nav-min #nav { width: var(--nav-w-min); }
+  .nav-sec { font: 700 10px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--nav-text2); padding: 18px 18px 8px; white-space: nowrap; }
+  body.nav-min .nav-sec { text-align: center; padding: 18px 0 8px; font-size: 0; }
+  body.nav-min .nav-sec::before { content: '—'; font-size: 10px; }
+  .nav-item { display: flex; align-items: center; gap: 12px; height: 44px; padding: 0 14px 0 16px; margin: 1px 8px; border-radius: 8px; color: var(--nav-text); white-space: nowrap; position: relative; }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: var(--nav-active); }
+  .nav-item.on { background: rgba(255,255,255,0.1); color: var(--nav-active); }
+  .nav-item.on::before { content: ''; position: absolute; left: -8px; top: 9px; bottom: 9px; width: 3px; border-radius: 2px; background: var(--c, #fff); }
+  .nav-item .k { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; font: 700 12px var(--mono); color: #0a0c0f; flex-shrink: 0; background: var(--c); opacity: 0.85; }
+  .nav-item.on .k { opacity: 1; }
+  .nav-item .t { flex: 1; font-size: 13.5px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+  .nav-item .n { font: 11px var(--mono); color: var(--nav-text2); }
+  .nav-item .ic { width: 26px; height: 26px; display: grid; place-items: center; flex-shrink: 0; color: var(--nav-text2); }
+  .nav-item .ic svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  body.nav-min .nav-item { padding: 0; margin: 1px 10px; justify-content: center; }
+  body.nav-min .nav-item .t, body.nav-min .nav-item .n { display: none; }
+  .nav-spacer { flex: 1; }
+  .mock { margin: 8px; padding: 10px 10px 8px; border: 1px dashed rgba(255,255,255,0.22); border-radius: 10px; }
+  .mock .lab { font: 700 9.5px var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: #f59e0b; margin-bottom: 8px; white-space: nowrap; }
+  .mock .row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .mock .row span { font: 10.5px var(--mono); color: var(--nav-text2); width: 48px; flex-shrink: 0; }
+  .seg { display: inline-flex; border: 1px solid rgba(255,255,255,0.18); border-radius: 7px; overflow: hidden; }
+  .seg button { height: 26px; min-width: 30px; padding: 0 8px; font: 600 11px var(--mono); color: var(--nav-text); border-right: 1px solid rgba(255,255,255,0.12); }
+  .seg button:last-child { border-right: 0; }
+  .seg button:hover { background: rgba(255,255,255,0.08); }
+  .seg button.on { background: #fff; color: #0a0c0f; }
+  body.nav-min .mock .row span, body.nav-min .mock .lab { display: none; }
+  body.nav-min .mock { padding: 8px 4px; } body.nav-min .mock .row { flex-direction: column; }
+  body.nav-min .seg { flex-direction: column; } body.nav-min .seg button { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } body.nav-min .seg button:last-child { border-bottom: 0; }
+  .nav-foot { padding: 10px 16px 14px; font: 10px var(--mono); color: var(--nav-text2); white-space: nowrap; line-height: 1.5; }
+  body.nav-min .nav-foot { display: none; }
+
+  #main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #pagebar { height: 48px; flex-shrink: 0; display: flex; align-items: center; gap: 12px; padding: 0 18px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  #pagebar .crumb { font: 11px var(--mono); color: var(--text3); white-space: nowrap; }
+  #pagebar .crumb b { color: var(--text2); font-weight: 500; }
+  #pagebar h1 { font-size: 15px; font-weight: 600; white-space: nowrap; }
+  #pagebar .st { flex: 1; min-width: 0; font: 11px var(--mono); color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #pagebar .open { font: 500 11.5px var(--sans); color: var(--text2); border: 1px solid var(--border2); border-radius: 6px; padding: 5px 9px; white-space: nowrap; }
+  #pagebar .open:hover { color: var(--text); background: var(--bg); }
+  #frame { flex: 1; min-height: 0; width: 100%; border: 0; background: var(--bg); }
+  @media (max-width: 900px) {
+    :root { --nav-w: 220px; }
+    #prop span, .user div, #top .chip { display: none; }
+    #pagebar .st { display: none; }
+  }
+</style>
+</head>
+<body>
+<header id="top">
+  <button id="menu-btn" onclick="toggleNav()" title="Collapse menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="app"><span class="logo">V</span><div><b>Vyanet <i>S</i><i>A</i><i>F</i><i>E</i></b><span>Property Intel portal</span></div></div>
+  <span class="sep"></span>
+  <div id="prop"><b id="prop-name"></b><span id="prop-addr"></span></div>
+  <span class="chip live" id="chip-live"></span>
+  <span class="chip" id="chip-alarm"></span>
+  <button class="icon-btn" title="Notifications"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
+  <div class="user"><span class="av">TJ</span><div><b>Tracy Jones</b><span>Owner · portal user</span></div></div>
+</header>
+<div id="body">
+  <nav id="nav">
+    <div class="nav-sec">SAFE</div>
+    <div id="nav-pages"></div>
+    <div class="nav-sec">Resources</div>
+    <div id="nav-links"></div>
+    <div class="nav-spacer"></div>
+    <div class="mock">
+      <div class="lab">Mock controls</div>
+      <div class="row"><span>Layout</span><div class="seg" id="seg-layout"><button data-v="a" onclick="setLayout('a')" title="A · map + rail">A</button><button data-v="b" onclick="setLayout('b')" title="B · briefing">B</button><button data-v="c" onclick="setLayout('c')" title="C · dashboard cards">C</button></div></div>
+      <div class="row"><span>Theme</span><div class="seg" id="seg-theme"><button data-v="light" onclick="setTheme('light')">Light</button><button data-v="dark" onclick="setTheme('dark')">Dark</button></div></div>
+    </div>
+    <div class="nav-foot">Zoho Creator portal chrome (imitation)<br>safe-portal-test 0.5.0 · mock · writes nothing</div>
+  </nav>
+  <main id="main">
+    <div id="pagebar">
+      <span class="crumb"><b>Vyanet SAFE</b> /</span>
+      <h1 id="page-title"></h1>
+      <span class="st" id="page-status"></span>
+      <a class="open" id="page-open" target="_blank" rel="noopener">Open page alone ↗</a>
+    </div>
+    <iframe id="frame" title="SAFE page"></iframe>
+  </main>
+</div>
+<script>
+(function () {
+  'use strict';
+  var PAGES = [
+    { id: 'home', comp: null, label: 'Home' },
+    { id: 'security', comp: 'S', label: 'Security' },
+    { id: 'access', comp: 'A', label: 'Access' },
+    { id: 'fire', comp: 'F', label: 'Fire' },
+    { id: 'emergency', comp: 'E', label: 'Emergency service' }
+  ];
+  var COLOR = { S: '#3b82f6', A: '#f59e0b', F: '#ef4444', E: '#22c55e' };
+  var HOME_ICON = '<svg viewBox="0 0 24 24"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>';
+  var params = new URLSearchParams(window.location.search);
+  var state = {
+    page: PAGES.some(function (p) { return p.id === params.get('page'); }) ? params.get('page') : 'home',
+    layout: ['a', 'b', 'c'].indexOf(params.get('layout')) >= 0 ? params.get('layout') : 'c',
+    theme: params.get('theme') === 'dark' ? 'dark' : 'light',
+    p: params.get('p') || 'residence',
+    pin: null,
+    navMin: false
+  };
+  var fx = (window.SAFE_FIXTURES || {})[state.p] || window.SAFE_FIXTURES.residence;
+  var counts = {};
+  fx.pins.forEach(function (p) { if (p.kind !== 'lot') counts[p.comp] = (counts[p.comp] || 0) + 1; });
+  var live = fx.pins.filter(function (p) { return p.kind === 'camera' && p.live; }).length;
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+  function $(id) { return document.getElementById(id); }
+
+  $('prop-name').textContent = fx.name;
+  $('prop-addr').textContent = fx.address;
+  $('chip-live').textContent = 'CHEKT · ' + live + ' live';
+  $('chip-alarm').textContent = 'Alarm: ' + fx.monitoring.alarm;
+
+  function pageUrl(id) {
+    var q = new URLSearchParams();
+    q.set('p', state.p); q.set('layout', state.layout); q.set('theme', state.theme);
+    if (state.pin) q.set('pin', state.pin);
+    return id + '.html?' + q.toString();
+  }
+  function renderNav() {
+    $('nav-pages').innerHTML = PAGES.map(function (pg) {
+      var on = pg.id === state.page ? ' on' : '';
+      if (!pg.comp) return '<a class="nav-item' + on + '" style="--c:#fff" href="?page=home" onclick="return goPage(\'home\')" title="Home"><span class="ic">' + HOME_ICON + '</span><span class="t">Home</span></a>';
+      return '<a class="nav-item' + on + '" style="--c:' + COLOR[pg.comp] + '" href="?page=' + pg.id + '" onclick="return goPage(\'' + pg.id + '\')" title="' + esc(pg.label) + '"><span class="k">' + pg.comp + '</span><span class="t">' + esc(pg.label) + '</span><span class="n">' + (counts[pg.comp] || 0) + '</span></a>';
+    }).join('');
+    var links = (fx.links || []).map(function (l) {
+      return '<a class="nav-item" href="' + esc(l.href) + '" target="_blank" rel="noopener" title="' + esc(l.label) + '"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span><span class="t">' + esc(l.label) + '</span></a>';
+    });
+    links.unshift('<a class="nav-item" href="?page=emergency" onclick="return goPage(\'emergency\')" title="Responder packet (on the Emergency service page)"><span class="ic"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/></svg></span><span class="t">Responder packet</span></a>');
+    $('nav-links').innerHTML = links.join('');
+    document.querySelectorAll('#seg-layout button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === state.layout); });
+    document.querySelectorAll('#seg-theme button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === state.theme); });
+  }
+  function loadPage() {
+    var pg = PAGES.filter(function (x) { return x.id === state.page; })[0];
+    $('page-title').textContent = pg.label;
+    $('page-status').textContent = pg.comp ? ((fx.report[pg.comp] || {}).status || '') : 'Property Intel portal · Security · Access · Fire · Emergency service';
+    $('page-open').href = pageUrl(pg.id);
+    $('frame').src = pageUrl(pg.id);
+    state.pin = null; // a deep-linked pin applies to one page load only
+    document.title = 'Vyanet SAFE — ' + pg.label + ' · ' + fx.name + ' (portal mock)';
+    document.body.classList.toggle('theme-dark', state.theme === 'dark');
+    var q = new URLSearchParams();
+    q.set('page', state.page); if (state.layout !== 'c') q.set('layout', state.layout); if (state.theme !== 'light') q.set('theme', state.theme); if (state.p !== 'residence') q.set('p', state.p);
+    try { history.replaceState(null, '', '?' + q.toString()); } catch (e) {}
+    renderNav();
+  }
+  window.goPage = function (id) { state.page = id; loadPage(); return false; };
+  window.setLayout = function (l) { state.layout = l; loadPage(); };
+  window.setTheme = function (t) { state.theme = t; loadPage(); };
+  window.toggleNav = function () { state.navMin = !state.navMin; document.body.classList.toggle('nav-min', state.navMin); };
+  window.addEventListener('message', function (e) {
+    if (!e.data) return;
+    if (e.data.type === 'safe-page' && e.data.status) $('page-status').textContent = e.data.status;
+    if (e.data.type === 'safe-nav' && PAGES.some(function (p) { return p.id === e.data.page; })) {
+      state.pin = e.data.pin || null;
+      goPage(e.data.page);
+    }
+  });
+  if (window.innerWidth < 1100) { state.navMin = true; document.body.classList.add('nav-min'); }
+  loadPage();
+})();
+</script>
+</body>
+</html>
