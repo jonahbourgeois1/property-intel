@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.9.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.11.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -8,7 +8,7 @@ import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading,
   coordPair, reviewEntry, reviewStateFromJson, parcelTileName, PARCEL_COUNTIES,
-  EDITOR_ACTORS, normActor, historyEventsFromJson
+  EDITOR_ACTORS, normActor, historyEventsFromJson, lastEditForHub
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +29,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.9');
+ok('build', BUILD === '1.0.11');
 ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
 ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
@@ -103,6 +103,15 @@ ok('history log keeps named events', historyEventsFromJson(JSON.stringify({
     { at: 'x', by: 'Nope', property: GUD }
   ]
 })).length === 1);
+ok('history log keeps earlier save', historyEventsFromJson(JSON.stringify({
+  events: [
+    { at: '2026-10-02T17:37:45.273Z', by: '', property: SAMPLE, source: 'backfill' }
+  ]
+}))[0].source === 'backfill');
+ok('last edit prefers later named', lastEditForHub([
+  { at: '2026-10-02T00:00:00.000Z', by: '', property: SAMPLE, file_id: SAMPLE },
+  { at: '2026-10-06T12:00:00.000Z', by: 'Jonah', property: SAMPLE, file_id: SAMPLE }
+], SAMPLE).by === 'Jonah');
 
 const withMx = JSON.parse(JSON.stringify(gud));
 withMx.cameras[0].mx = 1;
@@ -194,14 +203,17 @@ ok('no onclick', html.indexOf('onclick=') === -1);
 ok('client page named', html.includes('vyanet-viewer.html'));
 ok('internal banner', html.includes('Not a client link'));
 ['indexView', 'indexSearch', 'indexList', 'indexLink', 'indexCount', 'indexBlurb',
-  'actorSelect', 'historyFilter', 'historyFeed', 'editHistory', 'historyList'].forEach((id) => {
+  'actorSelect', 'historyLink', 'historyView', 'historyBlurb', 'historyCount',
+  'historyFilter', 'historyFeed', 'editHistory', 'historyList'].forEach((id) => {
   ok('index id ' + id, html.includes('id="' + id + '"'));
 });
+ok('history page query', html.includes('camera-pin-editor.html?history=1'));
 ok('index hides save until editing', html.includes('body:not(.editing) #saveBtn'));
 
 const scriptMatch = html.match(/<script type="module">([\s\S]*)<\/script>/);
 ok('one module script', !!scriptMatch);
 const script = scriptMatch ? scriptMatch[1] : '';
+ok('history page boots', script.includes("params.get('history') === '1'"));
 const ids = new Set();
 const idRe = /\bid="([^"]+)"/g;
 let m;
@@ -260,7 +272,11 @@ ok('gs refuses create', gs.includes('refusing to create a cameras file'));
 ok('gs requires actor', gs.includes("by must be Jonah, Eleanor, Bot 1, or Bot 2") &&
   gs.includes('CAM_PIN_ACTORS') && gs.includes('camPinAppendHistoryLog_'));
 ok('page has actor picker', html.includes('id="actorSelect"') && html.includes('Bot 2'));
-ok('history file empty', JSON.parse(readFileSync(join(root, 'camera-pin-history.json'), 'utf8')).events.length === 0);
+ok('page has last edited', html.includes('index-last') && html.includes('Earlier save'));
+const histDoc = JSON.parse(readFileSync(join(root, 'camera-pin-history.json'), 'utf8'));
+const histEvents = historyEventsFromJson(JSON.stringify(histDoc));
+ok('history file has prior saves', histEvents.length === 87 && histEvents.every((ev) => ev.source === 'backfill'));
+ok('achterhof last edited', lastEditForHub(histEvents, SAMPLE).at === '2026-10-02T17:37:45.273Z');
 ok('gs limits', gs.includes('CAM_PIN_MAX_MOVE_M = 5000') && gs.includes('CAM_PIN_FOV_MAX = 360') &&
   gs.includes('CAM_PIN_RANGE_MAX = 500'));
 [EUGENE, EUGENE_CAMS, JONES, TRACY, D9].forEach((id) => {

@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.9';
+export const BUILD = '1.0.11';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -61,20 +61,46 @@ export function historyEventsFromJson(text) {
   const out = [];
   for (let i = 0; i < rows.length; i++) {
     const ev = rows[i] || {};
-    const by = normActor(ev.by);
+    const rawBy = String(ev.by == null ? '' : ev.by).trim();
+    const by = normActor(rawBy);
+    if (rawBy && !by) continue;
     const property = normHubId(ev.property);
-    if (!by || !property) continue;
+    if (!property) continue;
+    const at = String(ev.at || '').trim();
+    if (!at) continue;
     const cameras = Array.isArray(ev.cameras) ? ev.cameras.map((id) => String(id || '').trim()).filter(Boolean) : [];
     out.push({
-      at: String(ev.at || ''),
+      at: at,
       by: by,
       property: property,
       file_id: normHubId(ev.file_id) || property,
       name: String(ev.name || '').trim(),
-      cameras: cameras
+      cameras: cameras,
+      source: ev.source === 'backfill' || !by ? 'backfill' : 'save'
     });
   }
   return out;
+}
+
+export function eventTouchesHub(ev, hubId, fileId) {
+  const ids = {};
+  const a = normHubId(hubId);
+  const b = normHubId(fileId);
+  if (a) ids[a] = true;
+  if (b) ids[b] = true;
+  if (!ev || !Object.keys(ids).length) return false;
+  return !!(ids[ev.property] || ids[ev.file_id]);
+}
+
+export function lastEditForHub(events, hubId, fileId) {
+  let best = null;
+  const rows = events || [];
+  for (let i = 0; i < rows.length; i++) {
+    const ev = rows[i];
+    if (!eventTouchesHub(ev, hubId, fileId)) continue;
+    if (!best || String(ev.at) > String(best.at)) best = ev;
+  }
+  return best;
 }
 
 export function appendEditorHistory(record, entry) {

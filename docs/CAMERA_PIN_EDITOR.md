@@ -4,6 +4,30 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-10-06 — Recent edits is its own page (cam-edit 1.0.11)
+
+**What.** The account list no longer embeds the activity feed. Header **Recent edits** (next to Reload) opens `camera-pin-editor.html?history=1`. That page lists every log row, with **Edits by**. Last edited stays next to each account name.
+
+**Why.** The feed sat on top of 321 accounts and was easy to miss.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`.
+
+**Status.** Local. Push with the 1.0.9/1.0.10 history work.
+
+### 2026-10-06 — Prior saves in the log, last edited on the list (cam-edit 1.0.10)
+
+**What.** `camera-pin-history.json` is seeded from every cameras file that already has `editor_saved_at` (87 saves, Oct 1–6). Those lines have no name — the editor did not store Jonah/Eleanor/Bot 1/Bot 2 then — and show as **Earlier save**. The account list puts **Last edited** next to the name. A later named Save replaces that with the name.
+
+**Why.** History that starts empty hides work already done. Who did those older saves cannot be recovered from git (the commit author is the Apps Script token).
+
+**Files.** `camera-pin-history.json`, `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Not verified live until the editor HTML is on `main`.
+
+**Status.** Ready to push with 1.0.9. Apps Script 1.0.9 paste is still required for named Saves; this seed is data-only.
+
 ### 2026-10-06 — Edit history by Jonah, Eleanor, Bot 1, Bot 2 (cam-edit 1.0.9)
 
 **What.** The editor header has **Editing as**. Save is refused until that is one of Jonah, Eleanor, Bot 1, or Bot 2. Each real save appends `editor_history[]` on the cameras file (who, when, which cameras, from/to pose) and a line on `camera-pin-history.json`. The property panel lists that history. The account list can filter **Edits by** and shows the last 20 events.

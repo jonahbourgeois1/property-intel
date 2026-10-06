@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.9)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.11)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -268,7 +268,8 @@
   body:not(.editing) #undoBtn,
   body:not(.editing) #redoBtn,
   body:not(.editing) #saveBtn { display: none; }
-  #indexView { flex: 1; overflow: auto; padding: 16px 20px 48px; }
+  #indexView,
+  #historyView { flex: 1; overflow: auto; padding: 16px 20px 48px; }
   .actor-pick {
     display: flex;
     align-items: center;
@@ -316,6 +317,18 @@
     text-decoration: none;
     min-width: 0;
   }
+  .index-name-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+  }
+  .index-last {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+    font-weight: 400;
+  }
   .index-row .row-link:hover, .index-row .row-link:focus { color: var(--accent); outline: none; }
   .index-done {
     display: flex;
@@ -345,7 +358,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.9</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.11</span>
   <label class="actor-pick">Editing as
     <select id="actorSelect" aria-label="Editing as">
       <option value="">Choose editor…</option>
@@ -359,6 +372,7 @@
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
   <button type="button" id="redoBtn" disabled>Redo</button>
+  <a class="header-link" id="historyLink" href="camera-pin-editor.html?history=1">Recent edits</a>
   <button type="button" id="reloadBtn">Reload</button>
   <button type="button" id="saveBtn" class="primary" disabled>Save</button>
   <div id="statusLine" aria-live="polite"></div>
@@ -367,6 +381,13 @@
   <p class="muted" id="indexBlurb"></p>
   <div class="index-bar">
     <input id="indexSearch" type="search" placeholder="Search name, address, or hub" autocomplete="off">
+    <span id="indexCount" class="muted"></span>
+  </div>
+  <div id="indexList"></div>
+</div>
+<div id="historyView" hidden>
+  <p class="muted" id="historyBlurb"></p>
+  <div class="index-bar">
     <label class="actor-pick">Edits by
       <select id="historyFilter" aria-label="Edits by">
         <option value="">Everyone</option>
@@ -376,10 +397,9 @@
         <option value="Bot 2">Bot 2</option>
       </select>
     </label>
-    <span id="indexCount" class="muted"></span>
+    <span id="historyCount" class="muted"></span>
   </div>
-  <div id="historyFeed" hidden></div>
-  <div id="indexList"></div>
+  <div id="historyFeed"></div>
 </div>
 <div id="gate" hidden>
   <h2 id="gateTitle">This page needs a property link</h2>
@@ -432,8 +452,9 @@ import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair,
   REVIEW_STORE_KEY, ACTOR_STORE_KEY, EDITOR_ACTORS, normActor, historyEventsFromJson,
+  lastEditForHub, eventTouchesHub,
   reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.9';
+} from './js/camera-pin-editor.js?v=1.0.11';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -543,6 +564,16 @@ function formatWhen(iso) {
   return new Date(t).toLocaleString();
 }
 
+function formatWhenShort(iso) {
+  var t = Date.parse(iso);
+  if (!isFinite(t)) return iso || '';
+  return new Date(t).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function actorLabel(by) {
+  return by || 'Earlier save';
+}
+
 function formatPose(pose) {
   var p = pose || {};
   var lat = p.lat == null ? '—' : Number(p.lat).toFixed(6);
@@ -553,11 +584,26 @@ function formatPose(pose) {
   return lat + ', ' + lng + ' · hdg ' + h + ' · fov ' + fov + ' · ' + range + ' m';
 }
 
+function historyRowsForOpenProperty() {
+  var rows = [];
+  var fileId = state.fileId || propertyId;
+  if (state.record && Array.isArray(state.record.editor_history)) {
+    state.record.editor_history.forEach(function (ev) { rows.push(ev); });
+  }
+  historyEvents.forEach(function (ev) {
+    if (!eventTouchesHub(ev, propertyId, fileId)) return;
+    var dup = rows.some(function (r) {
+      return String(r.at || '') === String(ev.at || '') && (r.by || '') === (ev.by || '');
+    });
+    if (!dup) rows.push(ev);
+  });
+  rows.sort(function (a, b) { return String(a.at || '').localeCompare(String(b.at || '')); });
+  return rows.reverse();
+}
+
 function renderEditHistory() {
   var list = $('historyList');
-  var rows = (state.record && Array.isArray(state.record.editor_history))
-    ? state.record.editor_history.slice().reverse()
-    : [];
+  var rows = historyRowsForOpenProperty();
   if (!rows.length) {
     list.textContent = 'No saves yet. Choose your name, then Save.';
     list.className = 'muted';
@@ -570,7 +616,7 @@ function renderEditHistory() {
     wrap.className = 'hist-row';
     var title = document.createElement('div');
     var cams = Array.isArray(ev.cameras) ? ev.cameras.join(', ') : '';
-    title.innerHTML = '<strong>' + escapeHtml(ev.by || 'Unknown') + '</strong> · ' +
+    title.innerHTML = '<strong>' + escapeHtml(actorLabel(ev.by)) + '</strong> · ' +
       escapeHtml(formatWhen(ev.at)) + (cams ? ' · ' + escapeHtml(cams) : '');
     wrap.appendChild(title);
     (ev.changes || []).forEach(function (ch) {
@@ -1384,6 +1430,10 @@ function indexHref() {
   return editorPageHref('');
 }
 
+function historyHref() {
+  return editorPageHref('history=1');
+}
+
 function propertyHref(id) {
   return editorPageHref('property=' + id);
 }
@@ -1392,12 +1442,27 @@ function editing() {
   return document.body.classList.contains('editing');
 }
 
+function syncNavLinks() {
+  $('indexLink').href = indexHref();
+  $('historyLink').href = historyHref();
+}
+
 function showIndex() {
   document.body.classList.remove('editing');
   $('app').hidden = true;
   $('gate').hidden = true;
+  $('historyView').hidden = true;
   $('indexView').hidden = false;
-  $('indexLink').href = indexHref();
+  syncNavLinks();
+}
+
+function showHistoryPage() {
+  document.body.classList.remove('editing');
+  $('app').hidden = true;
+  $('gate').hidden = true;
+  $('indexView').hidden = true;
+  $('historyView').hidden = false;
+  syncNavLinks();
 }
 
 function loadReview() {
@@ -1438,30 +1503,19 @@ function reviewDoneCount() {
   return n;
 }
 
-function hubsEditedBy(actor) {
-  var found = {};
-  if (!actor) return found;
-  historyEvents.forEach(function (ev) {
-    if (ev.by === actor) found[ev.property] = true;
-  });
-  return found;
-}
-
 function renderHistoryFeed() {
   var feed = $('historyFeed');
   var actor = normActor($('historyFilter').value);
   var rows = historyEvents.slice().reverse();
   if (actor) rows = rows.filter(function (ev) { return ev.by === actor; });
-  rows = rows.slice(0, 20);
+  $('historyCount').textContent = rows.length + (rows.length === 1 ? ' edit' : ' edits');
   if (!rows.length) {
-    feed.hidden = !actor;
-    feed.textContent = actor ? ('No saved edits by ' + actor + ' yet.') : '';
+    feed.textContent = actor ? ('No saved edits by ' + actor + ' yet.') : 'No saved edits yet.';
     return;
   }
-  feed.hidden = false;
   feed.textContent = '';
   var heading = document.createElement('h3');
-  heading.textContent = actor ? ('Recent edits by ' + actor) : 'Recent edits';
+  heading.textContent = actor ? ('Edits by ' + actor) : 'All edits';
   feed.appendChild(heading);
   rows.forEach(function (ev) {
     var item = document.createElement('div');
@@ -1469,7 +1523,7 @@ function renderHistoryFeed() {
     var link = document.createElement('a');
     link.href = propertyHref(ev.property);
     link.textContent = ev.name || ev.property.slice(0, 8);
-    item.appendChild(document.createTextNode(ev.by + ' · ' + formatWhen(ev.at) + ' · '));
+    item.appendChild(document.createTextNode(actorLabel(ev.by) + ' · ' + formatWhen(ev.at) + ' · '));
     item.appendChild(link);
     if (ev.cameras && ev.cameras.length) {
       item.appendChild(document.createTextNode(' · ' + ev.cameras.join(', ')));
@@ -1480,9 +1534,6 @@ function renderHistoryFeed() {
 
 function renderIndex() {
   var q = ($('indexSearch').value || '').trim().toLowerCase();
-  var actor = normActor($('historyFilter').value);
-  var edited = hubsEditedBy(actor);
-  renderHistoryFeed();
   var list = $('indexList');
   list.textContent = '';
   var shown = 0;
@@ -1491,7 +1542,6 @@ function renderIndex() {
     var row = indexRows[i] || {};
     var id = normHubId(row.id);
     if (!id) continue;
-    if (actor && !edited[id]) continue;
     if (Number(row.cameras) > 0) withCams++;
     var mark = reviewOf(id);
     var blob = ((row.name || '') + ' ' + (row.address || '') + ' ' + id + ' ' +
@@ -1511,12 +1561,24 @@ function renderIndex() {
     var link = document.createElement('a');
     link.className = 'row-link';
     link.href = propertyHref(id);
+    var nameRow = document.createElement('div');
+    nameRow.className = 'index-name-row';
     var name = document.createElement('div');
     name.textContent = row.name || id;
+    nameRow.appendChild(name);
+    var last = lastEditForHub(historyEvents, id, row.cameras_file);
+    if (last && last.at) {
+      var when = document.createElement('div');
+      when.className = 'index-last';
+      when.textContent = last.by
+        ? ('Last edited ' + formatWhenShort(last.at) + ' · ' + last.by)
+        : ('Last edited ' + formatWhenShort(last.at));
+      nameRow.appendChild(when);
+    }
     var addr = document.createElement('div');
     addr.className = 'muted';
     addr.textContent = row.address || id;
-    link.appendChild(name);
+    link.appendChild(nameRow);
     link.appendChild(addr);
     var count = document.createElement('div');
     count.className = 'count';
@@ -1562,17 +1624,23 @@ function writeIndexCount(shown, withCams) {
     withCams + ' with cameras · ' + reviewDoneCount() + ' done';
 }
 
-function bootIndex() {
-  showIndex();
-  $('indexBlurb').textContent = 'Chekt accounts. Choose your name (Jonah, Eleanor, Bot 1, or Bot 2) before Save. Edit history is shared. Done and notes stay in this browser. Client links stay vyanet-viewer.html?property=…&live=1.';
-  setStatus('Loading properties…', '');
+function fetchHistoryLog() {
   var histUrl = new URL('camera-pin-history.json', window.location.href);
   histUrl.searchParams.set('t', String(Date.now()));
+  return fetchJson(histUrl.href).then(function (doc) {
+    historyEvents = historyEventsFromJson(JSON.stringify(doc || {}));
+  }).catch(function () {
+    historyEvents = [];
+  });
+}
+
+function bootIndex() {
+  showIndex();
+  $('indexBlurb').textContent = 'Chekt accounts. Choose your name (Jonah, Eleanor, Bot 1, or Bot 2) before Save. Recent edits is a separate page. Done and notes stay in this browser. Client links stay vyanet-viewer.html?property=…&live=1.';
+  setStatus('Loading properties…', '');
   var url = new URL('camera-pin-properties.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
-  Promise.all([fetchJson(url.href), fetchJson(histUrl.href).then(function (doc) {
-    historyEvents = historyEventsFromJson(JSON.stringify(doc || {}));
-  })]).then(function (pair) {
+  Promise.all([fetchJson(url.href), fetchHistoryLog()]).then(function (pair) {
     var doc = pair[0];
     var rows = doc && Array.isArray(doc.properties) ? doc.properties : null;
     if (!rows) {
@@ -1592,6 +1660,7 @@ function showGate(title, html) {
   document.body.classList.remove('editing');
   $('app').hidden = true;
   $('indexView').hidden = true;
+  $('historyView').hidden = true;
   $('gate').hidden = false;
   $('gateTitle').textContent = title;
   $('gateBody').innerHTML = html;
@@ -1606,16 +1675,31 @@ function exampleBlock() {
     'The client page stays <span class="mono">vyanet-viewer.html?property=…&amp;live=1</span>.</p>';
 }
 
+function bootHistory() {
+  showHistoryPage();
+  $('historyBlurb').textContent = 'Every camera-pin Save, newest first. Saves from before named editors show as Earlier save. Click a property to open it.';
+  setStatus('Loading edits…', '');
+  fetchHistoryLog().then(function () {
+    renderHistoryFeed();
+    setStatus('', '');
+  });
+}
+
 function boot() {
-  $('indexLink').href = indexHref();
+  syncNavLinks();
   loadReview();
   loadActor();
+  if (!propertyId && (params.get('history') === '1' || params.get('view') === 'history')) {
+    bootHistory();
+    return;
+  }
   if (!propertyId) {
     bootIndex();
     return;
   }
   document.body.classList.add('editing');
   $('indexView').hidden = true;
+  $('historyView').hidden = true;
   var editor = editorUrl(propertyId);
   var client = clientLiveUrl(propertyId);
   $('editorLink').href = editor;
@@ -1668,7 +1752,7 @@ function boot() {
     $('gate').hidden = true;
     $('app').hidden = false;
     renderList();
-    renderEditHistory();
+    fetchHistoryLog().then(function () { renderEditHistory(); });
     loadMaps();
     checkSaveEndpoint().then(function (ready) {
       state.saveReady = ready;
@@ -1692,7 +1776,11 @@ $('reloadBtn').addEventListener('click', function () {
   window.location.reload();
 });
 $('indexSearch').addEventListener('input', renderIndex);
-$('historyFilter').addEventListener('change', renderIndex);
+$('historyFilter').addEventListener('change', renderHistoryFeed);
+$('historyLink').addEventListener('click', function (ev) {
+  if (editing() && posesJson() !== state.savedJson &&
+      !window.confirm('Discard unsaved pin edits and leave?')) ev.preventDefault();
+});
 $('actorSelect').addEventListener('change', function () {
   saveActor();
   refreshDirty();
