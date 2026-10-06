@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<title>Vyanet SAFE — Layout B · SAFE briefing (mock)</title>
+<!--
+  safe-portal/layout-b.html — SAFE portal layout variant B: SAFE BRIEFING
+  (safe-portal 0.2.0 · mock for the Zoho Creator portal page)
+
+  The four SAFE components are the spine of the page, one wide tab each. The
+  active component renders as the briefing panel from the reference deck:
+  annotated drone nadir (numbered pins, cones, zones, routes, lot line) with a
+  numbered callout column, then SHOULD KNOW | RECOMMENDATIONS side by side.
+  The panel substrate can swap to the Google map or the 3D model; the right
+  rail holds Live (CHEKT feeds, simulated), Clips, Drone mapping (nadir + four
+  obliques + 3D) and Facts. Shared engine: portal-core.js / portal-core.css;
+  data: fixtures.js (?p=residence). Writes nothing.
+-->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="portal-core.css">
+<script src="../nadir-geo.js"></script>
+<script src="fixtures.js"></script>
+<script src="portal-core.js"></script>
+<style>
+  :root { --head-h: 56px; --spine-h: 64px; --rail-w: 372px; }
+  body { display: flex; flex-direction: column; }
+  #head {
+    height: var(--head-h); flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+    padding: 0 18px; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 30;
+  }
+  #head .sp-ident { flex: 1; }
+  #head .vname { font: 600 11px var(--mono); color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+  /* ---- the SAFE spine ---- */
+  #spine { height: var(--spine-h); flex-shrink: 0; display: grid; grid-template-columns: repeat(4, 1fr); background: var(--surface); border-bottom: 1px solid var(--border); }
+  #spine button {
+    display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; column-gap: 10px; align-items: center; text-align: left;
+    padding: 0 16px; border-right: 1px solid var(--border); border-bottom: 3px solid transparent; color: var(--text2); min-width: 0;
+  }
+  #spine button:last-child { border-right: 0; }
+  #spine button .sp-k { grid-row: 1 / 3; width: 30px; height: 30px; font-size: 14px; border-radius: 7px; opacity: 0.45; }
+  #spine button .t { font: 600 13px var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #spine button .t .n { font: 11px var(--mono); color: var(--text3); margin-left: 6px; }
+  #spine button .s { font: 10.5px var(--mono); color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #spine button:hover { color: var(--text); background: var(--surface2); }
+  #spine button.on { color: var(--text); background: var(--surface2); }
+  #spine button.on .sp-k { opacity: 1; }
+  #spine button.on.S { border-bottom-color: var(--S); } #spine button.on.A { border-bottom-color: var(--A); }
+  #spine button.on.F { border-bottom-color: var(--F); } #spine button.on.E { border-bottom-color: var(--E); }
+  /* ---- body ---- */
+  #body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) var(--rail-w); }
+  #main { min-width: 0; padding: 16px 18px 28px; }
+  .brief { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .brief-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .brief-head .sp-k { width: 28px; height: 28px; font-size: 14px; border-radius: 7px; }
+  .brief-head .ttl { flex: 1; min-width: 220px; }
+  .brief-head .ttl h2 { font-size: 15px; font-weight: 600; line-height: 1.25; }
+  .brief-head .ttl .st { font: 11px var(--mono); color: var(--text2); margin-top: 2px; }
+  .brief-head .ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .brief-stage { display: grid; grid-template-columns: minmax(0, 1fr) 272px; border-bottom: 1px solid var(--border); }
+  /* the nadir render is 1568x1367: let the stage follow the width so the
+     frame fills it, capped so the Should know / Recommendations stay near */
+  #stage { width: 100%; aspect-ratio: 1568 / 1367; max-height: 72vh; min-height: 380px; }
+  #stage .sp-sub.nadir { background: #000; }
+  #legend { position: absolute; left: 12px; bottom: 12px; z-index: 5; }
+  #card { position: absolute; right: 12px; bottom: 12px; z-index: 20; width: 330px; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow-y: auto; display: none; scrollbar-width: thin; }
+  #card.on { display: block; }
+  #callouts { border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  #callouts .sp-ph { padding: 10px 12px 6px; }
+  #callout-list { flex: 1; min-height: 0; padding: 0 8px 10px; }
+  .co { display: grid; grid-template-columns: 24px 1fr; gap: 8px; padding: 7px 6px; border-radius: 7px; cursor: pointer; border: 1px solid transparent; }
+  .co:hover { background: var(--surface2); border-color: var(--border); }
+  .co.sel { background: var(--surface2); border-color: #fff; }
+  .co .num { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 10.5px var(--mono); border: 1.5px solid rgba(255,255,255,0.9); margin-top: 1px; }
+  .co.S .num { background: var(--S); } .co.A .num { background: var(--A); } .co.F .num { background: var(--F); } .co.E .num { background: var(--E); }
+  .co.pl-estimated .num, .co.pl-mock .num { border-style: dashed; }
+  .co b { display: block; font-size: 12px; font-weight: 600; line-height: 1.3; }
+  .co span { display: block; font-size: 11px; color: var(--text2); line-height: 1.4; margin-top: 2px; }
+  .co .off { font: 10px var(--mono); color: var(--A); }
+  .brief-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; padding: 6px 18px 14px; }
+  .brief-cols .sp-h { margin-top: 12px; }
+  .brief-measures { display: flex; gap: 6px; flex-wrap: wrap; padding: 10px 16px 0; }
+  .brief-foot { padding: 10px 16px 12px; border-top: 1px solid var(--border); font: 10.5px var(--mono); color: var(--text3); line-height: 1.5; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .brief-limits { margin-top: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px 6px; }
+  /* ---- rail ---- */
+  #rail { background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  #rail-body { flex: 1; min-height: 0; padding: 0 0 20px; }
+  .rail-sec { border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  .rail-sec .pad { padding: 0 12px; }
+  #player-wrap { padding: 0 12px 8px; display: none; }
+  #player-wrap.on { display: block; }
+  #feeds.compact .sp-tile .ts { display: none; }
+  #clips { padding: 0 6px; }
+  #thumbs-rail { grid-template-columns: repeat(3, 1fr); padding: 0 12px; }
+  #facts { padding: 0 12px; }
+  #facts .sp-h:first-child { margin-top: 4px; }
+  .sp-tool.sm { height: 24px; padding: 0 8px; font-size: 11px; }
+  @media (max-width: 1180px) { :root { --rail-w: 330px; } .brief-stage { grid-template-columns: minmax(0, 1fr) 240px; } }
+  @media (max-width: 980px) {
+    body { overflow: auto; height: auto; min-height: 100dvh; }
+    #body { grid-template-columns: 1fr; }
+    #main { padding: 12px; }
+    #rail { border-left: 0; border-top: 1px solid var(--border); }
+    #rail-body { overflow: visible; }
+    .brief-stage { grid-template-columns: 1fr; }
+    #callouts { border-left: 0; border-top: 1px solid var(--border); max-height: 280px; }
+    #stage { max-height: 60vh; min-height: 260px; }
+    #legend { display: none; }
+    .brief-cols { grid-template-columns: 1fr; }
+    #spine button .s { display: none; }
+    #spine button { grid-template-rows: auto; padding: 0 10px; }
+    #head .vname, #head .sp-chips { display: none; }
+  }
+</style>
+</head>
+<body>
+<header id="head">
+  <div id="brand"></div>
+  <span class="vname">B · SAFE briefing</span>
+  <div class="sp-ident" id="ident"></div>
+  <div class="sp-chips" id="chips"></div>
+  <div id="switch"></div>
+</header>
+<nav id="spine"></nav>
+<div id="body">
+  <main id="main" class="sp-scroll">
+    <section class="brief">
+      <div class="brief-head">
+        <span class="sp-k" id="bh-k"></span>
+        <div class="ttl"><h2 id="bh-title"></h2><div class="st" id="bh-status"></div></div>
+        <div class="ctl">
+          <div class="sp-seg" id="substrate">
+            <button data-sub="nadir" class="on" onclick="setSub('nadir')">Drone nadir</button>
+            <button data-sub="map" onclick="setSub('map')">Google map</button>
+            <button data-sub="3d" onclick="setSub('3d')">3D model</button>
+          </div>
+          <button class="sp-tool" id="btn-labels" onclick="toggleLabels()">Labels</button>
+          <button class="sp-tool" id="btn-all" onclick="toggleAll()" title="Show every SAFE layer, not just the active one">All layers</button>
+        </div>
+      </div>
+      <div class="brief-measures" id="measures"></div>
+      <div class="brief-stage">
+        <div id="stage" class="sp-stage">
+          <div id="sub-nadir" class="sp-sub nadir on"></div>
+          <div id="sub-map" class="sp-sub"></div>
+          <div id="sub-3d" class="sp-sub"></div>
+          <div id="sub-still" class="sp-sub"><div id="still" class="sp-still"></div></div>
+          <div id="legend" class="sp-legend"></div>
+          <div id="card" class="sp-card"></div>
+        </div>
+        <aside id="callouts">
+          <div class="sp-ph"><h2 id="co-title">On the map</h2><span class="sub" id="co-sub"></span></div>
+          <div id="callout-list" class="sp-scroll"></div>
+        </aside>
+      </div>
+      <div class="brief-cols" id="cols"></div>
+      <div class="brief-foot"><span id="bf-left">Pins from the SAFE record (mock) · measurements approximate</span><span>solid = surveyed · dashed = estimated / mock · live feeds simulated from technician stills</span></div>
+    </section>
+    <section class="brief-limits" id="limits"></section>
+  </main>
+  <aside id="rail">
+    <div id="rail-body" class="sp-scroll">
+      <div class="rail-sec">
+        <div class="sp-ph"><h2>Live · CHEKT</h2><span class="sub live" id="live-sub"></span></div>
+        <div id="player-wrap"><div class="sp-player" id="player"></div></div>
+        <div class="pad"><div id="feeds" class="compact"></div></div>
+      </div>
+      <div class="rail-sec">
+        <div class="sp-ph"><h2 id="clips-title">Clips · last 7 days</h2><button class="sp-tool sm" id="clips-all" hidden onclick="clipsAll()">All cameras</button></div>
+        <div id="clips" class="sp-clips"></div>
+      </div>
+      <div class="rail-sec" id="drone-sec">
+        <div class="sp-ph"><h2>Drone mapping</h2><span class="sub" id="drone-sub"></span></div>
+        <div id="thumbs-rail" class="sp-thumbs"></div>
+      </div>
+      <div class="rail-sec" style="border-bottom:0">
+        <div class="sp-ph"><h2>Property facts</h2></div>
+        <div id="facts"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+<script>
+(function () {
+  'use strict';
+  var SP = window.SafePortal;
+  var $ = function (id) { return document.getElementById(id); };
+  var R = SP.load(SP.params.get('p') || 'residence');
+  var state = { tab: 'S', sub: R.drone ? 'nadir' : 'map', sel: null, cam: null, clip: null, clipCam: null, labels: 'auto', all: false, still: null };
+  function onlyLayers() { var o = {}; SP.ORDER.forEach(function (c) { o[c] = state.all || c === state.tab; }); return o; }
+
+  // ---------- header ----------
+  $('brand').innerHTML = SP.brandHTML();
+  $('ident').innerHTML = '<div class="name">' + SP.esc(R.name) + '</div><div class="addr">' + SP.esc(R.address) + '</div>';
+  $('chips').innerHTML = SP.chipsHTML(R);
+  $('switch').innerHTML = SP.switchHTML('b');
+  document.title = 'Vyanet SAFE — ' + R.name + ' · Layout B (mock)';
+
+  // ---------- spine ----------
+  function renderSpine() {
+    $('spine').innerHTML = SP.ORDER.map(function (c) {
+      var r = R.fx.report[c];
+      return '<button class="' + c + (state.tab === c ? ' on' : '') + '" onclick="setTab(\'' + c + '\')"><span class="sp-k ' + c + '">' + c + '</span>' +
+        '<span class="t">' + SP.esc(SP.COMP[c].label) + '<span class="n">' + R.counts[c] + ' pins</span></span><span class="s">' + SP.esc(r.status) + '</span></button>';
+    }).join('');
+  }
+
+  // ---------- stage ----------
+  var nadir = R.drone ? SP.createNadir($('sub-nadir'), R, {
+    layers: onlyLayers(), labels: 'auto', showLot: true,
+    onSelect: function (p, meta) { if (p) onPin(p.id, 'nadir'); else if (meta.source === 'nadir') closeCard(); }
+  }) : null;
+  var map = SP.createMap($('sub-map'), R, {
+    layers: onlyLayers(), lot: true, zoom: 19,
+    onSelect: function (p, meta) { if (p) onPin(p.id, 'map'); else if (meta.source === 'map') closeCard(); },
+    onFail: function () { if (state.sub === 'map' && R.drone) setSub('nadir'); }
+  });
+  var model = R.drone ? SP.createModel($('sub-3d'), R) : null;
+  if (!R.drone) {
+    document.querySelectorAll('#substrate button[data-sub="nadir"], #substrate button[data-sub="3d"]').forEach(function (b) { b.disabled = true; });
+    $('drone-sec').style.display = 'none';
+    document.querySelector('#substrate button[data-sub="map"]').classList.add('on');
+    document.querySelector('#substrate button[data-sub="nadir"]').classList.remove('on');
+    $('sub-nadir').classList.remove('on'); $('sub-map').classList.add('on');
+  }
+  $('legend').innerHTML = SP.legendHTML(R);
+
+  window.setSub = function (s) {
+    var prev = state.sub;
+    state.sub = s;
+    document.querySelectorAll('#substrate button').forEach(function (b) { b.classList.toggle('on', b.dataset.sub === s); });
+    ['nadir', 'map', '3d', 'still'].forEach(function (k) { $('sub-' + k).classList.toggle('on', k === s); });
+    $('legend').style.display = (s === 'map' || s === 'nadir') ? '' : 'none';
+    if (s === '3d' || s === 'still') $('card').classList.remove('on'); else if (state.sel) renderCard(R.byId[state.sel]);
+    if (s === '3d' && model) model.show(); else if (prev === '3d' && model) model.hide();
+    if (s === 'map') map.resize();
+    if (s === 'nadir' && nadir) nadir.resize();
+    if (s !== 'still') { state.still = null; renderThumbs(); }
+  };
+  window.toggleLabels = function () {
+    state.labels = state.labels === true ? 'auto' : true;
+    $('btn-labels').classList.toggle('on', state.labels === true);
+    if (nadir) nadir.setLabels(state.labels);
+    map.setLabels(state.labels === true);
+  };
+  window.toggleAll = function () {
+    state.all = !state.all;
+    $('btn-all').classList.toggle('on', state.all);
+    applyLayers();
+  };
+  function applyLayers() {
+    var L = onlyLayers();
+    if (nadir) { nadir.setLayers(L); nadir.setFocus(state.all ? state.tab : null); }
+    map.setLayers(L); map.setFocus(state.all ? state.tab : null);
+  }
+
+  // ---------- briefing panel ----------
+  function firstSentence(t) { var s = SP.sentences(t); return s.length ? s[0] : ''; }
+  function renderBrief() {
+    var c = state.tab, r = R.fx.report[c], pins = R.byComp[c];
+    var k = $('bh-k'); k.className = 'sp-k ' + c; k.textContent = c;
+    $('bh-title').textContent = SP.COMP[c].label + ' · ' + R.name + ', ' + R.address;
+    $('bh-status').textContent = r.status;
+    $('measures').innerHTML = SP.measuresHTML(R, c);
+    $('co-title').textContent = 'On the map · ' + pins.length;
+    var off = nadir ? nadir.offFrame().filter(function (p) { return p.comp === c; }).length : 0;
+    $('co-sub').textContent = off ? off + ' outside the nadir frame' : '';
+    $('callout-list').innerHTML = pins.map(function (p) {
+      var isOff = nadir && nadir.offFrame().indexOf(p) >= 0;
+      return '<div class="co ' + c + ' pl-' + (p.placement || 'surveyed') + (state.sel === p.id ? ' sel' : '') + '" data-id="' + p.id + '"><span class="num">' + p.n + '</span><div><b>' + SP.esc(p.name) + '</b><span>' + SP.esc(firstSentence(p.desc)) + '</span>' + (isOff ? '<span class="off">outside the nadir frame — see Google map</span>' : '') + '</div></div>';
+    }).join('');
+    $('callout-list').querySelectorAll('.co').forEach(function (e) { e.addEventListener('click', function () { onPin(e.dataset.id, 'callout'); }); });
+    $('cols').innerHTML =
+      '<div><div class="sp-h ' + c + '">Should know</div><ul class="sp-bullets ' + c + '">' + SP.sentences(r.considerations).map(function (s) { return '<li>' + SP.esc(s) + '</li>'; }).join('') + '</ul></div>' +
+      '<div><div class="sp-h ' + c + '">Recommendations</div><ul class="sp-bullets ' + c + '">' + SP.sentences(r.recommendations).map(function (s) { return '<li>' + SP.esc(s) + '</li>'; }).join('') + '</ul></div>';
+    $('limits').innerHTML = SP.limitsHTML(R) + '<div class="sp-note" style="margin-bottom:8px">Clarifications from the record. The briefing is reviewed; dashed pins are estimated or mock placements for this walkthrough.</div>';
+  }
+  window.setTab = function (c) {
+    state.tab = c;
+    if (state.sel && R.byId[state.sel].comp !== c) closeCard();
+    renderSpine(); renderBrief(); applyLayers();
+  };
+
+  // ---------- selection ----------
+  function onPin(id, source) {
+    var p = R.byId[id];
+    if (!p) return;
+    state.sel = id;
+    if (p.comp !== state.tab) { state.tab = p.comp; renderSpine(); renderBrief(); applyLayers(); }
+    document.querySelectorAll('#callout-list .co').forEach(function (e) { e.classList.toggle('sel', e.dataset.id === id); });
+    var row = document.querySelector('#callout-list .co[data-id="' + id + '"]');
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (nadir && source !== 'nadir' && nadir.state.sel !== id) nadir.select(id, 'sync');
+    if (source !== 'map' && map.state.sel !== id) map.select(id, state.sub === 'map', 'sync');
+    if (state.sub === 'still' || state.sub === '3d') setSub(R.drone ? 'nadir' : 'map');
+    renderCard(p);
+  }
+  function renderCard(p) {
+    var card = $('card');
+    card.innerHTML = SP.cardHTML(p, R, { showMap: state.sub !== 'map' });
+    card.classList.add('on');
+    card.querySelectorAll('[data-act]').forEach(function (b) { b.addEventListener('click', function () { cardAction(b.dataset.act, p); }); });
+    card.querySelectorAll('.sp-pinrow').forEach(function (row) { row.addEventListener('click', function () { onPin(row.dataset.id, 'card'); }); });
+  }
+  function cardAction(act, p) {
+    if (act === 'close') { closeCard(); return; }
+    if (act === 'live') { focusCam(p.id, null); $('rail-body').scrollTop = 0; return; }
+    if (act === 'clips') { focusCam(p.id, null); filterClips(p.id); return; }
+    if (act === 'unlock') { SP.toast('<b>Unlock sent</b> — ' + SP.esc(p.name) + '. Relocks in 30 s. Logged to events. (mock)'); return; }
+    if (act === 'map') { setSub('map'); map.select(p.id, true, 'sync'); return; }
+  }
+  function closeCard() {
+    state.sel = null;
+    $('card').classList.remove('on');
+    if (nadir) nadir.clear('sync'); map.clear('sync');
+    document.querySelectorAll('#callout-list .co.sel').forEach(function (e) { e.classList.remove('sel'); });
+  }
+
+  // ---------- rail: live + clips ----------
+  $('live-sub').textContent = R.live.length + ' live · site ' + (R.live[0] && R.live[0].live.site || '3525');
+  var feeds = SP.renderFeeds($('feeds'), R, { layout: 'grid2', small: true, onFocus: function (cam) { focusCam(cam.id, null); filterClips(cam.id); } });
+  function focusCam(id, clip) {
+    var cam = R.byId[id];
+    if (!cam) return;
+    state.cam = id; state.clip = clip;
+    feeds.setActive(id);
+    $('player-wrap').classList.add('on');
+    $('player').innerHTML = SP.playerHTML(cam, clip);
+    $('player').querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.act === 'live') focusCam(id, null);
+        else if (b.dataset.act === 'snap') SP.toast('Snapshot saved (mock) — production: gateway snapshot JPEG for ' + SP.esc(cam.live ? cam.live.name : cam.name) + '.');
+        else if (b.dataset.act === 'map') { onPin(id, 'player'); }
+      });
+    });
+    document.querySelectorAll('#clips .sp-clip').forEach(function (r) { r.classList.toggle('on', !!clip && Number(r.dataset.i) === clip.i); });
+  }
+  function renderClips() {
+    $('clips').innerHTML = SP.clipsHTML(R, { camId: state.clipCam, limit: state.clipCam ? 0 : 6 });
+    $('clips').querySelectorAll('.sp-clip').forEach(function (row) {
+      row.addEventListener('click', function () { var c = R.clips[Number(row.dataset.i)]; focusCam(c.cam, c); $('rail-body').scrollTop = 0; });
+    });
+    var cam = state.clipCam ? R.byId[state.clipCam] : null;
+    $('clips-title').textContent = 'Clips · ' + (cam ? (cam.live ? cam.live.name : cam.name) : 'last 7 days');
+    $('clips-all').hidden = !state.clipCam;
+  }
+  function filterClips(camId) { state.clipCam = camId; renderClips(); }
+  window.clipsAll = function () { state.clipCam = null; renderClips(); };
+
+  // ---------- rail: drone mapping ----------
+  function renderThumbs() {
+    if (!R.drone) return;
+    $('drone-sub').textContent = R.drone.capture;
+    var active = state.sub === 'still' ? state.still : (state.sub === 'nadir' ? 'nadir' : (state.sub === '3d' ? '3d' : null));
+    $('thumbs-rail').innerHTML = SP.thumbsHTML(R, active, true);
+    $('thumbs-rail').querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = b.dataset.view;
+        if (v === 'nadir' || v === '3d') { setSub(v); return; }
+        var ob = R.drone.obliques.filter(function (o) { return o.id === v; })[0];
+        if (!ob) return;
+        state.still = v;
+        $('still').innerHTML = SP.stillHTML(ob);
+        setSub('still');
+        state.still = v; renderThumbs();
+        $('main').scrollTop = 0;
+      });
+    });
+  }
+
+  // ---------- boot ----------
+  $('facts').innerHTML = SP.factsHTML(R, { limit: 9 });
+  renderSpine(); renderBrief(); renderClips(); renderThumbs(); applyLayers();
+  var pinParam = SP.params.get('pin');
+  if (pinParam && R.byId[pinParam]) setTimeout(function () { onPin(pinParam, 'url'); }, 400);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.sel) closeCard(); });
+  window.SAFE_B = { state: state, R: R, map: map, nadir: nadir };
+})();
+</script>
+</body>
+</html>

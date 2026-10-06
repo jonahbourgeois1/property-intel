@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vyanet SAFE — portal test</title>
+<!--
+  safe-portal-test/index.html — published entry for the SAFE portal mock.
+  Lands on the Zoho Creator shell (Home, layout C). Query string is kept.
+  The earlier single-page map mock is at map.html.
+-->
+<script>
+(function () {
+  var q = window.location.search || '';
+  if (q.indexOf('layout=') < 0) q = q ? (q + '&layout=c') : '?layout=c';
+  window.location.replace('portal/index.html' + q + (window.location.hash || ''));
+})();
+</script>
+</head>
+<body>
+<p><a href="portal/index.html?layout=c">Open the SAFE portal test</a></p>
+</body>
+</html>

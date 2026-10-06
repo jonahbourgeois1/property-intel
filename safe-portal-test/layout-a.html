@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<title>Vyanet SAFE — Layout A · Operations dashboard (mock)</title>
+<!--
+  safe-portal/layout-a.html — SAFE portal layout variant A: OPERATIONS DASHBOARD
+  (safe-portal 0.2.0 · mock for the Zoho Creator portal page)
+
+  Three columns, everything on screen at once:
+    left    Live (CHEKT feeds, simulated) + a player + Clips
+    center  the stage: 2D Google map · drone nadir · obliques · 3D model
+    right   SAFE tabs — Security · Access · Fire · Emergency service — each with
+            status, Should know, Recommendations and the numbered pin list
+
+  Selecting a SAFE tab dims every other layer on the stage; selecting a pin
+  (map, nadir or list) opens its card and syncs the list. Camera cards open the
+  feed in the left player. Shared engine: portal-core.js / portal-core.css;
+  data: fixtures.js (?p=residence). Writes nothing.
+-->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="portal-core.css">
+<script src="../nadir-geo.js"></script>
+<script src="fixtures.js"></script>
+<script src="portal-core.js"></script>
+<style>
+  :root { --head-h: 56px; --left-w: 330px; --right-w: 400px; }
+  body { display: flex; flex-direction: column; }
+  #head {
+    height: var(--head-h); flex-shrink: 0; display: flex; align-items: center; gap: 16px;
+    padding: 0 16px; background: var(--surface); border-bottom: 1px solid var(--border); z-index: 30;
+  }
+  #head .sp-ident { flex: 1; }
+  #head .vname { font: 600 11px var(--mono); color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+  #main {
+    flex: 1; min-height: 0; display: grid;
+    grid-template-columns: var(--left-w) minmax(0, 1fr) var(--right-w);
+    grid-template-areas: "left center right";
+  }
+  /* ---- left: live + clips ---- */
+  #left { grid-area: left; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  #left .sp-ph { flex-shrink: 0; }
+  #player-wrap { padding: 0 12px 8px; display: none; }
+  #player-wrap.on { display: block; }
+  #feeds { padding: 0 12px 10px; flex-shrink: 0; }
+  #feeds.compact .sp-tile .ts { display: none; }
+  #clips-head { border-top: 1px solid var(--border); }
+  #clips { flex: 1; min-height: 0; padding: 0 8px 12px; }
+  .sp-tool.sm { height: 24px; padding: 0 8px; font-size: 11px; }
+  /* ---- center: stage ---- */
+  #center { grid-area: center; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #toolbar {
+    height: 46px; flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 0 12px;
+    background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none;
+  }
+  #toolbar::-webkit-scrollbar { display: none; }
+  #toolbar .spacer { flex: 1; }
+  #stage { flex: 1; min-height: 0; }
+  #legend { position: absolute; right: 12px; bottom: 12px; z-index: 5; }
+  #card { position: absolute; left: 12px; bottom: 12px; z-index: 20; width: 340px; max-width: calc(100% - 24px); max-height: calc(100% - 24px); overflow-y: auto; display: none; scrollbar-width: thin; }
+  #card.on { display: block; }
+  #sub-still { display: flex; flex-direction: column; }
+  #still { position: relative; flex: 1; min-height: 0; }
+  #thumbs { flex-shrink: 0; padding: 8px 12px; background: var(--surface); border-top: 1px solid var(--border); }
+  #stage-note { position: absolute; left: 12px; top: 12px; z-index: 5; display: none; }
+  #stage-note.on { display: block; }
+  /* ---- right: SAFE ---- */
+  #right { grid-area: right; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  #safe-tabs { flex-shrink: 0; }
+  #safe-body { flex: 1; min-height: 0; }
+  #safe-foot { flex-shrink: 0; border-top: 1px solid var(--border); padding: 8px 16px; font: 10.5px var(--mono); color: var(--text3); line-height: 1.5; }
+  @media (max-width: 1240px) { :root { --left-w: 290px; --right-w: 360px; } }
+  @media (max-width: 1100px) {
+    body { overflow: auto; height: auto; min-height: 100dvh; }
+    #main { grid-template-columns: 1fr; grid-template-areas: "center" "right" "left"; grid-template-rows: 58vh auto auto; }
+    #center { min-height: 58vh; }
+    #right, #left { border: 0; border-top: 1px solid var(--border); }
+    #right { max-height: none; } #safe-body { overflow: visible; }
+    #clips { max-height: 360px; }
+    #head .vname, #head .sp-chips .sp-chip:nth-child(n+3) { display: none; }
+  }
+  #toolbar .sp-layers { flex-wrap: nowrap; }
+  @media (max-width: 700px) {
+    #head { gap: 10px; padding: 0 12px; }
+    #head .sp-chips { display: none; }
+    #toolbar .sp-layer .t { display: none; }
+    #legend { display: none; }
+    #card { width: auto; right: 12px; max-height: 70%; }
+  }
+</style>
+</head>
+<body>
+<header id="head">
+  <div id="brand"></div>
+  <span class="vname">A · Operations dashboard</span>
+  <div class="sp-ident" id="ident"></div>
+  <div class="sp-chips" id="chips"></div>
+  <div id="switch"></div>
+</header>
+<main id="main">
+  <aside id="left">
+    <div class="sp-ph"><h2>Live · CHEKT</h2><span class="sub live" id="live-sub"></span></div>
+    <div id="player-wrap"><div class="sp-player" id="player"></div></div>
+    <div id="feeds"></div>
+    <div class="sp-ph" id="clips-head"><h2 id="clips-title">Clips · last 7 days</h2><button class="sp-tool sm" id="clips-all" hidden onclick="clipsAll()">All cameras</button></div>
+    <div id="clips" class="sp-clips sp-scroll"></div>
+  </aside>
+  <section id="center">
+    <div id="toolbar">
+      <div class="sp-seg" id="substrate">
+        <button data-sub="map" class="on" onclick="setSub('map')">2D map</button>
+        <button data-sub="nadir" onclick="setSub('nadir')">Drone nadir</button>
+        <button data-sub="still" onclick="setSub('still')">Obliques</button>
+        <button data-sub="3d" onclick="setSub('3d')">3D model</button>
+      </div>
+      <div class="sp-layers" id="layers"></div>
+      <span class="spacer"></span>
+      <button class="sp-tool on" id="btn-dim" onclick="toggleDim()" title="Dim the layers that are not the selected SAFE tab">Dim others</button>
+      <button class="sp-tool on" id="btn-lot" onclick="toggleLot()">Lot</button>
+      <button class="sp-tool" id="btn-labels" onclick="toggleLabels()">Labels</button>
+      <button class="sp-tool" id="btn-fit" onclick="fitAll()">Fit</button>
+    </div>
+    <div id="stage" class="sp-stage">
+      <div id="sub-map" class="sp-sub on"></div>
+      <div id="sub-nadir" class="sp-sub"></div>
+      <div id="sub-still" class="sp-sub"><div id="still" class="sp-still"></div><div id="thumbs" class="sp-thumbs"></div></div>
+      <div id="sub-3d" class="sp-sub"></div>
+      <div id="stage-note" class="sp-mapnote"></div>
+      <div id="legend" class="sp-legend"></div>
+      <div id="card" class="sp-card"></div>
+    </div>
+  </section>
+  <aside id="right">
+    <div id="safe-tabs" class="sp-safe-tabs"></div>
+    <div id="safe-body" class="sp-safe-body sp-scroll"></div>
+    <div id="safe-foot">Pins from the SAFE record (mock) · solid = surveyed, dashed = estimated / mock · live feeds simulated from technician stills</div>
+  </aside>
+</main>
+<script>
+(function () {
+  'use strict';
+  var SP = window.SafePortal;
+  var $ = function (id) { return document.getElementById(id); };
+  var R = SP.load(SP.params.get('p') || 'residence');
+  var state = { tab: 'S', sub: 'map', sel: null, cam: null, clip: null, clipCam: null, dim: true, lot: true, labels: false, still: 'alpha' };
+  var layers = { S: true, A: true, F: true, E: true };
+
+  // ---------- header ----------
+  $('brand').innerHTML = SP.brandHTML();
+  $('ident').innerHTML = '<div class="name">' + SP.esc(R.name) + '</div><div class="addr">' + SP.esc(R.address) + '</div>';
+  $('chips').innerHTML = SP.chipsHTML(R);
+  $('switch').innerHTML = SP.switchHTML('a');
+  document.title = 'Vyanet SAFE — ' + R.name + ' · Layout A (mock)';
+
+  // ---------- stage ----------
+  var map = SP.createMap($('sub-map'), R, {
+    layers: layers, focus: state.tab, lot: true,
+    onSelect: function (p, meta) { if (p) onPin(p.id, 'map'); else if (meta.source === 'map') closeCard(); },
+    onFail: function () { if (R.drone && state.sub === 'map') { setSub('nadir'); note('Google Maps is not available from this origin — showing the drone nadir instead.'); } }
+  });
+  var nadir = R.drone ? SP.createNadir($('sub-nadir'), R, {
+    layers: layers, focus: state.tab, labels: false,
+    onSelect: function (p, meta) { if (p) onPin(p.id, 'nadir'); else if (meta.source === 'nadir') closeCard(); }
+  }) : null;
+  var model = R.drone ? SP.createModel($('sub-3d'), R) : null;
+  if (!R.drone) {
+    document.querySelectorAll('#substrate button[data-sub="nadir"], #substrate button[data-sub="still"], #substrate button[data-sub="3d"]').forEach(function (b) { b.disabled = true; b.title = 'No drone capture on this record'; });
+  }
+  $('legend').innerHTML = SP.legendHTML(R);
+  function note(msg) { var n = $('stage-note'); n.textContent = msg; n.classList.add('on'); setTimeout(function () { n.classList.remove('on'); }, 6000); }
+
+  window.setSub = function (s) {
+    if (s !== 'map' && !R.drone) return;
+    var prev = state.sub;
+    state.sub = s;
+    document.querySelectorAll('#substrate button').forEach(function (b) { b.classList.toggle('on', b.dataset.sub === s); });
+    ['map', 'nadir', 'still', '3d'].forEach(function (k) { $('sub-' + k).classList.toggle('on', k === s); });
+    $('legend').style.display = (s === 'map' || s === 'nadir') ? '' : 'none';
+    if (s === 'still' || s === '3d') $('card').classList.remove('on');
+    else if (state.sel) renderCard(R.byId[state.sel]);
+    if (s === '3d' && model) model.show(); else if (prev === '3d' && model) model.hide();
+    if (s === 'still') renderStill();
+    if (s === 'map') map.resize();
+    if (s === 'nadir' && nadir) nadir.resize();
+  };
+  function renderStill() {
+    var ob = R.drone.obliques.filter(function (o) { return o.id === state.still; })[0] || R.drone.obliques[0];
+    $('still').innerHTML = SP.stillHTML(ob);
+    $('thumbs').innerHTML = SP.thumbsHTML(R, state.still, false);
+    $('thumbs').querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.view === 'nadir') { setSub('nadir'); return; }
+        state.still = b.dataset.view; renderStill();
+      });
+    });
+  }
+
+  // ---------- layers / tools ----------
+  function renderLayers() {
+    $('layers').innerHTML = SP.ORDER.map(function (c) {
+      return '<button class="sp-layer ' + c + (layers[c] ? ' on' : '') + '" onclick="toggleLayer(\'' + c + '\')"><span class="sp-k ' + c + '">' + c + '</span><span class="t">' + SP.COMP[c].short + '</span><span class="n">' + R.counts[c] + '</span></button>';
+    }).join('');
+  }
+  window.toggleLayer = function (c) {
+    layers[c] = !layers[c];
+    map.setLayers(layers); if (nadir) nadir.setLayers(layers);
+    if (state.sel && R.byId[state.sel].comp === c && !layers[c]) closeCard();
+    renderLayers();
+  };
+  window.toggleDim = function () { state.dim = !state.dim; $('btn-dim').classList.toggle('on', state.dim); applyFocus(); };
+  window.toggleLot = function () { state.lot = !state.lot; $('btn-lot').classList.toggle('on', state.lot); map.setLot(state.lot); if (nadir) nadir.setLot(state.lot); };
+  window.toggleLabels = function () { state.labels = !state.labels; $('btn-labels').classList.toggle('on', state.labels); map.setLabels(state.labels); if (nadir) nadir.setLabels(state.labels); };
+  window.fitAll = function () { if (state.sub === 'map') map.fit(); };
+  function applyFocus() { var f = state.dim ? state.tab : null; map.setFocus(f); if (nadir) nadir.setFocus(f); }
+
+  // ---------- SAFE panel ----------
+  function renderTabs() {
+    $('safe-tabs').innerHTML = SP.ORDER.map(function (c) {
+      return '<button class="' + c + (state.tab === c ? ' on' : '') + '" onclick="setTab(\'' + c + '\')"><span class="sp-k ' + c + '">' + c + '</span><span class="t">' + SP.COMP[c].short + '</span><span class="n">' + R.counts[c] + ' pins</span></button>';
+    }).join('');
+  }
+  function renderSafe() {
+    var body = $('safe-body');
+    body.innerHTML = SP.safeHTML(R, state.tab, { head: true, limits: state.tab === 'E' });
+    body.querySelectorAll('.sp-pinrow').forEach(function (row) {
+      row.addEventListener('click', function () { onPin(row.dataset.id, 'list'); });
+    });
+    if (state.sel) markRow(state.sel);
+  }
+  function markRow(id) {
+    document.querySelectorAll('#safe-body .sp-pinrow').forEach(function (r) { r.classList.toggle('sel', r.dataset.id === id); });
+    var row = document.querySelector('#safe-body .sp-pinrow[data-id="' + id + '"]');
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  window.setTab = function (c) {
+    state.tab = c;
+    renderTabs(); renderSafe(); applyFocus();
+  };
+
+  // ---------- pin selection + card ----------
+  function onPin(id, source) {
+    var p = R.byId[id];
+    if (!p) return;
+    state.sel = id;
+    if (p.comp !== state.tab) { state.tab = p.comp; renderTabs(); renderSafe(); applyFocus(); }
+    markRow(id);
+    if (source !== 'map' && map.state.sel !== id) map.select(id, state.sub === 'map', 'sync');
+    if (nadir && source !== 'nadir' && nadir.state.sel !== id) nadir.select(id, 'sync');
+    renderCard(p);
+  }
+  function renderCard(p) {
+    var card = $('card');
+    card.innerHTML = SP.cardHTML(p, R, { showMap: state.sub !== 'map' });
+    card.classList.add('on');
+    card.querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () { cardAction(b.dataset.act, p); });
+    });
+    card.querySelectorAll('.sp-pinrow').forEach(function (row) {
+      row.addEventListener('click', function () { onPin(row.dataset.id, 'card'); });
+    });
+  }
+  function cardAction(act, p) {
+    if (act === 'close') { closeCard(); return; }
+    if (act === 'live') { focusCam(p.id, null); return; }
+    if (act === 'clips') { focusCam(p.id, null); filterClips(p.id); return; }
+    if (act === 'unlock') { SP.toast('<b>Unlock sent</b> — ' + SP.esc(p.name) + '. Relocks in 30 s. Logged to events. (mock)'); return; }
+    if (act === 'map') { setSub('map'); map.select(p.id, true, 'sync'); return; }
+  }
+  function closeCard() {
+    state.sel = null;
+    $('card').classList.remove('on');
+    map.clear('sync'); if (nadir) nadir.clear('sync');
+    document.querySelectorAll('#safe-body .sp-pinrow.sel').forEach(function (r) { r.classList.remove('sel'); });
+  }
+
+  // ---------- live + clips ----------
+  $('live-sub').textContent = R.live.length + ' live · ' + R.cams.length + ' surveyed · site ' + (R.live[0] && R.live[0].live.site || '3525');
+  var feeds = SP.renderFeeds($('feeds'), R, { layout: 'grid2', small: true, onFocus: function (cam) { focusCam(cam.id, null); filterClips(cam.id); } });
+  function focusCam(id, clip) {
+    var cam = R.byId[id];
+    if (!cam) return;
+    state.cam = id; state.clip = clip;
+    feeds.setActive(id);
+    var wrap = $('player-wrap');
+    wrap.classList.add('on');
+    $('player').innerHTML = SP.playerHTML(cam, clip);
+    $('player').querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.act === 'live') focusCam(id, null);
+        else if (b.dataset.act === 'snap') SP.toast('Snapshot saved (mock) — production: gateway snapshot JPEG for ' + SP.esc(cam.live ? cam.live.name : cam.name) + '.');
+        else if (b.dataset.act === 'map') { setSub('map'); onPin(id, 'player'); map.select(id, true, 'sync'); }
+      });
+    });
+    document.querySelectorAll('#clips .sp-clip').forEach(function (r) { r.classList.toggle('on', !!clip && Number(r.dataset.i) === clip.i); });
+  }
+  function renderClips() {
+    $('clips').innerHTML = SP.clipsHTML(R, { camId: state.clipCam });
+    $('clips').querySelectorAll('.sp-clip').forEach(function (row) {
+      row.addEventListener('click', function () { var c = R.clips[Number(row.dataset.i)]; focusCam(c.cam, c); });
+    });
+    var cam = state.clipCam ? R.byId[state.clipCam] : null;
+    $('clips-title').textContent = 'Clips · ' + (cam ? (cam.live ? cam.live.name : cam.name) : 'last 7 days');
+    $('clips-all').hidden = !state.clipCam;
+  }
+  function filterClips(camId) { state.clipCam = camId; renderClips(); }
+  window.clipsAll = function () { state.clipCam = null; renderClips(); };
+
+  // ---------- boot ----------
+  renderLayers(); renderTabs(); renderSafe(); renderClips(); applyFocus();
+  var pinParam = SP.params.get('pin');
+  if (pinParam && R.byId[pinParam]) setTimeout(function () { onPin(pinParam, 'url'); }, 400);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && state.sel) closeCard(); });
+  window.SAFE_A = { state: state, R: R, map: map, nadir: nadir };
+})();
+</script>
+</body>
+</html>
