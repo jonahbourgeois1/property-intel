@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.14.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.15.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -30,7 +30,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.14');
+ok('build', BUILD === '1.0.15');
 ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
 ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
@@ -291,6 +291,7 @@ ok('gs review route', gs.includes("function camerasEditorReviewSave_") &&
 ok('page has actor picker', html.includes('id="actorSelect"') && html.includes('Bot 2'));
 ok('page asks who is editing', html.includes('Who is editing?') && html.includes('function showActorGate') &&
   html.includes('data-actor="Jonah"'));
+ok('actor gate is once', script.includes('if (applyActor(storedActor()))'));
 ok('page shares reviews', html.includes('camera-pins-review-save') &&
   html.includes('function flushReviews'));
 ok('review file empty', Object.keys(JSON.parse(readFileSync(join(root, 'camera-pin-review.json'), 'utf8')).reviews).length === 0);

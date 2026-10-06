@@ -4,6 +4,16 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-10-06 — Who is editing is once per browser (cam-edit 1.0.15)
+
+**What.** The name prompt shows only when this browser has no saved editor. Recent edits, All properties, and a reload reuse that name. **Editing as** can still be changed.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`.
+
+**Status.** Local.
+
 ### 2026-10-06 — Choose who is editing when the page opens (cam-edit 1.0.14)
 
 **What.** Opening the editor asks **Who is editing?** first. That choice fills **Editing as**. The last name used is highlighted. The header dropdown can still be changed later.
