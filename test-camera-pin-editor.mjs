@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.15.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.16.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -9,7 +9,7 @@ import {
   camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading,
   coordPair, reviewEntry, reviewStateFromJson, parcelTileName, PARCEL_COUNTIES,
   EDITOR_ACTORS, normActor, historyEventsFromJson, lastEditForHub,
-  mergeReviewRecords
+  mergeReviewRecords, mergeReviewCaches
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -30,7 +30,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.15');
+ok('build', BUILD === '1.0.16');
 ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
 ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
@@ -54,6 +54,9 @@ ok('review merge names Eleanor', rev.ok && rev.reviews['1512452d9e6e0f1cf0a32255
 ok('review merge refuses unnamed', mergeReviewRecords({}, {
   '1512452d9e6e0f1cf0a32255a4392b12': { done: true, note: 'x' }
 }, '').ok === false);
+ok('review cache keeps local when remote empty', mergeReviewCaches({}, {
+  '1512452d9e6e0f1cf0a32255a4392b12': { done: false, note: 'doors checked' }
+})['1512452d9e6e0f1cf0a32255a4392b12'].note === 'doors checked');
 ok('review entry is a checkbox', reviewEntry({ done: 1, note: 'x' }).done === false);
 ok('lane parcel tile', parcelTileName(44.070, -123.092, PARCEL_COUNTIES[1]) === 'lane_44.03_-123.15.geojson');
 ok('bend parcel tile', parcelTileName(44.068, -121.291, PARCEL_COUNTIES[0]) === 'deschutes_44.03_-121.31.geojson');
@@ -287,13 +290,14 @@ ok('gs refuses create', gs.includes('refusing to create a cameras file'));
 ok('gs requires actor', gs.includes("by must be Jonah, Eleanor, Bot 1, or Bot 2") &&
   gs.includes('CAM_PIN_ACTORS') && gs.includes('camPinAppendHistoryLog_'));
 ok('gs review route', gs.includes("function camerasEditorReviewSave_") &&
+  gs.includes('function camerasEditorReviewGet_') &&
   gs.includes('camera-pin-review.json'));
 ok('page has actor picker', html.includes('id="actorSelect"') && html.includes('Bot 2'));
 ok('page asks who is editing', html.includes('Who is editing?') && html.includes('function showActorGate') &&
   html.includes('data-actor="Jonah"'));
 ok('actor gate is once', script.includes('if (applyActor(storedActor()))'));
 ok('page shares reviews', html.includes('camera-pins-review-save') &&
-  html.includes('function flushReviews'));
+  html.includes('function flushReviews') && html.includes('function fetchReviewFromScript'));
 ok('review file empty', Object.keys(JSON.parse(readFileSync(join(root, 'camera-pin-review.json'), 'utf8')).reviews).length === 0);
 ok('page has last edited', html.includes('index-last') && html.includes('Earlier save'));
 const histDoc = JSON.parse(readFileSync(join(root, 'camera-pin-history.json'), 'utf8'));
@@ -308,7 +312,8 @@ ok('gs limits', gs.includes('CAM_PIN_MAX_MOVE_M = 5000') && gs.includes('CAM_PIN
 
 const api = readFileSync(join(root, 'apps scripts/critique-api.gs'), 'utf8');
 ok('ping flag', api.includes('camera_pins: (typeof camerasEditorSave_ === \'function\')') &&
-  api.includes('camera_pins_review: (typeof camerasEditorReviewSave_ === \'function\')'));
+  api.includes('camerasEditorReviewGet_'));
+ok('review get route', api.includes("route === 'camera-pins-review'"));
 ok('post route before critique', api.indexOf("postRoute === 'camera-pins-save'") !== -1 &&
   api.indexOf("postRoute === 'camera-pins-save'") < api.lastIndexOf('critiquePost_(payload)'));
 ok('review post route before critique', api.indexOf("postRoute === 'camera-pins-review-save'") !== -1 &&

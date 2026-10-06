@@ -635,6 +635,14 @@ function camPinReviewRecords_(parsed) {
   return out;
 }
 
+function camerasEditorReviewGet_() {
+  var got = camPinGetRawJson_(CAM_PIN_REVIEW_LOG);
+  if (!got.ok) return { ok: false, route: 'camera-pins-review', error: got.error };
+  var reviews = {};
+  if (!got.missing && got.rec) reviews = camPinReviewRecords_(got.rec);
+  return { ok: true, route: 'camera-pins-review', version: 1, reviews: reviews };
+}
+
 function camerasEditorReviewSave_(payload) {
   payload = payload || {};
   var actor = camPinNormActor_(payload.by);

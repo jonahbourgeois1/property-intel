@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-10-06 — Notes stay visible after reload (cam-edit 1.0.16)
+
+**What.** Done and notes always stay in this browser as a cache. On load they merge with the shared file, so a blank GitHub/Pages copy does not wipe them. The page reads the live GitHub file through Apps Script (`GET route=camera-pins-review`) instead of waiting for Pages.
+
+**Why.** `camera-pin-review.json` on Pages was still empty. A successful-looking save then a reload showed blank notes.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `apps scripts/camera-pins.gs`, `apps scripts/critique-api.gs`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`.
+
+**Status.** Paste `camera-pins.gs` and `critique-api.gs` again, then new deployment version.
+
 ### 2026-10-06 — Who is editing is once per browser (cam-edit 1.0.15)
 
 **What.** The name prompt shows only when this browser has no saved editor. Recent edits, All properties, and a reload reuse that name. **Editing as** can still be changed.

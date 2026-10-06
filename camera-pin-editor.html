@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.15)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.16)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -385,7 +385,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.15</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.16</span>
   <label class="actor-pick">Editing as
     <select id="actorSelect" aria-label="Editing as">
       <option value="">Choose editor…</option>
@@ -492,8 +492,9 @@ import {
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair,
   REVIEW_STORE_KEY, ACTOR_STORE_KEY, EDITOR_ACTORS, normActor, historyEventsFromJson,
   lastEditForHub, eventTouchesHub,
-  reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.15';
+  reviewEntry, reviewStateFromJson, reviewRecordsFromParsed, mergeReviewCaches,
+  PARCEL_COUNTIES, parcelTileName
+} from './js/camera-pin-editor.js?v=1.0.16';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -1553,18 +1554,17 @@ function saveLocalReview() {
   } catch (e) {}
 }
 
-function clearLocalReview() {
-  try { localStorage.removeItem(REVIEW_STORE_KEY); } catch (e) {}
-}
-
-function adoptLocalReview() {
+function applyReviewCaches(remote) {
   var local = loadLocalReview();
+  var rem = remote || {};
+  reviewState = mergeReviewCaches(rem, local);
   Object.keys(local).forEach(function (id) {
-    if (!reviewState[id]) {
-      reviewState[id] = local[id];
-      pendingReviews[id] = true;
-    }
+    var a = rem[id];
+    var b = local[id];
+    if (!b || !(b.done || b.note)) return;
+    if (!a || (Date.parse(b.at) || 0) > (Date.parse(a.at) || 0)) pendingReviews[id] = true;
   });
+  saveLocalReview();
 }
 
 function reviewOf(id) {
@@ -1579,20 +1579,42 @@ function setReview(id, patch) {
     by: cur.by,
     at: cur.at
   });
+  next.at = new Date().toISOString();
+  next.by = currentActor() || next.by;
   if (!next.done && !next.note) delete reviewState[id];
   else reviewState[id] = next;
   pendingReviews[id] = true;
-  if (!reviewReady) saveLocalReview();
+  saveLocalReview();
 }
 
-function fetchReviewDoc() {
+function fetchReviewFromPages() {
   var url = new URL('camera-pin-review.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
   return fetchJson(url.href).then(function (doc) {
-    reviewState = reviewStateFromJson(JSON.stringify(doc || {}));
-    adoptLocalReview();
+    return reviewStateFromJson(JSON.stringify(doc || {}));
+  }).catch(function () { return {}; });
+}
+
+function fetchReviewFromScript() {
+  return fetch(CAMERA_SAVE_URL + '?route=camera-pins-review&_=' + Date.now(), {
+    redirect: 'follow',
+    cache: 'no-store'
+  }).then(function (res) { return res.text(); })
+    .then(function (text) {
+      var j;
+      try { j = JSON.parse(text); } catch (e) { return {}; }
+      if (!j || j.ok === false) return {};
+      return reviewRecordsFromParsed(j);
+    })
+    .catch(function () { return {}; });
+}
+
+function fetchReviewDoc() {
+  var load = reviewReady ? fetchReviewFromScript() : fetchReviewFromPages();
+  return load.then(function (remote) {
+    applyReviewCaches(remote);
   }).catch(function () {
-    reviewState = loadLocalReview();
+    applyReviewCaches({});
   });
 }
 
@@ -1641,7 +1663,7 @@ function flushReviews() {
       try { j = JSON.parse(text); } catch (e) { throw new Error('Review save did not return JSON'); }
       if (!j || j.ok === false) throw new Error((j && j.error) || 'Review save failed');
       ids.forEach(function (id) { delete pendingReviews[id]; });
-      if (!Object.keys(pendingReviews).length) clearLocalReview();
+      saveLocalReview();
       setStatus('Saved Done and notes as ' + (j.by || actor) + '.', 'ok');
     })
     .catch(function (err) {
@@ -1801,7 +1823,14 @@ function bootIndex() {
   setStatus('Loading properties…', '');
   var url = new URL('camera-pin-properties.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
-  Promise.all([fetchJson(url.href), fetchHistoryLog(), fetchReviewDoc(), checkReviewEndpoint()]).then(function (pair) {
+  Promise.all([
+    fetchJson(url.href),
+    fetchHistoryLog(),
+    checkReviewEndpoint().then(function (ready) {
+      reviewReady = ready;
+      return fetchReviewDoc();
+    })
+  ]).then(function (pair) {
     var doc = pair[0];
     var rows = doc && Array.isArray(doc.properties) ? doc.properties : null;
     if (!rows) {
@@ -1812,7 +1841,6 @@ function bootIndex() {
       return;
     }
     indexRows = rows;
-    reviewReady = pair[3] === true;
     renderIndex();
     if (reviewReady) {
       if (Object.keys(pendingReviews).length) flushReviews();

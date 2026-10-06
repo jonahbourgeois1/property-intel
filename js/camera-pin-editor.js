@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.15';
+export const BUILD = '1.0.16';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -143,6 +143,29 @@ export function reviewStateFromJson(text) {
   let parsed;
   try { parsed = JSON.parse(text || ''); } catch (e) { return {}; }
   return reviewRecordsFromParsed(parsed);
+}
+
+// Remote wins when it has a later at. Local fills hubs the shared file does not have yet.
+export function mergeReviewCaches(remote, local) {
+  const out = {};
+  const ids = {};
+  const rem = remote && typeof remote === 'object' ? remote : {};
+  const loc = local && typeof local === 'object' ? local : {};
+  Object.keys(rem).forEach((id) => { ids[id] = true; });
+  Object.keys(loc).forEach((id) => { ids[id] = true; });
+  Object.keys(ids).forEach((id) => {
+    const a = rem[id];
+    const b = loc[id];
+    let pick = a;
+    if (!a) pick = b;
+    else if (b) {
+      const atA = Date.parse(a.at) || 0;
+      const atB = Date.parse(b.at) || 0;
+      pick = atB > atA ? b : a;
+    }
+    if (pick && (pick.done || pick.note)) out[id] = reviewEntry(pick);
+  });
+  return out;
 }
 
 export function mergeReviewRecords(existing, edits, by, nowIso) {
