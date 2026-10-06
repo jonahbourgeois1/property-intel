@@ -4,6 +4,18 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-10-06 — Edit history by Jonah, Eleanor, Bot 1, Bot 2 (cam-edit 1.0.9)
+
+**What.** The editor header has **Editing as**. Save is refused until that is one of Jonah, Eleanor, Bot 1, or Bot 2. Each real save appends `editor_history[]` on the cameras file (who, when, which cameras, from/to pose) and a line on `camera-pin-history.json`. The property panel lists that history. The account list can filter **Edits by** and shows the last 20 events.
+
+**Why.** Four people/bots place pins on the same files. Git commit author is always the Apps Script token.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `apps scripts/camera-pins.gs`, `camera-pin-history.json`, `test-camera-pin-editor.mjs`, `docs/INDEX_AND_CAMERAS_CONTRACT.md`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`. Not verified live until Apps Script is pasted and a new deployment version is created, then this HTML is on `main`.
+
+**Status.** Ready to paste `camera-pins.gs` and deploy a new version, then push the editor files.
+
 ### 2026-09-30 — Done marks, notes, and the lot line (cam-edit 1.0.8)
 
 **What.** Each account on the full list has a Done checkbox and a notes box. Those stay in this browser. On a property, the map draws that account’s parcel boundary in red, from the same parcel tiles as the client viewer. A property with no saved pins frames the lot after the address geocode.

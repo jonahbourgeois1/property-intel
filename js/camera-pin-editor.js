@@ -2,7 +2,7 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.8';
+export const BUILD = '1.0.9';
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;
@@ -32,7 +32,59 @@ export function normHubId(value) {
 }
 
 export const REVIEW_STORE_KEY = 'cam-edit-review-v1';
+export const ACTOR_STORE_KEY = 'cam-edit-actor-v1';
+export const EDITOR_ACTORS = ['Jonah', 'Eleanor', 'Bot 1', 'Bot 2'];
+export const HISTORY_MAX = 200;
+export const HISTORY_LOG_MAX = 2000;
 const REVIEW_NOTE_MAX = 2000;
+
+export function normActor(value) {
+  const name = String(value == null ? '' : value).trim();
+  return EDITOR_ACTORS.indexOf(name) >= 0 ? name : '';
+}
+
+export function poseSnapshot(cam) {
+  const src = cam && typeof cam === 'object' ? cam : {};
+  return {
+    lat: src.lat,
+    lng: src.lng,
+    heading: src.heading,
+    fov: src.fov,
+    range: src.range
+  };
+}
+
+export function historyEventsFromJson(text) {
+  let parsed;
+  try { parsed = JSON.parse(text || ''); } catch (e) { return []; }
+  const rows = parsed && Array.isArray(parsed.events) ? parsed.events : [];
+  const out = [];
+  for (let i = 0; i < rows.length; i++) {
+    const ev = rows[i] || {};
+    const by = normActor(ev.by);
+    const property = normHubId(ev.property);
+    if (!by || !property) continue;
+    const cameras = Array.isArray(ev.cameras) ? ev.cameras.map((id) => String(id || '').trim()).filter(Boolean) : [];
+    out.push({
+      at: String(ev.at || ''),
+      by: by,
+      property: property,
+      file_id: normHubId(ev.file_id) || property,
+      name: String(ev.name || '').trim(),
+      cameras: cameras
+    });
+  }
+  return out;
+}
+
+export function appendEditorHistory(record, entry) {
+  const hist = Array.isArray(record.editor_history) ? record.editor_history.slice() : [];
+  hist.push(entry);
+  if (hist.length > HISTORY_MAX) hist.splice(0, hist.length - HISTORY_MAX);
+  record.editor_history = hist;
+  record.editor_saved_by = entry.by;
+  return record;
+}
 
 export function reviewEntry(raw) {
   const src = raw && typeof raw === 'object' ? raw : {};
@@ -323,7 +375,11 @@ function geometryChanged(cam, edit) {
 // live, photo, label, mount_height, taxlot, placement, and notes stay.
 // A lat/lng change drops mx/my/mz on that camera so 3D follows lat/lng.
 // heading_magnetic updates only when declination is already on the camera.
-export function mergeCamerasRecord(existing, edits, nowIso) {
+export function mergeCamerasRecord(existing, edits, nowIso, by) {
+  const actor = normActor(by);
+  if (by != null && String(by).trim() !== '' && !actor) {
+    return fail('editor must be Jonah, Eleanor, Bot 1, or Bot 2');
+  }
   if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
     return fail('no cameras file to update');
   }
@@ -360,6 +416,7 @@ export function mergeCamerasRecord(existing, edits, nowIso) {
   }
   const record = JSON.parse(JSON.stringify(existing));
   const updated = [];
+  const changes = [];
   record.cameras = record.cameras.map((cam) => {
     let edit = null;
     for (let i = 0; i < clean.length; i++) {
@@ -369,6 +426,11 @@ export function mergeCamerasRecord(existing, edits, nowIso) {
     const next = JSON.parse(JSON.stringify(cam));
     const moved = roundLatLng(cam.lat) !== edit.lat || roundLatLng(cam.lng) !== edit.lng;
     const headingChanged = normalizeHeading(cam.heading) !== edit.heading;
+    changes.push({
+      id: cam.id,
+      from: poseSnapshot(cam),
+      to: poseSnapshot(edit)
+    });
     next.lat = edit.lat;
     next.lng = edit.lng;
     next.heading = edit.heading;
@@ -388,6 +450,15 @@ export function mergeCamerasRecord(existing, edits, nowIso) {
   if (!updated.length) {
     return { ok: true, unchanged: true, record: existing, updated: [] };
   }
-  record.editor_saved_at = nowIso || new Date().toISOString();
+  const at = nowIso || new Date().toISOString();
+  record.editor_saved_at = at;
+  if (actor) {
+    appendEditorHistory(record, {
+      at: at,
+      by: actor,
+      cameras: updated.slice(),
+      changes: changes
+    });
+  }
   return { ok: true, unchanged: false, record: record, updated: updated };
 }

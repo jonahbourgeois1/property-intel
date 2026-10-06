@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.8)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.9)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -17,7 +17,8 @@
   hub from camera-pin-properties.json (repo root, not under data/).
   One property loads data/cameras/json/{id}.json (walking the same
   sibling hubs as the viewer) and POSTs geometry to the Apps Script
-  web app. Apps Script merges into that file. The browser does not
+  web app.   Apps Script merges into that file and appends editor_history
+  (Jonah / Eleanor / Bot 1 / Bot 2). The browser does not
   call GitHub.
 
   Open edit: no passcode. Save stays disabled until ?route=ping reports
@@ -268,6 +269,32 @@
   body:not(.editing) #redoBtn,
   body:not(.editing) #saveBtn { display: none; }
   #indexView { flex: 1; overflow: auto; padding: 16px 20px 48px; }
+  .actor-pick {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .actor-pick select { min-width: 8.5em; }
+  #historyFeed {
+    max-width: 960px;
+    margin: 0 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel);
+    padding: 8px 12px;
+  }
+  #historyFeed h3 { margin: 0 0 8px; font-size: 13px; }
+  .hist-item { font-size: 12px; color: var(--muted); padding: 4px 0; border-top: 1px solid var(--line); }
+  .hist-item:first-of-type { border-top: none; }
+  .hist-item a { color: var(--accent); }
+  #editHistory { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); }
+  #editHistory h3 { margin: 0 0 8px; font-size: 13px; }
+  #historyList { display: flex; flex-direction: column; gap: 8px; }
+  .hist-row { font-size: 12px; color: var(--muted); }
+  .hist-row strong { color: var(--text); font-weight: 650; }
+  .hist-change { font: 11px/1.4 ui-monospace, Consolas, monospace; color: var(--muted); }
   .index-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 12px 0; }
   #indexSearch { min-width: min(100%, 320px); }
   .index-row {
@@ -318,7 +345,16 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.8</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.9</span>
+  <label class="actor-pick">Editing as
+    <select id="actorSelect" aria-label="Editing as">
+      <option value="">Choose editor…</option>
+      <option value="Jonah">Jonah</option>
+      <option value="Eleanor">Eleanor</option>
+      <option value="Bot 1">Bot 1</option>
+      <option value="Bot 2">Bot 2</option>
+    </select>
+  </label>
   <span class="spacer"></span>
   <a class="header-link" id="indexLink" href="camera-pin-editor.html">All properties</a>
   <button type="button" id="undoBtn" disabled>Undo</button>
@@ -331,8 +367,18 @@
   <p class="muted" id="indexBlurb"></p>
   <div class="index-bar">
     <input id="indexSearch" type="search" placeholder="Search name, address, or hub" autocomplete="off">
+    <label class="actor-pick">Edits by
+      <select id="historyFilter" aria-label="Edits by">
+        <option value="">Everyone</option>
+        <option value="Jonah">Jonah</option>
+        <option value="Eleanor">Eleanor</option>
+        <option value="Bot 1">Bot 1</option>
+        <option value="Bot 2">Bot 2</option>
+      </select>
+    </label>
     <span id="indexCount" class="muted"></span>
   </div>
+  <div id="historyFeed" hidden></div>
   <div id="indexList"></div>
 </div>
 <div id="gate" hidden>
@@ -369,6 +415,10 @@
       <label>Range m<input id="rangeInput" type="number" step="0.01" autocomplete="off"></label>
     </div>
     <p class="muted">Drag a pin to move it. Drag the handle on the selected pin to set heading. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undo, <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Z</kbd> redo, <kbd>J</kbd>/<kbd>K</kbd> next camera. A move past 5 km is refused and the pin stays put.</p>
+    <div id="editHistory">
+      <h3>Edit history</h3>
+      <div id="historyList" class="muted">No saves yet. Choose your name, then Save.</div>
+    </div>
   </aside>
 </div>
 <div id="stillLightbox" hidden>
@@ -381,8 +431,9 @@
 import {
   BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair,
-  REVIEW_STORE_KEY, reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.8';
+  REVIEW_STORE_KEY, ACTOR_STORE_KEY, EDITOR_ACTORS, normActor, historyEventsFromJson,
+  reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
+} from './js/camera-pin-editor.js?v=1.0.9';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -411,6 +462,7 @@ var state = {
 };
 var indexRows = [];
 var reviewState = {};
+var historyEvents = [];
 
 var $ = function (id) { return document.getElementById(id); };
 
@@ -466,11 +518,77 @@ function findCam(id) {
   return null;
 }
 
+function currentActor() {
+  return normActor($('actorSelect').value);
+}
+
+function loadActor() {
+  try {
+    var stored = normActor(localStorage.getItem(ACTOR_STORE_KEY));
+    if (stored) $('actorSelect').value = stored;
+  } catch (e) {}
+}
+
+function saveActor() {
+  var name = currentActor();
+  try {
+    if (name) localStorage.setItem(ACTOR_STORE_KEY, name);
+    else localStorage.removeItem(ACTOR_STORE_KEY);
+  } catch (e) {}
+}
+
+function formatWhen(iso) {
+  var t = Date.parse(iso);
+  if (!isFinite(t)) return iso || '';
+  return new Date(t).toLocaleString();
+}
+
+function formatPose(pose) {
+  var p = pose || {};
+  var lat = p.lat == null ? '—' : Number(p.lat).toFixed(6);
+  var lng = p.lng == null ? '—' : Number(p.lng).toFixed(6);
+  var h = p.heading == null ? '—' : Number(p.heading);
+  var fov = p.fov == null ? '—' : Number(p.fov);
+  var range = p.range == null ? '—' : Number(p.range);
+  return lat + ', ' + lng + ' · hdg ' + h + ' · fov ' + fov + ' · ' + range + ' m';
+}
+
+function renderEditHistory() {
+  var list = $('historyList');
+  var rows = (state.record && Array.isArray(state.record.editor_history))
+    ? state.record.editor_history.slice().reverse()
+    : [];
+  if (!rows.length) {
+    list.textContent = 'No saves yet. Choose your name, then Save.';
+    list.className = 'muted';
+    return;
+  }
+  list.className = '';
+  list.textContent = '';
+  rows.forEach(function (ev) {
+    var wrap = document.createElement('div');
+    wrap.className = 'hist-row';
+    var title = document.createElement('div');
+    var cams = Array.isArray(ev.cameras) ? ev.cameras.join(', ') : '';
+    title.innerHTML = '<strong>' + escapeHtml(ev.by || 'Unknown') + '</strong> · ' +
+      escapeHtml(formatWhen(ev.at)) + (cams ? ' · ' + escapeHtml(cams) : '');
+    wrap.appendChild(title);
+    (ev.changes || []).forEach(function (ch) {
+      var line = document.createElement('div');
+      line.className = 'hist-change';
+      line.textContent = (ch.id || '') + ': ' + formatPose(ch.from) + ' → ' + formatPose(ch.to);
+      wrap.appendChild(line);
+    });
+    list.appendChild(wrap);
+  });
+}
+
 function refreshDirty() {
   var dirty = posesJson() !== state.savedJson;
+  var actor = currentActor();
   var btn = $('saveBtn');
-  btn.disabled = !state.saveReady || !dirty;
-  btn.classList.toggle('dirty', dirty && state.saveReady);
+  btn.disabled = !state.saveReady || !dirty || !actor;
+  btn.classList.toggle('dirty', dirty && state.saveReady && !!actor);
   $('undoBtn').disabled = !state.history.undo.length;
   $('redoBtn').disabled = !state.history.redo.length;
 }
@@ -1157,6 +1275,11 @@ function save() {
     setStatus('Save is off until Apps Script is deployed with camera-pins-save.', 'err');
     return;
   }
+  var actor = currentActor();
+  if (!actor) {
+    setStatus('Choose who is editing (Jonah, Eleanor, Bot 1, or Bot 2) before Save.', 'err');
+    return;
+  }
   var bodyCams = [];
   for (var i = 0; i < state.cameras.length; i++) {
     var cam = state.cameras[i];
@@ -1182,6 +1305,8 @@ function save() {
       route: 'camera-pins-save',
       property: propertyId,
       file_id: state.fileId,
+      by: actor,
+      name: $('propName').textContent || '',
       cameras: bodyCams
     })
   }).then(function (res) { return res.text(); })
@@ -1193,6 +1318,10 @@ function save() {
         return;
       }
       if (!j || j.ok === false) throw new Error((j && j.error) || 'Save failed');
+      var beforeById = {};
+      Object.keys(state.savedById).forEach(function (id) {
+        beforeById[id] = state.savedById[id];
+      });
       bodyCams.forEach(function (edit) {
         var cam = findCam(edit.id);
         if (cam) applyPose(cam, edit);
@@ -1205,7 +1334,28 @@ function save() {
           ? 'No pin changes to write. AWS records copy refreshed at' + recordsNote + '.'
           : 'No pin changes to write.', 'ok');
       } else {
-        setStatus('Saved ' + (j.updated || []).length + ' camera(s) to ' +
+        if (state.record) {
+          var hist = Array.isArray(state.record.editor_history) ? state.record.editor_history : [];
+          var changes = (j.updated || []).map(function (id) {
+            var before = beforeById[id] || {};
+            var after = findCam(id) || {};
+            return { id: id, from: {
+              lat: before.lat, lng: before.lng, heading: before.heading, fov: before.fov, range: before.range
+            }, to: {
+              lat: after.lat, lng: after.lng, heading: after.heading, fov: after.fov, range: after.range
+            } };
+          });
+          hist.push({
+            at: new Date().toISOString(),
+            by: j.by || actor,
+            cameras: (j.updated || []).slice(),
+            changes: changes
+          });
+          state.record.editor_history = hist;
+          state.record.editor_saved_by = j.by || actor;
+          renderEditHistory();
+        }
+        setStatus('Saved ' + (j.updated || []).length + ' camera(s) as ' + (j.by || actor) + ' to ' +
           (j.path || 'cameras JSON') + (recordsNote ? ' and' + recordsNote : '') + '.', 'ok');
       }
     })
@@ -1288,8 +1438,51 @@ function reviewDoneCount() {
   return n;
 }
 
+function hubsEditedBy(actor) {
+  var found = {};
+  if (!actor) return found;
+  historyEvents.forEach(function (ev) {
+    if (ev.by === actor) found[ev.property] = true;
+  });
+  return found;
+}
+
+function renderHistoryFeed() {
+  var feed = $('historyFeed');
+  var actor = normActor($('historyFilter').value);
+  var rows = historyEvents.slice().reverse();
+  if (actor) rows = rows.filter(function (ev) { return ev.by === actor; });
+  rows = rows.slice(0, 20);
+  if (!rows.length) {
+    feed.hidden = !actor;
+    feed.textContent = actor ? ('No saved edits by ' + actor + ' yet.') : '';
+    return;
+  }
+  feed.hidden = false;
+  feed.textContent = '';
+  var heading = document.createElement('h3');
+  heading.textContent = actor ? ('Recent edits by ' + actor) : 'Recent edits';
+  feed.appendChild(heading);
+  rows.forEach(function (ev) {
+    var item = document.createElement('div');
+    item.className = 'hist-item';
+    var link = document.createElement('a');
+    link.href = propertyHref(ev.property);
+    link.textContent = ev.name || ev.property.slice(0, 8);
+    item.appendChild(document.createTextNode(ev.by + ' · ' + formatWhen(ev.at) + ' · '));
+    item.appendChild(link);
+    if (ev.cameras && ev.cameras.length) {
+      item.appendChild(document.createTextNode(' · ' + ev.cameras.join(', ')));
+    }
+    feed.appendChild(item);
+  });
+}
+
 function renderIndex() {
   var q = ($('indexSearch').value || '').trim().toLowerCase();
+  var actor = normActor($('historyFilter').value);
+  var edited = hubsEditedBy(actor);
+  renderHistoryFeed();
   var list = $('indexList');
   list.textContent = '';
   var shown = 0;
@@ -1298,6 +1491,7 @@ function renderIndex() {
     var row = indexRows[i] || {};
     var id = normHubId(row.id);
     if (!id) continue;
+    if (actor && !edited[id]) continue;
     if (Number(row.cameras) > 0) withCams++;
     var mark = reviewOf(id);
     var blob = ((row.name || '') + ' ' + (row.address || '') + ' ' + id + ' ' +
@@ -1370,11 +1564,16 @@ function writeIndexCount(shown, withCams) {
 
 function bootIndex() {
   showIndex();
-  $('indexBlurb').textContent = 'Chekt accounts. Check Done when the pins are finished, and use the note for anything the next pass should know. Done and notes stay in this browser. Client links stay vyanet-viewer.html?property=…&live=1.';
+  $('indexBlurb').textContent = 'Chekt accounts. Choose your name (Jonah, Eleanor, Bot 1, or Bot 2) before Save. Edit history is shared. Done and notes stay in this browser. Client links stay vyanet-viewer.html?property=…&live=1.';
   setStatus('Loading properties…', '');
+  var histUrl = new URL('camera-pin-history.json', window.location.href);
+  histUrl.searchParams.set('t', String(Date.now()));
   var url = new URL('camera-pin-properties.json', window.location.href);
   url.searchParams.set('t', String(Date.now()));
-  fetchJson(url.href).then(function (doc) {
+  Promise.all([fetchJson(url.href), fetchJson(histUrl.href).then(function (doc) {
+    historyEvents = historyEventsFromJson(JSON.stringify(doc || {}));
+  })]).then(function (pair) {
+    var doc = pair[0];
     var rows = doc && Array.isArray(doc.properties) ? doc.properties : null;
     if (!rows) {
       showGate('Property list failed to load',
@@ -1410,6 +1609,7 @@ function exampleBlock() {
 function boot() {
   $('indexLink').href = indexHref();
   loadReview();
+  loadActor();
   if (!propertyId) {
     bootIndex();
     return;
@@ -1468,6 +1668,7 @@ function boot() {
     $('gate').hidden = true;
     $('app').hidden = false;
     renderList();
+    renderEditHistory();
     loadMaps();
     checkSaveEndpoint().then(function (ready) {
       state.saveReady = ready;
@@ -1491,6 +1692,14 @@ $('reloadBtn').addEventListener('click', function () {
   window.location.reload();
 });
 $('indexSearch').addEventListener('input', renderIndex);
+$('historyFilter').addEventListener('change', renderIndex);
+$('actorSelect').addEventListener('change', function () {
+  saveActor();
+  refreshDirty();
+  if (!currentActor() && editing() && posesJson() !== state.savedJson) {
+    setStatus('Choose who is editing before Save.', '');
+  }
+});
 ['headingInput', 'fovInput', 'rangeInput'].forEach(function (id) {
   $(id).addEventListener('change', commitInputs);
   $(id).addEventListener('wheel', function (ev) {

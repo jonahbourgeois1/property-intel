@@ -25,6 +25,9 @@
 //   - Update heading_magnetic only when declination is already set.
 //   - file_id must be a sibling/canonical id of property, and the file
 //     must already exist at data/cameras/json/{file_id}.json.
+//   - Save names the editor: Jonah, Eleanor, Bot 1, or Bot 2. That name
+//     is appended to editor_history[] on the cameras file and to
+//     camera-pin-history.json (the shared activity list).
 // Drone-test sync reads this file back (camerasFileForSync_) and does
 // not rebuild pin geometry. pushAllToGitHub does not push this path.
 // ============================================================
@@ -32,6 +35,10 @@
 var CAM_PIN_MAX_MOVE_M = 5000;
 var CAM_PIN_FOV_MAX = 360;
 var CAM_PIN_RANGE_MAX = 500;
+var CAM_PIN_ACTORS = ['Jonah', 'Eleanor', 'Bot 1', 'Bot 2'];
+var CAM_PIN_HISTORY_MAX = 200;
+var CAM_PIN_HISTORY_LOG = 'camera-pin-history.json';
+var CAM_PIN_HISTORY_LOG_MAX = 2000;
 
 // Mirror of js/vyanet-viewer/property.js CAMERA_HUB_SIBLINGS.
 var CAM_PIN_SIBLINGS = {
@@ -47,6 +54,30 @@ var CAM_PIN_CANONICAL = {
   '8eea64e5c09dc806f667b079e111a38d': '4a484f8c273abef3c02cf91e274f9e2f',
   'd9f759d7351db3886c79dd689c41e3c0': '6de88883bfd4a8349a901c54611ed9d7'
 };
+
+function camPinNormActor_(value) {
+  var name = String(value == null ? '' : value).replace(/^\s+|\s+$/g, '');
+  return CAM_PIN_ACTORS.indexOf(name) >= 0 ? name : '';
+}
+
+function camPinPose_(cam) {
+  var src = cam && typeof cam === 'object' ? cam : {};
+  return {
+    lat: src.lat,
+    lng: src.lng,
+    heading: src.heading,
+    fov: src.fov,
+    range: src.range
+  };
+}
+
+function camPinAppendHistory_(record, entry) {
+  var hist = Array.isArray(record.editor_history) ? record.editor_history.slice() : [];
+  hist.push(entry);
+  if (hist.length > CAM_PIN_HISTORY_MAX) hist = hist.slice(hist.length - CAM_PIN_HISTORY_MAX);
+  record.editor_history = hist;
+  record.editor_saved_by = entry.by;
+}
 
 function camPinNormId_(value) {
   var id = String(value || '').replace(/^\s+|\s+$/g, '').toLowerCase();
@@ -170,7 +201,11 @@ function camPinGeometryChanged_(cam, edit) {
     camPinRoundMeasure_(cam.range) !== edit.range;
 }
 
-function camPinMerge_(existing, edits, nowIso) {
+function camPinMerge_(existing, edits, nowIso, by) {
+  var actor = camPinNormActor_(by);
+  if (by != null && String(by).replace(/^\s+|\s+$/g, '') !== '' && !actor) {
+    return camPinFail_('editor must be Jonah, Eleanor, Bot 1, or Bot 2');
+  }
   if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
     return camPinFail_('no cameras file to update');
   }
@@ -207,6 +242,7 @@ function camPinMerge_(existing, edits, nowIso) {
   }
   var record = JSON.parse(JSON.stringify(existing));
   var updated = [];
+  var changes = [];
   var nextCams = [];
   for (var c = 0; c < record.cameras.length; c++) {
     var cur = record.cameras[c];
@@ -218,6 +254,11 @@ function camPinMerge_(existing, edits, nowIso) {
       nextCams.push(cur);
       continue;
     }
+    changes.push({
+      id: cur.id,
+      from: camPinPose_(cur),
+      to: camPinPose_(matched)
+    });
     var next = JSON.parse(JSON.stringify(cur));
     var moved = camPinRoundLatLng_(cur.lat) !== matched.lat || camPinRoundLatLng_(cur.lng) !== matched.lng;
     var headingChanged = camPinNormalizeHeading_(cur.heading) !== matched.heading;
@@ -241,7 +282,16 @@ function camPinMerge_(existing, edits, nowIso) {
   if (!updated.length) {
     return { ok: true, unchanged: true, record: existing, updated: [] };
   }
-  record.editor_saved_at = nowIso || new Date().toISOString();
+  var at = nowIso || new Date().toISOString();
+  record.editor_saved_at = at;
+  if (actor) {
+    camPinAppendHistory_(record, {
+      at: at,
+      by: actor,
+      cameras: updated.slice(),
+      changes: changes
+    });
+  }
   return { ok: true, unchanged: false, record: record, updated: updated };
 }
 
@@ -260,7 +310,7 @@ function camPinGithubHeaders_() {
   };
 }
 
-function camPinGetJson_(repoPath) {
+function camPinGetRawJson_(repoPath) {
   var headers = camPinGithubHeaders_();
   if (!headers) return { ok: false, error: 'GITHUB_TOKEN is not set in the script properties' };
   var branch = (typeof GITHUB_BRANCH === 'string' && GITHUB_BRANCH) ? GITHUB_BRANCH : 'main';
@@ -275,11 +325,72 @@ function camPinGetJson_(repoPath) {
   var raw = Utilities.newBlob(Utilities.base64Decode(String(body.content || '').replace(/\n/g, ''))).getDataAsString();
   var rec;
   try { rec = JSON.parse(raw); }
-  catch (err) { return { ok: false, error: 'cameras file is not JSON' }; }
-  if (!rec || !Array.isArray(rec.cameras) || !rec.cameras.length) {
+  catch (err) { return { ok: false, error: 'file is not JSON' }; }
+  return { ok: true, rec: rec, sha: body.sha || '' };
+}
+
+function camPinGetJson_(repoPath) {
+  var got = camPinGetRawJson_(repoPath);
+  if (!got.ok || got.missing) return got;
+  if (!got.rec || !Array.isArray(got.rec.cameras) || !got.rec.cameras.length) {
     return { ok: false, error: 'cameras file has no cameras — this editor does not create one' };
   }
-  return { ok: true, rec: rec, sha: body.sha || '' };
+  return got;
+}
+
+function camPinPutAny_(repoPath, text, message, sha) {
+  var headers = camPinGithubHeaders_();
+  if (!headers) return { ok: false, error: 'GITHUB_TOKEN is not set in the script properties' };
+  var branch = (typeof GITHUB_BRANCH === 'string' && GITHUB_BRANCH) ? GITHUB_BRANCH : 'main';
+  var repo = (typeof GITHUB_REPO === 'string' && GITHUB_REPO) ? GITHUB_REPO : '';
+  if (!repo) return { ok: false, error: 'GITHUB_REPO is not set' };
+  var url = 'https://api.github.com/repos/' + repo + '/contents/' + repoPath;
+  var b64 = Utilities.base64Encode(text).replace(/\s+/g, '');
+  var payload = { message: message, content: b64, branch: branch };
+  if (sha) payload.sha = sha;
+  var res = UrlFetchApp.fetch(url, {
+    method: 'PUT',
+    headers: headers,
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  Logger.log('camera pin editor PUT ' + code + ' ' + repoPath);
+  if (code !== 200 && code !== 201) {
+    return { ok: false, error: 'GitHub write failed (HTTP ' + code + ')', conflict: code === 409 };
+  }
+  return { ok: true };
+}
+
+function camPinAppendHistoryLog_(event) {
+  var got = camPinGetRawJson_(CAM_PIN_HISTORY_LOG);
+  var doc = { version: 1, events: [] };
+  var sha = '';
+  if (got.ok && !got.missing && got.rec && typeof got.rec === 'object') {
+    doc = got.rec;
+    sha = got.sha || '';
+    if (!Array.isArray(doc.events)) doc.events = [];
+  } else if (got.ok && got.missing) {
+    sha = '';
+  } else if (!got.ok) {
+    Logger.log('camera pin history log read failed: ' + got.error);
+    return;
+  }
+  doc.version = 1;
+  doc.events.push({
+    at: event.at,
+    by: event.by,
+    property: event.property,
+    file_id: event.file_id,
+    name: event.name || '',
+    cameras: event.cameras || []
+  });
+  if (doc.events.length > CAM_PIN_HISTORY_LOG_MAX) {
+    doc.events = doc.events.slice(doc.events.length - CAM_PIN_HISTORY_LOG_MAX);
+  }
+  var text = JSON.stringify(doc, null, 2) + '\n';
+  var put = camPinPutAny_(CAM_PIN_HISTORY_LOG, text, 'Camera pin history ' + event.property, sha);
+  if (!put.ok) Logger.log('camera pin history log write failed: ' + put.error);
 }
 
 function camPinPut_(repoPath, text, message, sha) {
@@ -358,6 +469,7 @@ function camPinRespond_(base, recordsResult) {
     updated: base.updated || [],
     unchanged: !!base.unchanged,
     commit: base.commit || '',
+    by: base.by || '',
     records_hub: (recordsResult && recordsResult.hubId) || '',
     records_key: (recordsResult && recordsResult.key) || ''
   };
@@ -394,11 +506,15 @@ function camPinFileBody_(fileId, record) {
 }
 
 // POST route=camera-pins-save
-// Body: { property, file_id, cameras: [{ id, lat, lng, heading, fov, range }] }
+// Body: { property, file_id, by, name, cameras: [{ id, lat, lng, heading, fov, range }] }
 function camerasEditorSave_(payload) {
   payload = payload || {};
   var propertyId = camPinNormId_(payload.property);
   if (!propertyId) return { ok: false, route: 'camera-pins-save', error: 'property must be the 32-character hub id' };
+  var actor = camPinNormActor_(payload.by);
+  if (!actor) {
+    return { ok: false, route: 'camera-pins-save', error: 'by must be Jonah, Eleanor, Bot 1, or Bot 2' };
+  }
   var fileId = camPinNormId_(payload.file_id);
   if (!fileId) return { ok: false, route: 'camera-pins-save', error: 'file_id must be the cameras file that was loaded' };
   var candidates = camPinCandidates_(propertyId);
@@ -430,7 +546,7 @@ function camerasEditorSave_(payload) {
         error: 'no cameras file at ' + repoPath + ' — this editor does not create one'
       };
     }
-    var merged = camPinMerge_(got.rec, payload.cameras);
+    var merged = camPinMerge_(got.rec, payload.cameras, '', actor);
     if (!merged.ok) return { ok: false, route: 'camera-pins-save', error: merged.error };
     if (merged.unchanged) {
       var currentFile = camPinFileBody_(fileId, got.rec);
@@ -450,7 +566,7 @@ function camerasEditorSave_(payload) {
       if (!again.ok || again.missing) {
         return { ok: false, route: 'camera-pins-save', error: 'cameras file changed during save — reload and try again' };
       }
-      merged = camPinMerge_(again.rec, payload.cameras);
+      merged = camPinMerge_(again.rec, payload.cameras, '', actor);
       if (!merged.ok) return { ok: false, route: 'camera-pins-save', error: merged.error };
       if (merged.unchanged) {
         file = camPinFileBody_(fileId, again.rec);
@@ -467,13 +583,22 @@ function camerasEditorSave_(payload) {
       put = camPinPut_(file.path, file.content, 'Camera pin editor ' + fileId, again.sha);
     }
     if (!put.ok) return { ok: false, route: 'camera-pins-save', error: put.error };
+    camPinAppendHistoryLog_({
+      at: merged.record.editor_saved_at,
+      by: actor,
+      property: propertyId,
+      file_id: fileId,
+      name: String(payload.name || ''),
+      cameras: merged.updated
+    });
     return camPinAfterGithub_({
       property: propertyId,
       fileId: fileId,
       path: file.path,
       updated: merged.updated,
       unchanged: false,
-      commit: put.commit || ''
+      commit: put.commit || '',
+      by: actor
     }, file.path, file.content);
   } finally {
     lock.releaseLock();

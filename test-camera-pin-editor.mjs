@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.8.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.9.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -7,7 +7,8 @@ import vm from 'vm';
 import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
   camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading,
-  coordPair, reviewEntry, reviewStateFromJson, parcelTileName, PARCEL_COUNTIES
+  coordPair, reviewEntry, reviewStateFromJson, parcelTileName, PARCEL_COUNTIES,
+  EDITOR_ACTORS, normActor, historyEventsFromJson
 } from './js/camera-pin-editor.js';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -28,7 +29,9 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.8');
+ok('build', BUILD === '1.0.9');
+ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
+ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
 ok('blank coord is unplaced', coordPair({ lat: '', lng: '' }) === null);
 ok('real coord kept', coordPair({ lat: 44.07, lng: -123.09 }).lat === 44.07);
@@ -75,6 +78,31 @@ ok('note kept', moved.record.placement_note === gud.placement_note);
 ok('sibling taxlot kept', moved.record.cameras.find((c) => c.id === 'cam-12').taxlot === '36061600000103');
 ok('stamp', moved.record.editor_saved_at === '2026-09-30T00:00:00.000Z');
 ok('heading updated', moved.record.cameras[0].heading === normalizeHeading(cam01.heading + 1));
+ok('no history without actor', !moved.record.editor_history);
+
+const named = mergeCamerasRecord(gud, [{
+  id: 'cam-01',
+  lat: cam01.lat + 0.0001,
+  lng: cam01.lng,
+  heading: cam01.heading + 1,
+  fov: cam01.fov,
+  range: cam01.range
+}], '2026-10-06T12:00:00.000Z', 'Eleanor');
+ok('history names Eleanor', named.ok && named.record.editor_saved_by === 'Eleanor' &&
+  named.record.editor_history[0].by === 'Eleanor' &&
+  named.record.editor_history[0].cameras[0] === 'cam-01');
+ok('history keeps from/to', named.record.editor_history[0].changes[0].from.lat === cam01.lat &&
+  named.record.editor_history[0].changes[0].to.lat === moved.record.cameras[0].lat);
+ok('unknown actor refused', mergeCamerasRecord(gud, [{
+  id: 'cam-01', lat: cam01.lat + 0.0001, lng: cam01.lng,
+  heading: cam01.heading, fov: cam01.fov, range: cam01.range
+}], '2026-10-06T12:00:00.000Z', 'Ross').ok === false);
+ok('history log keeps named events', historyEventsFromJson(JSON.stringify({
+  events: [
+    { at: '2026-10-06T00:00:00Z', by: 'Eleanor', property: GUD, cameras: ['cam-01'] },
+    { at: 'x', by: 'Nope', property: GUD }
+  ]
+})).length === 1);
 
 const withMx = JSON.parse(JSON.stringify(gud));
 withMx.cameras[0].mx = 1;
@@ -165,7 +193,8 @@ ok('no github api in the page', html.indexOf('api.github.com') === -1);
 ok('no onclick', html.indexOf('onclick=') === -1);
 ok('client page named', html.includes('vyanet-viewer.html'));
 ok('internal banner', html.includes('Not a client link'));
-['indexView', 'indexSearch', 'indexList', 'indexLink', 'indexCount', 'indexBlurb'].forEach((id) => {
+['indexView', 'indexSearch', 'indexList', 'indexLink', 'indexCount', 'indexBlurb',
+  'actorSelect', 'historyFilter', 'historyFeed', 'editHistory', 'historyList'].forEach((id) => {
   ok('index id ' + id, html.includes('id="' + id + '"'));
 });
 ok('index hides save until editing', html.includes('body:not(.editing) #saveBtn'));
@@ -228,6 +257,10 @@ ok('gs partial phrase', gs.includes('GitHub saved ') && gs.includes('but the AWS
 ok('gs github before records', gs.indexOf('camPinPut_') !== -1 && gs.indexOf('camPinPut_') < gs.indexOf('camPinRefreshRecords_'));
 ok('page shows partial aws error', html.includes('j.github_saved') && html.includes('AWS records copy failed'));
 ok('gs refuses create', gs.includes('refusing to create a cameras file'));
+ok('gs requires actor', gs.includes("by must be Jonah, Eleanor, Bot 1, or Bot 2") &&
+  gs.includes('CAM_PIN_ACTORS') && gs.includes('camPinAppendHistoryLog_'));
+ok('page has actor picker', html.includes('id="actorSelect"') && html.includes('Bot 2'));
+ok('history file empty', JSON.parse(readFileSync(join(root, 'camera-pin-history.json'), 'utf8')).events.length === 0);
 ok('gs limits', gs.includes('CAM_PIN_MAX_MOVE_M = 5000') && gs.includes('CAM_PIN_FOV_MAX = 360') &&
   gs.includes('CAM_PIN_RANGE_MAX = 500'));
 [EUGENE, EUGENE_CAMS, JONES, TRACY, D9].forEach((id) => {
@@ -247,7 +280,7 @@ const committed = JSON.parse(readFileSync(join(root, 'camera-pin-properties.json
 const props = committed.properties || [];
 const byId = {};
 props.forEach((row) => { byId[row.id] = row; });
-ok('catalog is the chekt tab', props.length === 158 && !byId[NOT_CHEKT]);
+ok('catalog is the chekt tab', props.length === 321 && !byId[NOT_CHEKT]);
 ok('achterhof is a chekt account', byId[ACHTERHOF] && byId[ACHTERHOF].cameras === 4 && byId[ACHTERHOF].cameras_file === ACHTERHOF);
 ok('seeded wellman has no scratch fields', (() => {
   const doc = JSON.parse(readFileSync(join(camDir, '0bff28782e679ea68ce2994c5c2932f7.json'), 'utf8'));
@@ -260,7 +293,7 @@ ok('butler still attached', (() => {
   const id = '305a44231fd0ee62c93819812e58bd38';
   const doc = JSON.parse(readFileSync(join(camDir, id + '.json'), 'utf8'));
   const photo = doc.cameras[0].photo;
-  return doc.cameras[0].lat === 44.0701631 && doc.cameras[0].label === 'DRIVEWAY' &&
+  return doc.cameras[0].lat === 44.0701154 && doc.cameras[0].label === 'DRIVEWAY' &&
     photo === 'data/cameras/images/' + id + '/cam-01.jpg' && existsSync(join(root, photo));
 })());
 ok('wellman still attached', (() => {
