@@ -4,6 +4,16 @@ Internal page for placing camera pins. Clients do not use it.
 
 ## Changelog
 
+### 2026-10-06 — Property links open a new tab (cam-edit 1.0.12)
+
+**What.** Account-list and Recent-edits property links use `target=_blank`, same as the client live link on a pin page. The list or history page stays put.
+
+**Files.** `camera-pin-editor.html`, `js/camera-pin-editor.js`, `test-camera-pin-editor.mjs`, this file.
+
+**How it was checked.** `node test-camera-pin-editor.mjs`.
+
+**Status.** Local, with the history work.
+
 ### 2026-10-06 — Recent edits is its own page (cam-edit 1.0.11)
 
 **What.** The account list no longer embeds the activity feed. Header **Recent edits** (next to Reload) opens `camera-pin-editor.html?history=1`. That page lists every log row, with **Edits by**. Last edited stays next to each account name.

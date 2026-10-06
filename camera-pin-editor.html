@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.11)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.12)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -358,7 +358,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.11</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.12</span>
   <label class="actor-pick">Editing as
     <select id="actorSelect" aria-label="Editing as">
       <option value="">Choose editor…</option>
@@ -454,7 +454,7 @@ import {
   REVIEW_STORE_KEY, ACTOR_STORE_KEY, EDITOR_ACTORS, normActor, historyEventsFromJson,
   lastEditForHub, eventTouchesHub,
   reviewEntry, reviewStateFromJson, PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.11';
+} from './js/camera-pin-editor.js?v=1.0.12';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -1438,6 +1438,13 @@ function propertyHref(id) {
   return editorPageHref('property=' + id);
 }
 
+function setPropertyTabLink(link, id, label) {
+  link.href = propertyHref(id);
+  link.target = '_blank';
+  link.rel = 'noopener';
+  if (label) link.textContent = label;
+}
+
 function editing() {
   return document.body.classList.contains('editing');
 }
@@ -1521,8 +1528,7 @@ function renderHistoryFeed() {
     var item = document.createElement('div');
     item.className = 'hist-item';
     var link = document.createElement('a');
-    link.href = propertyHref(ev.property);
-    link.textContent = ev.name || ev.property.slice(0, 8);
+    setPropertyTabLink(link, ev.property, ev.name || ev.property.slice(0, 8));
     item.appendChild(document.createTextNode(actorLabel(ev.by) + ' · ' + formatWhen(ev.at) + ' · '));
     item.appendChild(link);
     if (ev.cameras && ev.cameras.length) {
@@ -1560,7 +1566,7 @@ function renderIndex() {
     doneLabel.appendChild(document.createTextNode('Done'));
     var link = document.createElement('a');
     link.className = 'row-link';
-    link.href = propertyHref(id);
+    setPropertyTabLink(link, id);
     var nameRow = document.createElement('div');
     nameRow.className = 'index-name-row';
     var name = document.createElement('div');

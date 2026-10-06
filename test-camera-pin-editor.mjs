@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.11.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.12.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -29,7 +29,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.11');
+ok('build', BUILD === '1.0.12');
 ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
 ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);
@@ -214,6 +214,8 @@ const scriptMatch = html.match(/<script type="module">([\s\S]*)<\/script>/);
 ok('one module script', !!scriptMatch);
 const script = scriptMatch ? scriptMatch[1] : '';
 ok('history page boots', script.includes("params.get('history') === '1'"));
+ok('property links open a tab', script.includes("link.target = '_blank'") &&
+  script.includes("function setPropertyTabLink"));
 const ids = new Set();
 const idRe = /\bid="([^"]+)"/g;
 let m;
