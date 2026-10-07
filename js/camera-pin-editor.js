@@ -2,7 +2,14 @@
 // Apps Script mirror: apps scripts/camera-pins.gs (keep the limits in lockstep).
 // Internal editors only. Client links stay on vyanet-viewer.html?property=&live=1.
 
-export const BUILD = '1.0.16';
+export const BUILD = '1.0.17';
+
+// CHEKT's dead-camera frame is a near-black JPEG stamped DOA.
+// Published real stills sit above a mean luma of 50. That frame is about 18.
+export const ERROR_STILL_LUMA = 40;
+export function isErrorStillLuma(mean) {
+  return typeof mean === 'number' && isFinite(mean) && mean < ERROR_STILL_LUMA;
+}
 
 export const MAX_MOVE_M = 5000;
 export const FOV_MAX = 360;

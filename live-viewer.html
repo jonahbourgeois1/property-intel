@@ -208,9 +208,9 @@
 </div>
 <div id="debug-panel"><div id="debug-log"></div></div>
 <script type="module">
-import { dataRoot, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters, loadPropertyIndex, readViewerPass, writeViewerPass } from './js/vyanet-viewer/property.js?v=1.8.50';
+import { dataRoot, fetchCamerasFile, liveAliasIds, gwLiveQuery, gwConfig, indexLiveRoster, groupLiveCameras, liveWallGrid, flattenLiveGroups, parcelLabel, syncLiveWallStreams, stopMjpegImg, invalidateLiveWall, applyClipPosters, loadPropertyIndex, readViewerPass, writeViewerPass } from './js/vyanet-viewer/property.js?v=1.8.50';
 
-const BUILD = '1.1.13';
+const BUILD = '1.1.14';
 const params = new URLSearchParams(window.location.search);
 const propertyId = (params.get('property') || '').trim();
 const embedded = params.get('embed') === '1';
@@ -321,8 +321,21 @@ async function gwGet(path, interactive) {
     if (!k) throw new Error('no passcode entered');
     r = await fetch(gw.url + path, { headers: { 'x-viewer-key': k } });
   }
-  if (!r.ok) throw new Error('gateway HTTP ' + r.status);
+  if (!r.ok) {
+    let detail = '';
+    try { detail = String(((await r.json()) || {}).error || ''); } catch (e) {}
+    const err = new Error('gateway HTTP ' + r.status);
+    err.http = r.status;
+    err.detail = detail;
+    throw err;
+  }
   return await r.json();
+}
+
+// Password matched, then CHEKT 404'd GET /sites/{id}/cameras. The gateway
+// wraps that as 502 "chekt returned 404". The account is still on the roster.
+function chektCamerasMiss(e) {
+  return !!(e && e.http === 502 && e.detail === 'chekt returned 404');
 }
 
 async function gwGetForProperty(makePath, interactive) {
@@ -506,6 +519,41 @@ function lmPaintWall() {
   }
   dbg('Live: ' + lmRows.length + ' cameras painted', 'ok');
 }
+
+// Site cameras URL 404'd. Show each known camera as offline, with no still
+// and no clip poster. Those frames are CHEKT's error image, not a view.
+async function paintOfflineDevices() {
+  const main = document.getElementById('lm-main');
+  const bar = document.getElementById('lm-bar');
+  lmClearMain();
+  let file = null;
+  let ids = [propertyId];
+  try {
+    const idx = await loadIndex();
+    ids = liveAliasIds(idx, propertyId);
+  } catch (e) {}
+  try {
+    for (let i = 0; i < ids.length && !file; i++) {
+      file = await fetchCamerasFile(root, ids[i]);
+    }
+  } catch (e) {}
+  const cams = ((file && file.cameras) || []).filter(function (c) { return c; });
+  if (bar) bar.classList.remove('on');
+  if (!cams.length) {
+    main.innerHTML = '<div class="rd-note">offline</div>';
+    return;
+  }
+  const grid = liveWallGrid(cams.length);
+  main.style.gridTemplateColumns = 'repeat(' + grid.cols + ', minmax(0, 1fr))';
+  main.style.gridTemplateRows = 'repeat(' + grid.rows + ', minmax(120px, 1fr))';
+  main.innerHTML = cams.map(function (cam) {
+    const live = cam.live || {};
+    const name = String(live.name || cam.label || cam.id || 'Camera');
+    return '<div class="quad-cell">' +
+      '<span class="quad-name">' + escHtml(name) + '</span>' +
+      '<span class="quad-state bad">offline</span></div>';
+  }).join('');
+}
 window.lmToggleFeed = function (i) {
   lmFocus = (lmFocus === i) ? -1 : i;
   lmApplyFilter();
@@ -613,6 +661,13 @@ async function startLivePage() {
   let m;
   try { m = await gwEnsureLive(); }
   catch (e) {
+    if (chektCamerasMiss(e)) {
+      await paintOfflineDevices();
+      const clips = document.getElementById('lm-clips');
+      if (clips) clips.innerHTML = '<div class="rd-note">offline</div>';
+      dbg('CHEKT cameras URL 404 - labeled offline', 'warn');
+      return;
+    }
     main.innerHTML = '<div class="rd-note">Live cameras unavailable - ' +
                      escHtml(e && e.message) + '</div>';
     dbg('Gateway failed: ' + (e && e.message), 'warn');
