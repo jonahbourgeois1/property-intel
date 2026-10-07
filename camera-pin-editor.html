@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.17)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.18)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -385,7 +385,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.17</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.18</span>
   <label class="actor-pick">Editing as
     <select id="actorSelect" aria-label="Editing as">
       <option value="">Choose editor…</option>
@@ -461,7 +461,7 @@
     </div>
     <div id="list"></div>
     <img id="stillImg" alt="" hidden title="Click to enlarge">
-    <div id="stillEmpty" hidden>No still</div>
+    <div id="stillEmpty" hidden>offline</div>
     <div id="detailName"></div>
     <div class="muted" id="detailMeta"></div>
     <div class="muted" id="liveLine"></div>
@@ -494,7 +494,7 @@ import {
   lastEditForHub, eventTouchesHub,
   reviewEntry, reviewStateFromJson, reviewRecordsFromParsed, mergeReviewCaches,
   PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.17';
+} from './js/camera-pin-editor.js?v=1.0.18';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -779,7 +779,7 @@ function syncDetail(forceInputs) {
   var src = stillSrc(cam.photo);
   var img = $('stillImg');
   var empty = $('stillEmpty');
-  empty.textContent = 'No still';
+  empty.textContent = 'offline';
   function judgeStill() {
     if (!isErrorStillLuma(stillLuma(img))) {
       img.hidden = false;
@@ -793,7 +793,7 @@ function syncDetail(forceInputs) {
   img.onload = judgeStill;
   img.onerror = function () {
     img.hidden = true;
-    empty.textContent = 'No still';
+    empty.textContent = 'offline';
     empty.hidden = false;
   };
   if (!src) {
@@ -869,11 +869,11 @@ function renderList() {
       thumb.onerror = function () {
         var ph = document.createElement('div');
         ph.className = 'thumb-empty';
-        ph.textContent = 'No still';
+        ph.textContent = 'offline';
         thumb.replaceWith(ph);
       };
     } else {
-      thumb.textContent = 'No still';
+      thumb.textContent = 'offline';
     }
     var text = document.createElement('div');
     var name = document.createElement('div');

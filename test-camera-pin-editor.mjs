@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.17.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.18.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -31,7 +31,7 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.17');
+ok('build', BUILD === '1.0.18');
 ok('DOA frame is offline', isErrorStillLuma(17.9) && !isErrorStillLuma(50) && !isErrorStillLuma(124));
 ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
 ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
