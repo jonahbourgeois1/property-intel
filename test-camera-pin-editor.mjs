@@ -1,4 +1,4 @@
-// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.16.
+// Merge rules, URL shape, and page structure for camera-pin-editor 1.0.17.
 import { existsSync, readFileSync, writeFileSync, unlinkSync, readdirSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { dirname, join } from 'path';
@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import vm from 'vm';
 import {
   BUILD, MAX_MOVE_M, editorHubUrl, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
+  isErrorStillLuma,
   camerasFileForHub, chektEditorCatalog, mergeCamerasRecord, validateGeometry, normalizeHeading,
   coordPair, reviewEntry, reviewStateFromJson, parcelTileName, PARCEL_COUNTIES,
   EDITOR_ACTORS, normActor, historyEventsFromJson, lastEditForHub,
@@ -30,7 +31,8 @@ const D9 = 'd9f759d7351db3886c79dd689c41e3c0';
 const GUD = '1512452d9e6e0f1cf0a32255a4392b12';
 const SAMPLE = '933e6dd98ecb875eab79fdb3b103a938';
 
-ok('build', BUILD === '1.0.16');
+ok('build', BUILD === '1.0.17');
+ok('DOA frame is offline', isErrorStillLuma(17.9) && !isErrorStillLuma(50) && !isErrorStillLuma(124));
 ok('four actors', EDITOR_ACTORS.join('|') === 'Jonah|Eleanor|Bot 1|Bot 2');
 ok('norm actor', normActor(' Jonah ') === 'Jonah' && normActor('Ross') === '');
 ok('null coord is unplaced', coordPair({ lat: null, lng: null }) === null);

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Camera pin editor</title>
 <!--
-  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.16)
+  camera-pin-editor.html — internal camera pin placement (cam-edit 1.0.17)
 
   For camera editors. Not a client page. Do not send this URL to a client.
 
@@ -385,7 +385,7 @@
 <header>
   <h1>Camera pin editor</h1>
   <span class="banner">Internal — camera editors only. Not a client link.</span>
-  <span class="chip" id="buildChip">cam-edit 1.0.16</span>
+  <span class="chip" id="buildChip">cam-edit 1.0.17</span>
   <label class="actor-pick">Editing as
     <select id="actorSelect" aria-label="Editing as">
       <option value="">Choose editor…</option>
@@ -488,13 +488,13 @@
 <script src="nadir-geo.js"></script>
 <script type="module">
 import {
-  BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId,
+  BUILD, editorUrl, clientLiveUrl, cameraFileCandidates, normHubId, isErrorStillLuma,
   validateGeometry, offsetByHeading, headingFromLatLng, editorHubUrl, coordPair,
   REVIEW_STORE_KEY, ACTOR_STORE_KEY, EDITOR_ACTORS, normActor, historyEventsFromJson,
   lastEditForHub, eventTouchesHub,
   reviewEntry, reviewStateFromJson, reviewRecordsFromParsed, mergeReviewCaches,
   PARCEL_COUNTIES, parcelTileName
-} from './js/camera-pin-editor.js?v=1.0.16';
+} from './js/camera-pin-editor.js?v=1.0.17';
 
 var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
 var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
@@ -561,6 +561,34 @@ function stillSrc(photo) {
   var root = dataRoot();
   if (s.indexOf('data/') === 0) return root + s.slice(5);
   return root + s.replace(/^\//, '');
+}
+
+function stillLuma(img) {
+  try {
+    var w = 40;
+    var h = 30;
+    var canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0, w, h);
+    var data = ctx.getImageData(0, 0, w, h).data;
+    var sum = 0;
+    var n = w * h;
+    for (var i = 0; i < data.length; i += 4) {
+      sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    }
+    return sum / n;
+  } catch (e) {
+    return null;
+  }
+}
+
+function offlinePlaceholder(className) {
+  var ph = document.createElement('div');
+  ph.className = className;
+  ph.textContent = 'offline';
+  return ph;
 }
 
 function poseOf(cam) {
@@ -751,7 +779,26 @@ function syncDetail(forceInputs) {
   var src = stillSrc(cam.photo);
   var img = $('stillImg');
   var empty = $('stillEmpty');
+  empty.textContent = 'No still';
+  function judgeStill() {
+    if (!isErrorStillLuma(stillLuma(img))) {
+      img.hidden = false;
+      empty.hidden = true;
+      return;
+    }
+    img.hidden = true;
+    empty.textContent = 'offline';
+    empty.hidden = false;
+  }
+  img.onload = judgeStill;
+  img.onerror = function () {
+    img.hidden = true;
+    empty.textContent = 'No still';
+    empty.hidden = false;
+  };
   if (!src) {
+    img.onload = null;
+    img.onerror = null;
     img.hidden = true;
     img.removeAttribute('src');
     empty.hidden = false;
@@ -759,8 +806,9 @@ function syncDetail(forceInputs) {
     empty.hidden = true;
     img.hidden = false;
     img.alt = cam.label || cam.id;
-    img.onerror = function () { img.hidden = true; empty.hidden = false; };
     img.src = src;
+  } else if (img.complete && img.naturalWidth) {
+    judgeStill();
   } else {
     img.hidden = false;
     empty.hidden = true;
@@ -814,6 +862,10 @@ function renderList() {
       thumb.alt = '';
       thumb.title = 'Click to enlarge';
       thumb.src = src;
+      thumb.onload = function () {
+        if (!isErrorStillLuma(stillLuma(thumb))) return;
+        thumb.replaceWith(offlinePlaceholder('thumb-empty'));
+      };
       thumb.onerror = function () {
         var ph = document.createElement('div');
         ph.className = 'thumb-empty';
