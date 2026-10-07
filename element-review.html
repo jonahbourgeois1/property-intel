@@ -33,6 +33,8 @@
              ?route=rounds sets next_round (first review is always 1).
     parcels= (optional) NEW in v6.1 — override the parcel-tile directory.
              Defaults to the same-origin 'data/parcels/' in this repo.
+             v6.8.23: when no grid tile holds the point, the county layers on
+             CloudFront are searched (reference/parcels/counties.json).
     kind   = (optional) NEW in v6.8.4 — 'school' raises the pin cap from 12
              to 20 (SAT_MAX_PINS_SCHOOL). Sheet links set this when column B
              is School. ?route=elements max_pins is the live override.
@@ -47,6 +49,14 @@
              Sandbox + Element Critique Sandbox. Production Satellite and
              element-critique are never read or written. Sheet menu
              "Open Element Review" under Satellite Sandbox sets this.
+
+  v6.8.23 (county lot lines): when none of the five GitHub grid tiles holds
+    the point, the lot line comes from the Segment 2 county layers on
+    CloudFront (reference/parcels/{county}/index.json + shards), discovered
+    through reference/parcels/counties.json (123 counties as of 2026-10-05).
+    Same consumer rules, same NadirGeo.parcelHit, same shards the Lambdas,
+    Apps Script shared.gs v5.41 and viewer.html read. Before this, every
+    property outside Deschutes/Lane/Josephine/Linn/Douglas had no lot line.
 
   v6.8.22 (map fill): the satellite basemap is sized to the stage in pixels.
     A percentage height inside the grid cell was indefinite on the first
@@ -1326,7 +1336,7 @@
   // long after it is fixed, so both are live possibilities at once. The build
   // tag in the header answers the second question without any URL param, and
   // the diagnostics panel answers the first.
-  var BUILD = 'v6.8.22';
+  var BUILD = 'v6.8.23';
   // The oldest SERVER build whose re-pin writer keeps duplicate catalog ids as
   // separate instances (pin seq identity, critique-api v6.8.2). Submitting
   // against anything older stacks or deletes duplicates — four separate
@@ -3294,6 +3304,83 @@
     return parcelTiles[name];
   }
 
+  // ── v6.8.23: the county layers on CloudFront, for everything the grid does
+  // not cover. Same shards the Lambdas, Apps Script (shared.gs v5.41) and
+  // viewer.html read. Discovery is data: reference/parcels/counties.json lists
+  // every published county id with its bounds (123 as of 2026-10-05), so a
+  // new county needs no edit here. Consumer rules from 2-PARCEL_CONTRACT: the
+  // county box holds the point -> shards whose bounds hold the point -> one
+  // merged feature list -> NadirGeo.parcelHit (holes count, unaccounted lots
+  // skipped, smallest lot wins). CloudFront sends Access-Control-Allow-Origin
+  // on this prefix, so the browser fetches it directly, like the grid tiles.
+  // Only consulted after the five grid counties miss, so Bend costs nothing.
+  var PARCEL_CDN = 'https://d3fg47bqswi0rr.cloudfront.net/';
+  var PARCEL_CDN_MANIFEST = 'reference/parcels/counties.json';
+
+  function parcelCdnJson(key) {
+    var url = PARCEL_CDN + key;            // full URL as the cache key: never collides with a tile name
+    if (!parcelTiles[url]) {
+      parcelTiles[url] = fetch(url)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .catch(function () { return null; });
+    }
+    return parcelTiles[url];
+  }
+
+  function parcelBoxHolds(b, lat, lng) {
+    return !!b && lat >= Number(b.south) && lat <= Number(b.north) &&
+           lng >= Number(b.west) && lng <= Number(b.east);
+  }
+
+  function parcelBoxArea(b) {
+    return Math.abs((Number(b.north) - Number(b.south)) * (Number(b.east) - Number(b.west)));
+  }
+
+  // Resolves to a parcelHit ({ring, taxlot, feature} + county, shards) for the
+  // smallest published lot holding the point, or null. Counties are tried
+  // smallest box first; a point near a county line sits in two boxes but only
+  // one county's polygons hold it.
+  function searchCdn(lat, lng) {
+    return parcelCdnJson(PARCEL_CDN_MANIFEST).then(function (manifest) {
+      if (!manifest || !manifest.counties) {
+        parcelSay('county manifest unavailable: ' + PARCEL_CDN + PARCEL_CDN_MANIFEST);
+        return null;
+      }
+      var counties = manifest.counties.filter(function (c) {
+        return c && c.id && parcelBoxHolds(c.bounds, lat, lng);
+      });
+      counties.sort(function (a, b) { return parcelBoxArea(a.bounds) - parcelBoxArea(b.bounds); });
+      if (!counties.length) {
+        parcelSay('no published county box holds the point (' + manifest.counties.length + ' counties in the manifest)');
+        return null;
+      }
+      function tryCounty(i) {
+        if (i >= counties.length) return Promise.resolve(null);
+        var county = counties[i];
+        return parcelCdnJson('reference/parcels/' + county.id + '/index.json').then(function (index) {
+          if (!index || !parcelBoxHolds(index.bounds, lat, lng)) return null;
+          var shards = (index.shards || []).filter(function (s) {
+            return s && s.key && parcelBoxHolds(s.bounds, lat, lng);
+          });
+          if (!shards.length) return null;
+          return Promise.all(shards.map(function (s) { return parcelCdnJson(s.key); })).then(function (parts) {
+            var feats = [];
+            parts.forEach(function (gj) { if (gj && gj.features) feats = feats.concat(gj.features); });
+            var hit = parcelHit({ type: 'FeatureCollection', features: feats }, lat, lng);
+            if (!hit) return null;
+            hit.county = county.id;
+            hit.shards = shards.length;
+            if (!hit.taxlot && index.join_field && hit.feature && hit.feature.properties) {
+              hit.taxlot = String(hit.feature.properties[index.join_field] || '');
+            }
+            return hit;
+          });
+        }).then(function (hit) { return hit || tryCounty(i + 1); });
+      }
+      return tryCounty(0);
+    });
+  }
+
   // Lot lookup: holes count, skip Lane ROW leftovers (TAXLOT 77/88/99 and
   // ACCTNO 000None), smallest remaining lot wins. Canonical copy is
   // NadirGeo.parcelHit (nadir-geo.js 1.3.3). Outer-ring-only first-hit drew
@@ -3332,8 +3419,8 @@
     if (btn) {
       btn.style.display = '';
       btn.classList.add('unavailable');
-      btn.title = 'No lot lines on file for this property — parcel tiles cover ' +
-                  'Deschutes County (Bend, Redmond, Sisters) and Lane County (Eugene).';
+      btn.title = 'No lot lines on file for this property — no published county ' +
+                  'parcel layer holds this point (see the console for the lookup).';
     }
   }
 
@@ -3374,9 +3461,13 @@
     }
 
     searchAll(0).then(function (hit) {
+      // v6.8.23: the grid first (same-origin, browser-cached), then the
+      // county layers on CloudFront for everything else.
+      return hit || searchCdn(lat, lng);
+    }).then(function (hit) {
       if (!hit) {
         parcelNone('no lot containing ' + lat.toFixed(5) + ', ' + lng.toFixed(5) +
-                   ' (tried Deschutes and Lane tiles)');
+                   ' (tried the five grid counties and every county layer on the CDN)');
         return;
       }
       parcelRing = hit.ring.map(function (c) { return { lat: c[1], lng: c[0] }; });
@@ -3385,7 +3476,9 @@
       if (btn) btn.style.display = '';
       setParcelToggle(true);
       parcelSay('parcel boundary drawn — ' + parcelRing.length + ' vertices' +
-                (hit.taxlot ? ', taxlot ' + hit.taxlot : ''));
+                (hit.taxlot ? ', taxlot ' + hit.taxlot : '') +
+                (hit.county ? ' (' + hit.county + ' via CDN, ' + hit.shards +
+                              ' shard' + (hit.shards === 1 ? '' : 's') + ')' : ' (grid tile)'));
     }, function (err) {
       parcelNone('lookup failed: ' + String((err && err.message) || err));
     });
