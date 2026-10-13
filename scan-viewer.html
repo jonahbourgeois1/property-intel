@@ -89,7 +89,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 4</span>
+  <span id="build">scan-viewer 5</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -299,6 +299,36 @@
     });
   }
 
+  function showKeys(keys) {
+    el('frames').innerHTML = '';
+    state.frames = [];
+    state.key = '';
+    clearStage();
+    paintKeys(keys);
+    setStatus(keys.length ? (keys.length + ' frames') : 'No frames in this view');
+  }
+
+  async function gatherKeys(latest, known, token) {
+    var fresh = [];
+    var key = latest;
+    var guard = 0;
+    while (key && guard < 500 && state.token === token) {
+      if (known.length && key === known[0]) return fresh.concat(known);
+      guard++;
+      fresh.push(key);
+      if (guard === 1 || guard % 20 === 0) setStatus('Finding frames… ' + fresh.length);
+      var res;
+      try { res = await fetch(jsonUrl(key)); }
+      catch (e) { setStatus(e.message); return fresh; }
+      if (!res.ok) break;
+      var obj;
+      try { obj = await res.json(); } catch (e) { break; }
+      if (state.token !== token) return null;
+      key = obj && obj.previous ? String(obj.previous).replace(/\.jpg$/, '.json') : '';
+    }
+    return fresh;
+  }
+
   async function loadFrames(device) {
     var token = ++state.token;
     state.device = device;
@@ -312,39 +342,23 @@
       if (state.cameras[i].device_id === device) cam = state.cameras[i];
     }
     var latest = cam && cam.latest && cam.latest.key;
-    if (!latest) { setStatus('No frames'); return; }
-    var known = readCatalog(device);
-    if (known.length && known[0] === latest) {
-      paintKeys(known);
-      setStatus(known.length + ' frames');
+    var listed = cam && cam.keys && cam.keys.length ? cam.keys : null;
+    if (listed) {
+      writeCatalog(device, listed);
+      showKeys(listed);
       return;
     }
-    setStatus('Loading frames…');
-    var fresh = [];
-    var key = latest;
-    var guard = 0;
-    var hit = false;
-    while (key && guard < 500 && state.token === token) {
-      if (known.length && key === known[0]) { hit = true; break; }
-      guard++;
-      fresh.push(key);
-      addTile(key);
-      if (guard === 1 || guard % 10 === 0) setStatus(fresh.length + ' frames');
-      var res;
-      try { res = await fetch(jsonUrl(key)); }
-      catch (e) { setStatus(e.message); break; }
-      if (!res.ok) break;
-      var obj;
-      try { obj = await res.json(); } catch (e) { break; }
-      if (state.token !== token) return;
-      applyMeta(key, obj || {});
-      key = obj && obj.previous ? String(obj.previous).replace(/\.jpg$/, '.json') : '';
+    var known = readCatalog(device);
+    if (known.length && known[0] === latest) {
+      showKeys(known);
+      return;
     }
-    if (state.token !== token) return;
-    var all = hit ? fresh.concat(known) : fresh;
-    if (hit) paintKeys(known);
-    writeCatalog(device, all);
-    setStatus(all.length ? (all.length + ' frames') : 'No frames in this view');
+    if (!latest) { setStatus('No frames'); return; }
+    setStatus('Finding frames…');
+    var keys = await gatherKeys(latest, known, token);
+    if (!keys || state.token !== token) return;
+    writeCatalog(device, keys);
+    showKeys(keys);
   }
 
   function selectCamera(device) { return loadFrames(device); }
