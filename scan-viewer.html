@@ -12,6 +12,7 @@
     background: #0c1016; color: #e7ecf2;
     font-family: "Segoe UI", system-ui, sans-serif;
   }
+  body { display: flex; flex-direction: column; }
   header {
     display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
     padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -35,11 +36,35 @@
   button:disabled { opacity: 0.5; cursor: default; }
   label.notes { font-size: 13px; color: #c5d0dc; display: flex; gap: 6px; align-items: center; }
   #status { flex-basis: 100%; margin: 0; min-height: 1.2em; color: #f0c36a; font-size: 13px; }
+  #tabs {
+    display: flex; gap: 4px; padding: 0 16px;
+    background: #10161f; border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .tab {
+    background: transparent; border: 0; border-radius: 0;
+    border-bottom: 2px solid transparent;
+    color: #93a0b0; padding: 10px 12px;
+  }
+  .tab.on { color: #e7ecf2; border-bottom-color: #7eb6ff; }
   #layout {
     display: grid;
     grid-template-columns: 220px 1fr 320px;
-    height: calc(100% - 74px);
+    flex: 1;
     min-height: 0;
+  }
+  #layout[hidden], #notes[hidden] { display: none !important; }
+  #notes { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px 40px; }
+  .note-cam { margin: 0 0 28px; }
+  .note-cam h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; }
+  .note-row {
+    display: grid; grid-template-columns: 180px 1fr; gap: 12px;
+    width: 100%; max-width: 860px; text-align: left;
+    background: #121820; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px; padding: 8px; margin: 0 0 8px;
+  }
+  .note-row img {
+    width: 100%; aspect-ratio: 16 / 10; object-fit: cover;
+    border-radius: 6px; background: #07090c;
   }
   aside, #frames, #stage { min-height: 0; overflow: auto; }
   aside, #frames { border-right: 1px solid rgba(255,255,255,0.08); }
@@ -89,13 +114,17 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 5</span>
+  <span id="build">scan-viewer 6</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
   <label class="notes"><input id="notable" type="checkbox"> Notes only</label>
   <p id="status" role="status"></p>
 </header>
+<div id="tabs">
+  <button id="tab-pictures" class="tab on" type="button">Pictures</button>
+  <button id="tab-notes" class="tab" type="button">Notes</button>
+</div>
 <div id="layout">
   <aside id="cameras"></aside>
   <section id="frames"></section>
@@ -106,11 +135,14 @@
     <p id="frame-text"></p>
   </section>
 </div>
+<div id="notes" hidden>
+  <div id="note-list"></div>
+</div>
 <script>
 (function () {
   var EXEC = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var CDN = 'https://d1h1on7f1v1lpy.cloudfront.net/';
-  var state = { hub: '', pass: '', cameras: [], device: '', frames: [], key: '', token: 0 };
+  var state = { hub: '', pass: '', cameras: [], device: '', frames: [], key: '', token: 0, tab: 'pictures', noteToken: 0, noteCache: {} };
 
   function el(id) { return document.getElementById(id); }
   function setStatus(text) { el('status').textContent = text || ''; }
@@ -237,6 +269,7 @@
   function notableOn() { return el('notable').checked; }
 
   function applyMeta(key, obj) {
+    state.noteCache[key] = obj || {};
     var frame = frameByKey(key);
     if (!frame) return;
     frame.name = obj.name || frame.name;
@@ -361,7 +394,129 @@
     showKeys(keys);
   }
 
-  function selectCamera(device) { return loadFrames(device); }
+  function selectCamera(device) {
+    showTab('pictures');
+    return loadFrames(device);
+  }
+
+  function cameraKeys(cam) {
+    if (cam.keys && cam.keys.length) return cam.keys;
+    var known = readCatalog(cam.device_id);
+    if (known.length) return known;
+    if (cam.latest && cam.latest.key) return [cam.latest.key];
+    return [];
+  }
+
+  function showTab(name) {
+    state.tab = name;
+    el('tab-pictures').classList.toggle('on', name === 'pictures');
+    el('tab-notes').classList.toggle('on', name === 'notes');
+    el('layout').hidden = name !== 'pictures';
+    el('notes').hidden = name !== 'notes';
+    el('notable').parentElement.hidden = name !== 'pictures';
+  }
+
+  async function mapPool(items, limit, worker) {
+    var cursor = 0;
+    var running = [];
+    function next() {
+      if (cursor >= items.length) return Promise.resolve();
+      var item = items[cursor++];
+      return worker(item).then(next);
+    }
+    var n = Math.min(limit, items.length) || 0;
+    for (var i = 0; i < n; i++) running.push(next());
+    await Promise.all(running);
+  }
+
+  function renderNotes() {
+    var box = el('note-list');
+    box.innerHTML = '';
+    var total = 0;
+    state.cameras.forEach(function (cam) {
+      var notes = [];
+      cameraKeys(cam).forEach(function (key) {
+        var obj = state.noteCache[key];
+        if (obj && obj.description) notes.push({ key: key, obj: obj });
+      });
+      total += notes.length;
+      var section = document.createElement('section');
+      section.className = 'note-cam';
+      var heading = document.createElement('h2');
+      heading.textContent = (cam.name || cam.device_id) + ' (' + notes.length + ')';
+      section.appendChild(heading);
+      if (!notes.length) {
+        var empty = document.createElement('p');
+        empty.className = 'note empty';
+        empty.textContent = 'No notes';
+        section.appendChild(empty);
+      }
+      notes.forEach(function (item) {
+        var row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'note-row';
+        var img = document.createElement('img');
+        img.alt = '';
+        img.src = jpegUrl(item.key);
+        var copy = document.createElement('span');
+        var meta = document.createElement('span');
+        meta.className = 'meta';
+        meta.textContent = when(item.obj.requested_at || stampFromKey(item.key));
+        var text = document.createElement('span');
+        text.className = 'note';
+        text.textContent = item.obj.description;
+        copy.appendChild(meta);
+        copy.appendChild(text);
+        row.appendChild(img);
+        row.appendChild(copy);
+        row.onclick = function () {
+          selectCamera(cam.device_id).then(function () {
+            var frame = frameByKey(item.key);
+            if (frame) {
+              frame.description = item.obj.description || frame.description;
+              frame.requested_at = item.obj.requested_at || frame.requested_at;
+              frame.name = item.obj.name || frame.name || cam.name;
+              selectFrame(frame);
+            }
+          });
+        };
+        section.appendChild(row);
+      });
+      box.appendChild(section);
+    });
+    setStatus(total ? (total + ' notes') : 'No notes');
+  }
+
+  async function loadNotes() {
+    if (!state.cameras.length) {
+      el('note-list').innerHTML = '';
+      setStatus('Open a property first');
+      return;
+    }
+    var token = ++state.noteToken;
+    var jobs = [];
+    state.cameras.forEach(function (cam) {
+      cameraKeys(cam).forEach(function (key) {
+        if (!state.noteCache[key]) jobs.push(key);
+      });
+    });
+    if (!jobs.length) { renderNotes(); return; }
+    setStatus('Reading notes…');
+    var done = 0;
+    await mapPool(jobs, 24, function (key) {
+      return fetch(jsonUrl(key)).then(function (r) {
+        if (!r.ok) return null;
+        return r.json();
+      }).then(function (obj) {
+        if (state.noteToken !== token) return;
+        if (obj) state.noteCache[key] = obj;
+        done++;
+        if (done === 1 || done % 40 === 0) setStatus('Reading notes… ' + done);
+      }).catch(function () {});
+    });
+    if (state.noteToken !== token) return;
+    renderNotes();
+  }
 
   async function openProperty() {
     var sel = el('property');
@@ -370,7 +525,10 @@
     state.device = '';
     state.frames = [];
     state.older = '';
+    state.noteCache = {};
+    state.noteToken++;
     clearStage();
+    el('note-list').innerHTML = '';
     el('frames').innerHTML = '';
     if (!state.hub) { setStatus('Choose a property'); return; }
     if (!state.pass) { setStatus('Enter the property password'); return; }
@@ -390,7 +548,8 @@
         return;
       }
       setStatus('');
-      await selectCamera(state.cameras[0].device_id);
+      if (state.tab === 'notes') await loadNotes();
+      else await selectCamera(state.cameras[0].device_id);
     } catch (e) {
       setStatus(e.message);
     } finally {
@@ -424,6 +583,11 @@
   el('pass').addEventListener('keydown', function (ev) {
     if (ev.key === 'Enter') openProperty();
   });
+  el('tab-pictures').onclick = function () { showTab('pictures'); };
+  el('tab-notes').onclick = function () {
+    showTab('notes');
+    loadNotes();
+  };
   el('notable').onchange = function () {
     var tiles = el('frames').querySelectorAll('.frame');
     for (var i = 0; i < tiles.length; i++) {
