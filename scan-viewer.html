@@ -72,7 +72,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 1</span>
+  <span id="build">scan-viewer 2</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -92,7 +92,6 @@
 <script>
 (function () {
   var EXEC = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
-  var seq = 0;
   var state = { hub: '', pass: '', cameras: [], device: '', frames: [], older: '', key: '' };
 
   function el(id) { return document.getElementById(id); }
@@ -116,30 +115,22 @@
   }
 
   function callApi(params) {
-    return new Promise(function (resolve, reject) {
-      var cb = 'scanViewerCb' + (++seq);
-      var s = document.createElement('script');
-      var q = new URLSearchParams();
-      Object.keys(params).forEach(function (k) {
-        if (params[k] !== undefined && params[k] !== null && params[k] !== '') q.set(k, params[k]);
-      });
-      q.set('callback', cb);
-      var timer = setTimeout(function () {
-        cleanup();
-        reject(new Error('The request timed out'));
-      }, 90000);
-      window[cb] = function (data) {
-        cleanup();
-        resolve(data || { ok: false, error: 'empty response' });
-      };
-      function cleanup() {
-        clearTimeout(timer);
-        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
-        if (s.parentNode) s.parentNode.removeChild(s);
-      }
-      s.onerror = function () { cleanup(); reject(new Error('The request failed')); };
-      s.src = EXEC + '?' + q.toString();
-      document.head.appendChild(s);
+    var q = new URLSearchParams();
+    Object.keys(params).forEach(function (k) {
+      if (params[k] !== undefined && params[k] !== null && params[k] !== '') q.set(k, params[k]);
+    });
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 90000);
+    return fetch(EXEC + '?' + q.toString(), { signal: ctrl.signal }).then(function (r) {
+      clearTimeout(timer);
+      if (!r.ok) throw new Error('The request failed (' + r.status + ')');
+      return r.json();
+    }).then(function (data) {
+      return data || { ok: false, error: 'empty response' };
+    }).catch(function (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('The request timed out');
+      throw e;
     });
   }
 
