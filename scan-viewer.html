@@ -37,21 +37,38 @@
   #status { flex-basis: 100%; margin: 0; min-height: 1.2em; color: #f0c36a; font-size: 13px; }
   #layout {
     display: grid;
-    grid-template-columns: 240px 340px 1fr;
+    grid-template-columns: 220px 1fr 320px;
     height: calc(100% - 74px);
     min-height: 0;
   }
   aside, #frames, #stage { min-height: 0; overflow: auto; }
   aside, #frames { border-right: 1px solid rgba(255,255,255,0.08); }
+  #frames {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 8px;
+    padding: 8px;
+    align-content: start;
+  }
   .cam, .frame {
     display: block; width: 100%; text-align: left;
     background: transparent; border: 0; border-radius: 0;
     padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);
   }
+  .frame {
+    padding: 0; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+    overflow: hidden; background: #0b0e12;
+  }
+  .frame img {
+    display: block; width: 100%; aspect-ratio: 16 / 10;
+    object-fit: cover; background: #07090c;
+  }
   .cam.on, .frame.on { background: #17263a; }
   .cam:hover, .frame:hover { background: #141c28; }
   .name { display: block; font-weight: 650; font-size: 13px; }
   .meta { display: block; margin-top: 3px; color: #93a0b0; font-size: 12px; }
+  .frame .meta, .frame .note { display: block; padding: 4px 8px 0; }
+  .frame .note { padding-bottom: 8px; }
   .note { display: block; margin-top: 4px; color: #d5deea; font-size: 13px; line-height: 1.35; }
   .note.empty { color: #6d7b8c; }
   #stage { padding: 18px 20px 28px; }
@@ -72,7 +89,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 2</span>
+  <span id="build">scan-viewer 3</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -92,7 +109,8 @@
 <script>
 (function () {
   var EXEC = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
-  var state = { hub: '', pass: '', cameras: [], device: '', frames: [], older: '', key: '' };
+  var CDN = 'https://d1h1on7f1v1lpy.cloudfront.net/';
+  var state = { hub: '', pass: '', cameras: [], device: '', frames: [], key: '', token: 0 };
 
   function el(id) { return document.getElementById(id); }
   function setStatus(text) { el('status').textContent = text || ''; }
@@ -169,32 +187,34 @@
     });
   }
 
-  function renderFrames() {
-    var box = el('frames');
-    box.innerHTML = '';
-    state.frames.forEach(function (frame) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'frame' + (frame.key === state.key ? ' on' : '');
-      var meta = document.createElement('span');
-      meta.className = 'meta';
-      meta.textContent = when(frame.requested_at);
-      var note = document.createElement('span');
-      note.className = 'note' + (frame.description ? '' : ' empty');
-      note.textContent = sentence(frame);
-      b.appendChild(meta);
-      b.appendChild(note);
-      b.onclick = function () { selectFrame(frame); };
-      box.appendChild(b);
-    });
-    if (state.older) {
-      var more = document.createElement('button');
-      more.id = 'older';
-      more.type = 'button';
-      more.textContent = 'Older frames';
-      more.onclick = loadOlder;
-      box.appendChild(more);
+  function jpegUrl(key) { return CDN + String(key || '').replace(/\.json$/, '.jpg'); }
+  function jsonUrl(key) { return CDN + String(key || '').replace(/\.jpg$/, '.json'); }
+
+  function stampFromKey(key) {
+    var m = String(key || '').match(/(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(\d{3})Z/);
+    if (!m) return '';
+    return m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':' + m[6] + '.' + m[7] + 'Z';
+  }
+
+  function catalogName(device) { return 'scan-catalog:' + state.hub + ':' + device; }
+
+  function readCatalog(device) {
+    try {
+      var raw = sessionStorage.getItem(catalogName(device));
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+
+  function writeCatalog(device, keys) {
+    try { sessionStorage.setItem(catalogName(device), JSON.stringify(keys)); } catch (e) {}
+  }
+
+  function frameByKey(key) {
+    for (var i = 0; i < state.frames.length; i++) {
+      if (state.frames[i].key === key) return state.frames[i];
     }
+    return null;
   }
 
   function showFrameText(frame) {
@@ -203,74 +223,130 @@
     el('frame-text').textContent = sentence(frame);
   }
 
-  async function selectFrame(frame) {
+  function selectFrame(frame) {
     state.key = frame.key;
-    renderFrames();
+    var tiles = el('frames').querySelectorAll('.frame');
+    for (var i = 0; i < tiles.length; i++) {
+      tiles[i].classList.toggle('on', tiles[i].getAttribute('data-key') === frame.key);
+    }
+    el('picture').src = jpegUrl(frame.key);
+    el('picture').alt = (frame.name || 'Scan') + ' ' + when(frame.requested_at);
     showFrameText(frame);
-    el('picture').removeAttribute('src');
-    el('picture').alt = 'Loading ' + (frame.name || 'frame');
-    setStatus('Loading picture…');
-    try {
-      var data = await callApi({
-        route: 'scan-frame',
-        hub: state.hub,
-        pass: state.pass,
-        key: frame.key
-      });
-      if (state.key !== frame.key) return;
-      if (!data.ok) {
-        setStatus(data.error || 'Could not load the picture');
-        return;
-      }
-      el('picture').src = 'data:image/jpeg;base64,' + data.jpeg_base64;
-      el('picture').alt = (data.name || 'Scan') + ' ' + when(data.requested_at);
-      showFrameText(data);
-      setStatus('');
-    } catch (e) {
-      if (state.key === frame.key) setStatus(e.message);
-    }
   }
 
-  async function loadFrames(device, appendStart) {
+  function notableOn() { return el('notable').checked; }
+
+  function applyMeta(key, obj) {
+    var frame = frameByKey(key);
+    if (!frame) return;
+    frame.name = obj.name || frame.name;
+    frame.description = obj.description || '';
+    frame.reviewed_at = obj.reviewed_at || '';
+    if (obj.requested_at) frame.requested_at = obj.requested_at;
+    var tile = el('frames').querySelector('[data-key="' + key + '"]');
+    if (!tile) return;
+    var note = tile.querySelector('.note');
+    if (note) {
+      note.textContent = sentence(frame);
+      note.className = 'note' + (frame.description ? '' : ' empty');
+    }
+    if (notableOn() && !frame.description) tile.style.display = 'none';
+    else tile.style.display = '';
+    if (state.key === key) showFrameText(frame);
+  }
+
+  function addTile(key) {
+    if (frameByKey(key)) return frameByKey(key);
+    var frame = {
+      key: key,
+      name: '',
+      requested_at: stampFromKey(key),
+      description: '',
+      reviewed_at: ''
+    };
+    state.frames.push(frame);
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'frame' + (state.key === key ? ' on' : '');
+    b.setAttribute('data-key', key);
+    var img = document.createElement('img');
+    img.alt = '';
+    img.src = jpegUrl(key);
+    var meta = document.createElement('span');
+    meta.className = 'meta';
+    meta.textContent = when(frame.requested_at);
+    var note = document.createElement('span');
+    note.className = 'note empty';
+    note.textContent = '…';
+    b.appendChild(img);
+    b.appendChild(meta);
+    b.appendChild(note);
+    b.onclick = function () { selectFrame(frame); };
+    el('frames').appendChild(b);
+    if (!state.key) selectFrame(frame);
+    return frame;
+  }
+
+  function paintKeys(keys) {
+    keys.forEach(function (key) {
+      addTile(key);
+      fetch(jsonUrl(key)).then(function (r) {
+        if (!r.ok) throw new Error('missing note');
+        return r.json();
+      }).then(function (obj) {
+        applyMeta(key, obj || {});
+      }).catch(function () {});
+    });
+  }
+
+  async function loadFrames(device) {
+    var token = ++state.token;
     state.device = device;
-    if (!appendStart) {
-      state.frames = [];
-      state.older = '';
-      clearStage();
-    }
+    state.frames = [];
+    state.key = '';
+    clearStage();
+    el('frames').innerHTML = '';
     renderCameras();
-    setStatus('Loading frames…');
-    el('open').disabled = true;
-    try {
-      var data = await callApi({
-        route: 'scan-list',
-        hub: state.hub,
-        pass: state.pass,
-        device: device,
-        start: appendStart || '',
-        limit: '24',
-        notable: el('notable').checked ? '1' : ''
-      });
-      if (!data.ok) {
-        setStatus(data.error || 'Could not load frames');
-        return;
-      }
-      var incoming = data.frames || [];
-      if (appendStart) state.frames = state.frames.concat(incoming);
-      else state.frames = incoming;
-      state.older = data.older || '';
-      renderFrames();
-      setStatus(state.frames.length ? '' : 'No frames in this view');
-      if (!appendStart && state.frames.length) await selectFrame(state.frames[0]);
-    } catch (e) {
-      setStatus(e.message);
-    } finally {
-      el('open').disabled = false;
+    var cam = null;
+    for (var i = 0; i < state.cameras.length; i++) {
+      if (state.cameras[i].device_id === device) cam = state.cameras[i];
     }
+    var latest = cam && cam.latest && cam.latest.key;
+    if (!latest) { setStatus('No frames'); return; }
+    var known = readCatalog(device);
+    if (known.length && known[0] === latest) {
+      paintKeys(known);
+      setStatus(known.length + ' frames');
+      return;
+    }
+    setStatus('Loading frames…');
+    var fresh = [];
+    var key = latest;
+    var guard = 0;
+    var hit = false;
+    while (key && guard < 500 && state.token === token) {
+      if (known.length && key === known[0]) { hit = true; break; }
+      guard++;
+      fresh.push(key);
+      addTile(key);
+      var res;
+      try { res = await fetch(jsonUrl(key)); }
+      catch (e) { setStatus(e.message); break; }
+      if (!res.ok) break;
+      var obj;
+      try { obj = await res.json(); } catch (e) { break; }
+      if (state.token !== token) return;
+      applyMeta(key, obj || {});
+      key = obj && obj.previous ? String(obj.previous).replace(/\.jpg$/, '.json') : '';
+    }
+    if (state.token !== token) return;
+    var all = hit ? fresh.concat(known) : fresh;
+    if (hit) known.forEach(addTile);
+    writeCatalog(device, all);
+    setStatus(all.length ? (all.length + ' frames') : 'No frames in this view');
   }
 
-  function selectCamera(device) { return loadFrames(device, ''); }
-  function loadOlder() { return loadFrames(state.device, state.older); }
+  function selectCamera(device) { return loadFrames(device); }
 
   async function openProperty() {
     var sel = el('property');
@@ -334,7 +410,12 @@
     if (ev.key === 'Enter') openProperty();
   });
   el('notable').onchange = function () {
-    if (state.device) selectCamera(state.device);
+    var tiles = el('frames').querySelectorAll('.frame');
+    for (var i = 0; i < tiles.length; i++) {
+      var frame = frameByKey(tiles[i].getAttribute('data-key'));
+      var show = !notableOn() || (frame && frame.description);
+      tiles[i].style.display = show ? '' : 'none';
+    }
   };
   loadRoster();
 })();
