@@ -55,9 +55,11 @@
   }
   #layout[hidden], #notes[hidden], #patrol[hidden] { display: none !important; }
   #notes, #patrol { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px 40px; }
-  .qa { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
-  .qa button { background: #18202b; }
-  .qa button.on { background: #1d4e89; border-color: #1d4e89; }
+  .qa, .presets { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+  .qa button, .presets button { background: #18202b; }
+  .qa button.on, .presets button.on { background: #1d4e89; border-color: #1d4e89; }
+  .presets button { text-align: left; }
+  .presets small { display: block; color: #93a0b0; font-size: 12px; font-weight: 400; }
   .pool { margin: 0 0 8px; color: #d5deea; font-size: 14px; }
   .patrol-note { margin: 0 0 16px; color: #93a0b0; font-size: 13px; max-width: 68ch; }
   .patrol-cam { margin: 0 0 18px; max-width: 720px; }
@@ -127,7 +129,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 8</span>
+  <span id="build">scan-viewer 9</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -154,6 +156,7 @@
 </div>
 <div id="patrol" hidden>
   <div class="qa" id="qa"></div>
+  <div class="presets" id="presets"></div>
   <p class="pool" id="pool"></p>
   <p class="patrol-note" id="patrol-note"></p>
   <div id="patrol-list"></div>
@@ -487,6 +490,69 @@
 
   function setPatrolStatus(text) { el('patrol-status').textContent = text || ''; }
 
+  function patrolHm(mins) {
+    var h = Math.floor(mins / 60);
+    var m = mins % 60;
+    return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m;
+  }
+
+  function patrolWindowSlots(start, end) {
+    var slots = [];
+    var m;
+    if (end > start) {
+      for (m = start; m < end; m += 5) slots.push(m);
+    } else {
+      for (m = start; m < 1440; m += 5) slots.push(m);
+      for (m = 0; m < end; m += 5) slots.push(m);
+    }
+    return slots;
+  }
+
+  function patrolEven(slots, count) {
+    if (!count || count > slots.length) return null;
+    var out = [];
+    for (var i = 0; i < count; i++) out.push(patrolHm(slots[Math.floor(i * slots.length / count)]));
+    return out;
+  }
+
+  function patrolPresetList(qa) {
+    var rate = PATROL_RATE[qa] || 0;
+    var cadence = { bronze: 'every 2 hours', silver: 'every hour', gold: 'every 30 min', platinum: 'every 15 min' };
+    var evening = rate > 60
+      ? { id: 'evening', name: 'Evening', detail: '4:00–12:00', start: 16 * 60, end: 24 * 60 }
+      : { id: 'evening', name: 'Evening', detail: '5:00–10:00', start: 17 * 60, end: 22 * 60 };
+    return [
+      { id: 'all', name: 'All day', detail: cadence[qa] || '', start: 0, end: 24 * 60 },
+      { id: 'work', name: 'Work hours', detail: '8:00–5:00', start: 8 * 60, end: 17 * 60 },
+      evening
+    ];
+  }
+
+  function patrolPresetTimes(preset, qa) {
+    return patrolEven(patrolWindowSlots(preset.start, preset.end), PATROL_RATE[qa] || 0);
+  }
+
+  function patrolPresetOn(preset) {
+    var times = patrolPresetTimes(preset, state.patrol.qa);
+    if (!times || !state.cameras.length) return false;
+    var want = times.join(',');
+    return state.cameras.every(function (cam) {
+      var mine = (state.patrol.times[cam.device_id] || []).slice().sort();
+      return mine.join(',') === want;
+    });
+  }
+
+  function applyPatrolPreset(preset) {
+    if (!state.cameras.length) { setPatrolStatus('Open a property first'); return; }
+    var times = patrolPresetTimes(preset, state.patrol.qa);
+    if (!times) { setPatrolStatus('That window cannot hold this level.'); return; }
+    var next = {};
+    state.cameras.forEach(function (cam) { next[String(cam.device_id)] = times.slice(); });
+    state.patrol.times = next;
+    setPatrolStatus(preset.name + ' filled ' + times.length + ' times on each camera. Change any of them below, then save.');
+    renderPatrol();
+  }
+
   function renderPatrol() {
     var qa = el('qa');
     qa.innerHTML = '';
@@ -497,20 +563,35 @@
       b.textContent = level.charAt(0).toUpperCase() + level.slice(1) + ' · ' + PATROL_RATE[level] + '/camera';
       b.onclick = function () {
         state.patrol.qa = level;
+        setPatrolStatus('');
         renderPatrol();
       };
       qa.appendChild(b);
+    });
+    var presets = el('presets');
+    presets.innerHTML = '';
+    patrolPresetList(state.patrol.qa).forEach(function (preset) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = patrolPresetOn(preset) ? 'on' : '';
+      b.appendChild(document.createTextNode(preset.name));
+      var detail = document.createElement('small');
+      detail.textContent = preset.detail;
+      b.appendChild(detail);
+      b.onclick = function () { applyPatrolPreset(preset); };
+      presets.appendChild(b);
     });
     var used = patrolUsed();
     var pool = patrolPool();
     el('pool').textContent = state.cameras.length
       ? (used + ' of ' + pool + ' reviews placed' + (used > pool ? '. Remove times or raise the level.' : ''))
       : 'Open a property first';
+    var lead = state.patrol.saved
+      ? 'This schedule replaces Scan hours. The same times repeat every day (' + state.patrol.zone + ').'
+      : 'Scan hours on the sheet keep running until you save. Times use ' + state.patrol.zone + '.';
     el('patrol-note').textContent = state.cameras.length
-      ? (state.patrol.saved
-        ? 'This schedule replaces Scan hours. The same times repeat every day (' + state.patrol.zone + ').'
-        : 'Scan hours on the sheet keep running until you save. Times use ' + state.patrol.zone + '.')
-      : '';
+      ? (lead + ' A preset fills every camera. Change those times, or add times yourself.')
+      : 'Choose a level, then a preset. Open a property before the times can fill in.';
     var list = el('patrol-list');
     list.innerHTML = '';
     state.cameras.forEach(function (cam) {
@@ -529,6 +610,7 @@
         chip.onclick = function () {
           state.patrol.times[cam.device_id] = mine.filter(function (t) { return t !== hm; });
           if (!state.patrol.times[cam.device_id].length) delete state.patrol.times[cam.device_id];
+          setPatrolStatus('');
           renderPatrol();
         };
         chips.appendChild(chip);
@@ -550,7 +632,7 @@
         if (have.indexOf(hm) !== -1) { setPatrolStatus(hm + ' is already on this camera.'); return; }
         if (used >= pool) { setPatrolStatus('The budget is full. Remove a time or raise the level.'); return; }
         state.patrol.times[cam.device_id] = have.concat([hm]);
-        setPatrolStatus('');
+        setPatrolStatus('Added ' + hm + '. Save when this is the schedule you want.');
         renderPatrol();
       };
       add.appendChild(input);
