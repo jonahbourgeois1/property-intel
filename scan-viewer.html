@@ -115,7 +115,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 6</span>
+  <span id="build">scan-viewer 7</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -165,13 +165,13 @@
     return 'Not reviewed yet';
   }
 
-  function callApi(params) {
+  function callApi(params, timeoutMs) {
     var q = new URLSearchParams();
     Object.keys(params).forEach(function (k) {
       if (params[k] !== undefined && params[k] !== null && params[k] !== '') q.set(k, params[k]);
     });
     var ctrl = new AbortController();
-    var timer = setTimeout(function () { ctrl.abort(); }, 90000);
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 90000);
     return fetch(EXEC + '?' + q.toString(), { signal: ctrl.signal }).then(function (r) {
       clearTimeout(timer);
       if (!r.ok) throw new Error('The request failed (' + r.status + ')');
@@ -560,24 +560,30 @@
 
   async function loadRoster() {
     setStatus('Loading properties…');
-    try {
-      var data = await callApi({ route: 'scan-roster' });
-      var sel = el('property');
-      sel.innerHTML = '';
-      if (!data.ok) { setStatus(data.error || 'Could not load properties'); return; }
-      var rows = data.rows || [];
-      if (!rows.length) { setStatus('No property is enrolled'); return; }
-      rows.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
-      rows.forEach(function (row) {
-        var opt = document.createElement('option');
-        opt.value = row.hub;
-        opt.textContent = row.name || row.hub;
-        sel.appendChild(opt);
-      });
-      setStatus('');
-    } catch (e) {
-      setStatus(e.message);
+    var last = null;
+    for (var attempt = 1; attempt <= 3; attempt++) {
+      try {
+        var data = await callApi({ route: 'scan-roster' }, 15000);
+        var sel = el('property');
+        sel.innerHTML = '';
+        if (!data.ok) { setStatus(data.error || 'Could not load properties'); return; }
+        var rows = data.rows || [];
+        if (!rows.length) { setStatus('No property is enrolled'); return; }
+        rows.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+        rows.forEach(function (row) {
+          var opt = document.createElement('option');
+          opt.value = row.hub;
+          opt.textContent = row.name || row.hub;
+          sel.appendChild(opt);
+        });
+        setStatus('');
+        return;
+      } catch (e) {
+        last = e;
+        if (attempt < 3) setStatus('The property list is busy. Trying again…');
+      }
     }
+    setStatus((last && last.message) ? last.message : 'Could not load properties');
   }
 
   el('open').onclick = openProperty;
