@@ -89,7 +89,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 3</span>
+  <span id="build">scan-viewer 4</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -200,14 +200,14 @@
 
   function readCatalog(device) {
     try {
-      var raw = sessionStorage.getItem(catalogName(device));
+      var raw = localStorage.getItem(catalogName(device));
       var arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr : [];
     } catch (e) { return []; }
   }
 
   function writeCatalog(device, keys) {
-    try { sessionStorage.setItem(catalogName(device), JSON.stringify(keys)); } catch (e) {}
+    try { localStorage.setItem(catalogName(device), JSON.stringify(keys)); } catch (e) {}
   }
 
   function frameByKey(key) {
@@ -329,6 +329,7 @@
       guard++;
       fresh.push(key);
       addTile(key);
+      if (guard === 1 || guard % 10 === 0) setStatus(fresh.length + ' frames');
       var res;
       try { res = await fetch(jsonUrl(key)); }
       catch (e) { setStatus(e.message); break; }
@@ -341,7 +342,7 @@
     }
     if (state.token !== token) return;
     var all = hit ? fresh.concat(known) : fresh;
-    if (hit) known.forEach(addTile);
+    if (hit) paintKeys(known);
     writeCatalog(device, all);
     setStatus(all.length ? (all.length + ' frames') : 'No frames in this view');
   }
