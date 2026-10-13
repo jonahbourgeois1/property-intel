@@ -17,7 +17,7 @@
 | Versioning | On (stable keys, overwrite-in-place; restore from a prior version) |
 | Object ownership | BucketOwnerEnforced |
 
-Do **not** put records in `property-intel-ingest` (raw) or mix them into `property-intel-tiles` except the serving prefixes that belong there (`captures/`, Nearmap rasters, `cameras/{hubId}/` stills, `parcels/`). Lambda never writes GitHub. GitHub Actions never call AWS. Apps Script writes sheet-built JSON. Git-owned cameras/GIS/parcels are copied by the operator script (or the GitHub sidecar for JSON only).
+Do **not** put records in `property-intel-ingest` (raw) or mix them into `property-intel-tiles` except the serving prefixes that belong there (`captures/`, Nearmap rasters, `cameras/{hubId}/` stills, `parcels/`). Lambda never writes GitHub. GitHub Actions never call AWS. Apps Script writes sheet-built JSON. Git-owned cameras/GIS/parcels are copied by the operator script (or the GitHub sidecar for JSON only). SAFE report panels are the one binary that lives in this bucket; see **SAFE reports**.
 
 ## CloudFront
 
@@ -75,11 +75,16 @@ s3://property-intel-records/
   gis/{hubId}.json
   pins/{hubId}.json
   hoa/{slug}.json
+  safe/{hubId}/report.json
+  safe/{hubId}/s.jpg
+  safe/{hubId}/a.jpg
+  safe/{hubId}/f.jpg
+  safe/{hubId}/e.jpg
 ```
 
 `responder-drone/{id}` keeps the **frozen** customer ids (`hashId(slug(account name))`). Do not rename those files. `drone-test/` is not a production view.
 
-Binaries stay on tiles / ingest. Camera stills: `s3://property-intel-tiles/cameras/{hubId}/cam-NN.jpg` (same hub id as the records JSON). Raw technician photos stay ingest-only. GLBs, nadirs, Nearmap rasters, and **county lot-line tiles** stay on tiles. The child JSON (plane, cameras, nearmap) holds those URLs. The index does not duplicate them.
+Source binaries stay on tiles / ingest. Camera stills: `s3://property-intel-tiles/cameras/{hubId}/cam-NN.jpg` (same hub id as the records JSON). Raw technician photos stay ingest-only. GLBs, nadirs, Nearmap rasters, and **county lot-line tiles** stay on tiles. The child JSON (plane, cameras, nearmap) holds those URLs. The index does not duplicate them. The four SAFE panel JPEGs are the exception: they are the report, and they live under `safe/{hubId}/` in this bucket.
 
 County parcel tiles (Deschutes / Lane / Josephine 0.07° grid) are **not** customer records and are **not** listed on `files`:
 
@@ -117,8 +122,73 @@ Do not put pins, routes, obliques, GLB URLs, or the camera array on the index. T
 | `gis` | `gis/{hubId}.json` | hub id |
 | `pins` | `pins/{hubId}.json` | hub id |
 | `hoa` | `hoa/{slug}.json` | slug from `hoa` field |
+| `safe` | `safe/{hubId}/report.json` | hub id. Omit until a report exists. Image keys live in the report, not on the index. |
 
 If a future interior (or other) view record is published, add `files.interior` the same way. Do not flatten pin-catalog `role=`.
+
+## SAFE reports
+
+No numbered segment contract covers this. This section is the clause.
+
+A SAFE report is one property’s four panels — Security, Access, Fire, Environment — the pages in the Gartland packet (annotated nadir, oblique strip, what to know, recommendations). The unit of work is one Satellite sheet row. The folder name is the hub id, `hashId(slug(site_no))`. Blank `site_no` is skipped. Address is printed on the panel; it is not the key. 410 SW Columbia is two rows, so an address folder would collide.
+
+```text
+s3://property-intel-records/safe/{hubId}/report.json
+s3://property-intel-records/safe/{hubId}/s.jpg
+s3://property-intel-records/safe/{hubId}/a.jpg
+s3://property-intel-records/safe/{hubId}/f.jpg
+s3://property-intel-records/safe/{hubId}/e.jpg
+```
+
+The four JPEGs are the report images. Each one is a finished panel with the imagery baked in, the way the Gartland pages are. They are not a second copy of the plane capture, the Nearmap survey, or the camera stills. Those stay on tiles. A lens with nothing to add still gets a panel (Gartland Security: no cameras, imagery-only read). Environment is a look-list: debris, roof and road condition, irrigation. The panel says what is visible. It does not specify the maintenance.
+
+`report.json` is `property-intel-records/safe-report-v1`. Image keys are bucket-relative, same rule as `files.*.key` (no `https://` or `s3://` stored in the file).
+
+```json
+{
+  "schema": "property-intel-records/safe-report-v1",
+  "id": "<hubId>",
+  "name": "Gartland residence",
+  "address": "3255 NW Celilo Ln, Bend OR 97703",
+  "generated": "2026-10-08T18:00:00Z",
+  "images": {
+    "S": "safe/<hubId>/s.jpg",
+    "A": "safe/<hubId>/a.jpg",
+    "F": "safe/<hubId>/f.jpg",
+    "E": "safe/<hubId>/e.jpg"
+  },
+  "lenses": {
+    "S": { "status": "", "considerations": "", "recommendations": "" },
+    "A": { "status": "", "considerations": "", "recommendations": "" },
+    "F": { "status": "", "considerations": "", "recommendations": "" },
+    "E": { "status": "", "considerations": "", "recommendations": "" }
+  }
+}
+```
+
+### Match the row to a hub
+
+The bot is tasked with specific rows (Satellite, or another mothership tab). It writes only after it has resolved that row to one hub id. The id is `satPropertyId_(site_no, HASH_SALT)` — the same call Sheet Sync uses (`hashId` of `slugify(site_no)` plus the `HASH_SALT` Script Property). Hashing the account name, the address, or the capture name produces a different id. Jones is the worked example: the mothership hub is site_no **14725**, not `hashId("jones")` (`6de88883…`).
+
+1. The task names a `site_no`, or the row has one in its site_no column. `hubId = satPropertyId_(that value)`. Blank is a skip. `hashId('')` is a real hash that every empty row would share.
+2. The task names another mothership row (plane, drone, Nearmap, interior) and that row’s own site_no cell is blank. Look up the Satellite tab the same way `indexHubId_` does. A unique account name wins. If the name matches more than one row, a unique address is the fallback. Zero matches, or more than one name and more than one address: stop. Do not guess. Do not hash the name. 410 SW Columbia is two Satellite rows; address is not a key.
+3. The task names a 32-hex id. `s3.head_object` `index/{id}.json`. Read `site_no` off that index (or the satellite object it points at) and recompute `satPropertyId_`. Write only when the recomputed id equals the id in the task. A name-hash index that does not equal the site_no hash is reported and skipped.
+
+### Place or create
+
+S3 has no separate folder object. The prefix `safe/{hubId}/` appears when the first object is PUT.
+
+1. `s3.head_object` on `safe/{hubId}/report.json`. Never a CloudFront HEAD.
+2. **Place.** The object exists. Overwrite `report.json`, `s.jpg`, `a.jpg`, `f.jpg`, and `e.jpg` in that prefix.
+3. **Create.** The object is missing. PUT those same five keys. That is the new folder.
+4. `s3.head_object` on `index/{hubId}.json`. When it exists, read it, follow `files` for the imagery inputs, and merge `files.safe = { "key": "safe/{hubId}/report.json" }` only. Leave every other `files` and `views` key. When it does not exist, still write the report. Do not create the index. Creating an index from a name or an address is how a second hub gets minted.
+5. Content-Type `image/jpeg` and `application/json`. Versioning is on, so the previous report can be restored. Do not add a `views` entry until a viewer tab exists. Viewers must not guess `safe/{hubId}/report.json` when `files.safe` is absent.
+
+### Writer
+
+The bot does not hash the id and does not hold an AWS key. Before any upload it calls `GET ?route=safe-dest` (`site_no`, or `hub`, or `name` + `address`). It then posts one part at a time to `POST ?route=safe-put` (`part` is `report`, `S`, `A`, `F`, or `E`). The script writes that object to `safe/{hubId}/` with the records credentials already in Script Properties. A JPEG is base64, must start with the JPEG marker, and must be at most 12MB. The script sets `report.json` `id` and `images` from the hub. After all five exist, `POST ?route=safe-attach` checks each key on the records bucket and, when the index already exists, merges `files.safe`. Apps Script cannot send HTTP HEAD (`UrlFetchApp` rejects `method: "head"`), so that check is a signed GET of the first byte against the S3 host. It is not a CloudFront request. It does not create the index. The bot does not write GitHub and does not PUT `satellite/`, `plane/`, `nearmap/`, `cameras/`, `pins/`, `gis/`, or tiles. Sheet Sync keeps owning those, and a later sync merge leaves `files.safe` in place. The records distribution is CachingDisabled, so these overwrites do not need a CloudFront invalidation while that stays true.
+
+A property with no report has no `safe/{hubId}/` prefix and no `files.safe` key.
 
 ### Index shape (v1)
 
@@ -182,6 +252,55 @@ During dual-run, a reader that must support both:
 
 Do not unify satellite `site_no` hashes with responder-drone name hashes. The index is the join.
 
+## Camera scans
+
+No numbered segment contract covers this. This section is the clause. The runner writes it with `POST ?route=scan-put`.
+
+A camera scan is one live frame from one CHEKT camera, plus a description of that frame. The property folder is the SAFE hub, `hashId(slug(site_no))`, the same id as `safe/{hubId}/`. Resolve it the same way as `safe-dest`. Do not use the Chekt row's Property hub id when that id is the older name hash. The camera subfolder is the CHEKT device id. The file name is the request time in UTC, `yyyyMMddTHHmmssfffZ`. The JPEG and the description share that name.
+
+```text
+s3://property-intel-records/camera-scans/{hubId}/{deviceId}/{stamp}.jpg
+s3://property-intel-records/camera-scans/{hubId}/{deviceId}/{stamp}.json
+```
+
+Worked example, the Jones driveway. SAFE hub is site_no **14725**, `d9f759d7351db3886c79dd689c41e3c0`. The gateway roster for the same house is still the Chekt hub `6de88883bfd4a8349a901c54611ed9d7`. `/live?property=` uses the Chekt hub. The object key uses the SAFE hub.
+
+```text
+camera-scans/d9f759d7351db3886c79dd689c41e3c0/4350156/20261009T184733762Z.jpg
+camera-scans/d9f759d7351db3886c79dd689c41e3c0/4350156/20261009T184733762Z.json
+```
+
+`{stamp}.json` is `property-intel-records/camera-scan-v1`. Keys inside it are bucket-relative. No `https://`, no `s3://`, no snapshot token, no mjpeg URL, no password.
+
+```json
+{
+  "schema": "property-intel-records/camera-scan-v1",
+  "hub": "d9f759d7351db3886c79dd689c41e3c0",
+  "device_id": "4350156",
+  "name": "DRIVEWAY",
+  "requested_at": "2026-10-09T18:47:33.762Z",
+  "received_at": "2026-10-09T18:47:34.903Z",
+  "source": "mjpeg",
+  "previous": "",
+  "description": "",
+  "reviewed_at": ""
+}
+```
+
+Two jobs write this record, and they do not call each other. The runner retrieves the frame and creates the JPEG and the JSON. It sets `description` to `""` and `reviewed_at` to `""`. It never reads the picture. The bot does not retrieve a frame. Its queue is a scan whose `previous` is set and whose `reviewed_at` is empty. It reads that JPEG and the previous JPEG, then overwrites the same JSON: `reviewed_at` becomes the review time, and `description` stays `""` unless the new frame shows something irregular. The stamp does not change, and a second object is not created. A first scan has `previous` `""`, so it is the baseline and is not a review.
+
+`description` is the only sentence a customer sees. It is empty when the frame shows nothing irregular. A person, a vehicle, or an object that does not belong in the usual scene is a description. A standing condition that is already in the previous frame stays empty. `previous` is the bucket-relative key of the prior JPEG in this camera folder, or `""` on the first scan. The previous file is the one whose stamp sorts immediately before this one. A failed grab writes neither object, so the last pair remains the baseline.
+
+The picture is the first JPEG from that camera's live stream. One `/live` per property per pass mints every camera token. Offline cameras are skipped. The stream is closed after the first frame. The snapshot URL is not called. On the Jones driveway it returned 404, and the stream returned a 38KB JPEG in 1.1 seconds. Tokens stay in memory for that pass and are not stored. A cadence inside 60 minutes may reuse that `/live` response until `expires_in`. An 8-hour pass calls `/live` once. `name` is the roster name at grab time. The folder is the device id, so a rename does not move the history.
+
+S3 Lifecycle on this prefix expires every object 7 days after it was uploaded. One rule, filter prefix `camera-scans/`, expiration 7 days. The JPEG and the JSON sit under that prefix, so the same rule removes both. The scan worker only writes. It does not list or delete. Age is the object's upload time, which is the grab time. S3 rounds the expiry up to the next midnight UTC and removes the object on its daily pass, so a frame from `2026-10-09T18:47:33Z` becomes eligible at `2026-10-17T00:00:00Z` and may linger a few hours after that. If the bucket has versioning on, the same rule also expires noncurrent versions, or the old bytes stay. These objects stay out of GitHub `data/`, out of `property-intel-tiles`, and out of the public CloudFront distribution. A scan does not rewrite `index/{hubId}.json`. The portal lists the camera folder. A `previous` key that lifecycle has already removed means that scan is a new baseline.
+
+The runner writes with `POST ?route=scan-put`, one object per request. `part` is `jpeg` or `json`. Content-Type is `text/plain`. The script holds the AWS credentials. The runner does not receive a key. The script checks that `hub` is the SAFE hub on `index/{hub}.json` (site_no hash) and builds the key itself. `description` and `reviewed_at` are stored as `""` on this route.
+
+The operator viewer lists frames with `GET ?route=scan-list` and loads one picture with `GET ?route=scan-frame`. Both take the Chekt row password (`pass`) and the Chekt hub or the SAFE hub. The script checks the password against the enrolled row, then walks each frame's `previous` pointer. It does not list the bucket, and the picture is not loaded from CloudFront. `scan-list` without `device` returns each camera's newest frame. With `device`, it returns up to 40 frames, newest first. `notable=1` skips empty descriptions and stops after 80 reads. `start` continues from an older key. The password is not written into the scan record.
+
+The bot reads with `GET ?route=scan-next&review_key=` and writes with `POST ?route=scan-review`. `review_key` matches Script Property `SCAN_REVIEW_KEY`. The value is not in the repo. `scan-next` returns one pair whose `previous` is set and whose `reviewed_at` is empty, including both JPEGs. `scan-review` sets `description` and `reviewed_at` on that same JSON key. The JPEG and the stamp do not change. A scan still does not rewrite the index.
+
 ## Cutover (do not skip)
 
 1. Keep `responder-intel.vyanet.com` on the current Pages repo until a given record type is served from this bucket.
@@ -194,6 +313,22 @@ Do not unify satellite `site_no` hashes with responder-drone name hashes. The in
 
 ## Changelog
 
+- **2026-10-12** — `scan-next` reviews every stored frame, not only the newest 80. It walks each camera from the oldest previous link forward. The first frame stays a baseline. Critique build `v6.8.18`.
+- **2026-10-12** — Operator viewer. `GET ?route=scan-list` and `GET ?route=scan-frame` show stored frames for one enrolled property. The Chekt row password gates them. The list walks `previous`. Critique build `v6.8.17`. Page: `scan-viewer.html`.
+- **2026-10-12** — `scan-next` loads the JPEGs for the first unreviewed pair only. The rest of the queue stays put. The queue on the state file still keeps the newest 80. Critique build `v6.8.16`.
+- **2026-10-09** — Scan clock state is one object per enrolled row, `camera-scan-state/{hubId}.json`, on the records bucket. It is not a Script Property and it is not under `camera-scans/`, so the 7-day lifecycle does not remove it. The next wake copies the old `scan-seen`, `scan-slot`, `scan-mins`, and `scan-prev` properties into that file and deletes them.
+- **2026-10-09** — Bot review routes. `GET ?route=scan-next` returns one unreviewed pair. `POST ?route=scan-review` sets `description` and `reviewed_at` on that JSON. Script Property `SCAN_REVIEW_KEY` gates both. Critique build `v6.8.14`. The grab route still stores an empty description.
+- **2026-10-09** — Scan hours, not minutes. `.25` is 15 minutes, `.5` is 30 minutes, and a whole number is that many hours on the hour. The clock is still `chektScanTick`.
+- **2026-10-09** — The scan clock is Apps Script `chektScanTick` (every 5 minutes). A checked row runs on the mark that divides the hour. Pictures come from gateway `GET /scan`. The script writes S3. The first pass after the clock starts waits for the next mark.
+- **2026-10-09** — `POST ?route=scan-put` writes one camera-scan object (JPEG or JSON) under `camera-scans/{hubId}/{deviceId}/`. The script holds the AWS key. `description` and `reviewed_at` stay empty. Critique build `v6.8.13`. Paste `records.gs` and `critique-api.gs`, save, and deploy a new version. `?route=ping` must show `scan_put: true`.
+- **2026-10-09** — Camera scans split retrieval from review. The runner writes the JPEG and the JSON with `description` and `reviewed_at` empty. The bot overwrites that JSON only: it sets `reviewed_at`, and sets `description` only when the new frame is irregular. A scan with an empty `previous` is a baseline and is not reviewed. The runner does not call the bot.
+- **2026-10-09** — Camera-scan folder is the SAFE hub (`hashId(slug(site_no))`, Jones site_no 14725 → `d9f759d7351db3886c79dd689c41e3c0`). `/live` still uses the Chekt roster hub. Description overwrites the same JSON key. The picture is the first live-stream JPEG after one `/live` per property. The snapshot URL is not called.
+- **2026-10-09** — Camera scans. New prefix `camera-scans/{hubId}/{deviceId}/` on `property-intel-records`. One JPEG and one JSON per scan, both named with the UTC request time `yyyyMMddTHHmmssfffZ`. The JSON is `camera-scan-v1` and holds `description` (empty when nothing is irregular). 7-day expiry. No writer route yet.
+- **2026-10-08** — SAFE existence checks no longer use `method: "head"`. `UrlFetchApp` rejects that method before the request is sent, which made `safe-dest` return `Attribute provided with invalid value: method`. The check is now a signed GET `Range: bytes=0-0` on the S3 host. Critique build `v6.8.11`. Paste `records.gs` and `critique-api.gs`, save, and deploy a new version of the deployment that just pinged v6.8.10.
+- **2026-10-08** — `POST ?route=safe-put` writes one SAFE object (the report JSON or one panel JPEG). The bot does not receive an AWS key. Critique build `v6.8.10`. Paste `records.gs` and `critique-api.gs`, save, and deploy a new version. `?route=ping` must show `safe_put: true`.
+- **2026-10-08** — SAFE report routes. `records.gs` accepts `safe/{hubId}/report.json` and the four panel JPEGs. `GET ?route=safe-dest` returns the hub and those keys (`place` or `create`). `POST ?route=safe-attach` merges `files.safe` only after all five objects exist, and does not create an index. Critique build `v6.8.9`. Paste `records.gs` and `critique-api.gs`, save, and deploy a new version. `?route=ping` must show `safe_dest: true` before the bot runs.
+- **2026-10-08** — SAFE report bot. A tasked row resolves to one hub with `satPropertyId_(site_no, HASH_SALT)` before any PUT. Another mothership tab with a blank site_no joins the Satellite tab only on a unique match (site_no, then address, then name). A supplied 32-hex id is rewritten only when it equals that site_no hash. Existing `safe/{hubId}/report.json` is overwritten; a missing key is the create. The bot still does not create `index/{hubId}.json`.
+- **2026-10-08** — SAFE reports. New prefix `safe/{hubId}/` on `property-intel-records`: `report.json` plus four panel JPEGs (`s.jpg`, `a.jpg`, `f.jpg`, `e.jpg`). Hub id stays `hashId(slug(site_no))`. The job writes only that prefix and, when an index already exists, merges `files.safe`. It does not create an index and does not move captures, Nearmap, or camera stills. No viewer tab yet.
 - **2026-09-14** — Drone-test dual-writes GitHub Pages (`data/drone-test/{id}.json` + merged `data/index/{hubId}.json`) so `vyanet-viewer` 3D can load `viewer360`. S3 records stay the mothership write. `recordsJoinViewIndex_` uses `droneTestHubId_` (existing index by name/address) because Gud Cultures has no Satellite site_no.
 - **2026-09-11** — Drone is the dual-write exception: `data/responder-drone/` and `data/drone/` go to GitHub Pages on `jonahbourgeois1/property-intel` (live `responder-intel.html` links) **and** `s3://property-intel-records/responder-drone/`. Satellite / plane / Nearmap stay S3-only.
 - **2026-09-11** — Sheet Sync/Publish writes records S3, not GitHub. `pushAllToGitHub` is a trampoline to `pushAllToRecords_`. Paths `data/{satellite,plane,responder-drone,drone-test,nearmap,hoa,pins,index,…}` map onto mothership keys. GitHub-shaped indexes convert to `files`/`views` and merge. Cameras/GIS still git-sourced; drone-test may refresh cameras JSON onto the site_no hub. Full Satellite sync still 6-min capped.

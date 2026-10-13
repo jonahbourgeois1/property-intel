@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Camera scans</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%;
+    background: #0c1016; color: #e7ecf2;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  header {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    background: #10161f;
+  }
+  h1 { font-size: 16px; font-weight: 650; margin: 0 8px 0 0; }
+  #build {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 11px; color: #8b97a8;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px; padding: 3px 8px;
+  }
+  select, input, button {
+    font: inherit; color: inherit; background: #18202b;
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 8px; padding: 8px 10px;
+  }
+  select { min-width: 220px; }
+  input { width: 160px; }
+  button { cursor: pointer; background: #1d4e89; border-color: #1d4e89; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  label.notes { font-size: 13px; color: #c5d0dc; display: flex; gap: 6px; align-items: center; }
+  #status { flex-basis: 100%; margin: 0; min-height: 1.2em; color: #f0c36a; font-size: 13px; }
+  #layout {
+    display: grid;
+    grid-template-columns: 240px 340px 1fr;
+    height: calc(100% - 74px);
+    min-height: 0;
+  }
+  aside, #frames, #stage { min-height: 0; overflow: auto; }
+  aside, #frames { border-right: 1px solid rgba(255,255,255,0.08); }
+  .cam, .frame {
+    display: block; width: 100%; text-align: left;
+    background: transparent; border: 0; border-radius: 0;
+    padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .cam.on, .frame.on { background: #17263a; }
+  .cam:hover, .frame:hover { background: #141c28; }
+  .name { display: block; font-weight: 650; font-size: 13px; }
+  .meta { display: block; margin-top: 3px; color: #93a0b0; font-size: 12px; }
+  .note { display: block; margin-top: 4px; color: #d5deea; font-size: 13px; line-height: 1.35; }
+  .note.empty { color: #6d7b8c; }
+  #stage { padding: 18px 20px 28px; }
+  #picture {
+    display: block; max-width: 100%; max-height: 62vh;
+    background: #07090c; border-radius: 10px;
+  }
+  #frame-name { margin: 14px 0 0; font-size: 18px; }
+  #frame-when { margin: 4px 0 0; color: #93a0b0; font-size: 13px; }
+  #frame-text { margin: 10px 0 0; font-size: 16px; line-height: 1.4; max-width: 62ch; }
+  #older { margin: 8px 14px 16px; }
+  @media (max-width: 900px) {
+    #layout { grid-template-columns: 1fr; height: auto; }
+    aside, #frames { border-right: 0; border-bottom: 1px solid rgba(255,255,255,0.08); max-height: 280px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Camera scans</h1>
+  <span id="build">scan-viewer 1</span>
+  <select id="property" aria-label="Property"></select>
+  <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
+  <button id="open" type="button">Open</button>
+  <label class="notes"><input id="notable" type="checkbox"> Notes only</label>
+  <p id="status" role="status"></p>
+</header>
+<div id="layout">
+  <aside id="cameras"></aside>
+  <section id="frames"></section>
+  <section id="stage">
+    <img id="picture" alt="">
+    <h2 id="frame-name"></h2>
+    <p id="frame-when"></p>
+    <p id="frame-text"></p>
+  </section>
+</div>
+<script>
+(function () {
+  var EXEC = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
+  var seq = 0;
+  var state = { hub: '', pass: '', cameras: [], device: '', frames: [], older: '', key: '' };
+
+  function el(id) { return document.getElementById(id); }
+  function setStatus(text) { el('status').textContent = text || ''; }
+
+  function when(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleString('en-US', {
+      timeZone: 'America/Chicago',
+      month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
+    });
+  }
+
+  function sentence(frame) {
+    if (!frame) return '';
+    if (frame.description) return frame.description;
+    if (frame.reviewed_at) return 'Nothing noted';
+    return 'Not reviewed yet';
+  }
+
+  function callApi(params) {
+    return new Promise(function (resolve, reject) {
+      var cb = 'scanViewerCb' + (++seq);
+      var s = document.createElement('script');
+      var q = new URLSearchParams();
+      Object.keys(params).forEach(function (k) {
+        if (params[k] !== undefined && params[k] !== null && params[k] !== '') q.set(k, params[k]);
+      });
+      q.set('callback', cb);
+      var timer = setTimeout(function () {
+        cleanup();
+        reject(new Error('The request timed out'));
+      }, 90000);
+      window[cb] = function (data) {
+        cleanup();
+        resolve(data || { ok: false, error: 'empty response' });
+      };
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (s.parentNode) s.parentNode.removeChild(s);
+      }
+      s.onerror = function () { cleanup(); reject(new Error('The request failed')); };
+      s.src = EXEC + '?' + q.toString();
+      document.head.appendChild(s);
+    });
+  }
+
+  function clearStage() {
+    state.key = '';
+    el('picture').removeAttribute('src');
+    el('picture').alt = '';
+    el('frame-name').textContent = '';
+    el('frame-when').textContent = '';
+    el('frame-text').textContent = '';
+  }
+
+  function renderCameras() {
+    var box = el('cameras');
+    box.innerHTML = '';
+    state.cameras.forEach(function (cam) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'cam' + (cam.device_id === state.device ? ' on' : '');
+      var name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = cam.name || cam.device_id;
+      var meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = cam.latest ? when(cam.latest.requested_at) : 'No frame';
+      b.appendChild(name);
+      b.appendChild(meta);
+      if (cam.latest && cam.latest.description) {
+        var note = document.createElement('span');
+        note.className = 'note';
+        note.textContent = cam.latest.description;
+        b.appendChild(note);
+      }
+      b.onclick = function () { selectCamera(cam.device_id); };
+      box.appendChild(b);
+    });
+  }
+
+  function renderFrames() {
+    var box = el('frames');
+    box.innerHTML = '';
+    state.frames.forEach(function (frame) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'frame' + (frame.key === state.key ? ' on' : '');
+      var meta = document.createElement('span');
+      meta.className = 'meta';
+      meta.textContent = when(frame.requested_at);
+      var note = document.createElement('span');
+      note.className = 'note' + (frame.description ? '' : ' empty');
+      note.textContent = sentence(frame);
+      b.appendChild(meta);
+      b.appendChild(note);
+      b.onclick = function () { selectFrame(frame); };
+      box.appendChild(b);
+    });
+    if (state.older) {
+      var more = document.createElement('button');
+      more.id = 'older';
+      more.type = 'button';
+      more.textContent = 'Older frames';
+      more.onclick = loadOlder;
+      box.appendChild(more);
+    }
+  }
+
+  function showFrameText(frame) {
+    el('frame-name').textContent = frame.name || state.device;
+    el('frame-when').textContent = when(frame.requested_at);
+    el('frame-text').textContent = sentence(frame);
+  }
+
+  async function selectFrame(frame) {
+    state.key = frame.key;
+    renderFrames();
+    showFrameText(frame);
+    el('picture').removeAttribute('src');
+    el('picture').alt = 'Loading ' + (frame.name || 'frame');
+    setStatus('Loading picture…');
+    try {
+      var data = await callApi({
+        route: 'scan-frame',
+        hub: state.hub,
+        pass: state.pass,
+        key: frame.key
+      });
+      if (state.key !== frame.key) return;
+      if (!data.ok) {
+        setStatus(data.error || 'Could not load the picture');
+        return;
+      }
+      el('picture').src = 'data:image/jpeg;base64,' + data.jpeg_base64;
+      el('picture').alt = (data.name || 'Scan') + ' ' + when(data.requested_at);
+      showFrameText(data);
+      setStatus('');
+    } catch (e) {
+      if (state.key === frame.key) setStatus(e.message);
+    }
+  }
+
+  async function loadFrames(device, appendStart) {
+    state.device = device;
+    if (!appendStart) {
+      state.frames = [];
+      state.older = '';
+      clearStage();
+    }
+    renderCameras();
+    setStatus('Loading frames…');
+    el('open').disabled = true;
+    try {
+      var data = await callApi({
+        route: 'scan-list',
+        hub: state.hub,
+        pass: state.pass,
+        device: device,
+        start: appendStart || '',
+        limit: '24',
+        notable: el('notable').checked ? '1' : ''
+      });
+      if (!data.ok) {
+        setStatus(data.error || 'Could not load frames');
+        return;
+      }
+      var incoming = data.frames || [];
+      if (appendStart) state.frames = state.frames.concat(incoming);
+      else state.frames = incoming;
+      state.older = data.older || '';
+      renderFrames();
+      setStatus(state.frames.length ? '' : 'No frames in this view');
+      if (!appendStart && state.frames.length) await selectFrame(state.frames[0]);
+    } catch (e) {
+      setStatus(e.message);
+    } finally {
+      el('open').disabled = false;
+    }
+  }
+
+  function selectCamera(device) { return loadFrames(device, ''); }
+  function loadOlder() { return loadFrames(state.device, state.older); }
+
+  async function openProperty() {
+    var sel = el('property');
+    state.hub = sel.value;
+    state.pass = el('pass').value;
+    state.device = '';
+    state.frames = [];
+    state.older = '';
+    clearStage();
+    el('frames').innerHTML = '';
+    if (!state.hub) { setStatus('Choose a property'); return; }
+    if (!state.pass) { setStatus('Enter the property password'); return; }
+    setStatus('Loading cameras…');
+    el('open').disabled = true;
+    try {
+      var data = await callApi({ route: 'scan-list', hub: state.hub, pass: state.pass });
+      if (!data.ok) {
+        setStatus(data.error || 'Could not open the property');
+        el('cameras').innerHTML = '';
+        return;
+      }
+      state.cameras = data.cameras || [];
+      renderCameras();
+      if (!state.cameras.length) {
+        setStatus('No stored frames for this property yet');
+        return;
+      }
+      setStatus('');
+      await selectCamera(state.cameras[0].device_id);
+    } catch (e) {
+      setStatus(e.message);
+    } finally {
+      el('open').disabled = false;
+    }
+  }
+
+  async function loadRoster() {
+    setStatus('Loading properties…');
+    try {
+      var data = await callApi({ route: 'scan-roster' });
+      var sel = el('property');
+      sel.innerHTML = '';
+      if (!data.ok) { setStatus(data.error || 'Could not load properties'); return; }
+      var rows = data.rows || [];
+      if (!rows.length) { setStatus('No property is enrolled'); return; }
+      rows.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      rows.forEach(function (row) {
+        var opt = document.createElement('option');
+        opt.value = row.hub;
+        opt.textContent = row.name || row.hub;
+        sel.appendChild(opt);
+      });
+      setStatus('');
+    } catch (e) {
+      setStatus(e.message);
+    }
+  }
+
+  el('open').onclick = openProperty;
+  el('pass').addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter') openProperty();
+  });
+  el('notable').onchange = function () {
+    if (state.device) selectCamera(state.device);
+  };
+  loadRoster();
+})();
+</script>
+</body>
+</html>
