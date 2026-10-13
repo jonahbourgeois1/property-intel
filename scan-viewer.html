@@ -53,8 +53,20 @@
     flex: 1;
     min-height: 0;
   }
-  #layout[hidden], #notes[hidden] { display: none !important; }
-  #notes { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px 40px; }
+  #layout[hidden], #notes[hidden], #patrol[hidden] { display: none !important; }
+  #notes, #patrol { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px 40px; }
+  .qa { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; }
+  .qa button { background: #18202b; }
+  .qa button.on { background: #1d4e89; border-color: #1d4e89; }
+  .pool { margin: 0 0 8px; color: #d5deea; font-size: 14px; }
+  .patrol-note { margin: 0 0 16px; color: #93a0b0; font-size: 13px; max-width: 68ch; }
+  .patrol-cam { margin: 0 0 18px; max-width: 720px; }
+  .patrol-cam h2 { margin: 0 0 8px; font-size: 15px; font-weight: 650; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button { background: #18202b; font-size: 13px; }
+  .add-time { display: flex; gap: 8px; margin-top: 8px; }
+  .add-time input { width: 140px; }
+  #patrol-status { min-height: 1.2em; color: #f0c36a; font-size: 13px; }
   .note-cam { margin: 0 0 28px; }
   .note-cam h2 { margin: 0 0 10px; font-size: 15px; font-weight: 650; }
   .note-row {
@@ -115,7 +127,7 @@
 <body>
 <header>
   <h1>Camera scans</h1>
-  <span id="build">scan-viewer 7</span>
+  <span id="build">scan-viewer 8</span>
   <select id="property" aria-label="Property"></select>
   <input id="pass" type="password" autocomplete="off" placeholder="Property password" aria-label="Property password">
   <button id="open" type="button">Open</button>
@@ -125,6 +137,7 @@
 <div id="tabs">
   <button id="tab-pictures" class="tab on" type="button">Pictures</button>
   <button id="tab-notes" class="tab" type="button">Notes</button>
+  <button id="tab-patrol" class="tab" type="button">Patrol</button>
 </div>
 <div id="layout">
   <aside id="cameras"></aside>
@@ -139,11 +152,23 @@
 <div id="notes" hidden>
   <div id="note-list"></div>
 </div>
+<div id="patrol" hidden>
+  <div class="qa" id="qa"></div>
+  <p class="pool" id="pool"></p>
+  <p class="patrol-note" id="patrol-note"></p>
+  <div id="patrol-list"></div>
+  <p id="patrol-status" role="status"></p>
+</div>
 <script>
 (function () {
   var EXEC = 'https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec';
   var CDN = 'https://d1h1on7f1v1lpy.cloudfront.net/';
-  var state = { hub: '', pass: '', cameras: [], device: '', frames: [], key: '', token: 0, tab: 'pictures', noteToken: 0, noteCache: {} };
+  var PATROL_RATE = { bronze: 12, silver: 24, gold: 48, platinum: 96 };
+  var state = {
+    hub: '', pass: '', cameras: [], device: '', frames: [], key: '', token: 0,
+    tab: 'pictures', noteToken: 0, noteCache: {},
+    patrol: { qa: 'bronze', times: {}, saved: false, zone: 'America/Chicago' }
+  };
 
   function el(id) { return document.getElementById(id); }
   function setStatus(text) { el('status').textContent = text || ''; }
@@ -412,9 +437,182 @@
     state.tab = name;
     el('tab-pictures').classList.toggle('on', name === 'pictures');
     el('tab-notes').classList.toggle('on', name === 'notes');
+    el('tab-patrol').classList.toggle('on', name === 'patrol');
     el('layout').hidden = name !== 'pictures';
     el('notes').hidden = name !== 'notes';
+    el('patrol').hidden = name !== 'patrol';
     el('notable').parentElement.hidden = name !== 'pictures';
+  }
+
+  function postApi(body) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, 90000);
+    return fetch(EXEC + '?route=' + encodeURIComponent(body.route || ''), {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      signal: ctrl.signal
+    }).then(function (r) {
+      clearTimeout(timer);
+      if (!r.ok) throw new Error('The request failed (' + r.status + ')');
+      return r.json();
+    }).then(function (data) {
+      return data || { ok: false, error: 'empty response' };
+    }).catch(function (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('The request timed out');
+      throw e;
+    });
+  }
+
+  function patrolUsed() {
+    var n = 0;
+    var times = state.patrol.times || {};
+    Object.keys(times).forEach(function (id) { n += (times[id] || []).length; });
+    return n;
+  }
+
+  function patrolPool() {
+    return (PATROL_RATE[state.patrol.qa] || 0) * state.cameras.length;
+  }
+
+  function patrolTime(value) {
+    var m = String(value || '').match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+    if (!m) return '';
+    var hour = Number(m[1]);
+    var minute = Number(m[2]);
+    if (hour > 23 || minute > 59 || minute % 5 !== 0) return '';
+    return (hour < 10 ? '0' : '') + hour + ':' + (minute < 10 ? '0' : '') + minute;
+  }
+
+  function setPatrolStatus(text) { el('patrol-status').textContent = text || ''; }
+
+  function renderPatrol() {
+    var qa = el('qa');
+    qa.innerHTML = '';
+    ['bronze', 'silver', 'gold', 'platinum'].forEach(function (level) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = state.patrol.qa === level ? 'on' : '';
+      b.textContent = level.charAt(0).toUpperCase() + level.slice(1) + ' · ' + PATROL_RATE[level] + '/camera';
+      b.onclick = function () {
+        state.patrol.qa = level;
+        renderPatrol();
+      };
+      qa.appendChild(b);
+    });
+    var used = patrolUsed();
+    var pool = patrolPool();
+    el('pool').textContent = state.cameras.length
+      ? (used + ' of ' + pool + ' reviews placed' + (used > pool ? '. Remove times or raise the level.' : ''))
+      : 'Open a property first';
+    el('patrol-note').textContent = state.cameras.length
+      ? (state.patrol.saved
+        ? 'This schedule replaces Scan hours. The same times repeat every day (' + state.patrol.zone + ').'
+        : 'Scan hours on the sheet keep running until you save. Times use ' + state.patrol.zone + '.')
+      : '';
+    var list = el('patrol-list');
+    list.innerHTML = '';
+    state.cameras.forEach(function (cam) {
+      var section = document.createElement('section');
+      section.className = 'patrol-cam';
+      var heading = document.createElement('h2');
+      var mine = (state.patrol.times[cam.device_id] || []).slice().sort();
+      heading.textContent = (cam.name || cam.device_id) + ' · ' + mine.length;
+      section.appendChild(heading);
+      var chips = document.createElement('div');
+      chips.className = 'chips';
+      mine.forEach(function (hm) {
+        var chip = document.createElement('button');
+        chip.type = 'button';
+        chip.textContent = hm + ' ×';
+        chip.onclick = function () {
+          state.patrol.times[cam.device_id] = mine.filter(function (t) { return t !== hm; });
+          if (!state.patrol.times[cam.device_id].length) delete state.patrol.times[cam.device_id];
+          renderPatrol();
+        };
+        chips.appendChild(chip);
+      });
+      section.appendChild(chips);
+      var add = document.createElement('div');
+      add.className = 'add-time';
+      var input = document.createElement('input');
+      input.type = 'time';
+      input.step = '300';
+      input.setAttribute('aria-label', 'Review time');
+      var go = document.createElement('button');
+      go.type = 'button';
+      go.textContent = 'Add';
+      go.onclick = function () {
+        var hm = patrolTime(input.value);
+        if (!hm) { setPatrolStatus('Use a 5-minute mark, such as 7:00 or 7:05.'); return; }
+        var have = state.patrol.times[cam.device_id] || [];
+        if (have.indexOf(hm) !== -1) { setPatrolStatus(hm + ' is already on this camera.'); return; }
+        if (used >= pool) { setPatrolStatus('The budget is full. Remove a time or raise the level.'); return; }
+        state.patrol.times[cam.device_id] = have.concat([hm]);
+        setPatrolStatus('');
+        renderPatrol();
+      };
+      add.appendChild(input);
+      add.appendChild(go);
+      section.appendChild(add);
+      list.appendChild(section);
+    });
+    if (state.cameras.length) {
+      var save = document.createElement('button');
+      save.type = 'button';
+      save.textContent = 'Save schedule';
+      save.onclick = savePatrol;
+      list.appendChild(save);
+    }
+  }
+
+  async function loadPatrol() {
+    if (!state.hub || !state.pass) {
+      state.patrol = { qa: 'bronze', times: {}, saved: false, zone: 'America/Chicago' };
+      renderPatrol();
+      return;
+    }
+    var data = await callApi({ route: 'scan-patrol', hub: state.hub, pass: state.pass });
+    if (!data.ok) throw new Error(data.error || 'Could not load the patrol');
+    var known = {};
+    state.cameras.forEach(function (cam) { known[String(cam.device_id)] = true; });
+    var times = {};
+    Object.keys(data.times || {}).forEach(function (id) {
+      if (known[id]) times[id] = (data.times[id] || []).slice();
+    });
+    state.patrol = {
+      qa: data.saved ? data.qa : 'bronze',
+      times: times,
+      saved: !!data.saved,
+      zone: data.zone || 'America/Chicago'
+    };
+    renderPatrol();
+  }
+
+  async function savePatrol() {
+    if (!state.hub || !state.pass) { setPatrolStatus('Open a property first'); return; }
+    if (patrolUsed() > patrolPool()) {
+      setPatrolStatus('Too many times for this level. Remove some, or raise the level.');
+      return;
+    }
+    setPatrolStatus('Saving…');
+    try {
+      var data = await postApi({
+        route: 'scan-patrol',
+        hub: state.hub,
+        pass: state.pass,
+        qa: state.patrol.qa,
+        times: state.patrol.times
+      });
+      if (!data.ok) { setPatrolStatus(data.error || 'Save failed'); return; }
+      state.patrol.saved = true;
+      state.patrol.qa = data.qa || state.patrol.qa;
+      renderPatrol();
+      setPatrolStatus('Saved. Scan hours on the sheet no longer run for this property.');
+    } catch (e) {
+      setPatrolStatus(e.message);
+    }
   }
 
   async function mapPool(items, limit, worker) {
@@ -544,13 +742,15 @@
       }
       state.cameras = data.cameras || [];
       renderCameras();
+      try { await loadPatrol(); }
+      catch (err) { setPatrolStatus(err.message); }
       if (!state.cameras.length) {
         setStatus('No stored frames for this property yet');
         return;
       }
       setStatus('');
       if (state.tab === 'notes') await loadNotes();
-      else await selectCamera(state.cameras[0].device_id);
+      else if (state.tab !== 'patrol') await selectCamera(state.cameras[0].device_id);
     } catch (e) {
       setStatus(e.message);
     } finally {
@@ -594,6 +794,10 @@
   el('tab-notes').onclick = function () {
     showTab('notes');
     loadNotes();
+  };
+  el('tab-patrol').onclick = function () {
+    showTab('patrol');
+    renderPatrol();
   };
   el('notable').onchange = function () {
     var tiles = el('frames').querySelectorAll('.frame');
