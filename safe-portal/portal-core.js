@@ -171,7 +171,7 @@
     cams.forEach(function (p) {
       if (p.photo && p.photo.indexOf('../data/cameras/images/') === 0) p.photo = STILLS_BASE + p.photo.slice('../data/cameras/images/'.length);
     });
-    var live = cams.filter(function (p) { return p.live; });
+    var live = rosterLive(fx, cams, byId);
     var clips = (CLIPS[fx.slug] || []).map(function (c, i) {
       return { i: i, cam: c.cam, camera: byId[c.cam] || null, t: c.t, kind: c.kind, title: c.title, dur: c.dur };
     });
@@ -184,6 +184,34 @@
     ORDER.forEach(function (c) { R.counts[c] = byComp[c].length; });
     R.parcels = loadParcels(R);
     return R;
+  }
+
+  // CHEKT roster is the camera count. A pin is used when its device id matches.
+  // Cameras without a GPS pin stay in the live list and off the map.
+  function rosterLive(fx, cams, byId) {
+    var roster = fx.roster;
+    if (!roster || !roster.length) return cams.filter(function (p) { return p.live; });
+    var byDevice = {};
+    cams.forEach(function (p) {
+      if (p.live && p.live.device) byDevice[String(p.live.device)] = p;
+    });
+    return roster.map(function (row) {
+      var pinned = byDevice[String(row.device)];
+      if (pinned) return pinned;
+      var cam = {
+        id: 'roster-' + row.device,
+        comp: 'S',
+        kind: 'camera',
+        name: row.name,
+        vendor: 'CHEKT',
+        status: 'live',
+        placement: 'unplaced',
+        live: { name: row.name, device: String(row.device), site: '3525' },
+        desc: 'CHEKT camera on site 3525. It is live. It does not have a map pin yet.'
+      };
+      byId[cam.id] = cam;
+      return cam;
+    });
   }
 
   // ---------- lot lines (same public tiles + matcher customer-map.html uses) ----------
@@ -710,7 +738,7 @@
       '<div class="row"><div class="ttl"><b>' + esc(cam.name) + '</b><span>' + sub + '</span></div>' +
       '<button class="sp-act sm live' + (clip ? '' : ' on') + '" data-act="live">' + (clip ? 'Back to live' : 'Live') + '</button>' +
       '<button class="sp-act sm" data-act="snap">Snapshot</button>' +
-      '<button class="sp-act sm" data-act="map">On map</button></div>';
+      (cam.lat == null ? '' : '<button class="sp-act sm" data-act="map">On map</button>') + '</div>';
   }
   function clipsHTML(R, opts) {
     opts = opts || {};
@@ -767,7 +795,7 @@
     function d(a, b) { var p = R.byId[a], q = R.byId[b]; return (p && q) ? haversine(p, q) : null; }
     function ft(m) { return Math.round(m) + ' m · ' + fmt(Math.round(m * 3.28084)) + ' ft'; }
     if (c === 'S') {
-      out.push(R.cams.length + ' cameras · ' + R.live.length + ' live');
+      out.push((R.fx.roster && R.fx.roster.length) ? (R.fx.roster.length + ' CHEKT cameras') : (R.cams.length + ' cameras · ' + R.live.length + ' live'));
       var fovs = R.cams.map(function (p) { return p.fov || 90; });
       if (fovs.length) out.push('cones ' + Math.min.apply(null, fovs) + '–' + Math.max.apply(null, fovs) + '° · 25 m');
     }
@@ -825,12 +853,12 @@
       meta.push(['Field of view', (p.fov || 90) + '° · ' + (p.range || 25) + ' m']);
       if (p.live) meta.push(['Live feed', p.live.name + ' · device ' + p.live.device]);
     }
-    meta.push(['Position', p.lat.toFixed(6) + ', ' + p.lng.toFixed(6)]);
+    if (p.lat != null && p.lng != null) meta.push(['Position', p.lat.toFixed(6) + ', ' + p.lng.toFixed(6)]);
     var acts = [];
     if (p.kind === 'camera' && p.live && opts.live !== false) acts.push('<button class="sp-act live" data-act="live">Open live</button><button class="sp-act" data-act="clips">Clips</button>');
     if ((p.actions || []).indexOf('unlock') >= 0) acts.push('<button class="sp-act unlock" data-act="unlock">' + (/garage/i.test(p.name) ? 'Open' : 'Unlock') + '</button>');
     if (opts.showMap !== false) acts.push('<button class="sp-act" data-act="map">Show on map</button>');
-    var near = R.pins.filter(function (q) { return q.id !== p.id; }).map(function (q) { return { p: q, d: haversine(p, q) }; }).sort(function (a, b) { return a.d - b.d; }).slice(0, 3);
+    var near = (p.lat == null) ? [] : R.pins.filter(function (q) { return q.id !== p.id && q.lat != null; }).map(function (q) { return { p: q, d: haversine(p, q) }; }).sort(function (a, b) { return a.d - b.d; }).slice(0, 3);
     return media + '<div class="body">' +
       '<div class="top"><span class="sp-k ' + p.comp + '">' + p.comp + '</span><h3>' + p.n + '. ' + esc(p.name) + '</h3><button class="close" data-act="close" title="Close">×</button></div>' +
       '<div class="sp-tags">' + placementTag(p.placement) + statusTag(p.status) + '<span class="sp-tag">' + esc(COMP[p.comp].label) + ' · ' + esc(p.kind) + '</span></div>' +

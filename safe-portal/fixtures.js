@@ -13,7 +13,7 @@
 
   Sources of the real parts:
     Residence  data/index/6de88883….json, data/cameras/json/6de88883….json
-               (14 GPS stills, 4 live), data/drone-test/83af9960….json
+               (14 GPS stills, 12 CHEKT cameras), data/drone-test/83af9960….json
                (pins, Pool-incident route, nadir bounds), data/nearmap/
                d9f759d7….json (wildfire concern pins), data/gis/2dce25a3….json
     HOA        data/hoa/highlands.json → 46 member index/satellite records
@@ -173,10 +173,10 @@
     ],
     report: {
       S: {
-        status: '14 cameras surveyed · 4 associated to live feeds · 6 alarm zones',
-        summary: 'Open perimeter, single approach. Camera coverage is strongest on the frontage and the rear decks; the north lawn and west side path are covered but not associated to live feeds yet.',
-        considerations: 'Dense conifer clusters and established landscaping closely surround the main residence on all sides, limiting sightlines around the structure. The driveway is long, curved, and terminates in a looped configuration around the front of the residence. Eight CHEKT roster cameras (front courtyard, garage corner, garage exterior, HVAC enclosure, lower deck double doors, upper deck family and living room doors, side drone) do not yet have a pin.',
-        recommendations: 'Associate the eight unpinned roster cameras to GPS stills on the next technician visit. Vary each cone by what the camera actually sees (door vs. driveway) rather than a fixed 90°. Treat the west side path (cam-12) and north lawn edge (cam-11) as the perimeter approach cameras for alarm-event review.'
+        status: '12 CHEKT cameras · site 3525 · 6 alarm zones',
+        summary: 'Twelve CHEKT cameras are live on this house. Four of them have a GPS pin (front door, upper deck master, lower deck single door, driveway). The other eight are live and still need a pin.',
+        considerations: 'Dense conifer clusters and established landscaping closely surround the main residence on all sides, limiting sightlines around the structure. The driveway is long, curved, and terminates in a looped configuration around the front of the residence. Eight of the twelve live cameras (front courtyard, garage corner, garage exterior, HVAC enclosure, lower deck double doors, upper deck family and living room doors, side drone) are not drawn on the map yet.',
+        recommendations: 'Place those eight live cameras on the map on the next technician visit. Vary each cone by what the camera actually sees (door vs. driveway) rather than a fixed 90°. Treat the west side path (cam-12) and north lawn edge (cam-11) as the perimeter approach cameras for alarm-event review.'
       },
       A: {
         status: '1 vehicle entry · looped drive · 2 remote-operable openings (proposed)',
@@ -210,6 +210,20 @@
       { t: '2 days ago 14:03', kind: 'trouble', pin: 'smoke-base', text: 'Low battery · Smoke / heat – basement' },
       { t: '2 days ago 02:51', kind: 'alarm', pin: 'gb-living', text: 'ALARM · Glass-break – living room. Cancelled by owner; no dispatch. Cameras on the rear decks showed no activity.' },
       { t: '5 days ago 17:30', kind: 'access', pin: 'garage-door', text: 'Garage door opened remotely by owner for landscaping contractor' }
+    ],
+    roster: [
+      { name: 'DRIVEWAY', device: '4350156' },
+      { name: 'FRONT COURTYARD', device: '4350159' },
+      { name: 'FRONT DOOR', device: '4350162' },
+      { name: 'GARAGE CORNER DRIVEWAY', device: '4350163' },
+      { name: 'GARAGE EXTERIOR', device: '4350165' },
+      { name: 'HVAC ENCLOSURE', device: '4350167' },
+      { name: 'LOWER DECK DOUBLE DOORS', device: '4350168' },
+      { name: 'LOWER DECK SINGLE DOOR', device: '4350171' },
+      { name: 'UPPER DECK FAMILY ROOM DOOR', device: '4350173' },
+      { name: 'UPPER DECK LIVING ROOM DOOR', device: '4350174' },
+      { name: 'UPPER DECK MASTER DOOR', device: '4350175' },
+      { name: 'SIDE DRONE', device: '4350183' }
     ],
     rosterUnpinned: ['FRONT COURTYARD', 'GARAGE CORNER DRIVEWAY', 'GARAGE EXTERIOR', 'HVAC ENCLOSURE', 'LOWER DECK DOUBLE DOORS', 'UPPER DECK FAMILY ROOM DOOR', 'UPPER DECK LIVING ROOM DOOR', 'SIDE DRONE']
   };
@@ -275,7 +289,7 @@
       placement: 'surveyed', coverage: cov, hub: r[0],
       status: cov === 'canvas' ? 'live' : (cov === 'safe' ? 'online' : 'n/a'),
       desc: cov === 'canvas'
-        ? 'Live Device Canvas in production: 14 surveyed cameras, 4 live feeds, device layer on the SAFE map. Open the residence view to see it.'
+        ? 'Live Device Canvas in production: 12 CHEKT cameras, device layer on the SAFE map. Open the residence view to see it.'
         : cov === 'safe'
           ? 'Base SAFE map complete: parcel-clipped aerial render, 4 obliques, reviewed element and concern pins. Device layer not yet requested.'
           : 'Base SAFE map in production: satellite pass complete, aerial render pending.'
@@ -366,7 +380,7 @@
       'Defensible-space status on 45 of 46 lots — assessments not yet run.'
     ],
     events: [
-      { t: 'Today 07:10', kind: 'info', pin: 'lot-6de88883', text: 'Device layer refreshed — 18775 Macalpine Loop (14 cameras, 4 live)' },
+      { t: 'Today 07:10', kind: 'info', pin: 'lot-6de88883', text: 'Device layer refreshed — 18775 Macalpine Loop (12 CHEKT cameras)' },
       { t: 'Yesterday', kind: 'info', pin: 'lot-eb37c893', text: 'Base SAFE map published — 18830 Macalpine Loop' },
       { t: '3 days ago', kind: 'info', pin: 'hyd-survey', text: 'Fire layer item opened — community hydrant survey' }
     ]

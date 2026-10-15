@@ -1198,7 +1198,8 @@
     var devs = state.pins.filter(function (p) { return p.vendor && p.kind !== 'lot'; });
     var cams = devs.filter(function (p) { return p.kind === 'camera'; });
     var live = cams.filter(function (p) { return p.status === 'live'; });
-    var html = '<div class="summary"><div><b>' + cams.length + '</b><span>cameras</span></div><div><b>' + live.length + '</b><span>live feeds</span></div><div><b>' + (devs.length - cams.length) + '</b><span>other devices</span></div></div>';
+    var rosterN = (fx.roster && fx.roster.length) || live.length;
+    var html = '<div class="summary"><div><b>' + rosterN + '</b><span>cameras</span></div><div><b>' + rosterN + '</b><span>live feeds</span></div><div><b>' + (devs.length - cams.length) + '</b><span>other devices</span></div></div>';
     if (fx.vertical === 'hoa') {
       html += '<div class="note">Devices belong to each home. The one live canvas in the circle is 18775 Macalpine Loop — open it from the lot card. Community devices (an entry camera) are proposed, not installed.</div>';
     }

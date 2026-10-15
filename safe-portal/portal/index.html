@@ -21,7 +21,7 @@
   Residence / Community submenus collapse. Writes nothing.
 -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="../fixtures.js"></script>
+<script src="../fixtures.js?v=0.9.9"></script>
 <script src="patrol-data.js?v=0.9.8"></script>
 <style>
   :root {
@@ -229,6 +229,10 @@
   function fixture(p) { return (window.SAFE_FIXTURES || {})[p] || window.SAFE_FIXTURES.residence; }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function $(id) { return document.getElementById(id); }
+  function chektCount(fx) {
+    if (fx && fx.roster && fx.roster.length) return fx.roster.length;
+    return (fx && fx.pins || []).filter(function (pin) { return pin.kind === 'camera' && pin.live; }).length;
+  }
   function countsFor(p) {
     var fx = fixture(p), counts = {};
     fx.pins.forEach(function (pin) { counts[pin.comp] = (counts[pin.comp] || 0) + 1; });
@@ -236,11 +240,10 @@
   }
   function paintChrome() {
     var fx = fixture(state.p);
-    var live = fx.pins.filter(function (pin) { return pin.kind === 'camera' && pin.live; }).length;
     if (state.page === 'home') {
       $('prop-name').textContent = 'Vyanet SAFE portal';
       $('prop-addr').textContent = 'Jones residence · Highlands at Broken Top';
-      $('chip-live').textContent = 'Residence · 4 live';
+      $('chip-live').textContent = 'Residence · ' + chektCount(window.SAFE_FIXTURES.residence) + ' live';
       $('chip-alarm').textContent = 'Community · 46 lots';
     } else if (state.p === 'hoa') {
       $('prop-name').textContent = fx.name;
@@ -250,18 +253,18 @@
     } else {
       $('prop-name').textContent = fx.name;
       $('prop-addr').textContent = fx.address;
-      $('chip-live').textContent = 'CHEKT · ' + live + ' live';
+      $('chip-live').textContent = 'CHEKT · ' + chektCount(fx) + ' live';
       $('chip-alarm').textContent = 'Alarm: ' + fx.monitoring.alarm;
     }
   }
 
   function pageUrl(id, p) {
-    if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme) + '&v=0.9.8';
+    if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme) + '&v=0.9.9';
     var q = new URLSearchParams();
     var slug = p || state.p;
     if (id === 'home') q.set('mode', 'portal');
     else q.set('p', slug);
-    q.set('v', '0.9.8');
+    q.set('v', '0.9.9');
     q.set('layout', state.layout); q.set('theme', state.theme);
     if (state.pin) q.set('pin', state.pin);
     var file = (id === 'home' || id === 'residence' || id === 'community') ? 'home.html' : id + '.html';

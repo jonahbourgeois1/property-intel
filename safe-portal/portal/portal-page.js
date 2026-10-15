@@ -45,11 +45,11 @@
     residence: {
       S: [
         { pins: ['cam-11', 'cam-12'], title: 'Perimeter approach cameras', text: '11 north lawn edge · 12 west side path — not yet on live feeds; the alarm-event review views.' },
-        { pins: ['cam-14'], title: 'Strongest coverage: frontage + rear decks', text: 'LIVE: 1 front door · 7 upper deck · 8 lower deck · 14 driveway (CHEKT site 3525).' },
+        { pins: ['cam-14'], title: 'Four cameras are drawn on the map', text: 'Front door, upper deck master, lower deck single door, and driveway. The live list has all 12 CHEKT cameras (site 3525).' },
         { pins: ['cam-04'], title: 'Side gate camera, south', text: 'Covers the pedestrian gate; cone 90°, 25 m.' },
         { pins: ['panel'], title: 'Alarm: 6 zones', text: 'Panel + 4 door contacts, great-room motion, living-room glass-break (mock placement).' },
         { title: 'Open perimeter; no fencing', text: 'Dense conifers limit sightlines around the house on all sides.', side: 'right' },
-        { title: '8 roster cameras not yet pinned', text: 'Front courtyard, garage corner / exterior, HVAC enclosure, lower deck doubles, upper deck family + living room doors, side drone.', side: 'left' }
+        { title: '12 CHEKT cameras, all live', text: 'Eight of them are not on the map yet: front courtyard, garage corner / exterior, HVAC enclosure, lower deck doubles, upper deck family + living room doors, side drone.', side: 'left' }
       ],
       A: [
         { pins: ['gate-road'], title: 'Only vehicle entry, off Macalpine Loop', text: 'Gate / barrier UNCONFIRMED (clarification #2). Proposed keypad gate: unlock + \u201cwho\u2019s there\u201d.' },
@@ -80,7 +80,7 @@
     },
     hoa: {
       S: [
-        { pins: ['lot-6de88883'], title: '18775 Macalpine \u2014 the live canvas', text: '14 surveyed cameras, 4 live feeds, device layer on. Open Residence (SAFE) for that house.' },
+        { pins: ['lot-6de88883'], title: '18775 Macalpine \u2014 the live canvas', text: '12 CHEKT cameras, device layer on. Open Residence (SAFE) for that house.' },
         { pins: ['entry-cam'], title: 'Entry camera \u2014 proposed', text: 'Community Live is empty. A plate-view camera here is the first community device.' },
         { title: '21 lots have a base SAFE map', text: 'Aerial render + reviewed pins. Device layer not yet requested.', side: 'right' },
         { title: '24 lots are satellite-only', text: 'In production; aerial render pending.', side: 'left' }
@@ -453,7 +453,7 @@
           var lots = ctx.R.pins.filter(function (p) { return p.kind === 'lot'; });
           return lots.length + ' lots \u00b7 ' + lots.filter(function (p) { return p.coverage === 'canvas'; }).length + ' live canvas \u00b7 ' + lots.filter(function (p) { return p.coverage === 'safe'; }).length + ' base SAFE';
         }
-        return ctx.R.live.length + ' live \u00b7 ' + ctx.R.cams.length + ' surveyed \u00b7 site ' + ((ctx.R.live[0] && ctx.R.live[0].live.site) || '3525');
+        return ctx.R.live.length + ' cameras \u00b7 site ' + ((ctx.R.live[0] && ctx.R.live[0].live.site) || '3525');
       },
       html: function (ctx) {
         if (ctx.R.slug === 'hoa') {

@@ -135,7 +135,8 @@
   // ---------- derived numbers ----------
   function statusLine(R) {
     var t = troubles(R).length;
-    return R.pins.length + ' pins \u00b7 ' + R.cams.length + ' cameras \u00b7 ' + R.live.length + ' live \u00b7 ' + (t ? t + ' open trouble' : 'no open trouble') + (R.drone ? ' \u00b7 drone tier' : '');
+    var n = (R.fx.roster && R.fx.roster.length) || R.cams.length;
+    return R.pins.length + ' pins \u00b7 ' + n + ' cameras \u00b7 ' + R.live.length + ' live \u00b7 ' + (t ? t + ' open trouble' : 'no open trouble') + (R.drone ? ' \u00b7 drone tier' : '');
   }
   function troubles(R) { return R.pins.filter(function (p) { return p.status === 'trouble'; }); }
   function ft(m) { return Math.round(m) + ' m'; }
@@ -146,7 +147,8 @@
         var lots = pins.filter(function (p) { return p.kind === 'lot'; });
         return [[lots.length, 'lots'], [lots.filter(function (p) { return p.coverage === 'canvas'; }).length, 'live canvas'], [lots.filter(function (p) { return p.coverage === 'safe'; }).length, 'base SAFE'], [lots.filter(function (p) { return p.coverage === 'pending'; }).length, 'in production']];
       }
-      return [[R.cams.length, 'cameras'], [R.live.length, 'live feeds'], [pins.filter(function (p) { return p.kind !== 'camera' && p.kind !== 'lot'; }).length, 'alarm devices'], [R.clips.length, 'clips \u00b7 7 days']];
+      var n = (R.fx.roster && R.fx.roster.length) || R.cams.length;
+      return [[n, 'cameras'], [R.live.length, 'live feeds'], [pins.filter(function (p) { return p.kind !== 'camera' && p.kind !== 'lot'; }).length, 'alarm devices'], [R.clips.length, 'clips \u00b7 7 days']];
     }
     if (c === 'A') {
       var open = pins.filter(function (p) { return p.kind === 'gate' || p.kind === 'door'; });
