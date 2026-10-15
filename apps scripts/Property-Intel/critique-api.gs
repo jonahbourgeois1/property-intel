@@ -207,7 +207,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8.40 (2026-10-15) — patrol profile tab';
+const CRITIQUE_BUILD = 'v6.8.42 (2026-10-15) — a full review tells the live bot and opens the clip';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -1808,7 +1808,8 @@ function critiqueScanReviewFrom_(fields) {
   return chektScanReview_({
     review_key: fields.review_key,
     key: fields.key,
-    description: fields.description == null ? '' : fields.description
+    description: fields.description == null ? '' : fields.description,
+    depth: fields.depth
   });
 }
 
@@ -1865,6 +1866,7 @@ function critiqueApiGet_(e) {
                                 property_profile_sources: (typeof chektProfileSources_ === 'function' && typeof chektProfileFrame_ === 'function'),
                                 property_profile_key: (typeof recordsProfileKeyAllowed_ === 'function') ? recordsProfileKeyAllowed_() : false,
                                 patrol_ping: (typeof recordsPatrolPing_ === 'function'),
+                                patrol_handoff: (typeof recordsPatrolTellNow_ === 'function' && typeof recordsLiveClipOpen_ === 'function'),
                                 patrol_clips: (typeof chektPatrolClips_ === 'function' && typeof recordsLiveClipShells_ === 'function'),
                                 patrol_profile: (typeof chektPatrolProfile_ === 'function' && typeof recordsPatrolProfilePublic_ === 'function'),
                                 property_profile_live_read: (typeof recordsProfileLiveReadOk_ === 'function'),
@@ -2097,7 +2099,8 @@ function critiqueApiPost_(e) {
       return critiqueJsonOut_(chektScanReview_({
         review_key: payload.review_key,
         key: payload.key,
-        description: payload.description
+        description: payload.description,
+        depth: payload.depth
       }));
     }
     if (postRoute === 'patrol-ping') {

@@ -823,12 +823,33 @@ function recordsScanReview_(opts) {
   raw.description = description;
   raw.reviewed_at = new Date().toISOString();
   const put = recordsPutJson_(key, raw);
+  const depth = String(opts.depth || '').trim().toLowerCase();
+  let told = false;
+  let started = false;
+  if (String(raw.hub || '') === RECORDS_PROFILE_HUB && depth === 'full' && description) {
+    try {
+      const notice = recordsPatrolTellNow_({
+        hub: RECORDS_PROFILE_HUB,
+        source: 'scan',
+        device_id: String(raw.device_id || ''),
+        camera: String(raw.name || ''),
+        sentence: description,
+        at: String(raw.requested_at || ''),
+        key: key
+      });
+      told = !!(notice && notice.told);
+      started = !!(notice && notice.started);
+    } catch (e) {
+      Logger.log('patrol tell ' + e.message);
+    }
+  }
   return {
     ok: true, route: 'scan-review', key: key, hubId: raw.hub,
     device_id: String(raw.device_id || ''),
     name: String(raw.name || ''),
     requested_at: String(raw.requested_at || ''),
-    description: description, reviewed_at: raw.reviewed_at, etag: put.etag
+    description: description, reviewed_at: raw.reviewed_at, etag: put.etag,
+    told: told, started: started
   };
 }
 
@@ -1420,10 +1441,12 @@ function recordsLiveLook_(opts) {
   }
   const both = (finished.ok ? finished.finished : []).concat(fromStation);
   const ping = recordsPatrolPingRead_();
-  // patrol_id and patrol stay before the JPEGs. A short read of this body still has the ping.
+  const handoffs = recordsPatrolHandoffRead_();
+  // handoffs, patrol_id, and patrol stay before the JPEGs. A short read still has them.
   return {
     ok: true,
     route: 'live-look',
+    handoffs: handoffs,
     patrol_id: ping && ping.id ? String(ping.id) : '',
     patrol: ping,
     live: live,
@@ -1448,9 +1471,89 @@ function recordsLivePatrol_(opts) {
   return {
     ok: true,
     route: 'live-patrol',
+    handoffs: recordsPatrolHandoffRead_(),
     patrol_id: ping && ping.id ? String(ping.id) : '',
     patrol: ping
   };
+}
+
+// The frames the live bot has not been allowed to miss. Newest eight, last 30 minutes.
+function recordsPatrolHandoffRead_() {
+  const raw = PropertiesService.getScriptProperties().getProperty('PATROL_HANDOFF') || '[]';
+  let list = [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) list = parsed;
+  } catch (e) {
+    list = [];
+  }
+  const now = Date.now();
+  const fresh = [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (!row || !row.id) continue;
+    const told = Date.parse(row.told_at || '');
+    if (!told || (now - told) > 30 * 60 * 1000) continue;
+    fresh.push(row);
+  }
+  return fresh.slice(-8);
+}
+
+function recordsPatrolHandoffWrite_(list) {
+  PropertiesService.getScriptProperties().setProperty('PATROL_HANDOFF', JSON.stringify(list.slice(-8)));
+}
+
+// The review just found an event. Tell the live bot and open the clip in this same call.
+function recordsPatrolTellNow_(info) {
+  info = info || {};
+  const device = String(info.device_id || '').trim();
+  const list = recordsPatrolHandoffRead_();
+  let row = null;
+  const key = String(info.key || '');
+  const logId = String(info.log_id || '');
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (key && list[i].key === key) { row = list[i]; break; }
+    if (logId && list[i].log_id === logId) { row = list[i]; break; }
+  }
+  if (!row) {
+    row = {
+      id: String(info.id || Utilities.getUuid().replace(/-/g, '').toLowerCase()),
+      phase: 'sentence',
+      hub: RECORDS_PROFILE_HUB,
+      source: String(info.source || 'scan'),
+      device_id: device,
+      camera: String(info.camera || '').replace(/[\r\n]/g, ' ').trim(),
+      sentence: String(info.sentence || ''),
+      at: String(info.at || ''),
+      key: key,
+      log_id: logId,
+      started: false,
+      told_at: new Date().toISOString()
+    };
+    list.push(row);
+  } else if (info.sentence) {
+    row.phase = 'sentence';
+    row.sentence = String(info.sentence);
+  }
+  let started = !!row.started;
+  if (!started && /^[0-9]{1,16}$/.test(device)) {
+    const queued = recordsLiveClipOpen_(device);
+    if (queued && queued.ok) {
+      row.started = true;
+      started = true;
+    }
+  }
+  recordsPatrolHandoffWrite_(list);
+  return { told: true, started: started, id: row.id };
+}
+
+function recordsLiveClipOpen_(device) {
+  const order = {
+    id: Utilities.getUuid().replace(/-/g, '').toLowerCase(),
+    action: 'start',
+    device_id: String(device)
+  };
+  return recordsLiveClipQueue_(order);
 }
 
 // The patrol bot pings the live bot after a notable Tracy frame. One waiting ping.
@@ -1491,7 +1594,14 @@ function recordsPatrolPing_(opts) {
     log_id: source === 'log' ? logId : ''
   };
   CacheService.getScriptCache().put('patrol-ping', JSON.stringify(ping), 1200);
-  return { ok: true, route: 'patrol-ping', id: ping.id };
+  let started = false;
+  try {
+    const notice = recordsPatrolTellNow_(ping);
+    started = !!(notice && notice.started);
+  } catch (e) {
+    Logger.log('patrol tell ' + e.message);
+  }
+  return { ok: true, route: 'patrol-ping', id: ping.id, started: started };
 }
 
 function recordsPatrolPingRead_() {
@@ -1681,6 +1791,9 @@ function recordsLiveClip_(opts) {
   if (action !== 'start' && action !== 'stop') return { ok: false, error: 'action must be start or stop' };
   const device = String(opts.device_id || '').trim();
   if (!/^[0-9]{1,16}$/.test(device)) return { ok: false, error: 'device_id must be digits' };
+  if (action === 'start' && recordsPatrolClipJustOpened_(device)) {
+    return { ok: true, route: 'live-clip', queued: true, already: true, action: action, device_id: device };
+  }
   const order = {
     id: Utilities.getUuid().replace(/-/g, '').toLowerCase(),
     action: action,
@@ -1693,6 +1806,23 @@ function recordsLiveClip_(opts) {
     if (description.indexOf('://') >= 0) return { ok: false, error: 'description refused' };
     order.description = description;
   }
+  const queued = recordsLiveClipQueue_(order);
+  if (!queued.ok) return queued;
+  return { ok: true, route: 'live-clip', queued: true, action: action, device_id: device };
+}
+
+function recordsPatrolClipJustOpened_(device) {
+  const list = recordsPatrolHandoffRead_();
+  const now = Date.now();
+  for (let i = list.length - 1; i >= 0; i--) {
+    if (String(list[i].device_id || '') !== String(device) || !list[i].started) continue;
+    const told = Date.parse(list[i].told_at || '');
+    if (told && (now - told) < 90 * 1000) return true;
+  }
+  return false;
+}
+
+function recordsLiveClipQueue_(order) {
   const cached = recordsLiveWithLock_(function () {
     const cache = CacheService.getScriptCache();
     const list = recordsLiveCacheList_('live-orders');
@@ -1720,7 +1850,7 @@ function recordsLiveClip_(opts) {
     }
     return { ok: false, error: 'station object refused' };
   }
-  return { ok: true, route: 'live-clip', queued: true, action: action, device_id: device };
+  return { ok: true };
 }
 
 function recordsLiveBytes_(b64, kind) {

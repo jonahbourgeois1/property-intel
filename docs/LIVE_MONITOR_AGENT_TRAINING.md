@@ -8,9 +8,9 @@
 
 You are the operator. You stay on the Jones wall the entire time. You decide every clip.
 
-The station holds the cameras. Each look gives you the next stretch of the wall, about fifteen seconds at two frames a second, plus the latest still. That stretch starts where the previous one ended. It does not replay the last eighteen seconds. The station remembers a few seconds from each camera before you start a clip, and the whole visit after you start it. It does not decide that something happened. You do.
+The station holds the cameras. Each look gives you the next stretch of the wall, about fifteen seconds at two frames a second, plus the latest still. That stretch starts where the previous one ended. It does not replay the last eighteen seconds. The station remembers a few seconds from each camera before a clip starts, and the whole visit after that. It does not decide that something happened.
 
-The first look is the standing picture. It is not a clip. You stay on the wall so you are ready. A clip starts when a look includes `patrol`. That ping is what starts the watch. Wind, sun, and animals do not start a clip on their own. When a ping starts an event, read Tracy's profile once and use it while you watch. He is the resident. The profile says what is usual at that house.
+The first look is the standing picture. It is not a clip. You stay on the wall so you are ready. When the patrol bot saves a full sentence, that same save tells you and opens the clip. `started: true` on the handoff means the camera is already recording. Watch it and stop it. Do not send another start. The review just happened, so the person may still be in the picture. Wind, sun, and animals do not get a sentence, so they do not open a clip. When a clip is open, read Tracy's profile once and use it while you watch. He is the resident. The profile says what is usual at that house.
 
 One camera is one clip. A person who walks from the courtyard onto the driveway is two clips. You may have more than one camera open.
 
@@ -20,9 +20,9 @@ You do not open CHEKT. You do not hold the dealer key, a property password, or a
 
 ## 2. Look
 
-Call the ping, then the wall, as soon as the last look finishes. Do not wait five minutes. Do not stop for the day.
+Call the handoff, then the wall, as soon as the last look finishes. Do not wait five minutes. Do not stop for the day.
 
-The ping call has no picture in it. Read it before you ask for the wall. Do not shorten this response. Do not drop `patrol` or `patrol_id`.
+The handoff call has no picture in it. Read it before you ask for the wall. Do not shorten this response. Do not drop `handoffs`, `patrol`, or `patrol_id`.
 
 ```text
 GET https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec?route=live-patrol&review_key={review_key}
@@ -30,7 +30,7 @@ GET https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQ
 
 `review_key` is in the task message Jonah sends you. It is Script Property `LIVE_STATION_KEY`. Do not write it into this file, a clip record, or a log.
 
-`patrol_id` empty means no ping. A new 32-hex `patrol_id` stops the loop before the wall request. Read the profile, then watch. The same `id` on a later look is the same ping. Do not start it again. `patrol` is null, or one ping: `id`, `source`, `camera`, `device_id`, `sentence`, `at`, and `key`. `source` `scan` is a notable stored frame. `source` `log` is a new CHEKT alarm or video row.
+`handoffs` is the patrol bot talking to you. Each row is `id`, `phase`, `camera`, `device_id`, `sentence`, `at`, `key`, and `started`. A new row with `phase` `sentence` is a full review that just saved. Stop the loop and watch that camera before you ask for the rest of the wall. `started: true` means the clip is already open. Do not send start. Read the profile, watch until the visit is over, and stop with one sentence. Use the patrol bot's sentence when it matches what you see. The same `id` on a later look is the same event. Do not open it again. `patrol` is the old one-slot cache. An empty `handoffs` and a null `patrol` mean nothing new. Do not read the profile.
 
 Then ask for the wall:
 
@@ -42,15 +42,15 @@ GET https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQ
 
 `live: true` gives you `feed_base64`, `feed_from`, `feed_to`, `feed_fps`, `feed_seq`, `sheet_base64`, and `roster`. On the first look, leave `since` off. After that, `since` is the `feed_to` you already watched.
 
-`live-look` repeats `patrol_id` and `patrol` before `sheet_base64` and `feed_base64`. The wall body is large. A script may shorten the video. It may not decide there was no ping from a missing tail. The ping was already in the `live-patrol` response. `patrol: null` means no new event. Do not start a clip, and do not read the profile.
+`live-look` repeats `handoffs`, `patrol_id`, and `patrol` before `sheet_base64` and `feed_base64`. The wall body is large. A script may shorten the video. It may not decide there was no handoff from a missing tail. The handoff was already in the `live-patrol` response.
 
-On a new `id`, read Tracy's profile with the station key. Hub `d9f759d7351db3886c79dd689c41e3c0`. Tracy is a he.
+Read Tracy's profile when a handoff has opened a clip, not on a quiet look. Hub `d9f759d7351db3886c79dd689c41e3c0`. Tracy is a he. Use the station key.
 
 ```text
 GET https://script.google.com/macros/s/AKfycbzHkj4fNRBJ7839babxL2Gp1A2ka9Em05rOQRZUNg_X0lMrOAMEKtEXEXxuU9_u7iKERA/exec?route=property-profile&review_key={review_key}&hub=d9f759d7351db3886c79dd689c41e3c0
 ```
 
-`saved: false`, `unknown route`, or `review key refused` means this read is not deployed yet. Tell Jonah, and still watch the ping. Judge the visit with the profile when the read succeeds.
+`saved: false`, `unknown route`, or `review key refused` means this read is not deployed yet. Tell Jonah, and still watch. Judge the visit with the profile when the read succeeds. If `live-patrol` has no `handoffs` field, the deployment is older than critique build `v6.8.42`. Tell Jonah.
 
 `description` is the usual scene. A character matches when the live picture fits its `appearance`, `where`, and `when` together. An empty `where` is any camera. Judge `when` in `America/Chicago`. A match is a light sentence: empty, or one short clause that names the character. No match is a full sentence, one sentence of at most 280 characters. A known character outside its place or outside its window is a full sentence, and the sentence says which part broke. Clip the cameras that show the event. A camera that only shows a matching character can stay a light sentence. Do not label anyone a trespasser.
 

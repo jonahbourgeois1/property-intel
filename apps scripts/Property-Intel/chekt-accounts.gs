@@ -534,7 +534,7 @@ function chektScanReview_(opts) {
   if (typeof recordsScanReview_ !== 'function') {
     return { ok: false, error: 'paste records.gs, save, and deploy a new version' };
   }
-  var result = recordsScanReview_({ key: opts.key, description: opts.description });
+  var result = recordsScanReview_({ key: opts.key, description: opts.description, depth: opts.depth });
   if (result && result.ok) {
     var enrolled = chektScanEnrolled_();
     var rows = (enrolled && enrolled.rows) || [];
