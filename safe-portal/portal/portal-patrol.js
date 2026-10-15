@@ -232,7 +232,7 @@
   }
 
   var GW = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
-  var live = { cameras: [], clips: [], at: 0, focus: -1, clip: -1, gen: 0 };
+  var live = { cameras: [], bot: [], chekt: [], at: 0, focus: -1, play: '', gen: 0, clipGen: 0 };
 
   function gridCols(n) {
     if (n <= 1) return 1;
@@ -393,68 +393,127 @@
         bindFeed(img, stateEl, cam, gen);
       }, i * 180);
     });
-    el('live-sub').firstChild.textContent = cams.length + ' cameras together. Clips from the last 7 days are on the right. ';
+    el('live-sub').firstChild.textContent = cams.length + ' cameras together. Bot clips and CHEKT clips from the last 7 days are on the right. ';
   }
 
-  function paintClips() {
-    var list = live.clips || [];
-    var count = el('live-clip-n');
-    var box = el('live-clips');
-    if (count) count.textContent = list.length ? '(' + list.length + ')' : '';
+  function asClip(raw, kind) {
+    if (kind === 'bot') {
+      return {
+        name: raw.name || raw.device_id || 'Camera',
+        when: raw.started_at || '',
+        thumb: raw.still_url || '',
+        mp4: raw.clip_url || '',
+        description: raw.description || ''
+      };
+    }
+    return {
+      name: raw.device_name || raw.camera || raw.name || 'Camera',
+      when: raw.event_time || '',
+      thumb: raw.thumbnail || '',
+      mp4: raw.mp4 || '',
+      description: ''
+    };
+  }
+
+  function clipRow(item, key) {
+    var thumb = item.thumb ? '<img alt="" src="' + esc(item.thumb) + '" referrerpolicy="no-referrer">' : '<img alt="">';
+    var sentence = item.description ? '<span class="desc">' + esc(item.description) + '</span>' : '';
+    return '<button type="button" class="live-clip' + (key === live.play ? ' on' : '') + '" data-k="' + esc(key) + '">' + thumb + '<span><b>' + esc(item.name) + '</b><span>' + esc(SP.when(item.when) || '') + '</span>' + sentence + '</span></button>';
+  }
+
+  function paintGroup(id, list, prefix, empty) {
+    var box = el(id);
+    if (!box) return;
     if (!list.length) {
-      box.innerHTML = '<p class="empty">No clips in the last 7 days.</p>';
+      box.innerHTML = '<p class="empty">' + esc(empty) + '</p>';
       return;
     }
     box.innerHTML = list.map(function (item, i) {
-      var name = item.device_name || item.camera || item.name || 'Camera';
-      var when = SP.when(item.event_time) || '';
-      var thumb = item.thumbnail ? '<img alt="" src="' + esc(item.thumbnail) + '" referrerpolicy="no-referrer">' : '<img alt="">';
-      return '<button type="button" class="live-clip' + (i === live.clip ? ' on' : '') + '" data-i="' + i + '">' + thumb + '<span><b>' + esc(name) + '</b><span>' + esc(when) + '</span></span></button>';
+      live.byKey[prefix + i] = item;
+      return clipRow(item, prefix + i);
     }).join('');
     Array.prototype.forEach.call(box.querySelectorAll('.live-clip'), function (btn) {
-      btn.onclick = function () { playClip(Number(btn.getAttribute('data-i'))); };
+      btn.onclick = function () { playClip(btn.getAttribute('data-k')); };
     });
   }
 
-  function playClip(index) {
-    var item = (live.clips || [])[index];
+  function paintClips() {
+    var bot = live.bot || [];
+    var chekt = live.chekt || [];
+    var count = el('live-clip-n');
+    var total = bot.length + chekt.length;
+    if (count) count.textContent = total ? '(' + total + ')' : '';
+    live.byKey = {};
+    paintGroup('live-bot', bot, 'b', live.botNote || 'No bot clips in the last 7 days.');
+    paintGroup('live-clips', chekt, 'c', live.chektNote || 'No CHEKT clips in the last 7 days.');
+  }
+
+  function playClip(key) {
+    var item = (live.byKey || {})[key];
     if (!item || !item.mp4) return;
-    live.clip = index;
-    el('live-player').innerHTML = '<video controls playsinline referrerpolicy="no-referrer" src="' + esc(item.mp4) + '"' + (item.thumbnail ? ' poster="' + esc(item.thumbnail) + '"' : '') + '></video>';
+    live.play = key;
+    el('live-player').innerHTML = '<video controls playsinline referrerpolicy="no-referrer" src="' + esc(item.mp4) + '"' + (item.thumb ? ' poster="' + esc(item.thumb) + '"' : '') + '></video>';
     var video = el('live-player').querySelector('video');
     if (video) video.play().catch(function () {});
-    Array.prototype.forEach.call(el('live-clips').querySelectorAll('.live-clip'), function (btn) {
-      btn.classList.toggle('on', Number(btn.getAttribute('data-i')) === index);
+    Array.prototype.forEach.call(el('live-side').querySelectorAll('.live-clip'), function (btn) {
+      btn.classList.toggle('on', btn.getAttribute('data-k') === key);
+    });
+  }
+
+  function loadClips(gen) {
+    var botP = SP.patrolClips().then(function (data) {
+      if (!data || data.ok === false) {
+        var err = (data && data.error) || 'Patrol clips did not load.';
+        if (/unknown route/i.test(err)) err = 'Bot clips are not on this deployment yet.';
+        return { list: [], note: err };
+      }
+      if (data.list === false) return { list: [], note: data.error || 'Bot clips did not load.' };
+      return { list: (data.clips || []).map(function (row) { return asClip(row, 'bot'); }), note: '' };
+    }).catch(function (e) {
+      return { list: [], note: e.message || 'Bot clips did not load.' };
+    });
+    var chektP = gwGet('/clips?property=' + encodeURIComponent(SP.HUB) + '&days=7').then(function (data) {
+      return { list: ((data && data.events) || []).map(function (row) { return asClip(row, 'chekt'); }), note: '' };
+    }).catch(function (e) {
+      return { list: [], note: e.message || 'CHEKT clips did not load.' };
+    });
+    return Promise.all([botP, chektP]).then(function (both) {
+      if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.bot = both[0].list;
+      live.botNote = both[0].note;
+      live.chekt = both[1].list;
+      live.chektNote = both[1].note;
+      paintClips();
     });
   }
 
   function openLive() {
     if (!SP.pass()) {
       el('live-wall').innerHTML = '<p class="empty">Sign in to open the live feeds.</p>';
-      return;
-    }
-    if (live.cameras.length && (Date.now() - live.at) < 50 * 60 * 1000) {
-      paintWall();
+      live.bot = [];
+      live.chekt = [];
+      live.botNote = 'Sign in to open the clips.';
+      live.chektNote = 'Sign in to open the clips.';
       paintClips();
       return;
     }
-    el('live-wall').innerHTML = '<p class="empty">Opening the cameras…</p>';
-    el('live-clips').innerHTML = '<p class="empty">Loading clips…</p>';
+    var fresh = live.cameras.length && (Date.now() - live.at) < 50 * 60 * 1000;
+    if (!fresh) el('live-wall').innerHTML = '<p class="empty">Opening the cameras…</p>';
+    else paintWall();
+    el('live-bot').innerHTML = '<p class="empty">Loading bot clips…</p>';
+    el('live-clips').innerHTML = '<p class="empty">Loading CHEKT clips…</p>';
+    var gen = ++live.clipGen;
+    loadClips(gen);
+    if (fresh) return;
     gwGet('/live?property=' + encodeURIComponent(SP.HUB)).then(function (data) {
-      if (state.tab !== 'live') return null;
+      if (state.tab !== 'live') return;
       live.cameras = (data && data.cameras) || [];
       live.at = Date.now();
       live.focus = -1;
       paintWall();
-      return gwGet('/clips?property=' + encodeURIComponent(SP.HUB) + '&days=7');
-    }).then(function (data) {
-      if (!data || state.tab !== 'live') return;
-      live.clips = data.events || [];
-      paintClips();
     }).catch(function (e) {
       if (state.tab !== 'live') return;
       if (!live.cameras.length) el('live-wall').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
-      el('live-clips').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
     });
   }
 

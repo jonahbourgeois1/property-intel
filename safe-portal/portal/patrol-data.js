@@ -148,6 +148,10 @@
     return postApi({ route: 'scan-patrol', hub: HUB, pass: pass(), qa: qa, times: times });
   }
 
+  function patrolClips() {
+    return callApi({ route: 'patrol-clips', hub: HUB, pass: pass() }, 60000);
+  }
+
   function hm(mins) {
     var h = Math.floor(mins / 60);
     var m = mins % 60;
@@ -665,6 +669,7 @@
     collect: collect,
     patrolGet: patrolGet,
     patrolSave: patrolSave,
+    patrolClips: patrolClips,
     presets: presets,
     presetTimes: presetTimes,
     jpegUrl: jpegUrl,

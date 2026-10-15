@@ -1387,9 +1387,13 @@ function recordsLiveLook_(opts) {
     fromStation = [];
   }
   const both = (finished.ok ? finished.finished : []).concat(fromStation);
+  const ping = recordsPatrolPingRead_();
+  // patrol_id and patrol stay before the JPEGs. A short read of this body still has the ping.
   return {
     ok: true,
     route: 'live-look',
+    patrol_id: ping && ping.id ? String(ping.id) : '',
+    patrol: ping,
     live: live,
     age_s: age,
     roster: roster,
@@ -1400,8 +1404,20 @@ function recordsLiveLook_(opts) {
     feed_fps: 2,
     feed_seq: live && obj ? Number(obj.feed_seq) || 0 : 0,
     finished: both.slice(-20),
-    station: station,
-    patrol: recordsPatrolPingRead_()
+    station: station
+  };
+}
+
+// The ping by itself. No wall JPEG and no video, so a short read cannot drop it.
+function recordsLivePatrol_(opts) {
+  opts = opts || {};
+  if (!recordsLiveKeyOk_(opts.review_key)) return { ok: false, error: 'live station key refused' };
+  const ping = recordsPatrolPingRead_();
+  return {
+    ok: true,
+    route: 'live-patrol',
+    patrol_id: ping && ping.id ? String(ping.id) : '',
+    patrol: ping
   };
 }
 
@@ -1516,11 +1532,18 @@ function recordsLiveClipPage_(xml) {
   };
 }
 
-// Saved Jones visits for the station page. Does not read the watch object.
+// Saved Jones visits. The station page calls this with the station key.
+// The patrol page calls recordsLiveClipsRead_ after the row password checks out.
 function recordsLiveClips_(opts) {
   opts = opts || {};
   if (!recordsLiveKeyOk_(opts.review_key)) return { ok: false, error: 'live station key refused' };
-  const prefix = 'camera-live/' + RECORDS_JONES_HUB + '/';
+  return recordsLiveClipsRead_(RECORDS_JONES_HUB);
+}
+
+function recordsLiveClipsRead_(hubId) {
+  const hub = String(hubId || '').trim().toLowerCase();
+  if (hub !== RECORDS_JONES_HUB) return { ok: false, error: 'clip list is Tracy\'s house only' };
+  const prefix = 'camera-live/' + hub + '/';
   const keys = [];
   let token = '';
   try {

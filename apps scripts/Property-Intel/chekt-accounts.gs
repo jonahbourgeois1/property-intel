@@ -1006,6 +1006,33 @@ function chektScanPatrol_(opts) {
   };
 }
 
+// Jones visits the live bot saved. The row password reads them. The station key stays off this route.
+function chektPatrolClips_(opts) {
+  opts = opts || {};
+  var row = chektScanViewerRow_(opts.hub, opts.pass);
+  if (!row.ok) return row;
+  if (row.hub !== '6de88883bfd4a8349a901c54611ed9d7') {
+    return { ok: false, error: 'patrol clips are Tracy\'s house only' };
+  }
+  if (typeof recordsLiveClipsRead_ !== 'function') {
+    return { ok: false, error: 'recordsLiveClipsRead_ is not defined — paste records.gs, save, and deploy a new version' };
+  }
+  var got = recordsLiveClipsRead_(row.store || 'd9f759d7351db3886c79dd689c41e3c0');
+  if (!got.ok) return got;
+  var cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  var clips = (got.clips || []).filter(function (clip) {
+    var at = Date.parse(clip.started_at || '');
+    return at && at >= cutoff;
+  });
+  return {
+    ok: true,
+    route: 'patrol-clips',
+    list: !!got.list,
+    clips: clips,
+    error: got.error || ''
+  };
+}
+
 function chektScanPatrolSave_(payload) {
   payload = payload || {};
   var row = chektScanViewerRow_(payload.hub, payload.pass);

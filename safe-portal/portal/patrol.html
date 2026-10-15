@@ -69,21 +69,23 @@
   .live-cell .st { top: 8px; font: 11px var(--mono); letter-spacing: 0.04em; }
   .live-cell .st.bad { color: #fecaca; }
   .live-side { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); max-height: calc(100dvh - 210px); overflow: auto; }
-  .live-side-h { position: sticky; top: 0; padding: 12px 12px 8px; background: var(--surface); font-weight: 700; }
+  .live-side-h { position: sticky; top: 0; z-index: 1; padding: 12px 12px 8px; background: var(--surface); font-weight: 700; }
+  .live-group { padding: 10px 12px 4px; font: 700 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #667085); }
   #live-player video { display: block; width: 100%; background: #0b0e12; }
   .live-clip { display: grid; grid-template-columns: 92px 1fr; gap: 8px; width: 100%; text-align: left; padding: 8px; border: 0; border-top: 1px solid var(--border); background: transparent; color: inherit; cursor: pointer; font: inherit; }
   .live-clip.on { background: rgba(29, 78, 137, 0.12); }
   .live-clip img { width: 92px; height: 58px; object-fit: cover; border-radius: 6px; background: #0b0e12; }
   .live-clip b, .live-clip span span { display: block; }
   .live-clip span span { font-size: 12px; margin-top: 3px; }
+  .live-clip .desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted, #667085); }
   #live-back { margin-left: 8px; }
   @media (max-width: 860px) {
     .live-station { grid-template-columns: 1fr; }
     .live-side { max-height: none; }
   }
 </style>
-<script src="patrol-data.js?v=0.9.11"></script>
-<script src="portal-patrol.js?v=0.9.11"></script>
+<script src="patrol-data.js?v=0.9.12"></script>
+<script src="portal-patrol.js?v=0.9.12"></script>
 </head>
 <body class="pg patrol">
   <div id="gate" class="visible">
@@ -122,12 +124,15 @@
     <button id="save" type="button">Save schedule</button>
   </section>
   <section class="panel-tab" id="panel-live">
-    <p class="sub" id="live-sub">All cameras together. Clips from the last 7 days are on the right. <button type="button" id="live-back" hidden>All cameras</button></p>
+    <p class="sub" id="live-sub">All cameras together. Bot clips and CHEKT clips from the last 7 days are on the right. <button type="button" id="live-back" hidden>All cameras</button></p>
     <div class="live-station">
       <div id="live-wall" class="live-wall"></div>
       <aside class="live-side">
         <div class="live-side-h">Clips <span id="live-clip-n"></span></div>
         <div id="live-player"></div>
+        <div class="live-group">Bot</div>
+        <div id="live-bot"></div>
+        <div class="live-group">CHEKT</div>
         <div id="live-clips"></div>
       </aside>
     </div>

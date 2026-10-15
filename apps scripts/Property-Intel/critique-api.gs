@@ -17,6 +17,7 @@
 //   GET  ?route=scan-next&review_key=       -> one unreviewed pair (two JPEGs)
 //   POST ?route=scan-review                 -> set description and reviewed_at on that JSON
 //   GET  ?route=scan-review&review_key=&key=&description= -> same write, used when a POST is redirected as GET
+//   GET  ?route=live-patrol&review_key=     -> the waiting ping only; no wall JPEG and no video
 //   GET  ?route=live-look&review_key=       -> current Jones wall and rolling video for the live bot
 //   POST ?route=patrol-ping                 -> patrol bot wakes the live bot for one Tracy event
 //   GET  ?route=live-wall&review_key=       -> same wall for the page; does not take finished clips
@@ -26,6 +27,7 @@
 //   POST ?route=live-put                    -> still, video, or sentence under camera-live/
 //   GET  ?route=scan-list&hub=&pass=        -> camera list, or one camera's frames
 //   GET  ?route=scan-patrol&hub=&pass=      -> QA level and review times
+//   GET  ?route=patrol-clips&hub=&pass=     -> Jones visits the live bot saved, last 7 days
 //   POST ?route=scan-patrol                 -> save that schedule (text/plain JSON)
 //   GET  ?route=scan-frame&hub=&pass=&key=  -> one JPEG plus its description
 //   GET  ?route=property-profile&review_key=&hub= -> read Tracy's profile
@@ -204,7 +206,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8.36 (2026-10-15) — patrol notes index';
+const CRITIQUE_BUILD = 'v6.8.38 (2026-10-15) — patrol clips for the virtual patrol page';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -1849,6 +1851,7 @@ function critiqueApiGet_(e) {
                                 scan_list: (typeof chektScanList_ === 'function'),
                                 scan_frame: (typeof chektScanFrame_ === 'function'),
                                 scan_patrol: (typeof chektScanPatrol_ === 'function' && typeof chektPatrolWrite_ === 'function'),
+                                live_patrol: (typeof recordsLivePatrol_ === 'function'),
                                 live_look: (typeof recordsLiveLook_ === 'function'),
                                 live_wall: (typeof recordsLiveWall_ === 'function'),
                                 live_clips: (typeof recordsLiveClips_ === 'function'),
@@ -1861,8 +1864,15 @@ function critiqueApiGet_(e) {
                                 property_profile_sources: (typeof chektProfileSources_ === 'function' && typeof chektProfileFrame_ === 'function'),
                                 property_profile_key: (typeof recordsProfileKeyAllowed_ === 'function') ? recordsProfileKeyAllowed_() : false,
                                 patrol_ping: (typeof recordsPatrolPing_ === 'function'),
+                                patrol_clips: (typeof chektPatrolClips_ === 'function' && typeof recordsLiveClipsRead_ === 'function'),
                                 property_profile_live_read: (typeof recordsProfileLiveReadOk_ === 'function'),
                                 server_time: new Date().toISOString() }, cb);
+    }
+    if (route === 'live-patrol') {
+      if (typeof recordsLivePatrol_ !== 'function') {
+        throw new Error('recordsLivePatrol_ is not defined — paste records.gs, save, and deploy a new version');
+      }
+      return critiqueJsonOut_(recordsLivePatrol_({ review_key: p.review_key }), cb);
     }
     if (route === 'live-look') {
       if (typeof recordsLiveLook_ !== 'function') {
@@ -1939,6 +1949,12 @@ function critiqueApiGet_(e) {
         throw new Error('chektScanPatrol_ is not defined — paste chekt-accounts.gs, save, and deploy a new version');
       }
       return critiqueJsonOut_(chektScanPatrol_({ hub: p.hub, pass: p.pass }), cb);
+    }
+    if (route === 'patrol-clips') {
+      if (typeof chektPatrolClips_ !== 'function') {
+        throw new Error('chektPatrolClips_ is not defined — paste chekt-accounts.gs, save, and deploy a new version');
+      }
+      return critiqueJsonOut_(chektPatrolClips_({ hub: p.hub, pass: p.pass }), cb);
     }
     if (route === 'scan-roster') {
       if (typeof chektScanRoster_ !== 'function') {
