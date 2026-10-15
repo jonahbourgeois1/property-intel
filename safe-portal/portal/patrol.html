@@ -71,21 +71,32 @@
   .live-side { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); max-height: calc(100dvh - 210px); overflow: auto; }
   .live-side-h { position: sticky; top: 0; z-index: 1; padding: 12px 12px 8px; background: var(--surface); font-weight: 700; }
   .live-group { padding: 10px 12px 4px; font: 700 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #667085); }
-  #live-player video { display: block; width: 100%; background: #0b0e12; }
   .live-clip { display: grid; grid-template-columns: 92px 1fr; gap: 8px; width: 100%; text-align: left; padding: 8px; border: 0; border-top: 1px solid var(--border); background: transparent; color: inherit; cursor: pointer; font: inherit; }
   .live-clip.on { background: rgba(29, 78, 137, 0.12); }
   .live-clip img { width: 92px; height: 58px; object-fit: cover; border-radius: 6px; background: #0b0e12; }
   .live-clip b, .live-clip span span { display: block; }
   .live-clip span span { font-size: 12px; margin-top: 3px; }
   .live-clip .desc { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; color: var(--muted, #667085); }
+  .live-retry { margin-left: 6px; border: 0; background: transparent; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
+  #clip-box { position: fixed; inset: 0; z-index: 30; background: rgba(6, 8, 12, 0.88); display: flex; align-items: flex-start; justify-content: center; padding: 24px 16px; overflow: auto; }
+  #clip-box[hidden] { display: none; }
+  .clip-card { width: min(1100px, 100%); background: var(--surface, #10161f); color: var(--text, #e7ecf2); border-radius: 12px; padding: 14px; }
+  .clip-card h2 { margin: 8px 0 0; font-size: 18px; }
+  .clip-card .when { margin: 4px 0 0; color: var(--muted, #667085); font-size: 13px; }
+  .clip-media { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+  .clip-media h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted, #667085); }
+  .clip-media img, .clip-media video { display: block; width: 100%; max-height: 62vh; object-fit: contain; background: #07090c; border-radius: 8px; }
+  #clip-fail { margin: 8px 0 0; font-size: 14px; }
+  #clip-desc { margin: 12px 0 0; font-size: 16px; line-height: 1.4; }
   #live-back { margin-left: 8px; }
   @media (max-width: 860px) {
     .live-station { grid-template-columns: 1fr; }
     .live-side { max-height: none; }
+    .clip-media { grid-template-columns: 1fr; }
   }
 </style>
-<script src="patrol-data.js?v=0.9.12"></script>
-<script src="portal-patrol.js?v=0.9.12"></script>
+<script src="patrol-data.js?v=0.9.14"></script>
+<script src="portal-patrol.js?v=0.9.14"></script>
 </head>
 <body class="pg patrol">
   <div id="gate" class="visible">
@@ -129,7 +140,6 @@
       <div id="live-wall" class="live-wall"></div>
       <aside class="live-side">
         <div class="live-side-h">Clips <span id="live-clip-n"></span></div>
-        <div id="live-player"></div>
         <div class="live-group">Bot</div>
         <div id="live-bot"></div>
         <div class="live-group">CHEKT</div>
@@ -147,6 +157,25 @@
     <div class="pick"><select id="note-cam" aria-label="Camera"></select></div>
     <div id="note-grid"></div>
   </section>
+  <div id="clip-box" hidden>
+    <div class="clip-card" id="clip-card">
+      <button id="clip-close" type="button">Close</button>
+      <h2 id="clip-title"></h2>
+      <p id="clip-when" class="when"></p>
+      <div class="clip-media">
+        <section>
+          <h3>Still</h3>
+          <img id="clip-still" alt="">
+        </section>
+        <section>
+          <h3>Clip</h3>
+          <video id="clip-video" controls playsinline preload="auto"></video>
+          <p id="clip-fail" hidden></p>
+        </section>
+      </div>
+      <p id="clip-desc"></p>
+    </div>
+  </div>
 <script>SafePatrolPage.boot();</script>
 </body>
 </html>

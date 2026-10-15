@@ -1014,21 +1014,16 @@ function chektPatrolClips_(opts) {
   if (row.hub !== '6de88883bfd4a8349a901c54611ed9d7') {
     return { ok: false, error: 'patrol clips are Tracy\'s house only' };
   }
-  if (typeof recordsLiveClipsRead_ !== 'function') {
-    return { ok: false, error: 'recordsLiveClipsRead_ is not defined — paste records.gs, save, and deploy a new version' };
+  if (typeof recordsLiveClipShells_ !== 'function') {
+    return { ok: false, error: 'recordsLiveClipShells_ is not defined — paste records.gs, save, and deploy a new version' };
   }
-  var got = recordsLiveClipsRead_(row.store || 'd9f759d7351db3886c79dd689c41e3c0');
+  var got = recordsLiveClipShells_(row.store || 'd9f759d7351db3886c79dd689c41e3c0', 7);
   if (!got.ok) return got;
-  var cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  var clips = (got.clips || []).filter(function (clip) {
-    var at = Date.parse(clip.started_at || '');
-    return at && at >= cutoff;
-  });
   return {
     ok: true,
     route: 'patrol-clips',
     list: !!got.list,
-    clips: clips,
+    clips: got.clips || [],
     error: got.error || ''
   };
 }

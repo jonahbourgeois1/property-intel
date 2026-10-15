@@ -1540,7 +1540,7 @@ function recordsLiveClips_(opts) {
   return recordsLiveClipsRead_(RECORDS_JONES_HUB);
 }
 
-function recordsLiveClipsRead_(hubId) {
+function recordsLiveClipKeys_(hubId) {
   const hub = String(hubId || '').trim().toLowerCase();
   if (hub !== RECORDS_JONES_HUB) return { ok: false, error: 'clip list is Tracy\'s house only' };
   const prefix = 'camera-live/' + hub + '/';
@@ -1556,9 +1556,9 @@ function recordsLiveClipsRead_(hubId) {
       const txt = res.getContentText();
       if (code !== 200) {
         if (code === 403 || /AccessDenied/.test(txt)) {
-          return { ok: true, route: 'live-clips', list: false, clips: [], error: 'clip list was not granted' };
+          return { ok: true, route: 'live-clips', list: false, keys: [], error: 'clip list was not granted' };
         }
-        return { ok: true, route: 'live-clips', list: false, clips: [], error: 'clip list failed' };
+        return { ok: true, route: 'live-clips', list: false, keys: [], error: 'clip list failed' };
       }
       const got = recordsLiveClipPage_(txt);
       for (let i = 0; i < got.keys.length; i++) keys.push(got.keys[i]);
@@ -1566,12 +1566,60 @@ function recordsLiveClipsRead_(hubId) {
       token = got.token;
     }
   } catch (e) {
-    return { ok: true, route: 'live-clips', list: false, clips: [], error: 'clip list failed' };
+    return { ok: true, route: 'live-clips', list: false, keys: [], error: 'clip list failed' };
   }
   keys.sort();
   keys.reverse();
+  return { ok: true, route: 'live-clips', list: true, keys: keys };
+}
+
+function recordsLiveClipFromKey_(key) {
+  const m = String(key || '').match(/^camera-live\/[a-f0-9]{32}\/([0-9]+)\/([0-9]{8}T[0-9]{9}Z)\.json$/);
+  if (!m) return null;
+  const stamp = m[2];
+  const iso = stamp.slice(0, 4) + '-' + stamp.slice(4, 6) + '-' + stamp.slice(6, 8) + 'T' + stamp.slice(9, 11) + ':' + stamp.slice(11, 13) + ':' + stamp.slice(13, 15) + '.' + stamp.slice(15, 18) + 'Z';
+  const base = String(key).replace(/\.json$/, '');
+  return {
+    device_id: m[1],
+    name: '',
+    description: '',
+    started_at: iso,
+    ended_at: '',
+    seconds: 0,
+    still_url: RECORDS_CF_BASE + base + '.jpg',
+    clip_url: RECORDS_CF_BASE + base + '.mp4'
+  };
+}
+
+// Names and sentences stay in the JSON. The page reads those from the CDN.
+function recordsLiveClipShells_(hubId, days) {
+  const listed = recordsLiveClipKeys_(hubId);
+  if (!listed.ok || listed.list === false) {
+    return { ok: listed.ok, route: 'live-clips', list: false, clips: [], error: listed.error || '' };
+  }
+  const windowMs = (Number(days) || 7) * 24 * 60 * 60 * 1000;
+  const cutoff = Date.now() - windowMs;
+  const clips = [];
+  const keys = listed.keys || [];
+  for (let i = 0; i < keys.length && clips.length < 40; i++) {
+    const shell = recordsLiveClipFromKey_(keys[i]);
+    if (!shell) continue;
+    const at = Date.parse(shell.started_at);
+    if (!at || at < cutoff) continue;
+    clips.push(shell);
+  }
+  return { ok: true, route: 'live-clips', list: true, clips: clips };
+}
+
+function recordsLiveClipsRead_(hubId) {
+  const listed = recordsLiveClipKeys_(hubId);
+  if (!listed.ok || listed.list === false) {
+    return { ok: listed.ok, route: 'live-clips', list: false, clips: [], error: listed.error || '' };
+  }
+  const keys = listed.keys || [];
   const clips = [];
   const take = keys.slice(0, 40);
+  const prefix = 'camera-live/' + String(hubId || '').trim().toLowerCase() + '/';
   for (let i = 0; i < take.length; i++) {
     let obj = null;
     try { obj = recordsFetchJson_(take[i]); } catch (e) { obj = null; }

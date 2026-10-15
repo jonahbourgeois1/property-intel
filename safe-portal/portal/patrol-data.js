@@ -149,7 +149,7 @@
   }
 
   function patrolClips() {
-    return callApi({ route: 'patrol-clips', hub: HUB, pass: pass() }, 60000);
+    return callApi({ route: 'patrol-clips', hub: HUB, pass: pass() }, 90000);
   }
 
   function hm(mins) {

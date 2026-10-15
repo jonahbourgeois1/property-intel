@@ -206,7 +206,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8.38 (2026-10-15) — patrol clips for the virtual patrol page';
+const CRITIQUE_BUILD = 'v6.8.39 (2026-10-15) — patrol clip list does not open each visit';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -1864,7 +1864,7 @@ function critiqueApiGet_(e) {
                                 property_profile_sources: (typeof chektProfileSources_ === 'function' && typeof chektProfileFrame_ === 'function'),
                                 property_profile_key: (typeof recordsProfileKeyAllowed_ === 'function') ? recordsProfileKeyAllowed_() : false,
                                 patrol_ping: (typeof recordsPatrolPing_ === 'function'),
-                                patrol_clips: (typeof chektPatrolClips_ === 'function' && typeof recordsLiveClipsRead_ === 'function'),
+                                patrol_clips: (typeof chektPatrolClips_ === 'function' && typeof recordsLiveClipShells_ === 'function'),
                                 property_profile_live_read: (typeof recordsProfileLiveReadOk_ === 'function'),
                                 server_time: new Date().toISOString() }, cb);
     }

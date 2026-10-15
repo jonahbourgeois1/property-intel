@@ -241,8 +241,11 @@
     return 4;
   }
 
-  function gwGet(path) {
-    return fetch(GW + path, { headers: { 'x-viewer-key': SP.pass() } }).then(function (r) {
+  function gwGet(path, timeoutMs) {
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs || 40000);
+    return fetch(GW + path, { headers: { 'x-viewer-key': SP.pass() }, signal: ctrl.signal }).then(function (r) {
+      clearTimeout(timer);
       if (r.status === 429) throw new Error('The camera service is busy. Wait a minute and open Live Feed again.');
       if (r.status === 401) throw new Error('That password did not open the cameras.');
       if (!r.ok) {
@@ -251,6 +254,10 @@
         });
       }
       return r.json();
+    }).catch(function (e) {
+      clearTimeout(timer);
+      if (e && e.name === 'AbortError') throw new Error('The camera service timed out.');
+      throw e;
     });
   }
 
@@ -277,13 +284,16 @@
     var timer = 0;
     var poll = 0;
     var snapTimer = 0;
+    var mjpegWait = 0;
     var busy = false;
+    var streaming = false;
     function alive() { return !stopped && gen === live.gen; }
     function stopTimers() {
       if (timer) clearTimeout(timer);
       if (poll) clearInterval(poll);
       if (snapTimer) clearInterval(snapTimer);
-      timer = poll = snapTimer = 0;
+      if (mjpegWait) clearTimeout(mjpegWait);
+      timer = poll = snapTimer = mjpegWait = 0;
     }
     function mark(text, bad) {
       if (!alive() || !stateEl) return;
@@ -307,7 +317,7 @@
         if (!alive() || !r.ok) return null;
         return r.json();
       }).then(function (body) {
-        if (!alive() || !body || body.data == null || body.data === '') return;
+        if (!alive() || streaming || !body || body.data == null || body.data === '') return;
         img.onload = function () { if (alive() && saw()) mark('LIVE', false); };
         img.src = body.base64Encoded === false ? String(body.data) : ('data:image/jpeg;base64,' + body.data);
       }).catch(function () {}).then(function () { busy = false; });
@@ -327,11 +337,18 @@
         snapTimer = setInterval(pollSnap, 2000);
       }, 8000);
     }
-    img.referrerPolicy = 'no-referrer';
-    img.onload = function () { if (alive() && saw()) { stopTimers(); mark('LIVE', false); } };
-    img.onerror = function () { if (alive() && !saw() && snaps.length) { stopTimers(); pollSnap(); snapTimer = setInterval(pollSnap, 2000); } };
-    img.src = url;
-    arm();
+    function startMjpeg() {
+      if (!alive()) return;
+      streaming = true;
+      img.referrerPolicy = 'no-referrer';
+      img.onload = function () { if (alive() && saw()) { stopTimers(); mark('LIVE', false); } };
+      img.onerror = function () { if (alive() && !saw() && snaps.length) { stopTimers(); pollSnap(); snapTimer = setInterval(pollSnap, 2000); } };
+      img.src = url;
+      arm();
+    }
+    mark('connecting…', false);
+    if (snaps.length) pollSnap();
+    mjpegWait = setTimeout(startMjpeg, snaps.length ? 1800 : 0);
   }
 
   function stopLive() {
@@ -342,11 +359,10 @@
       if (typeof img.__stop === 'function') img.__stop();
       else img.removeAttribute('src');
     });
-    var player = el('live-player');
-    if (player) {
-      var video = player.querySelector('video');
-      if (video) { video.pause(); video.removeAttribute('src'); }
-    }
+    var player = el('clip-video');
+    if (player) { player.pause(); player.removeAttribute('src'); }
+    var box = el('clip-box');
+    if (box) box.hidden = true;
   }
 
   function applyLiveFocus() {
@@ -391,19 +407,36 @@
       setTimeout(function () {
         if (gen !== live.gen) return;
         bindFeed(img, stateEl, cam, gen);
-      }, i * 180);
+      }, i * 120 + Math.floor(i / 4) * 1600);
     });
+    if ((live.bot && live.bot.length) || (live.chekt && live.chekt.length)) {
+      (live.bot || []).forEach(function (item) {
+        if (item.device_id) item.name = nameFor(item.device_id, item.name);
+      });
+      paintClips();
+    }
     el('live-sub').firstChild.textContent = cams.length + ' cameras together. Bot clips and CHEKT clips from the last 7 days are on the right. ';
+  }
+
+  function nameFor(id, fallback) {
+    var want = String(id || '');
+    var cams = live.cameras || [];
+    for (var i = 0; i < cams.length; i++) {
+      if (String(cams[i].device_id) === want && cams[i].name) return cams[i].name;
+    }
+    return fallback || want || 'Camera';
   }
 
   function asClip(raw, kind) {
     if (kind === 'bot') {
       return {
-        name: raw.name || raw.device_id || 'Camera',
+        device_id: raw.device_id || '',
+        name: raw.name || nameFor(raw.device_id, ''),
         when: raw.started_at || '',
         thumb: raw.still_url || '',
         mp4: raw.clip_url || '',
-        description: raw.description || ''
+        description: raw.description || '',
+        json: String(raw.still_url || '').replace(/\.jpg(\?.*)?$/, '.json')
       };
     }
     return {
@@ -425,7 +458,10 @@
     var box = el(id);
     if (!box) return;
     if (!list.length) {
-      box.innerHTML = '<p class="empty">' + esc(empty) + '</p>';
+      var retry = /timed out|did not|failed|busy|not on this deployment/i.test(empty || '');
+      box.innerHTML = '<p class="empty">' + esc(empty) + (retry ? ' <button type="button" class="live-retry">Retry</button>' : '') + '</p>';
+      var again = box.querySelector('.live-retry');
+      if (again) again.onclick = function () { retryClips(id === 'live-bot' ? 'bot' : 'chekt'); };
       return;
     }
     box.innerHTML = list.map(function (item, i) {
@@ -448,43 +484,136 @@
     paintGroup('live-clips', chekt, 'c', live.chektNote || 'No CHEKT clips in the last 7 days.');
   }
 
+  function hideClip() {
+    var video = el('clip-video');
+    if (video) {
+      video.pause();
+      video.onerror = null;
+      video.removeAttribute('src');
+      video.load();
+    }
+    var box = el('clip-box');
+    if (box) box.hidden = true;
+    var fail = el('clip-fail');
+    if (fail) { fail.hidden = true; fail.textContent = ''; }
+  }
+
   function playClip(key) {
     var item = (live.byKey || {})[key];
-    if (!item || !item.mp4) return;
+    if (!item) return;
     live.play = key;
-    el('live-player').innerHTML = '<video controls playsinline referrerpolicy="no-referrer" src="' + esc(item.mp4) + '"' + (item.thumb ? ' poster="' + esc(item.thumb) + '"' : '') + '></video>';
-    var video = el('live-player').querySelector('video');
-    if (video) video.play().catch(function () {});
+    el('clip-title').textContent = item.name || 'Camera';
+    el('clip-when').textContent = SP.when(item.when) || '';
+    el('clip-desc').textContent = item.description || '';
+    var img = el('clip-still');
+    if (item.thumb) {
+      img.hidden = false;
+      img.alt = item.name || 'Still';
+      img.src = item.thumb;
+    } else {
+      img.hidden = true;
+      img.removeAttribute('src');
+    }
+    var video = el('clip-video');
+    var fail = el('clip-fail');
+    fail.hidden = true;
+    fail.textContent = '';
+    video.onerror = function () {
+      fail.hidden = false;
+      fail.textContent = 'This browser cannot play this clip. The picture on the left is the saved still.';
+    };
+    if (item.mp4) {
+      video.src = item.mp4;
+      video.play().catch(function () {});
+    } else {
+      video.removeAttribute('src');
+      video.load();
+      fail.hidden = false;
+      fail.textContent = 'No video file came back for this clip.';
+    }
+    el('clip-box').hidden = false;
     Array.prototype.forEach.call(el('live-side').querySelectorAll('.live-clip'), function (btn) {
       btn.classList.toggle('on', btn.getAttribute('data-k') === key);
     });
   }
 
-  function loadClips(gen) {
-    var botP = SP.patrolClips().then(function (data) {
-      if (!data || data.ok === false) {
-        var err = (data && data.error) || 'Patrol clips did not load.';
-        if (/unknown route/i.test(err)) err = 'Bot clips are not on this deployment yet.';
-        return { list: [], note: err };
-      }
-      if (data.list === false) return { list: [], note: data.error || 'Bot clips did not load.' };
-      return { list: (data.clips || []).map(function (row) { return asClip(row, 'bot'); }), note: '' };
-    }).catch(function (e) {
-      return { list: [], note: e.message || 'Bot clips did not load.' };
+  function hydrateBot(list) {
+    var pending = list.filter(function (item) { return item.json && !item.description; });
+    if (!pending.length) return;
+    Promise.all(pending.map(function (item) {
+      return fetch(item.json, { cache: 'force-cache' }).then(function (r) {
+        return r.ok ? r.json() : null;
+      }).then(function (obj) {
+        if (!obj) return;
+        if (obj.name) item.name = obj.name;
+        else if (obj.device_id) item.name = nameFor(obj.device_id, item.name);
+        if (obj.description) item.description = String(obj.description);
+      }).catch(function () {});
+    })).then(function () {
+      if (state.tab !== 'live') return;
+      paintClips();
+      var open = (live.byKey || {})[live.play];
+      var desc = el('clip-desc');
+      var box = el('clip-box');
+      if (open && desc && box && !box.hidden) desc.textContent = open.description || '';
     });
-    var chektP = gwGet('/clips?property=' + encodeURIComponent(SP.HUB) + '&days=7').then(function (data) {
-      return { list: ((data && data.events) || []).map(function (row) { return asClip(row, 'chekt'); }), note: '' };
-    }).catch(function (e) {
-      return { list: [], note: e.message || 'CHEKT clips did not load.' };
-    });
-    return Promise.all([botP, chektP]).then(function (both) {
+  }
+
+  function loadBot(gen) {
+    return SP.patrolClips().then(function (data) {
       if (gen !== live.clipGen || state.tab !== 'live') return;
-      live.bot = both[0].list;
-      live.botNote = both[0].note;
-      live.chekt = both[1].list;
-      live.chektNote = both[1].note;
+      if (!data || data.ok === false) {
+        var err = (data && data.error) || 'Bot clips did not load.';
+        if (/unknown route/i.test(err)) err = 'Bot clips are not on this deployment yet.';
+        if (/timed out/i.test(err)) err = 'Bot clips timed out.';
+        live.bot = [];
+        live.botNote = err;
+        paintClips();
+        return;
+      }
+      if (data.list === false) {
+        live.bot = [];
+        live.botNote = data.error || 'Bot clips did not load.';
+        paintClips();
+        return;
+      }
+      live.bot = (data.clips || []).map(function (row) { return asClip(row, 'bot'); });
+      live.botNote = '';
+      paintClips();
+      hydrateBot(live.bot);
+    }).catch(function (e) {
+      if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.bot = [];
+      live.botNote = /timed out/i.test(e.message || '') ? 'Bot clips timed out.' : (e.message || 'Bot clips did not load.');
       paintClips();
     });
+  }
+
+  function loadChekt(gen) {
+    if (gen !== live.clipGen || state.tab !== 'live') return;
+    live.chektNote = 'Loading CHEKT clips…';
+    el('live-clips').innerHTML = '<p class="empty">Loading CHEKT clips…</p>';
+    gwGet('/clips?property=' + encodeURIComponent(SP.HUB) + '&days=7&limit=20&quick=1', 70000).then(function (data) {
+      if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.chekt = ((data && data.events) || []).map(function (row) { return asClip(row, 'chekt'); });
+      live.chektNote = '';
+      paintClips();
+    }).catch(function (e) {
+      if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.chekt = [];
+      live.chektNote = /timed out/i.test(e.message || '') ? 'CHEKT clips timed out.' : (e.message || 'CHEKT clips did not load.');
+      paintClips();
+    });
+  }
+
+  function retryClips(which) {
+    var gen = live.clipGen;
+    if (which === 'bot') {
+      el('live-bot').innerHTML = '<p class="empty">Loading bot clips…</p>';
+      loadBot(gen);
+      return;
+    }
+    loadChekt(gen);
   }
 
   function openLive() {
@@ -501,19 +630,29 @@
     if (!fresh) el('live-wall').innerHTML = '<p class="empty">Opening the cameras…</p>';
     else paintWall();
     el('live-bot').innerHTML = '<p class="empty">Loading bot clips…</p>';
-    el('live-clips').innerHTML = '<p class="empty">Loading CHEKT clips…</p>';
+    live.chekt = [];
+    live.chektNote = 'CHEKT clips load after the cameras.';
+    el('live-clips').innerHTML = '<p class="empty">CHEKT clips load after the cameras.</p>';
     var gen = ++live.clipGen;
-    loadClips(gen);
-    if (fresh) return;
-    gwGet('/live?property=' + encodeURIComponent(SP.HUB)).then(function (data) {
+    loadBot(gen);
+    var startChekt = function () {
+      setTimeout(function () {
+        if (gen !== live.clipGen || state.tab !== 'live') return;
+        loadChekt(gen);
+      }, 5000);
+    };
+    if (fresh) { startChekt(); return; }
+    gwGet('/live?property=' + encodeURIComponent(SP.HUB), 40000).then(function (data) {
       if (state.tab !== 'live') return;
       live.cameras = (data && data.cameras) || [];
       live.at = Date.now();
       live.focus = -1;
       paintWall();
+      startChekt();
     }).catch(function (e) {
       if (state.tab !== 'live') return;
       if (!live.cameras.length) el('live-wall').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+      startChekt();
     });
   }
 
@@ -640,6 +779,11 @@
       el('tab-' + tab).onclick = function () { showTab(tab); };
     });
     el('live-back').onclick = function () { live.focus = -1; applyLiveFocus(); };
+    el('clip-close').onclick = hideClip;
+    el('clip-box').onclick = function (ev) { if (ev.target === el('clip-box')) hideClip(); };
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && el('clip-box') && !el('clip-box').hidden) hideClip();
+    });
     el('save').onclick = save;
     renderSchedule();
     showTab('schedule');
