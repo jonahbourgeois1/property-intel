@@ -1,7 +1,7 @@
 /*
   safe-portal/portal/portal-patrol.js — Virtual Patrol page.
-  Opens on the 24-hour schedule. Images and notes are separate subtabs,
-  one camera at a time. Pictures are prepared when the portal password is entered.
+  Opens on the 24-hour schedule. Live Feed is every camera at once, with
+  clips on the right. Images and notes stay one camera at a time.
 */
 (function () {
   'use strict';
@@ -231,14 +231,243 @@
     renderCameraFrames('note-cam', 'note-grid', state.notes, 'noteId', 'No notes yet.', 'All notes');
   }
 
+  var GW = 'https://xuzftiqa5gqy35yf26y2bca2ji0ivbnj.lambda-url.us-east-1.on.aws';
+  var live = { cameras: [], clips: [], at: 0, focus: -1, clip: -1, gen: 0 };
+
+  function gridCols(n) {
+    if (n <= 1) return 1;
+    if (n <= 4) return 2;
+    if (n <= 6) return 3;
+    return 4;
+  }
+
+  function gwGet(path) {
+    return fetch(GW + path, { headers: { 'x-viewer-key': SP.pass() } }).then(function (r) {
+      if (r.status === 429) throw new Error('The camera service is busy. Wait a minute and open Live Feed again.');
+      if (r.status === 401) throw new Error('That password did not open the cameras.');
+      if (!r.ok) {
+        return r.json().catch(function () { return {}; }).then(function (body) {
+          throw new Error((body && body.error) || ('The camera service failed (' + r.status + ')'));
+        });
+      }
+      return r.json();
+    });
+  }
+
+  function snapUrls(cam) {
+    try {
+      var token = new URL(cam.mjpeg_url).searchParams.get('access_token');
+      if (!token) return [];
+      var part = token.split('.')[1] || '';
+      var norm = part.replace(/-/g, '+').replace(/_/g, '/');
+      var payload = JSON.parse(atob(norm + '==='.slice((norm.length + 3) % 4)));
+      var mac = String(cam.mac || payload.sub || '').replace(/:/g, '').toUpperCase();
+      if (!mac) return [];
+      var ch = cam.channel != null ? cam.channel : (payload.channel != null ? payload.channel : 0);
+      return ['https://api.chekt.com/api/v1/snapshots/' + encodeURIComponent(mac) + '/' + encodeURIComponent(ch) + '?access_token=' + encodeURIComponent(token)];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function bindFeed(img, stateEl, cam, gen) {
+    var url = cam.mjpeg_url;
+    var snaps = snapUrls(cam);
+    var stopped = false;
+    var timer = 0;
+    var poll = 0;
+    var snapTimer = 0;
+    var busy = false;
+    function alive() { return !stopped && gen === live.gen; }
+    function stopTimers() {
+      if (timer) clearTimeout(timer);
+      if (poll) clearInterval(poll);
+      if (snapTimer) clearInterval(snapTimer);
+      timer = poll = snapTimer = 0;
+    }
+    function mark(text, bad) {
+      if (!alive() || !stateEl) return;
+      stateEl.textContent = text;
+      stateEl.classList.toggle('bad', !!bad);
+      img.classList.toggle('on', text === 'LIVE');
+    }
+    img.__stop = function () {
+      stopped = true;
+      stopTimers();
+      img.onload = null;
+      img.onerror = null;
+      img.removeAttribute('src');
+      img.__stop = null;
+    };
+    function saw() { return img.naturalWidth > 0; }
+    function pollSnap() {
+      if (!alive() || busy || !snaps.length) return;
+      busy = true;
+      fetch(snaps[0], { mode: 'cors', cache: 'no-store', referrerPolicy: 'no-referrer' }).then(function (r) {
+        if (!alive() || !r.ok) return null;
+        return r.json();
+      }).then(function (body) {
+        if (!alive() || !body || body.data == null || body.data === '') return;
+        img.onload = function () { if (alive() && saw()) mark('LIVE', false); };
+        img.src = body.base64Encoded === false ? String(body.data) : ('data:image/jpeg;base64,' + body.data);
+      }).catch(function () {}).then(function () { busy = false; });
+    }
+    function arm() {
+      stopTimers();
+      poll = setInterval(function () {
+        if (!alive()) { stopTimers(); return; }
+        if (saw()) { stopTimers(); mark('LIVE', false); }
+      }, 400);
+      timer = setTimeout(function () {
+        if (!alive() || saw()) { if (saw()) mark('LIVE', false); return; }
+        stopTimers();
+        if (!snaps.length) { mark('no stream', true); return; }
+        mark('connecting…', false);
+        pollSnap();
+        snapTimer = setInterval(pollSnap, 2000);
+      }, 8000);
+    }
+    img.referrerPolicy = 'no-referrer';
+    img.onload = function () { if (alive() && saw()) { stopTimers(); mark('LIVE', false); } };
+    img.onerror = function () { if (alive() && !saw() && snaps.length) { stopTimers(); pollSnap(); snapTimer = setInterval(pollSnap, 2000); } };
+    img.src = url;
+    arm();
+  }
+
+  function stopLive() {
+    live.gen++;
+    var wall = el('live-wall');
+    if (!wall) return;
+    Array.prototype.forEach.call(wall.querySelectorAll('img.feed'), function (img) {
+      if (typeof img.__stop === 'function') img.__stop();
+      else img.removeAttribute('src');
+    });
+    var player = el('live-player');
+    if (player) {
+      var video = player.querySelector('video');
+      if (video) { video.pause(); video.removeAttribute('src'); }
+    }
+  }
+
+  function applyLiveFocus() {
+    var wall = el('live-wall');
+    var back = el('live-back');
+    if (!wall) return;
+    var shown = 0;
+    Array.prototype.forEach.call(wall.querySelectorAll('.live-cell'), function (cell) {
+      var on = live.focus < 0 || Number(cell.getAttribute('data-i')) === live.focus;
+      cell.hidden = !on;
+      if (on) shown++;
+    });
+    var cols = live.focus >= 0 ? 1 : gridCols(shown);
+    wall.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+    if (back) back.hidden = live.focus < 0;
+  }
+
+  function paintWall() {
+    var wall = el('live-wall');
+    var cams = live.cameras || [];
+    if (!cams.length) {
+      wall.innerHTML = '<p class="empty">No cameras came back from the live service.</p>';
+      return;
+    }
+    live.gen++;
+    var gen = live.gen;
+    wall.innerHTML = cams.map(function (cam, i) {
+      var name = cam.name || cam.device_id || 'Camera';
+      var stateText = cam.mjpeg_url ? 'connecting…' : 'no stream';
+      return '<button type="button" class="live-cell" data-i="' + i + '"><img class="feed" alt="" referrerpolicy="no-referrer"><span class="st' + (cam.mjpeg_url ? '' : ' bad') + '">' + esc(stateText) + '</span><span class="nm">' + esc(name) + '</span></button>';
+    }).join('');
+    wall.style.gridTemplateColumns = 'repeat(' + gridCols(cams.length) + ', minmax(0, 1fr))';
+    Array.prototype.forEach.call(wall.querySelectorAll('.live-cell'), function (cell, i) {
+      cell.onclick = function () {
+        live.focus = live.focus === i ? -1 : i;
+        applyLiveFocus();
+      };
+      var cam = cams[i];
+      if (!cam || !cam.mjpeg_url) return;
+      var img = cell.querySelector('img.feed');
+      var stateEl = cell.querySelector('.st');
+      setTimeout(function () {
+        if (gen !== live.gen) return;
+        bindFeed(img, stateEl, cam, gen);
+      }, i * 180);
+    });
+    el('live-sub').firstChild.textContent = cams.length + ' cameras together. Clips from the last 7 days are on the right. ';
+  }
+
+  function paintClips() {
+    var list = live.clips || [];
+    var count = el('live-clip-n');
+    var box = el('live-clips');
+    if (count) count.textContent = list.length ? '(' + list.length + ')' : '';
+    if (!list.length) {
+      box.innerHTML = '<p class="empty">No clips in the last 7 days.</p>';
+      return;
+    }
+    box.innerHTML = list.map(function (item, i) {
+      var name = item.device_name || item.camera || item.name || 'Camera';
+      var when = SP.when(item.event_time) || '';
+      var thumb = item.thumbnail ? '<img alt="" src="' + esc(item.thumbnail) + '" referrerpolicy="no-referrer">' : '<img alt="">';
+      return '<button type="button" class="live-clip' + (i === live.clip ? ' on' : '') + '" data-i="' + i + '">' + thumb + '<span><b>' + esc(name) + '</b><span>' + esc(when) + '</span></span></button>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.live-clip'), function (btn) {
+      btn.onclick = function () { playClip(Number(btn.getAttribute('data-i'))); };
+    });
+  }
+
+  function playClip(index) {
+    var item = (live.clips || [])[index];
+    if (!item || !item.mp4) return;
+    live.clip = index;
+    el('live-player').innerHTML = '<video controls playsinline referrerpolicy="no-referrer" src="' + esc(item.mp4) + '"' + (item.thumbnail ? ' poster="' + esc(item.thumbnail) + '"' : '') + '></video>';
+    var video = el('live-player').querySelector('video');
+    if (video) video.play().catch(function () {});
+    Array.prototype.forEach.call(el('live-clips').querySelectorAll('.live-clip'), function (btn) {
+      btn.classList.toggle('on', Number(btn.getAttribute('data-i')) === index);
+    });
+  }
+
+  function openLive() {
+    if (!SP.pass()) {
+      el('live-wall').innerHTML = '<p class="empty">Sign in to open the live feeds.</p>';
+      return;
+    }
+    if (live.cameras.length && (Date.now() - live.at) < 50 * 60 * 1000) {
+      paintWall();
+      paintClips();
+      return;
+    }
+    el('live-wall').innerHTML = '<p class="empty">Opening the cameras…</p>';
+    el('live-clips').innerHTML = '<p class="empty">Loading clips…</p>';
+    gwGet('/live?property=' + encodeURIComponent(SP.HUB)).then(function (data) {
+      if (state.tab !== 'live') return null;
+      live.cameras = (data && data.cameras) || [];
+      live.at = Date.now();
+      live.focus = -1;
+      paintWall();
+      return gwGet('/clips?property=' + encodeURIComponent(SP.HUB) + '&days=7');
+    }).then(function (data) {
+      if (!data || state.tab !== 'live') return;
+      live.clips = data.events || [];
+      paintClips();
+    }).catch(function (e) {
+      if (state.tab !== 'live') return;
+      if (!live.cameras.length) el('live-wall').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+      el('live-clips').innerHTML = '<p class="empty">' + esc(e.message) + '</p>';
+    });
+  }
+
   function showTab(name) {
     state.tab = name;
-    ['schedule', 'images', 'notes'].forEach(function (tab) {
+    ['schedule', 'live', 'images', 'notes'].forEach(function (tab) {
       el('tab-' + tab).classList.toggle('on', tab === name);
       el('panel-' + tab).classList.toggle('on', tab === name);
     });
     if (name === 'images') renderImages();
     if (name === 'notes') renderNotes();
+    if (name === 'live') openLive();
+    else stopLive();
   }
 
   function applyPreset(preset) {
@@ -348,9 +577,10 @@
     var theme = new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';
     document.documentElement.classList.add('theme-' + theme);
     el('gate-form').onsubmit = function (ev) { ev.preventDefault(); enter(el('gate-pass').value); };
-    ['schedule', 'images', 'notes'].forEach(function (tab) {
+    ['schedule', 'live', 'images', 'notes'].forEach(function (tab) {
       el('tab-' + tab).onclick = function () { showTab(tab); };
     });
+    el('live-back').onclick = function () { live.focus = -1; applyLiveFocus(); };
     el('save').onclick = save;
     renderSchedule();
     showTab('schedule');
