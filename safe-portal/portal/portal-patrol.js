@@ -277,7 +277,8 @@
 
   function show(cache) {
     if (!cache) return;
-    if (!state.painted) {
+    var first = !state.painted;
+    if (first) {
       state.painted = true;
       state.cameras = cache.cameras || [];
       state.qa = cache.qa || 'bronze';
@@ -287,9 +288,9 @@
       if (!state.editId && state.cameras.length) state.editId = String(state.cameras[0].device_id);
       el('property-name').textContent = cache.name || '';
       renderSchedule();
+      setStatus('');
     }
     applyPictures(cache);
-    setStatus('');
   }
 
   function waitForPictures() {
@@ -322,7 +323,7 @@
       }
       el('gate-pass').value = '';
       hideGate();
-      SP.warm().then(show).catch(function (e) { setStatus(e.message); });
+      SP.warm(data).then(show).catch(function (e) { setStatus(e.message); });
     }).catch(function (e) {
       SP.setPass('');
       el('gate-enter').disabled = false;

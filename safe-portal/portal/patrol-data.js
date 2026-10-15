@@ -64,7 +64,14 @@
   }
 
   function check() {
-    return callApi({ route: 'scan-patrol', hub: HUB, pass: pass() }, 20000);
+    return callApi({ route: 'scan-patrol', hub: HUB, pass: pass() }, 60000);
+  }
+
+  function cdnJson(key) {
+    return fetch(CDN + String(key || '').replace(/^\//, '')).then(function (r) {
+      if (!r.ok) return null;
+      return r.json();
+    }).catch(function () { return null; });
   }
 
   function keysFor(cam) {
@@ -340,23 +347,147 @@
     };
   }
 
-  function warm(listData) {
+  function camerasFromState(state, patrol) {
+    var prev = (state && state.previous) || {};
+    var times = (patrol && patrol.times) || {};
+    var ids = {};
+    Object.keys(prev).forEach(function (id) { if (/^[0-9]{1,16}$/.test(id)) ids[id] = prev[id]; });
+    Object.keys(times).forEach(function (id) { if (/^[0-9]{1,16}$/.test(id) && !ids[id]) ids[id] = ''; });
+    return Object.keys(ids).map(function (id) {
+      return { device_id: id, name: id, latest: String(ids[id] || '') };
+    });
+  }
+
+  function nameCameras(cameras) {
+    return pool(cameras, 12, function (cam) {
+      if (!cam.latest) return Promise.resolve();
+      return cdnJson(jsonUrl(cam.latest).slice(CDN.length)).then(function (obj) {
+        if (obj && obj.name) cam.name = String(obj.name);
+      });
+    }).then(function () { return cameras; });
+  }
+
+  function scheduleCache(patrol, cameras) {
+    var known = {};
+    var times = {};
+    cameras.forEach(function (cam) { known[String(cam.device_id)] = true; });
+    Object.keys((patrol && patrol.times) || {}).forEach(function (id) {
+      if (known[id]) times[id] = (patrol.times[id] || []).slice();
+    });
+    return {
+      name: (patrol && patrol.name) || '',
+      cameras: cameras.map(function (cam) {
+        return { device_id: String(cam.device_id), name: cam.name || String(cam.device_id) };
+      }),
+      qa: patrol && patrol.saved ? (patrol.qa || 'bronze') : 'bronze',
+      times: times,
+      saved: !!(patrol && patrol.saved),
+      zone: (patrol && patrol.zone) || 'America/Chicago',
+      reviewed: [],
+      notes: []
+    };
+  }
+
+  // Newest picture first. Each stored frame points at the one before it, so the
+  // page can show the schedule and the latest pictures without asking Apps
+  // Script to list every file.
+  function walkHistory(cameras, onBatch) {
+    var reviewed = [];
+    var notes = [];
+    var pending = cameras.map(function (cam) { return cam.latest || ''; });
+    var seen = {};
+    function wave() {
+      var batch = [];
+      for (var i = 0; i < pending.length; i++) {
+        var key = jsonUrl(pending[i]).slice(CDN.length);
+        pending[i] = '';
+        if (!key || seen[key]) continue;
+        seen[key] = true;
+        batch.push({ index: i, key: key, cam: cameras[i] });
+      }
+      if (!batch.length) return Promise.resolve();
+      return pool(batch, 24, function (job) {
+        return cdnJson(job.key).then(function (obj) {
+          if (!obj) return;
+          var prev = String(obj.previous || '');
+          if (prev.indexOf('camera-scans/') === 0) pending[job.index] = prev;
+          if (!obj.reviewed_at) return;
+          var frame = {
+            key: job.key,
+            name: obj.name || job.cam.name,
+            device_id: String(obj.device_id || job.cam.device_id),
+            requested_at: obj.requested_at || '',
+            description: String(obj.description || ''),
+            reviewed_at: String(obj.reviewed_at || '')
+          };
+          reviewed.push(frame);
+          if (frame.description) notes.push(frame);
+        });
+      }).then(function () {
+        reviewed.sort(function (a, b) { return String(b.requested_at).localeCompare(String(a.requested_at)); });
+        notes.sort(function (a, b) { return String(b.requested_at).localeCompare(String(a.requested_at)); });
+        onBatch(reviewed.slice(), notes.slice());
+        return wave();
+      });
+    }
+    return wave().then(function () { return { reviewed: reviewed, notes: notes }; });
+  }
+
+  function warm(patrolData) {
     if (warmPromise) return warmPromise;
     markWarming(true);
-    var listed = listData ? Promise.resolve(listData) : list();
-    warmPromise = listed.then(function (data) {
-      if (!data || !data.ok) {
-        var err = new Error((data && data.error) || 'Could not open the property');
+    var patrolPromise = (patrolData && patrolData.ok && patrolData.times)
+      ? Promise.resolve(patrolData)
+      : cdnJson('camera-scan-patrol/' + HUB + '.json').then(function (obj) {
+        if (obj && obj.times) {
+          return {
+            ok: true,
+            saved: !!obj.qa,
+            qa: obj.qa || '',
+            times: obj.times,
+            zone: 'America/Chicago',
+            name: ''
+          };
+        }
+        return patrolGet();
+      });
+    warmPromise = patrolPromise.then(function (patrol) {
+      if (!patrol || !patrol.ok) {
+        var err = new Error((patrol && patrol.error) || 'Could not open the property');
         err.auth = true;
         throw err;
       }
-      return Promise.all([patrolGet(), ingest(data.cameras || [])]).then(function (parts) {
-        var patrol = parts[0] && parts[0].ok ? parts[0] : { saved: false, times: {}, qa: 'bronze', zone: 'America/Chicago' };
-        var cache = pack(data, patrol, parts[1]);
-        writeCache(cache);
-        markWarming(false);
-        preload(cache.reviewed);
-        return cache;
+      return cdnJson('camera-scan-state/' + HUB + '.json').then(function (state) {
+        if (!state || !state.previous) {
+          return list().then(function (data) {
+            if (!data || !data.ok) {
+              var err = new Error((data && data.error) || 'Could not open the property');
+              err.auth = true;
+              throw err;
+            }
+            return ingest(data.cameras || []).then(function (frames) {
+              var cache = pack(data, patrol, frames);
+              writeCache(cache);
+              markWarming(false);
+              preload((cache.reviewed || []).slice(0, 24));
+              return cache;
+            });
+          });
+        }
+        var cameras = camerasFromState(state, patrol);
+        return nameCameras(cameras).then(function () {
+          var cache = scheduleCache(patrol, cameras);
+          writeCache(cache);
+          return walkHistory(cameras, function (reviewed, notes) {
+            cache.reviewed = reviewed;
+            cache.notes = notes;
+            writeCache(cache);
+          }).then(function () {
+            markWarming(false);
+            preload((cache.reviewed || []).slice(0, 24));
+            return cache;
+          });
+        });
       });
     }).catch(function (err) {
       markWarming(false);

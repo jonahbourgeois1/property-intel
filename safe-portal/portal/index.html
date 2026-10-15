@@ -22,7 +22,7 @@
 -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="../fixtures.js"></script>
-<script src="patrol-data.js?v=0.9.4"></script>
+<script src="patrol-data.js?v=0.9.5"></script>
 <style>
   :root {
     --top-h: 60px; --nav-w: 264px; --nav-w-min: 68px;
@@ -366,7 +366,7 @@
       $('gate-pass').value = '';
       hideGate();
       loadPage();
-      SP.warm().catch(function (err) {
+      SP.warm(data).catch(function (err) {
         if (!err.auth) return;
         SP.setPass('');
         showGate(err.message);
