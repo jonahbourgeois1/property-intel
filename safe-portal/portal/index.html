@@ -22,7 +22,7 @@
 -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="../fixtures.js"></script>
-<script src="patrol-data.js?v=0.9.6"></script>
+<script src="patrol-data.js?v=0.9.7"></script>
 <style>
   :root {
     --top-h: 60px; --nav-w: 264px; --nav-w-min: 68px;
@@ -256,12 +256,12 @@
   }
 
   function pageUrl(id, p) {
-    if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme);
+    if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme) + '&v=0.9.7';
     var q = new URLSearchParams();
     var slug = p || state.p;
     if (id === 'home') q.set('mode', 'portal');
     else q.set('p', slug);
-    q.set('v', '0.9.6');
+    q.set('v', '0.9.7');
     q.set('layout', state.layout); q.set('theme', state.theme);
     if (state.pin) q.set('pin', state.pin);
     var file = (id === 'home' || id === 'residence' || id === 'community') ? 'home.html' : id + '.html';

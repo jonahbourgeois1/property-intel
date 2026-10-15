@@ -367,6 +367,41 @@
     }).then(function () { return cameras; });
   }
 
+  function mergeNotes(primary, extra) {
+    var out = [];
+    var seen = {};
+    function take(list) {
+      (list || []).forEach(function (frame) {
+        if (!frame || !frame.key || !frame.description || seen[frame.key]) return;
+        seen[frame.key] = true;
+        out.push(frame);
+      });
+    }
+    take(primary);
+    take(extra);
+    out.sort(function (a, b) { return String(b.requested_at).localeCompare(String(a.requested_at)); });
+    return out;
+  }
+
+  function saveNotes(notes) {
+    if (!pass() || !notes || !notes.length) return Promise.resolve();
+    return postApi({
+      route: 'scan-notes',
+      hub: HUB,
+      pass: pass(),
+      notes: notes.slice(0, 400).map(function (frame) {
+        return {
+          key: frame.key,
+          device_id: frame.device_id,
+          name: frame.name,
+          requested_at: frame.requested_at,
+          description: frame.description,
+          reviewed_at: frame.reviewed_at
+        };
+      })
+    }).catch(function () {});
+  }
+
   function scheduleCache(patrol, cameras) {
     var known = {};
     var times = {};
@@ -475,14 +510,39 @@
           });
         }
         var cameras = camerasFromState(state, patrol);
-        return nameCameras(cameras).then(function () {
+        var prior = peek();
+        return Promise.all([
+          nameCameras(cameras),
+          cdnJson('camera-scan-notes/' + HUB + '.json')
+        ]).then(function (parts) {
+          var indexed = (parts[1] && parts[1].notes) || [];
           var cache = scheduleCache(patrol, cameras);
+          cache.notes = mergeNotes(indexed, prior && prior.notes);
+          cache.notesReady = indexed.length > 0 || !!(prior && prior.notesReady && cache.notes.length);
+          if (prior && prior.reviewedReady && prior.reviewed && prior.reviewed.length) {
+            cache.reviewed = prior.reviewed;
+            cache.reviewedReady = true;
+          }
           writeCache(cache);
+          if (cache.notesReady && cache.reviewedReady) {
+            markWarming(false);
+            preload((cache.reviewed || []).slice(0, 24));
+            return cache;
+          }
+          var waveN = 0;
+          var lastNotes = cache.notes.length;
           return walkHistory(cameras, function (reviewed, notes) {
+            waveN++;
             cache.reviewed = reviewed;
-            cache.notes = notes;
-            writeCache(cache);
+            if (!cache.notesReady) cache.notes = mergeNotes(cache.notes, notes);
+            var grew = cache.notes.length !== lastNotes;
+            lastNotes = cache.notes.length;
+            if (grew || waveN % 8 === 0) writeCache(cache);
           }).then(function () {
+            cache.reviewedReady = true;
+            cache.notesReady = true;
+            writeCache(cache);
+            if (!indexed.length) saveNotes(cache.notes);
             markWarming(false);
             preload((cache.reviewed || []).slice(0, 24));
             return cache;

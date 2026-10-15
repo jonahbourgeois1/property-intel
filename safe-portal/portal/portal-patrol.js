@@ -18,6 +18,7 @@
     editId: '',
     imageId: '',
     noteId: '',
+    notePicked: false,
     painted: false
   };
 
@@ -204,6 +205,7 @@
     fillSelect(select, frames, current, allLabel);
     select.onchange = function () {
       state[currentKey] = select.value;
+      if (currentKey === 'noteId') state.notePicked = true;
       renderCameraFrames(selectId, gridId, frames, currentKey, empty, allLabel);
     };
     var all = !!(allLabel && current === '*');
@@ -225,6 +227,7 @@
   }
 
   function renderNotes() {
+    if (!state.notePicked) state.noteId = '*';
     renderCameraFrames('note-cam', 'note-grid', state.notes, 'noteId', 'No notes yet.', 'All notes');
   }
 
