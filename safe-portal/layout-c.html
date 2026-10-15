@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="referrer" content="no-referrer-when-downgrade">
+<title>Vyanet SAFE — Layout C · Map canvas (mock)</title>
+<!--
+  safe-portal/layout-c.html — SAFE portal layout variant C: MAP CANVAS
+  (safe-portal 0.2.0 · mock for the Zoho Creator portal page)
+
+  The map IS the page. A full-bleed canvas (Google satellite · drone nadir ·
+  obliques · 3D model) with floating glass panels:
+    top-left      identity + substrate pills + SAFE layer chips
+    right drawer  a vertical S · A · F · E rail; the open drawer shows that
+                  component's status, Should know, Recommendations and pins,
+                  plus the selected pin's card. Collapses to the rail.
+    bottom dock   the CHEKT live filmstrip (simulated); a tile opens the
+                  floating player with its clips
+  On narrow screens the drawer becomes a bottom sheet and the dock a strip.
+  Shared engine: portal-core.js / portal-core.css; data: fixtures.js
+  (?p=residence). Writes nothing.
+-->
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="portal-core.css">
+<script src="../nadir-geo.js"></script>
+<script src="fixtures.js"></script>
+<script src="portal-core.js"></script>
+<style>
+  :root { --drawer-w: 420px; --rail-w: 46px; --glass: rgba(14,17,22,0.86); --dock-h: 118px; }
+  #stage { position: fixed; inset: 0; }
+  .glass { background: var(--glass); border: 1px solid var(--border2); border-radius: 12px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 10px 36px rgba(0,0,0,0.5); }
+  /* ---- top-left: identity + controls ---- */
+  #top { position: fixed; left: 12px; top: 12px; z-index: 40; display: flex; flex-direction: column; gap: 8px; max-width: calc(100% - var(--drawer-w) - 36px); }
+  #ident-card { display: flex; align-items: center; gap: 14px; padding: 10px 14px; }
+  #ident-card .sp-ident { min-width: 0; }
+  #ident-card .vname { font: 600 10.5px var(--mono); color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; }
+  #ident-card .sp-chips { flex-wrap: nowrap; }
+  #ctl { display: flex; align-items: center; gap: 8px; padding: 6px 8px; flex-wrap: wrap; }
+  #ctl .sep { width: 1px; height: 22px; background: var(--border2); }
+  /* ---- right drawer ---- */
+  #drawer {
+    position: fixed; right: 12px; top: 12px; bottom: 12px; z-index: 40; width: var(--drawer-w);
+    display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); overflow: hidden; transition: width 0.22s;
+  }
+  #drawer.closed { width: var(--rail-w); }
+  #drawer.closed #drawer-body { visibility: hidden; }
+  #rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 0; border-right: 1px solid var(--border); }
+  #rail button { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; color: var(--text2); font: 700 13px var(--mono); position: relative; }
+  #rail button:hover { background: var(--surface3); color: var(--text); }
+  #rail button.on { color: #0a0c0f; }
+  #rail button.on.S { background: var(--S); } #rail button.on.A { background: var(--A); } #rail button.on.F { background: var(--F); } #rail button.on.E { background: var(--E); }
+  #rail button.on.X { background: var(--text); }
+  #rail button .n { position: absolute; right: -2px; top: -3px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: var(--surface3); color: var(--text2); font: 600 9px var(--mono); display: grid; place-items: center; border: 1px solid var(--border2); }
+  #rail button.on .n { background: #0a0c0f; color: #fff; border-color: #0a0c0f; }
+  #rail .sep { width: 22px; height: 1px; background: var(--border2); margin: 4px 0; }
+  #rail .spacer { flex: 1; }
+  #rail button svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  #drawer-body { display: flex; flex-direction: column; min-height: 0; }
+  #drawer-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  #drawer-head .sp-k { width: 26px; height: 26px; font-size: 13px; border-radius: 7px; }
+  #drawer-head h2 { font-size: 14px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #drawer-head .cnt { font: 10.5px var(--mono); color: var(--text3); white-space: nowrap; }
+  #drawer-scroll { flex: 1; min-height: 0; }
+  #card { margin: 12px 12px 0; display: none; box-shadow: none; }
+  #card.on { display: block; }
+  #drawer-content.sp-safe-body { padding-top: 10px; }
+  #drawer-foot { flex-shrink: 0; border-top: 1px solid var(--border); padding: 8px 14px; font: 10px var(--mono); color: var(--text3); line-height: 1.5; }
+  /* ---- bottom dock: live filmstrip ---- */
+  #dock { position: fixed; left: 12px; bottom: 12px; z-index: 40; display: flex; align-items: stretch; gap: 8px; padding: 8px; max-width: calc(100% - var(--drawer-w) - 36px); }
+  #dock-label { display: flex; flex-direction: column; justify-content: center; gap: 6px; padding: 0 6px 0 8px; min-width: 92px; }
+  #dock-label b { font-size: 12px; font-weight: 600; }
+  #dock-label span { font: 10px var(--mono); color: var(--live); }
+  #dock-label button { margin-top: 2px; }
+  #dock-feeds { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+  #dock-feeds::-webkit-scrollbar { display: none; }
+  #dock-feeds .sp-tile { width: 164px; flex-shrink: 0; }
+  #dock-feeds .sp-tile .ts { display: none; }
+  /* ---- floating player ---- */
+  #player-panel { position: fixed; left: 12px; bottom: calc(var(--dock-h) + 20px); z-index: 41; width: 392px; max-width: calc(100% - var(--drawer-w) - 36px); display: none; flex-direction: column; max-height: calc(100% - var(--dock-h) - 150px); }
+  #player-panel.on { display: flex; }
+  #pp-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 8px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  #pp-head .sp-seg { margin-left: auto; }
+  #pp-head .close { width: 26px; height: 26px; border-radius: 6px; color: var(--text2); font-size: 18px; line-height: 1; }
+  #pp-head .close:hover { background: var(--surface3); color: var(--text); }
+  #pp-body { padding: 10px 12px 12px; overflow-y: auto; scrollbar-width: thin; min-height: 0; }
+  #pp-clips { margin-top: 8px; }
+  #pp-clips .sp-h { margin-top: 10px; }
+  /* ---- legend ---- */
+  #legend { position: fixed; right: calc(var(--drawer-w) + 24px); bottom: 12px; z-index: 39; transition: right 0.22s; }
+  body.drawer-closed #legend { right: calc(var(--rail-w) + 24px); }
+  #stage-note { position: fixed; left: 12px; top: 120px; z-index: 39; display: none; }
+  #stage-note.on { display: block; }
+  /* sub-stage chrome */
+  #sub-still { display: flex; flex-direction: column; }
+  #still { position: relative; flex: 1; min-height: 0; }
+  #thumbs { position: absolute; left: 50%; bottom: calc(var(--dock-h) + 24px); transform: translateX(-50%); z-index: 3; width: min(640px, calc(100% - var(--drawer-w) - 48px)); padding: 6px; }
+  @media (max-width: 1240px) { :root { --drawer-w: 380px; } }
+  @media (max-width: 860px) {
+    :root { --drawer-w: 100%; --dock-h: 100px; }
+    #top { max-width: calc(100% - 24px); }
+    #ident-card .vname, #ident-card .sp-chips { display: none; }
+    #ctl .sp-tool, #ctl .sep:nth-of-type(2), #ctl .sep:nth-of-type(3) { display: none; }
+    #drawer { left: 12px; right: 12px; top: auto; width: auto; height: 42%; bottom: 12px; grid-template-columns: var(--rail-w) minmax(0, 1fr); }
+    #drawer.closed { width: auto; height: 60px; grid-template-columns: 1fr; }
+    #drawer.closed #rail { flex-direction: row; justify-content: center; border-right: 0; padding: 10px; }
+    #drawer.closed #rail .spacer { display: none; }
+    #dock { bottom: calc(42% + 24px); max-width: calc(100% - 24px); }
+    #dock-feeds .sp-tile { width: 136px; }
+    body.drawer-closed #dock { bottom: 84px; }
+    /* the player takes the sheet's place; the dock steps aside while it is open */
+    #player-panel { bottom: 12px; left: 12px; right: 12px; width: auto; max-width: none; max-height: 70%; z-index: 45; }
+    body.player-on #dock { display: none; }
+    #legend { display: none; }
+    #thumbs { width: calc(100% - 24px); bottom: calc(42% + var(--dock-h) + 36px); }
+  }
+</style>
+</head>
+<body>
+<div id="stage" class="sp-stage">
+  <div id="sub-map" class="sp-sub on"></div>
+  <div id="sub-nadir" class="sp-sub"></div>
+  <div id="sub-still" class="sp-sub"><div id="still" class="sp-still"></div></div>
+  <div id="sub-3d" class="sp-sub"></div>
+  <div id="thumbs" class="sp-thumbs glass" style="display:none"></div>
+</div>
+<div id="stage-note" class="sp-mapnote"></div>
+<div id="top">
+  <div id="ident-card" class="glass">
+    <div id="brand"></div>
+    <span class="vname">C · Map canvas</span>
+    <div class="sp-ident" id="ident"></div>
+    <div class="sp-chips" id="chips"></div>
+    <div id="switch"></div>
+  </div>
+  <div id="ctl" class="glass">
+    <div class="sp-seg" id="substrate">
+      <button data-sub="map" class="on" onclick="setSub('map')">2D map</button>
+      <button data-sub="nadir" onclick="setSub('nadir')">Nadir</button>
+      <button data-sub="still" onclick="setSub('still')">Obliques</button>
+      <button data-sub="3d" onclick="setSub('3d')">3D</button>
+    </div>
+    <span class="sep"></span>
+    <div class="sp-layers" id="layers"></div>
+    <span class="sep"></span>
+    <button class="sp-tool on" id="btn-dim" onclick="toggleDim()" title="Dim layers other than the open SAFE tab">Dim others</button>
+    <button class="sp-tool on" id="btn-lot" onclick="toggleLot()">Lot</button>
+    <button class="sp-tool" id="btn-labels" onclick="toggleLabels()">Labels</button>
+    <button class="sp-tool" id="btn-fit" onclick="fitAll()">Fit</button>
+    <span class="sep"></span>
+    <button class="sp-tool" onclick="zoomBy(1)" title="Zoom in">+</button>
+    <button class="sp-tool" onclick="zoomBy(-1)" title="Zoom out">−</button>
+  </div>
+</div>
+<aside id="drawer" class="glass">
+  <div id="rail"></div>
+  <div id="drawer-body">
+    <div id="drawer-head"><span class="sp-k" id="dh-k"></span><h2 id="dh-title"></h2><span class="cnt" id="dh-cnt"></span></div>
+    <div id="drawer-scroll" class="sp-scroll">
+      <div id="card" class="sp-card"></div>
+      <div id="drawer-content" class="sp-safe-body"></div>
+    </div>
+    <div id="drawer-foot">Pins from the SAFE record (mock) · solid = surveyed, dashed = estimated / mock · live feeds simulated from technician stills</div>
+  </div>
+</aside>
+<div id="dock" class="glass">
+  <div id="dock-label"><b>Live · CHEKT</b><span id="dock-sub"></span><button class="sp-act sm" onclick="openClips()">All clips</button></div>
+  <div id="dock-feeds"></div>
+</div>
+<div id="player-panel" class="glass">
+  <div id="pp-head"><b id="pp-title" style="font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0"></b>
+    <div class="sp-seg"><button id="pp-tab-live" class="on" onclick="ppTab('live')">Live</button><button id="pp-tab-clips" onclick="ppTab('clips')">Clips</button></div>
+    <button class="close" onclick="closePlayer()" title="Close">×</button></div>
+  <div id="pp-body"><div class="sp-player" id="player"></div><div id="pp-clips" class="sp-clips" style="display:none"></div></div>
+</div>
+<div id="legend" class="sp-legend"></div>
+<script>
+(function () {
+  'use strict';
+  var SP = window.SafePortal;
+  var $ = function (id) { return document.getElementById(id); };
+  var R = SP.load(SP.params.get('p') || 'residence');
+  var state = { tab: 'S', sub: 'map', sel: null, cam: null, clip: null, ppTab: 'live', dim: true, lot: true, labels: false, still: 'alpha', drawer: true };
+  var layers = { S: true, A: true, F: true, E: true };
+
+  // ---------- identity ----------
+  $('brand').innerHTML = SP.brandHTML();
+  $('ident').innerHTML = '<div class="name">' + SP.esc(R.name) + '</div><div class="addr">' + SP.esc(R.address) + '</div>';
+  $('chips').innerHTML = SP.chipsHTML(R, { build: false });
+  $('switch').innerHTML = SP.switchHTML('c');
+  document.title = 'Vyanet SAFE — ' + R.name + ' · Layout C (mock)';
+
+  // ---------- stage ----------
+  var map = SP.createMap($('sub-map'), R, {
+    layers: layers, focus: state.tab, lot: true, zoom: 19, mapTypeControl: false, zoomControl: false,
+    onSelect: function (p, meta) { if (p) onPin(p.id, 'map'); else if (meta.source === 'map') closeCard(); },
+    onFail: function () { if (R.drone && state.sub === 'map') { setSub('nadir'); note('Google Maps is not available from this origin — showing the drone nadir instead.'); } }
+  });
+  var nadir = R.drone ? SP.createNadir($('sub-nadir'), R, {
+    layers: layers, focus: state.tab, labels: false,
+    onSelect: function (p, meta) { if (p) onPin(p.id, 'nadir'); else if (meta.source === 'nadir') closeCard(); }
+  }) : null;
+  var model = R.drone ? SP.createModel($('sub-3d'), R) : null;
+  if (!R.drone) document.querySelectorAll('#substrate button:not([data-sub="map"])').forEach(function (b) { b.disabled = true; b.title = 'No drone capture on this record'; });
+  $('legend').innerHTML = SP.legendHTML(R);
+  function note(msg) { var n = $('stage-note'); n.textContent = msg; n.classList.add('on'); setTimeout(function () { n.classList.remove('on'); }, 6000); }
+
+  window.setSub = function (s) {
+    if (s !== 'map' && !R.drone) return;
+    var prev = state.sub;
+    state.sub = s;
+    document.querySelectorAll('#substrate button').forEach(function (b) { b.classList.toggle('on', b.dataset.sub === s); });
+    ['map', 'nadir', 'still', '3d'].forEach(function (k) { $('sub-' + k).classList.toggle('on', k === s); });
+    $('legend').style.display = (s === 'map' || s === 'nadir') ? '' : 'none';
+    $('thumbs').style.display = s === 'still' ? '' : 'none';
+    if (s === '3d' && model) model.show(); else if (prev === '3d' && model) model.hide();
+    if (s === 'still') renderStill();
+    if (s === 'map') map.resize();
+    if (s === 'nadir' && nadir) nadir.resize();
+  };
+  function renderStill() {
+    var ob = R.drone.obliques.filter(function (o) { return o.id === state.still; })[0] || R.drone.obliques[0];
+    $('still').innerHTML = SP.stillHTML(ob);
+    $('thumbs').innerHTML = SP.thumbsHTML(R, state.still, true);
+    $('thumbs').querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = b.dataset.view;
+        if (v === 'nadir' || v === '3d') { setSub(v); return; }
+        state.still = v; renderStill();
+      });
+    });
+  }
+
+  // ---------- layers / tools ----------
+  function renderLayers() {
+    $('layers').innerHTML = SP.ORDER.map(function (c) {
+      return '<button class="sp-layer ' + c + (layers[c] ? ' on' : '') + '" onclick="toggleLayer(\'' + c + '\')" title="' + SP.esc(SP.COMP[c].label) + '"><span class="sp-k ' + c + '">' + c + '</span><span class="n">' + R.counts[c] + '</span></button>';
+    }).join('');
+  }
+  window.toggleLayer = function (c) {
+    layers[c] = !layers[c];
+    map.setLayers(layers); if (nadir) nadir.setLayers(layers);
+    if (state.sel && R.byId[state.sel].comp === c && !layers[c]) closeCard();
+    renderLayers();
+  };
+  window.toggleDim = function () { state.dim = !state.dim; $('btn-dim').classList.toggle('on', state.dim); applyFocus(); };
+  window.toggleLot = function () { state.lot = !state.lot; $('btn-lot').classList.toggle('on', state.lot); map.setLot(state.lot); if (nadir) nadir.setLot(state.lot); };
+  window.toggleLabels = function () { state.labels = !state.labels; $('btn-labels').classList.toggle('on', state.labels); map.setLabels(state.labels); if (nadir) nadir.setLabels(state.labels); };
+  window.fitAll = function () { if (state.sub === 'map') map.fit(); };
+  window.zoomBy = function (d) { if (state.sub !== 'map') setSub('map'); map.zoomBy(d); };
+  function applyFocus() { var f = (state.dim && state.tab !== 'X') ? state.tab : null; map.setFocus(f); if (nadir) nadir.setFocus(f); }
+
+  // ---------- drawer ----------
+  var INFO_ICON = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.2"/></svg>';
+  var CHEV_L = '<svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg>';
+  var CHEV_R = '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  function renderRail() {
+    var html = SP.ORDER.map(function (c) {
+      return '<button class="' + c + (state.tab === c ? ' on' : '') + '" onclick="setTab(\'' + c + '\')" title="' + SP.esc(SP.COMP[c].label) + '">' + c + '<span class="n">' + R.counts[c] + '</span></button>';
+    }).join('');
+    html += '<span class="sep"></span><button class="X' + (state.tab === 'X' ? ' on' : '') + '" onclick="setTab(\'X\')" title="Property facts">' + INFO_ICON + '</button>';
+    html += '<span class="spacer"></span><button onclick="toggleDrawer()" title="' + (state.drawer ? 'Collapse' : 'Expand') + '">' + (state.drawer ? CHEV_R : CHEV_L) + '</button>';
+    $('rail').innerHTML = html;
+  }
+  function renderDrawer() {
+    var c = state.tab;
+    var k = $('dh-k');
+    if (c === 'X') {
+      k.className = 'sp-k X'; k.textContent = 'i'; k.style.background = 'var(--surface3)'; k.style.color = 'var(--text)';
+      $('dh-title').textContent = 'Property facts'; $('dh-cnt').textContent = R.fx.tier.length + ' tiers';
+      $('drawer-content').innerHTML = SP.factsHTML(R) + '<div class="sp-h">SAFE components</div>' + SP.ORDER.map(function (cc) {
+        return '<div class="sp-note" style="border-color:' + SP.color(cc) + '"><b style="color:' + SP.color(cc) + '">' + SP.COMP[cc].label + '</b> — ' + SP.esc(SP.COMP[cc].what) + '</div>';
+      }).join('');
+    } else {
+      k.className = 'sp-k ' + c; k.textContent = c; k.style.background = ''; k.style.color = '';
+      $('dh-title').textContent = SP.COMP[c].label; $('dh-cnt').textContent = R.counts[c] + ' pins';
+      $('drawer-content').innerHTML = SP.safeHTML(R, c, { limits: c === 'E' });
+      $('drawer-content').querySelectorAll('.sp-pinrow').forEach(function (row) { row.addEventListener('click', function () { onPin(row.dataset.id, 'list'); }); });
+      if (state.sel) markRow(state.sel);
+    }
+  }
+  function markRow(id) {
+    document.querySelectorAll('#drawer-content .sp-pinrow').forEach(function (r) { r.classList.toggle('sel', r.dataset.id === id); });
+  }
+  window.setTab = function (c) {
+    state.tab = c;
+    if (!state.drawer) { state.drawer = true; applyDrawer(); }
+    if (state.sel && c !== 'X' && R.byId[state.sel].comp !== c) closeCard();
+    renderRail(); renderDrawer(); applyFocus();
+  };
+  window.toggleDrawer = function () { state.drawer = !state.drawer; applyDrawer(); renderRail(); };
+  function applyDrawer() {
+    $('drawer').classList.toggle('closed', !state.drawer);
+    document.body.classList.toggle('drawer-closed', !state.drawer);
+    setTimeout(function () { map.resize(); }, 240);
+  }
+
+  // ---------- selection ----------
+  function onPin(id, source) {
+    var p = R.byId[id];
+    if (!p) return;
+    state.sel = id;
+    if (!state.drawer) { state.drawer = true; applyDrawer(); renderRail(); }
+    if (p.comp !== state.tab) { state.tab = p.comp; renderRail(); renderDrawer(); applyFocus(); }
+    markRow(id);
+    if (source !== 'map' && map.state.sel !== id) map.select(id, state.sub === 'map', 'sync');
+    if (nadir && source !== 'nadir' && nadir.state.sel !== id) nadir.select(id, 'sync');
+    if (state.sub === 'still' || state.sub === '3d') setSub(R.drone ? 'nadir' : 'map');
+    renderCard(p);
+    $('drawer-scroll').scrollTop = 0;
+  }
+  function renderCard(p) {
+    var card = $('card');
+    card.innerHTML = SP.cardHTML(p, R, { showMap: state.sub !== 'map' });
+    card.classList.add('on');
+    card.querySelectorAll('[data-act]').forEach(function (b) { b.addEventListener('click', function () { cardAction(b.dataset.act, p); }); });
+    card.querySelectorAll('.sp-pinrow').forEach(function (row) { row.addEventListener('click', function () { onPin(row.dataset.id, 'card'); }); });
+  }
+  function cardAction(act, p) {
+    if (act === 'close') { closeCard(); return; }
+    if (act === 'live') { openPlayer(p.id, null, 'live'); return; }
+    if (act === 'clips') { openPlayer(p.id, null, 'clips'); return; }
+    if (act === 'unlock') { SP.toast('<b>Unlock sent</b> — ' + SP.esc(p.name) + '. Relocks in 30 s. Logged to events. (mock)'); return; }
+    if (act === 'map') { setSub('map'); map.select(p.id, true, 'sync'); return; }
+  }
+  function closeCard() {
+    state.sel = null;
+    $('card').classList.remove('on');
+    map.clear('sync'); if (nadir) nadir.clear('sync');
+    document.querySelectorAll('#drawer-content .sp-pinrow.sel').forEach(function (r) { r.classList.remove('sel'); });
+  }
+
+  // ---------- dock + player ----------
+  $('dock-sub').textContent = R.live.length + ' live · site ' + (R.live[0] && R.live[0].live.site || '3525');
+  var feeds = SP.renderFeeds($('dock-feeds'), R, { layout: 'strip', small: true, onFocus: function (cam) { openPlayer(cam.id, null, 'live'); } });
+  function openPlayer(camId, clip, tab) {
+    var cam = R.byId[camId] || R.live[0];
+    if (!cam) return;
+    state.cam = cam.id; state.clip = clip || null; state.ppTab = tab || state.ppTab;
+    feeds.setActive(cam.id);
+    $('player-panel').classList.add('on');
+    document.body.classList.add('player-on');
+    $('pp-title').textContent = cam.live ? cam.live.name : cam.name;
+    $('player').innerHTML = SP.playerHTML(cam, state.clip);
+    $('player').querySelectorAll('[data-act]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.act === 'live') openPlayer(cam.id, null, 'live');
+        else if (b.dataset.act === 'snap') SP.toast('Snapshot saved (mock) — production: gateway snapshot JPEG for ' + SP.esc(cam.live ? cam.live.name : cam.name) + '.');
+        else if (b.dataset.act === 'map') { setSub('map'); onPin(cam.id, 'player'); map.select(cam.id, true, 'sync'); }
+      });
+    });
+    renderPpClips(cam.id);
+    applyPpTab();
+  }
+  function renderPpClips(camId) {
+    var mine = SP.clipsHTML(R, { camId: camId });
+    var others = R.clips.filter(function (c) { return c.cam !== camId; });
+    $('pp-clips').innerHTML = '<div class="sp-h">This camera</div>' + mine + (others.length ? '<div class="sp-h">Other cameras</div>' + SP.clipsHTML(R, { excludeCam: camId }) : '');
+    $('pp-clips').querySelectorAll('.sp-clip').forEach(function (row) {
+      row.addEventListener('click', function () { var c = R.clips[Number(row.dataset.i)]; openPlayer(c.cam, c, 'live'); });
+      row.classList.toggle('on', !!state.clip && Number(row.dataset.i) === state.clip.i);
+    });
+  }
+  function applyPpTab() {
+    $('pp-tab-live').classList.toggle('on', state.ppTab === 'live');
+    $('pp-tab-clips').classList.toggle('on', state.ppTab === 'clips');
+    $('player').style.display = state.ppTab === 'live' ? '' : 'none';
+    $('pp-clips').style.display = state.ppTab === 'clips' ? '' : 'none';
+  }
+  window.ppTab = function (t) { state.ppTab = t; applyPpTab(); };
+  window.openClips = function () { openPlayer(state.cam || (R.live[0] && R.live[0].id), null, 'clips'); };
+  window.closePlayer = function () { $('player-panel').classList.remove('on'); document.body.classList.remove('player-on'); feeds.setActive(null); };
+
+  // ---------- boot ----------
+  renderLayers(); renderRail(); renderDrawer(); applyFocus();
+  var pinParam = SP.params.get('pin');
+  if (pinParam && R.byId[pinParam]) setTimeout(function () { onPin(pinParam, 'url'); }, 400);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if ($('player-panel').classList.contains('on')) window.closePlayer(); else if (state.sel) closeCard(); } });
+  window.SAFE_C = { state: state, R: R, map: map, nadir: nadir };
+})();
+</script>
+</body>
+</html>

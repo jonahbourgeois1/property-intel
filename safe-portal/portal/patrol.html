@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>Vyanet SAFE — Virtual Patrol</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../portal-core.css">
+<link rel="stylesheet" href="portal-page.css">
+<style>
+  body.patrol { margin: 0; padding: 22px 22px 64px; font-size: 16px; line-height: 1.45; }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; margin-bottom: 8px; }
+  .bar h1 { font-size: 24px; }
+  #property-name { color: var(--text); font-size: 15px; }
+  .tabs { display: flex; gap: 8px; margin: 0 0 16px; }
+  .tabs button, #qa button, #presets button, .add button, .chips button, #save, select {
+    font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 8px 12px; cursor: pointer;
+  }
+  .tabs button.on, #qa button.on, #save, .add button { background: #1d4e89; color: #fff; border-color: #1d4e89; }
+  .panel-tab { display: none; }
+  .panel-tab.on { display: block; }
+  .sub { color: var(--text); font: 13px var(--mono); margin: 0 0 12px; }
+  #patrol-status { color: #9a3412; font-size: 14px; min-height: 1.2em; margin: 0 0 10px; }
+  html.theme-dark #patrol-status { color: #fdba74; }
+  #qa, #presets, .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 12px; }
+  #pool, #sched-note { margin: 0 0 10px; font-size: 15px; }
+  #sched-note { color: var(--text); }
+  .axis, .day { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 10px; align-items: center; }
+  .axis { margin-bottom: 4px; }
+  .ticks { display: flex; justify-content: space-between; font: 12px var(--mono); color: var(--text); }
+  .day { width: 100%; text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 4px; cursor: pointer; color: inherit; font: inherit; }
+  .day.on, .day:hover { background: var(--surface2, rgba(16,24,40,0.04)); }
+  .day > span:first-child { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .track { position: relative; height: 22px; border-radius: 6px; background: var(--surface3, #e9edf2); }
+  html.theme-dark .track { background: #1c2430; }
+  .mark { position: absolute; top: 3px; bottom: 3px; width: 3px; margin-left: -1px; border-radius: 2px; background: #1d4e89; }
+  #editor { margin-top: 16px; }
+  #editor label { display: block; font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  #editor select, .pick select { min-width: 260px; max-width: 100%; margin-bottom: 10px; }
+  .add { display: flex; gap: 8px; }
+  .add input { width: 140px; font: inherit; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border2); background: var(--surface); color: inherit; }
+  .pick { margin-bottom: 8px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .shot { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; font: inherit; color: inherit; text-align: left; padding: 0; cursor: zoom-in; width: 100%; }
+  .shot img { display: block; width: 100%; aspect-ratio: 16/10; object-fit: cover; background: #0b0e12; }
+  .shot .cap { display: block; padding: 8px 10px 10px; }
+  .shot b { display: block; font-size: 14px; }
+  .note { display: block; margin: 6px 0 0; font-size: 14px; line-height: 1.4; }
+  .note.quiet, .empty { color: var(--text); font-size: 14px; }
+  #gate { display: none; position: fixed; inset: 0; z-index: 20; background: #111318; }
+  #gate.visible { display: flex; }
+  #gate-form { width: 100%; max-width: 400px; margin: auto; padding: 28px 20px; display: flex; flex-direction: column; gap: 12px; }
+  .gt-brand { font-size: 12px; letter-spacing: 0.14em; color: #d0d5dd; }
+  .gt-name { font-size: 26px; color: #ffffff; font-weight: 600; }
+  .gt-addr, .gt-sub { font-size: 15px; color: #e4e7ec; line-height: 1.45; }
+  #gate-pass { width: 100%; min-height: 48px; background: #0b0e12; border: 1px solid rgba(255,255,255,0.16); border-radius: 8px; color: #f0f2f5; font: 16px var(--mono); padding: 10px 12px; }
+  #gate-err { display: none; font-size: 14px; color: #fecaca; }
+  #gate-err.visible { display: block; }
+  #gate-enter { min-height: 50px; border-radius: 10px; background: rgba(168,85,247,0.28); border: 1px solid #d8b4fe; color: #f5f3ff; font: 700 15px var(--mono); letter-spacing: 0.08em; cursor: pointer; }
+  #gate-enter:disabled { opacity: 0.35; cursor: not-allowed; }
+  #gate-status { min-height: 16px; text-align: center; font-size: 13px; color: #e4e7ec; }
+</style>
+<script src="patrol-data.js?v=0.9.4"></script>
+<script src="portal-patrol.js?v=0.9.4"></script>
+</head>
+<body class="pg patrol">
+  <div id="gate" class="visible">
+    <form id="gate-form">
+      <div class="gt-brand">VYANET SAFE</div>
+      <div>
+        <div class="gt-name">Jones residence</div>
+        <div class="gt-addr">18775 Macalpine Loop, Bend, OR 97702</div>
+      </div>
+      <div class="gt-sub">Enter this property's password. It stays in this tab only.</div>
+      <input id="gate-pass" type="password" autocomplete="current-password" placeholder="Password" aria-label="Property password">
+      <div id="gate-err"></div>
+      <button type="submit" id="gate-enter">ENTER</button>
+      <div id="gate-status"></div>
+    </form>
+  </div>
+  <div class="bar">
+    <h1>Virtual Patrol</h1>
+    <span id="property-name"></span>
+  </div>
+  <p id="patrol-status" role="status"></p>
+  <nav class="tabs">
+    <button type="button" id="tab-schedule" class="on">Schedule</button>
+    <button type="button" id="tab-images">Images</button>
+    <button type="button" id="tab-notes">Notes</button>
+  </nav>
+  <section class="panel-tab on" id="panel-schedule">
+    <p class="sub">The day, across every camera. Pick a camera underneath to change its times.</p>
+    <div id="qa"></div>
+    <div id="presets"></div>
+    <p id="pool"></p>
+    <p id="sched-note"></p>
+    <div id="chart"></div>
+    <div id="editor"></div>
+    <button id="save" type="button">Save schedule</button>
+  </section>
+  <section class="panel-tab" id="panel-images">
+    <p class="sub" id="image-count">Reviewed frames for one camera.</p>
+    <div class="pick"><select id="image-cam" aria-label="Camera"></select></div>
+    <div id="image-grid"></div>
+  </section>
+  <section class="panel-tab" id="panel-notes">
+    <p class="sub" id="note-count">Frames with a sentence, one camera at a time.</p>
+    <div class="pick"><select id="note-cam" aria-label="Camera"></select></div>
+    <div id="note-grid"></div>
+  </section>
+<script>SafePatrolPage.boot();</script>
+</body>
+</html>

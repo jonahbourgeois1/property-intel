@@ -153,20 +153,23 @@
       { id: 'open-perim', comp: 'F', kind: 'hazard', name: 'Open perimeter – west / north', lat: nm(50, 35).lat, lng: nm(50, 35).lng, placement: 'surveyed', desc: 'Wildfire concern pin 234. No fencing; unmanaged fuels allow surface and crown fire spread toward the structure.' },
       { id: 'drive-veg', comp: 'F', kind: 'hazard', name: 'Single access through dense vegetation', lat: nm(53.5, 48.5).lat, lng: nm(53.5, 48.5).lng, placement: 'surveyed', desc: 'Concern pin 186 (Driveway). Winding drive through high woody vegetation, no secondary egress.' },
       { id: 'no-hydrant', comp: 'F', kind: 'hydrant', name: 'No hydrant within 150 m', lat: 44.04095, lng: -121.3797, placement: 'estimated', status: 'n/a', desc: 'GIS fact: hydrants_150m = 0. Nearest hydrant to be confirmed with Bend Fire / water utility; plan for tanker shuttle or pool draft.' },
-      // ---- Emergency service
-      { id: 'staging', comp: 'E', kind: 'staging', name: 'Staging – paved apron south of structure', lat: dt(63, 55).lat + 0.00003, lng: dt(63, 55).lng - 0.00012, placement: 'estimated', desc: 'From the FR recommendations: EMS and command may use the open paved apron south of the structure without blocking apparatus egress. Commit one engine to the driveway entrance to hold the egress corridor.' },
-      { id: 'dead-end', comp: 'E', kind: 'hazard', name: 'Dead end – single access, reverse-out', lat: dt(60, 67).lat - 0.00006, lng: dt(60, 67).lng + 0.0001, placement: 'surveyed', desc: 'Record concern pin 184. No turnaround loop rated for heavy apparatus; plan forward-in / reverse-out or multi-point turn on the court.' },
-      { id: 'pendant', comp: 'E', kind: 'medical', name: 'Panic / medical pendant – master suite', lat: 44.04152, lng: -121.37849, vendor: 'Vyanet', status: 'online', placement: 'mock', desc: 'Two-way voice to Vyanet central station. Shown at the master suite; the pendant travels with the occupant.' },
-      { id: 'lz-none', comp: 'E', kind: 'lz', name: 'Helicopter ground – none on parcel', lat: 44.0421, lng: -121.3799, placement: 'estimated', status: 'n/a', desc: 'Dense conifer canopy around all structures. Open terrain west of the developed core is unimproved scrub and not rated. Nearest usable ground to be designated with the agency.' },
-      { id: 'tennis', comp: 'E', kind: 'feature', name: 'Tennis court – hard surface, not staging', lat: dt(57, 35.5).lat, lng: dt(57, 35.5).lng, placement: 'surveyed', desc: 'Record pin 144. Upper parcel hardcourt; does not contribute to staging and can impede movement if apparatus is positioned there.' }
+      // ---- Environment (Nearmap condition layers; the owner decides)
+      { id: 'debris-sw', comp: 'E', kind: 'debris', name: 'Vegetation debris – southwest wall', lat: nm(54, 40).lat, lng: nm(54, 40).lng, placement: 'surveyed', source: 'Nearmap · debris',
+        desc: 'Imagery shows woody debris and shrub growth pressed to the southwest wall. Flagged because it is visible. Whether it is trash, a hazard, or something to leave is the owner\'s call, or their contractor\'s. Vyanet does not write the cleanup.' },
+      { id: 'roof-canopy', comp: 'E', kind: 'roof', name: 'Roof – canopy close to the roofline', lat: dt(62, 48).lat, lng: dt(62, 48).lng, placement: 'surveyed', source: 'Nearmap · roof',
+        desc: 'Canopy comes within a few metres of the roof. Two chimneys and a solar array are visible roof objects. No damage grade is assigned. A roofer, not this map, decides whether anything needs work.' },
+      { id: 'drive-surface', comp: 'E', kind: 'road', name: 'Approach drive – paved surface', lat: dt(52, 74).lat, lng: dt(52, 74).lng, placement: 'surveyed', source: 'Nearmap · surfaces',
+        desc: 'The curved private drive is a mapped driveable surface. How a vehicle uses it is on Access. This pin is the pavement itself. No cracking, settlement, or drainage failure is called on this pass. When a later survey shows damage, it lands here without a paving spec.' },
+      { id: 'lawn-irr', comp: 'E', kind: 'irrigation', name: 'North lawns – maintained turf vs native cover', lat: dt(66, 38).lat, lng: dt(66, 38).lng, placement: 'surveyed', source: 'Nearmap · surfaces',
+        desc: 'Lawn grass north and northeast of the house contrasts with native scrub on the other sides. That contrast is the visible irrigation extent. The controller, valves, leaks, and schedule are not visible from the air.' }
     ]),
     zones: [
       { comp: 'F', kind: 'ring', name: 'Zone 1 – 30 ft ember-resistant', lat: dt(62, 50).lat, lng: dt(62, 50).lng, radius_m: 9.1 },
       { comp: 'F', kind: 'ring', name: 'Zone 2 – 100 ft defensible space', lat: dt(62, 50).lat, lng: dt(62, 50).lng, radius_m: 30.5 }
     ],
     routes: [
-      { id: 'pool-route', comp: 'E', name: 'Pool incident', trigger: 'Person in distress in the pool; responders must reach it from the main entrance', start: 'Entrance (Macalpine Loop)', target: 'Pool',
-        points: [[39, 72.8], [51.5, 66.5], [54.1, 53.5], [49.7, 43.8], [59.5, 37.2], [68.2, 32.3]].map(function (p) { return dt(p[0], p[1]); }) }
+      { id: 'approach', comp: 'A', name: 'Approach drive', trigger: 'Vehicle approach from Macalpine Loop', start: 'Road entry', target: 'Court', estimated: true, numbered: false,
+        points: [[39, 72.8], [51.5, 66.5], [54.1, 53.5]].map(function (p) { return dt(p[0], p[1]); }) }
     ],
     report: {
       S: {
@@ -188,17 +191,18 @@
         recommendations: 'Establish and maintain a 30 ft ember-resistant Zone 1 around the structure, thinning shrubs and low limbs on the SW and SE sides first. Prune limbs to 10 ft and open horizontal spacing between crowns on the west and south. Install and inspect chimney spark arrestors; harden eave soffits, roof-to-wall junctions and solar mounting gaps. Confirm driveway width and vertical clearance with Rural Fire District #2 and identify a turnaround near the structure.'
       },
       E: {
-        status: 'Single access · reverse-out · staging on the south apron · no on-site LZ',
-        summary: 'Responders arrive through one curved drive and must plan their own way out. The map carries the pool route, the staging apron, and the devices that reach the central station.',
-        considerations: 'All apparatus must enter and exit via the same single access point. The paved court near the building cluster offers a multi-point turnaround but no rated loop. Heavy apparatus may need to reverse a significant distance. The open terrain behind and beside the developed core is unimproved scrub and is not suitable for heavy apparatus movement. Wildfire risk context is high given native vegetation immediately adjacent to all structures.',
-        recommendations: 'Approach via Macalpine Loop; commit one engine to staging at the driveway entrance to hold the egress corridor while a second unit advances. Plan forward-in / reverse-out or use the court for a multi-point turn before committing fully. Note the pool at the NE corner as a potential tanker fill point. Stage EMS and command on the paved apron south of the structure. Conduct a defensive perimeter assessment on arrival, north and west flanks first.'
+        status: 'Debris at the SW wall · canopy at the roof · drive surface mapped · lawn vs native cover',
+        summary: 'Environment isolates what the imagery shows: debris, roof and road condition, and where turf is being maintained. Arrival, turnaround, and how responders get in stay on Access. Vyanet does not grade repairs or run a maintenance program.',
+        considerations: 'Woody debris and shrubs press the southwest wall (Nearmap debris). Canopy comes within a few metres of the roof; chimneys and solar are visible roof objects, and no damage grade is assigned (Nearmap roof). The approach drive is a mapped driveable surface with no damage called on this pass (Nearmap surfaces). North and northeast lawns contrast with native scrub — that contrast is the visible irrigation extent; the system itself is not visible.',
+        recommendations: 'Use these pins as a look-list, not a work order. The owner or a contractor decides whether the southwest debris is cleared, whether the roof needs a walk, and whether the irrigation extent matches the intended landscape. Vyanet refreshes the layers when a new Nearmap survey is on the lot.'
       }
     },
     limits: [
       'Whether the driveway loop is wide and structurally rated for engine / ladder turnaround (record clarification #1).',
       'Gate or barrier at the property entry off Macalpine Loop (clarification #2).',
       'Use and separate entry of the detached structure (clarification #3).',
-      'On-site fire-suppression water beyond the pool: tank or hydrant (clarification #4).'
+      'On-site fire-suppression water beyond the pool: tank or hydrant (clarification #4).',
+      'Cause and repair. Imagery locates debris, surface change, and cover type. It does not say why it is there or what maintenance to buy.'
     ],
     events: [
       { t: 'Today 06:42', kind: 'motion', pin: 'cam-14', text: 'Motion · DRIVEWAY — vehicle on the frontage, clip saved' },
@@ -315,12 +319,17 @@
         desc: 'Arterial connection for the loop. Exact entry geometry, signage and any gate hardware are a bot-capture item; placed here so the access story reads end to end.' },
       { id: 'entry-cam', comp: 'S', kind: 'camera', name: 'Entry camera – proposed (license plate view)', lat: 44.0525, lng: -121.3661, heading: 160, fov: 60, range: 40, vendor: 'Proposed', status: 'offline', placement: 'mock',
         desc: 'Community cameras do not exist yet; Community Live stays a placeholder until they do. Shown as a proposed install so the board can see what the protective circle would add.' },
-      { id: 'common', comp: 'E', kind: 'staging', name: 'Common open space – apparatus staging candidate', lat: 44.0445, lng: -121.3755, placement: 'estimated', desc: 'Interior open ground inside the loop. Suitability for heavy apparatus and helicopter use to be confirmed with Rural Fire District #2.' },
+      { id: 'west-debris', comp: 'E', kind: 'debris', name: 'Western edge – vegetation debris', lat: 44.0420, lng: -121.3838, placement: 'estimated', source: 'Nearmap · debris',
+        desc: 'Where lots meet unmanaged ponderosa, imagery shows woody debris along the edge. Fire reads this same edge as fuel. Environment only marks what is on the ground. Clearing it is a board decision, not a Vyanet work order.' },
+      { id: 'loop-surface', comp: 'E', kind: 'road', name: 'Loop roads – pavement mapped, damage not called', lat: 44.0460, lng: -121.3762, placement: 'estimated', source: 'Nearmap · surfaces',
+        desc: 'Macalpine Loop and the courts are mapped driveable surfaces. No cracking, patching, or drainage failure is called on this pass. A later survey would isolate damage here. How traffic uses the loop stays on Access.' },
+      { id: 'common-cover', comp: 'E', kind: 'irrigation', name: 'Common ground – turf vs native cover', lat: 44.0445, lng: -121.3755, placement: 'estimated', source: 'Nearmap · surfaces',
+        desc: 'Open ground inside the loop reads as a mix of maintained turf and native cover. That is the visible irrigation extent. The controller, valves, and schedule are not in the imagery.' },
       { id: 'fuel-break-w', comp: 'F', kind: 'hazard', name: 'Western edge – unmanaged fuels', lat: 44.0420, lng: -121.3845, placement: 'estimated', desc: 'West flank of the subdivision meets continuous ponderosa and sagebrush. Per-lot wildfire assessments at the west edge show open perimeters with no cleared buffer.' },
-      { id: 'cul-rowallan', comp: 'E', kind: 'hazard', name: 'Rowallan Ct – dead-end cul-de-sac', lat: 44.0385, lng: -121.3810, placement: 'estimated', desc: 'One of five courts off the loop. Dead ends concentrate evacuation and apparatus turnaround on one bulb.' },
-      { id: 'cul-kildonan', comp: 'E', kind: 'hazard', name: 'Kildonan Ct – dead-end cul-de-sac', lat: 44.0500, lng: -121.3785, placement: 'estimated', desc: 'Dead-end court; turnaround on the bulb only.' },
-      { id: 'cul-ballantrae', comp: 'E', kind: 'hazard', name: 'Ballantrae Ct – dead-end cul-de-sac', lat: 44.0503, lng: -121.3728, placement: 'estimated', desc: 'Dead-end court; turnaround on the bulb only.' },
-      { id: 'evac', comp: 'E', kind: 'route', name: 'Evacuation direction – loop to arterial', lat: 44.0515, lng: -121.3675, placement: 'estimated', desc: 'The loop gives two directions of travel to the single arterial connection. Evacuation planning should assume every court empties onto the loop.' },
+      { id: 'cul-rowallan', comp: 'A', kind: 'feature', name: 'Rowallan Ct – dead-end cul-de-sac', lat: 44.0385, lng: -121.3810, placement: 'estimated', desc: 'One of five courts off the loop. The bulb is the only turnaround. How residents and responders get out of the court lives on Access.' },
+      { id: 'cul-kildonan', comp: 'A', kind: 'feature', name: 'Kildonan Ct – dead-end cul-de-sac', lat: 44.0500, lng: -121.3785, placement: 'estimated', desc: 'Dead-end court; turnaround on the bulb only. Access, not a condition finding.' },
+      { id: 'cul-ballantrae', comp: 'A', kind: 'feature', name: 'Ballantrae Ct – dead-end cul-de-sac', lat: 44.0503, lng: -121.3728, placement: 'estimated', desc: 'Dead-end court; turnaround on the bulb only. Access, not a condition finding.' },
+      { id: 'evac', comp: 'A', kind: 'route', name: 'Loop to the arterial', lat: 44.0515, lng: -121.3675, placement: 'estimated', desc: 'The loop gives two directions of travel to the single arterial connection. Every court empties onto the loop.' },
       { id: 'hyd-survey', comp: 'F', kind: 'hydrant', name: 'Hydrant survey – pending', lat: 44.0466, lng: -121.3770, placement: 'estimated', status: 'n/a', desc: 'The one assessed lot has 0 hydrants within 150 m. A community hydrant survey (Bend Fire / water utility) is a Fire-layer item for the board.' }
     ]),
     zones: [],
@@ -345,10 +354,10 @@
         recommendations: 'Run the wildfire assessment on all 46 lots from the existing aerial renders. Publish a community hydrant survey. Coordinate a shared fuel-break along the western edge. Consider Firewise USA recognition with the SAFE maps as the documentation.'
       },
       E: {
-        status: 'Loop geometry · dead-end courts · staging candidate inside the loop',
-        summary: 'Responders have two ways around the loop but only one way in. The common ground inside the loop is the staging candidate.',
-        considerations: 'Each court empties onto the loop; cul-de-sac bulbs are the only turnarounds. Private drives are long, curved, and canopied. No designated helicopter ground.',
-        recommendations: 'Designate and confirm an apparatus staging area and a helicopter ground with Rural Fire District #2. Give responders the per-lot SAFE maps through the responder packet so turnaround and water notes travel with the dispatch.'
+        status: 'Western-edge debris · loop pavement mapped · common-ground cover',
+        summary: 'Environment is the neighborhood as a landscape: debris where lots meet the wild edge, the pavement of the loop, and where common ground is being watered. How the neighborhood opens — the arterial, the courts, the turnarounds — stays on Access.',
+        considerations: 'Woody debris is visible along the western edge (Nearmap debris). Fire still owns the fuel-behavior reading of that edge. Loop and court pavement is mapped with no damage called on this pass (Nearmap surfaces). Common ground inside the loop reads as mixed turf and native cover; that is the visible irrigation extent, not a watering schedule.',
+        recommendations: 'Use the three pins as a look-list for the board. Per-lot roof, debris, and irrigation findings belong on each residence Environment page when that lot has a Nearmap survey. Vyanet will not write a maintenance spec for the HOA from a vertical.'
       }
     },
     limits: [
@@ -427,13 +436,14 @@
       id: 'green-' + h, comp: 'E', kind: 'green', hole: h, num: h, name: 'Green ' + h,
       lat: g[1], lng: g[2], placement: 'surveyed', image: CLD + greenImg[h], image2: CLD + lzImg[h],
       meta: m, report: '../golf-reports/awbrey-glen.html#hole-' + h,
-      desc: 'Par ' + m.par + ' · ' + m.yd + ' yd · HCP ' + m.hcp + ' · ' + m.club.toLocaleString() + ' ft from the clubhouse. ' + m.g + '.'
+      source: 'Nearmap · surfaces',
+      desc: 'Irrigated playing surface. Par ' + m.par + ' · ' + m.yd + ' yd · HCP ' + m.hcp + ' · ' + m.club.toLocaleString() + ' ft from the clubhouse. ' + m.g + '. Condition and any repair are the superintendent\'s call; this pin only locates the green.'
     });
     if (stations[h]) {
       golfPins.push({
-        id: 'station-' + h, comp: 'E', kind: 'medical', name: 'Restroom + water station – after green ' + h,
-        lat: g[1] + 0.00012, lng: g[2] + 0.00018, placement: 'estimated',
-        desc: 'Named in the club\'s local rules. A fixed landmark for an on-course medical call and a shelter point in a lightning hold.'
+        id: 'station-' + h, comp: 'E', kind: 'irrigation', name: 'Restroom + water station – after green ' + h,
+        lat: g[1] + 0.00012, lng: g[2] + 0.00018, placement: 'estimated', source: 'Club local rules',
+        desc: 'Named in the club\'s local rules. A fixed water point on the routing. Plumbing and water quality are not assessed from imagery.'
       });
     }
   });
@@ -515,18 +525,12 @@
       { id: 'g-gate-maint', comp: 'A', kind: 'gate', name: 'Maintenance yard gate', lat: 44.0836, lng: -121.3494, vendor: 'Gate contractor', status: 'online', placement: 'mock', actions: ['unlock', 'who'], near: 'g-cam-4', desc: 'Contractor-installed gate operator. Unlock from the map and confirm on the yard camera who is at the gate.' },
       { id: 'g-gate-entry', comp: 'A', kind: 'gate', name: 'Service entrance gate – Awbrey Glen Dr', lat: 44.0786, lng: -121.3489, vendor: 'Gate contractor', status: 'online', placement: 'mock', actions: ['unlock', 'who'], near: 'g-cam-3', desc: 'Delivery and vendor access after hours.' },
       { id: 'g-door-proshop', comp: 'A', kind: 'door', name: 'Pro shop door – access reader', lat: 44.07922, lng: -121.34945, vendor: 'Another alarm provider', status: 'online', placement: 'mock', actions: ['unlock', 'who'], near: 'g-cam-1', desc: 'Reader on the competitor\'s access system. Staff credentials, remote unlock from this map.' },
-      { id: 'g-irr', comp: 'A', kind: 'panel', name: 'Irrigation central controller + pump station', lat: 44.0833, lng: -121.3509, vendor: 'Irrigation contractor', status: 'online', placement: 'mock', desc: 'Pump station at pond 1 and the central controller. A third vendor\'s system on the same map as the cameras and gates.' },
+      { id: 'g-irr', comp: 'E', kind: 'irrigation', name: 'Irrigation central controller + pump station', lat: 44.0833, lng: -121.3509, vendor: 'Irrigation contractor', status: 'online', placement: 'mock', source: 'Irrigation contractor', desc: 'Pump station at pond 1 and the central controller. Located here so the water system sits with the turf it serves. Operation, schedules, and repairs stay with the irrigation contractor.' },
       { id: 'g-fuel', comp: 'F', kind: 'hazard', name: 'Fuel storage – maintenance yard (contents to confirm)', lat: 44.0839, lng: -121.3499, placement: 'mock', desc: 'Above-ground fuel and chemical storage is typical here; the imagery cannot see inside the structures. Pre-plan item for Bend Fire.' },
-      { id: 'g-aed', comp: 'E', kind: 'medical', name: 'AED – clubhouse', lat: 44.0793, lng: -121.3496, placement: 'mock', desc: 'The only AED on the property in this mock. Green 15 is 4,859 ft away — nearly a mile by cart path.' },
-      { id: 'g-lz', comp: 'E', kind: 'lz', name: 'Helicopter ground – range tee (confirm with AirLink)', lat: 44.0801, lng: -121.3505, placement: 'estimated', desc: 'Open mown range tee pads north of the practice green; the largest clear turf near the clubhouse and the lot.' },
-      { id: 'g-staging', comp: 'E', kind: 'staging', name: 'Apparatus staging – clubhouse lot', lat: 44.0797, lng: -121.3489, placement: 'estimated', desc: '87-stall striped lot adjacent to the clubhouse. Course interior is reached by cart path only.' },
-      { id: 'g-sentry', comp: 'E', kind: 'alert', name: 'Tee Sentry lightning signal – 18th tee', lat: 44.0834, lng: -121.3551, placement: 'estimated', desc: 'Named in the club\'s local rules ("Use the Tee Sentry signal on the 18th tee"). The course\'s own weather hold signal, worth a pin for the Emergency layer.' }
+      { id: 'g-sentry', comp: 'E', kind: 'hazard', name: 'Tee Sentry lightning signal – 18th tee', lat: 44.0834, lng: -121.3551, placement: 'estimated', source: 'Club local rules', desc: 'Named in the club\'s local rules ("Use the Tee Sentry signal on the 18th tee"). Located so a weather hold has a place on the map. Vyanet does not run the signal or decide the hold.' }
     ]),
     zones: [],
-    routes: [
-      { id: 'cart-route-12', comp: 'E', name: 'Cart-path reach – clubhouse to green 12', trigger: 'Medical call at the far north end of the routing', start: 'Clubhouse', target: 'Green 12',
-        points: [pt(44.079252, -121.349535), pt(44.0812, -121.3486), pt(44.083183, -121.348503), pt(44.085631, -121.348506), pt(44.088869, -121.348247), pt(44.091277, -121.348593)] }
-    ],
+    routes: [],
     report: {
       S: {
         status: '4 cameras (third-party) · 1 intrusion panel (another provider) · maintenance yard watched',
@@ -547,10 +551,10 @@
         recommendations: 'Confirm ponds 1 and 2 as drafting sites with Bend Fire (access, depth, dry-hydrant option). Walk the maintenance yard for fuel and chemical inventory and add it to the pre-plan. Share the residence frames with the HOA as a shared-fuel conversation. Request the Bend Fire hydrant map for the Awbrey Glen Dr frontage.'
       },
       E: {
-        status: 'Far greens 0.8–0.9 mi from the clubhouse AED · range tee as LZ candidate · 4 fixed stations',
-        summary: 'A medical event on holes 12–15 is nearly a mile from the clubhouse by cart path. The map carries the reach route, the water stations as landmarks, the range tee as helicopter ground and the club\'s own lightning signal.',
-        considerations: 'Greens 12, 13, 14 and 15 are 4,000–4,900 ft from the clubhouse pin. Course interior is cart-path access only; apparatus stage at the lot. Restroom and water stations after greens 4, 9, 14 and 16 are fixed, named landmarks. Ground slope and drainage are not visible in single frames.',
-        recommendations: 'Place a second AED at the hole 13/14 station. Pre-plan the cart-path reach route and confirm which paths carry a UTV ambulance. Confirm the range tee with AirLink as helicopter ground. Give responders the per-hole report so a caller\'s "hole 12" resolves to a pin.'
+        status: '76.6 acres irrigated turf · 18 greens located · controller at pond 1',
+        summary: 'Environment is the course as a landscape: where water is being applied, what the surfaces are, and what the imagery shows sitting on them. Cart paths, gates, and street crossings stay on Access. The superintendent decides the agronomy.',
+        considerations: 'Irrigated turf is 76.6 acres in 46 patches. Each green is a located playing surface; condition is not graded here. The irrigation controller and pump sit at pond 1. Four water stations are fixed points from the local rules. The Tee Sentry on the 18th tee is the club\'s own weather-hold signal, located only. Pipe, valves, and drainage are not visible in a vertical.',
+        recommendations: 'Treat the green stills as a look-list. Irrigation pipe and valves stay on the as-builts. Vyanet will not write a maintenance spec from a vertical. Wear on landing zones stays on Access, where the play line is.'
       }
     },
     limits: [
@@ -641,21 +645,18 @@
       { id: 'f-kitchen', comp: 'F', kind: 'hazard', name: 'Kitchen hood suppression – cafeteria', lat: 44.05178, lng: -121.29595, placement: 'mock', desc: 'Commercial kitchen; hood system and gas shutoff.' },
       { id: 'f-shop', comp: 'F', kind: 'hazard', name: 'CTE shop – compressed gas / flammables (confirm)', lat: 44.0524, lng: -121.2958, placement: 'mock', desc: 'Career-technical shop storage is a standard pre-plan item; contents to confirm on the site walk.' },
       { id: 'f-smoke', comp: 'F', kind: 'smoke', name: 'Smoke / heat detection – all wings', lat: 44.05215, lng: -121.2962, vendor: 'Another provider (fire)', status: 'online', placement: 'mock', desc: 'Addressable system; zone list on the FACP.' },
-      // ---- Emergency service
-      { id: 'e-aed-1', comp: 'E', kind: 'medical', name: 'AED – main office', lat: 44.05203, lng: -121.29742, placement: 'mock', desc: 'Nearest AED to the front entrance.' },
-      { id: 'e-aed-2', comp: 'E', kind: 'medical', name: 'AED – gym lobby', lat: 44.0526, lng: -121.29555, placement: 'mock', desc: 'Athletics.' },
-      { id: 'e-aed-3', comp: 'E', kind: 'medical', name: 'AED – stadium', lat: 44.05345, lng: -121.2951, placement: 'mock', desc: 'Event nights.' },
-      { id: 'e-staging-ems', comp: 'E', kind: 'staging', name: 'EMS staging – staff lot (north)', lat: 44.05305, lng: -121.29675, placement: 'mock', desc: 'Clear of bus-loop and drop-off queues at bell times.' },
-      { id: 'e-staging-app', comp: 'E', kind: 'staging', name: 'Apparatus staging – NE 9th St frontage', lat: 44.0524, lng: -121.2941, placement: 'mock', desc: 'Engine and truck staging with the east hydrant.' },
-      { id: 'e-lz', comp: 'E', kind: 'lz', name: 'Helicopter ground – stadium field (confirm with AirLink)', lat: 44.0537, lng: -121.295, placement: 'mock', desc: 'Largest open ground on campus; accessed through the field gate.' },
-      { id: 'e-command', comp: 'E', kind: 'staging', name: 'Incident command post – main entrance plaza', lat: 44.05195, lng: -121.29765, placement: 'mock', desc: 'Beside the Knox box, FACP annunciator and the vestibule camera.' },
-      { id: 'e-reunify', comp: 'E', kind: 'alert', name: 'Reunification site – designation pending', lat: 44.0506, lng: -121.2956, placement: 'mock', status: 'n/a', desc: 'Off-campus reunification is set with the district and law enforcement, not from imagery. Placeholder so the packet has the field.' }
+      // ---- Environment (empty until a Nearmap pass; placeholders so the lens has a shape)
+      { id: 'e-debris', comp: 'E', kind: 'debris', name: 'Debris and trash – not surveyed', lat: 44.0522, lng: -121.2964, placement: 'mock', status: 'n/a', source: 'Nearmap · debris',
+        desc: 'No Nearmap pass yet. When it runs, trash, junk, and vegetation debris land on this layer. Vyanet will locate them. Facilities decides what is removed.' },
+      { id: 'e-roof', comp: 'E', kind: 'roof', name: 'Roofs – condition not surveyed', lat: 44.05215, lng: -121.2968, placement: 'mock', status: 'n/a', source: 'Nearmap · roof',
+        desc: 'No Nearmap pass yet. Roof condition, debris on the roof, and roof objects will show here. No damage grade until the survey exists, and no repair spec after it does.' },
+      { id: 'e-lots', comp: 'E', kind: 'road', name: 'Lots and drives – surfaces not surveyed', lat: 44.0524, lng: -121.2952, placement: 'mock', status: 'n/a', source: 'Nearmap · surfaces',
+        desc: 'No Nearmap pass yet. Paving damage on lots and drives will be isolated here. How buses, parents, and responders use those drives stays on Access.' },
+      { id: 'e-fields', comp: 'E', kind: 'irrigation', name: 'Fields – irrigation extent not surveyed', lat: 44.0535, lng: -121.2952, placement: 'mock', status: 'n/a', source: 'Nearmap · surfaces',
+        desc: 'No Nearmap pass yet. Maintained turf versus bare or native cover is the visible irrigation extent. The system itself is not readable from a vertical.' }
     ],
     zones: [],
-    routes: [
-      { id: 'app-route', comp: 'E', name: 'Apparatus approach – 6th St to north lot to gym', trigger: 'Fire alarm, gym wing', start: 'NE 6th St', target: 'Gym north (D3)',
-        points: [pt(44.0515, -121.298), pt(44.0529, -121.298), pt(44.053, -121.297), pt(44.0527, -121.2958)] }
-    ],
+    routes: [],
     report: {
       S: {
         status: 'DRAFT · 5 district cameras · 1 intrusion panel (another provider) · lockdown button',
@@ -676,18 +677,17 @@
         recommendations: 'Request the Bend Fire hydrant map for both frontages. Walk the CTE shop and kitchen with facilities for the hazard inventory. Confirm the FDC and FACP locations and photograph them for the packet.'
       },
       E: {
-        status: 'DRAFT · 1,204 students + staff · 3 AEDs · 2 staging areas · stadium field as LZ candidate',
-        summary: 'Occupant count is the number that changes everything. The map carries the AEDs, the staging areas that stay clear at bell times, the helicopter ground and the apparatus approach.',
-        considerations: 'Bell-time queues on NE 6th St and the bus loop. Reunification site is set with the district, not from imagery. Stadium events add occupants and open the perimeter.',
-        recommendations: 'Confirm the stadium field with AirLink as helicopter ground and the field gate as its access. Stage EMS in the north staff lot. Build the responder packet with occupancy, bell schedule, door numbers, AEDs and the reunification designation.'
+        status: 'DRAFT · no Nearmap pass · debris, roof, paving, and irrigation empty',
+        summary: 'Environment has a shape and no findings. Trash, debris, roof and road condition, and irrigation extent wait on a Nearmap survey. Doors, the vestibule, and bell-time traffic stay on Access.',
+        considerations: 'Nothing on this layer is observed. The four pins are the categories the survey will fill: debris, roofs, lots and drives, field irrigation. A vertical will locate what is visible. It will not say what facilities should repair.',
+        recommendations: 'Run the Nearmap pass before sharing Environment with the district. Until then this page should stay empty of advice. Findings, when they exist, are a look-list for facilities, not a work order from Vyanet.'
       }
     },
     limits: [
       'Everything on this map — no imagery pass has been run; pins are placeholders.',
       'Door numbering and exterior door count — district facilities plan.',
       'Hydrant flows and FDC location — Bend Fire.',
-      'Reunification site — district and law enforcement designation.',
-      'Helicopter ground — AirLink / agency confirmation.'
+      'Debris, roof condition, paving damage, and irrigation extent — no Nearmap pass yet.'
     ],
     events: [
       { t: 'Today 07:31', kind: 'door', pin: 'd3', text: 'Propped-door alert · D3 gym north (cleared in 4 min)' },

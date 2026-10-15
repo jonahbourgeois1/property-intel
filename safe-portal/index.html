@@ -9,7 +9,7 @@
   safe-portal/index.html — customer-facing SAFE portal MOCK (safe-mock 0.1.0)
 
   Walkthrough of the October 2026 pivot (Vyanet_SAFE_Property_Intelligence_v3):
-  one SAFE map per property — Security · Access · Fire · Emergency service —
+  one SAFE map per property — Security · Access · Fire · Environment —
   on a Google satellite canvas, with the Live Device Canvas as the layer that
   distinguishes it from an imagery product. Vendor-agnostic: devices from any
   provider sit on the same map.
@@ -426,7 +426,7 @@
   <div class="brand">
     <span class="mark">VYANET</span>
     <span class="safe"><b>S</b><b>A</b><b>F</b><b>E</b></span>
-    <span class="tag">Security · Access · Fire · Emergency service</span>
+    <span class="tag">Security · Access · Fire · Environment</span>
   </div>
   <div id="ident">
     <div id="prop-name"></div>
@@ -449,12 +449,12 @@
   <button class="comp-btn S" data-comp="S" onclick="toggleComp('S')"><span class="k S">S</span>Security <span class="n" id="cnt-S"></span></button>
   <button class="comp-btn A" data-comp="A" onclick="toggleComp('A')"><span class="k A">A</span>Access <span class="n" id="cnt-A"></span></button>
   <button class="comp-btn F" data-comp="F" onclick="toggleComp('F')"><span class="k F">F</span>Fire <span class="n" id="cnt-F"></span></button>
-  <button class="comp-btn E" data-comp="E" onclick="toggleComp('E')"><span class="k E">E</span>Emergency service <span class="n" id="cnt-E"></span></button>
+  <button class="comp-btn E" data-comp="E" onclick="toggleComp('E')"><span class="k E">E</span>Environment <span class="n" id="cnt-E"></span></button>
   <span class="spacer"></span>
   <button class="tool on" id="btn-lot" onclick="toggleLot()">Lot</button>
   <button class="tool" id="btn-labels" onclick="toggleLabels()">Labels</button>
   <button class="tool" id="btn-fit" onclick="fitAll()">Fit</button>
-  <button class="tool accent" id="btn-packet" onclick="openPacket()">Responder packet</button>
+  <button class="tool accent" id="btn-packet" onclick="openPacket()">Print record</button>
   <div id="role-wrap"><span>Viewing as</span><select id="role-select" onchange="setRole(this.value)"></select></div>
 </nav>
 <main id="main">
@@ -468,7 +468,7 @@
     <div id="card"></div>
     <div id="about">
       <h3>What this mock shows</h3>
-      <p><b>One SAFE map per property.</b> Security · Access · Fire · Emergency service are the four layers of a single record, drawn on the Google satellite canvas the customer touches. The report is the entry point; the map is the product.</p>
+      <p><b>One SAFE map per property.</b> Security · Access · Fire · Environment are the four layers of a single record, drawn on the Google satellite canvas the customer touches. The report is the entry point; the map is the product. Environment isolates Nearmap conditions — debris, roof and road, irrigation — so the user can decide. Arrival and turnaround stay on Access.</p>
       <p><b>Live Device Canvas.</b> Cameras with per-camera cones, sensors, access points with unlock, fire devices and alerting devices — whoever installed them. An alarm event flies to the device and shows what is around it.</p>
       <p><b>Vendor-agnostic.</b> Devices from CHEKT, a competitor's alarm, a gate contractor and an irrigation vendor share one map. Vyanet does not need the monitoring contract.</p>
       <p><b>Placement legend.</b> Solid ring = surveyed (GPS still, sheet pin, record pin). Dashed = estimated or mock for this walkthrough. Nearmap imagery appears only in the reports, never on this canvas.</p>
@@ -503,7 +503,7 @@
     S: { label: 'Security', color: '#3b82f6', what: 'Perimeter, approaches, sightlines, blind spots, structures and their functions. Cameras with field of view, motion, glass-break, door and window contacts.' },
     A: { label: 'Access', color: '#f59e0b', what: 'Gates, driveways, service roads, cart paths, doors, codes — who can get in and how. Readers, keypads, remote unlock, gate sensors.' },
     F: { label: 'Fire', color: '#ef4444', what: 'Defensible space, fuel concentration, vegetation against structures, hydrants and water sources, wildfire exposure. Smoke, heat and life-safety detectors.' },
-    E: { label: 'Emergency service', color: '#22c55e', what: 'Routes a vehicle can use, turning space, helicopter ground, hazards, occupant considerations. Panic and medical alerts; the responder packet.' }
+    E: { label: 'Environment', color: '#22c55e', what: 'What the imagery shows on the lot: trash, debris, hazards, damaged roads and roofs, irrigation. Nearmap layers, isolated so the user can decide. Vyanet identifies; it does not specify the maintenance.' }
   };
   var ORDER = ['S', 'A', 'F', 'E'];
 
@@ -521,6 +521,11 @@
     water: '<path d="M8 2s-5 5.5-5 8.5a5 5 0 0 0 10 0C13 7.5 8 2 8 2z"/>',
     hydrant: '<path d="M5 14h6M6 14V6a2 2 0 0 1 4 0v8M4 8.5h8M8 2v2"/>',
     hazard: '<path d="M8 2.5l6 10.5H2z"/><path d="M8 7v3M8 12v0.3"/>',
+    debris: '<path d="M3 12h10M4 12l1.5-5h5L12 12M5.5 12v2M10.5 12v2M7 8h2"/>',
+    roof: '<path d="M2 8l6-5 6 5"/><path d="M4 8v6h8V8"/>',
+    road: '<path d="M4 14l3.2-12h1.6L12 14"/><path d="M8 5.5v2M8 9.5v2"/>',
+    irrigation: '<path d="M8 2s-5 5.5-5 8.5a5 5 0 0 0 10 0C13 7.5 8 2 8 2z"/>',
+    green: '<circle cx="8" cy="8" r="5.5"/><circle cx="8" cy="8" r="1.6"/>',
     staging: '<path d="M2 11h12M4 11V8l2-3h4l2 3v3"/><circle cx="5" cy="12.5" r="1"/><circle cx="11" cy="12.5" r="1"/>',
     lz: '<circle cx="8" cy="8" r="6"/><path d="M5.5 5v6M10.5 5v6M5.5 8h5"/>',
     medical: '<path d="M6 2h4v4h4v4h-4v4H6v-4H2V6h4z"/>',
@@ -1270,8 +1275,8 @@
     }).join('');
     $('packet-page').innerHTML =
       '<div class="pk-tools"><button onclick="window.print()" class="primary">Print / save PDF</button><button onclick="closePacket()">Close</button></div>' +
-      '<div class="pk-head"><div><div class="eyebrow">Vyanet SAFE · Responder packet' + (fx.status === 'draft' ? ' · DRAFT' : '') + '</div><h1>' + esc(fx.name) + '</h1><div class="meta">' + esc(fx.address) + '</div></div>' +
-      '<div class="tagline">Security · Access<br>Fire · Emergency service</div></div>' +
+      '<div class="pk-head"><div><div class="eyebrow">Vyanet SAFE · Property record' + (fx.status === 'draft' ? ' · DRAFT' : '') + '</div><h1>' + esc(fx.name) + '</h1><div class="meta">' + esc(fx.address) + '</div></div>' +
+      '<div class="tagline">Security · Access<br>Fire · Environment</div></div>' +
       '<dl class="facts">' + fx.facts.slice(0, 8).map(function (f) { return '<dt>' + esc(f[0]) + '</dt><dd>' + esc(f[1]) + '</dd>'; }).join('') + '</dl>' +
       section('E') + (routes ? '<p class="small"><b>Routes.</b></p>' + routes : '') + section('F') + section('A') + section('S') +
       '<h2>What this map cannot establish</h2><ul style="font:13px/1.5 var(--sans);margin-left:18px">' + (fx.limits || []).map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>' +
