@@ -315,8 +315,8 @@
       document.body.innerHTML =
         '<div class="pg-body"><div class="pg-main sp-scroll hm-main">' +
           portalHeroHTML() +
-          '<div class="hm-scopes">' + scopeCardHTML(ctx, ctx.R, 'res') + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
           patrolNotesHTML(ctx) +
+          '<div class="hm-scopes">' + scopeCardHTML(ctx, ctx.R, 'res') + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
           anatomyHTML() +
         '</div><aside class="pg-rail sp-scroll">' +
           '<div class="sec"><div class="sp-h">Who uses it</div>' + rolesHTML().replace('class="hm-roles"', 'class="hm-roles rail"') + '</div>' +
@@ -327,17 +327,17 @@
     b: function (ctx) {
       document.body.innerHTML = '<div class="wrap">' +
         portalHeroHTML() +
-        '<div class="hm-scopes two-col">' + scopeCardHTML(ctx, ctx.R, 'res') + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
         patrolNotesHTML(ctx) +
+        '<div class="hm-scopes two-col">' + scopeCardHTML(ctx, ctx.R, 'res') + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
         anatomyHTML() + rolesHTML() +
       '</div>';
     },
     c: function (ctx) {
       document.body.innerHTML = '<div class="grid">' +
         '<div class="card-12"><section class="panel hm-hero-card">' + portalHeroHTML() + '</section></div>' +
+        '<div class="card-12"><section class="panel"><div class="panel-b">' + patrolNotesHTML(ctx) + '</div></section></div>' +
         '<div class="card-6">' + scopeCardHTML(ctx, ctx.R, 'res') + '</div>' +
         '<div class="card-6">' + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
-        '<div class="card-12"><section class="panel"><div class="panel-b">' + patrolNotesHTML(ctx) + '</div></section></div>' +
         '<div class="card-8"><section class="panel"><div class="panel-b">' + anatomyHTML() + '</div></section></div>' +
         '<div class="card-4"><section class="panel"><div class="panel-b">' + rolesHTML() + '</div></section></div>' +
       '</div>';

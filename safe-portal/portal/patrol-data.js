@@ -549,7 +549,7 @@
   }
 
   function paintHomeNotes(box, notes, openPage) {
-    var top = (notes || []).slice(0, 8);
+    var top = notes || [];
     if (!top.length) {
       box.innerHTML = '<p class="empty">No notes yet. Quiet reviews stay off this list.</p>';
       return;

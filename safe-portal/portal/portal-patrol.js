@@ -70,14 +70,18 @@
     return n;
   }
 
-  function fillSelect(select, frames, current) {
+  function fillSelect(select, frames, current, allLabel) {
+    var all = '';
+    if (allLabel) {
+      all = '<option value="*"' + (current === '*' ? ' selected' : '') + '>' + esc(allLabel) + ' · ' + frames.length + '</option>';
+    }
     var html = state.cameras.map(function (cam) {
       var id = String(cam.device_id);
       var n = countFor(frames, id);
       var label = (cam.name || id) + (n ? ' · ' + n : '');
       return '<option value="' + esc(id) + '"' + (id === current ? ' selected' : '') + '>' + esc(label) + '</option>';
     }).join('');
-    select.innerHTML = html || '<option value="">No cameras</option>';
+    select.innerHTML = all + html || '<option value="">No cameras</option>';
   }
 
   function renderChart() {
@@ -192,20 +196,25 @@
     return '<button type="button" class="shot" data-i="' + index + '"><img alt="" src="' + esc(SP.jpegUrl(frame.key)) + '"><span class="cap"><b>' + esc(SP.when(frame.requested_at)) + '</b>' + note + '</span></button>';
   }
 
-  function renderCameraFrames(selectId, gridId, frames, currentKey, empty) {
+  function renderCameraFrames(selectId, gridId, frames, currentKey, empty, allLabel) {
     var select = el(selectId);
     var current = state[currentKey];
-    if (!current && state.cameras.length) current = String(state.cameras[0].device_id);
+    if (!current) current = allLabel ? '*' : (state.cameras.length ? String(state.cameras[0].device_id) : '');
     state[currentKey] = current;
-    fillSelect(select, frames, current);
+    fillSelect(select, frames, current, allLabel);
     select.onchange = function () {
       state[currentKey] = select.value;
-      renderCameraFrames(selectId, gridId, frames, currentKey, empty);
+      renderCameraFrames(selectId, gridId, frames, currentKey, empty, allLabel);
     };
-    var mine = frames.filter(function (frame) { return String(frame.device_id) === String(state[currentKey]); });
+    var all = !!(allLabel && current === '*');
+    var mine = all ? frames.slice() : frames.filter(function (frame) { return String(frame.device_id) === String(state[currentKey]); });
     var grid = el(gridId);
-    if (!mine.length) { grid.innerHTML = '<p class="empty">' + empty + '</p>'; return; }
-    grid.innerHTML = '<p class="sub">' + esc(cameraName(state[currentKey])) + ' · ' + mine.length + '</p><div class="grid">' + mine.map(frameCard).join('') + '</div>';
+    if (!mine.length) {
+      grid.innerHTML = '<p class="empty">' + (all || !allLabel ? empty : 'No notes for this camera.') + '</p>';
+      return;
+    }
+    var heading = all ? (allLabel + ' · ' + mine.length) : (cameraName(state[currentKey]) + ' · ' + mine.length);
+    grid.innerHTML = '<p class="sub">' + esc(heading) + '</p><div class="grid">' + mine.map(frameCard).join('') + '</div>';
     Array.prototype.forEach.call(grid.querySelectorAll('.shot'), function (btn) {
       btn.onclick = function () { SP.openViewer(mine, Number(btn.getAttribute('data-i'))); };
     });
@@ -216,7 +225,7 @@
   }
 
   function renderNotes() {
-    renderCameraFrames('note-cam', 'note-grid', state.notes, 'noteId', 'No notes for this camera.');
+    renderCameraFrames('note-cam', 'note-grid', state.notes, 'noteId', 'No notes yet.', 'All notes');
   }
 
   function showTab(name) {
