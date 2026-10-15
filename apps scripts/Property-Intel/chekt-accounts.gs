@@ -1028,6 +1028,19 @@ function chektPatrolClips_(opts) {
   };
 }
 
+function chektPatrolProfile_(opts) {
+  opts = opts || {};
+  var row = chektScanViewerRow_(opts.hub, opts.pass);
+  if (!row.ok) return row;
+  if (row.hub !== '6de88883bfd4a8349a901c54611ed9d7') {
+    return { ok: false, error: 'profile is Tracy\'s house only' };
+  }
+  if (typeof recordsPatrolProfilePublic_ !== 'function') {
+    return { ok: false, error: 'recordsPatrolProfilePublic_ is not defined — paste records.gs, save, and deploy a new version' };
+  }
+  return recordsPatrolProfilePublic_();
+}
+
 function chektScanPatrolSave_(payload) {
   payload = payload || {};
   var row = chektScanViewerRow_(payload.hub, payload.pass);

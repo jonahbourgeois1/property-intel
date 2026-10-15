@@ -658,14 +658,75 @@
 
   function showTab(name) {
     state.tab = name;
-    ['schedule', 'live', 'images', 'notes'].forEach(function (tab) {
+    ['schedule', 'live', 'images', 'notes', 'profile'].forEach(function (tab) {
       el('tab-' + tab).classList.toggle('on', tab === name);
       el('panel-' + tab).classList.toggle('on', tab === name);
     });
     if (name === 'images') renderImages();
     if (name === 'notes') renderNotes();
+    if (name === 'profile') loadProfile();
     if (name === 'live') openLive();
     else stopLive();
+  }
+
+  function accountLabel(value) {
+    var text = String(value || 'residential').trim();
+    if (text.toLowerCase().indexOf('comm') !== 0) return 'Residential';
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+
+  function whenText(when) {
+    if (!when || !when.days || !when.days.length) return 'Any time';
+    var days = when.days.map(function (day) {
+      return day.charAt(0).toUpperCase() + day.slice(1);
+    }).join(', ');
+    return days + ' ' + when.start + '–' + when.end;
+  }
+
+  function renderProfile(data) {
+    var name = data.name || 'Jones residence';
+    var address = data.address || '18775 Macalpine Loop, Bend, OR 97702';
+    var facts = '<dl class="profile-facts">' +
+      '<dt>Name</dt><dd>' + esc(name) + '</dd>' +
+      '<dt>Address</dt><dd>' + esc(address) + '</dd>' +
+      '<dt>Account type</dt><dd>' + esc(accountLabel(data.account_type)) + '</dd>' +
+      '</dl>';
+    var description = data.saved && data.description
+      ? '<p class="profile-desc">' + esc(data.description) + '</p>'
+      : '<p class="empty">No description has been saved yet.</p>';
+    var people = data.characters || [];
+    var cards = people.length
+      ? '<div class="profile-chars">' + people.map(function (row) {
+        var kind = row.kind ? row.kind.charAt(0).toUpperCase() + row.kind.slice(1) : '';
+        return '<article class="profile-char"><b>' + esc(row.label || row.id || 'Character') + '</b>' +
+          (kind ? '<span>' + esc(kind) + '</span>' : '') +
+          (row.appearance ? '<span>' + esc(row.appearance) + '</span>' : '') +
+          '<span>' + esc(row.where || 'Any camera') + '</span>' +
+          '<span>' + esc(whenText(row.when)) + '</span></article>';
+      }).join('') + '</div>'
+      : '<p class="empty">No characters yet. A character is written after the same thing has been seen more than once.</p>';
+    el('profile-body').innerHTML = facts + description + cards;
+  }
+
+  function loadProfile() {
+    if (!SP.pass()) {
+      el('profile-body').innerHTML = '<p class="empty">Sign in to read the profile.</p>';
+      return;
+    }
+    if (state.profile) { renderProfile(state.profile); return; }
+    el('profile-body').innerHTML = '<p class="empty">Reading the profile…</p>';
+    SP.patrolProfile().then(function (data) {
+      if (!data || data.ok === false) {
+        var err = (data && data.error) || 'The profile did not load.';
+        if (/unknown route/i.test(err)) err = 'The profile is not on this deployment yet.';
+        el('profile-body').innerHTML = '<p class="empty">' + esc(err) + '</p>';
+        return;
+      }
+      state.profile = data;
+      renderProfile(data);
+    }).catch(function (e) {
+      el('profile-body').innerHTML = '<p class="empty">' + esc(e.message || 'The profile did not load.') + '</p>';
+    });
   }
 
   function applyPreset(preset) {
@@ -775,7 +836,7 @@
     var theme = new URLSearchParams(location.search).get('theme') === 'dark' ? 'dark' : 'light';
     document.documentElement.classList.add('theme-' + theme);
     el('gate-form').onsubmit = function (ev) { ev.preventDefault(); enter(el('gate-pass').value); };
-    ['schedule', 'live', 'images', 'notes'].forEach(function (tab) {
+    ['schedule', 'live', 'images', 'notes', 'profile'].forEach(function (tab) {
       el('tab-' + tab).onclick = function () { showTab(tab); };
     });
     el('live-back').onclick = function () { live.focus = -1; applyLiveFocus(); };

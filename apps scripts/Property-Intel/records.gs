@@ -944,6 +944,38 @@ function recordsPropertyProfileGet_(opts) {
   return { ok: true, route: 'property-profile', saved: true, hub: dest.hubId, key: key, profile: raw };
 }
 
+// The patrol page. Name, address, description, and characters. Not the history.
+function recordsPatrolProfilePublic_() {
+  const hub = RECORDS_PROFILE_HUB;
+  const idx = recordsFetchJson_('index/' + hub + '.json') || {};
+  const raw = recordsFetchJson_('property-profile/' + hub + '.json');
+  const saved = !!(raw && raw.schema === 'property-intel-records/property-profile-v1');
+  const src = saved ? raw : {};
+  const characters = [];
+  const list = Array.isArray(src.characters) ? src.characters : [];
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i] || {};
+    characters.push({
+      id: String(row.id || ''),
+      kind: String(row.kind || ''),
+      label: String(row.label || '').replace(/[\r\n]/g, ' ').trim(),
+      appearance: String(row.appearance || '').replace(/[\r\n]/g, ' ').trim(),
+      where: String(row.where || '').replace(/[\r\n]/g, ' ').trim(),
+      when: (row.when && typeof row.when === 'object') ? row.when : null
+    });
+  }
+  return {
+    ok: true,
+    route: 'patrol-profile',
+    saved: saved,
+    name: String(src.name || idx.name || '').replace(/[\r\n]/g, ' ').trim(),
+    address: String(src.address || idx.address || '').replace(/[\r\n]/g, ' ').trim(),
+    account_type: String(src.account_type || idx.account_type || 'residential'),
+    description: saved ? String(src.description || '') : '',
+    characters: characters
+  };
+}
+
 function recordsPropertyProfilePut_(opts) {
   opts = opts || {};
   if (!recordsProfileKeyOk_(opts.review_key)) return { ok: false, error: 'review key refused' };

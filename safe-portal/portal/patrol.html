@@ -88,6 +88,17 @@
   .clip-media img, .clip-media video { display: block; width: 100%; max-height: 62vh; object-fit: contain; background: #07090c; border-radius: 8px; }
   #clip-fail { margin: 8px 0 0; font-size: 14px; }
   #clip-desc { margin: 12px 0 0; font-size: 16px; line-height: 1.4; }
+  .profile-facts { display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; margin: 0 0 18px; max-width: 720px; }
+  .profile-facts dt { font-weight: 700; }
+  .profile-facts dd { margin: 0; }
+  .profile-desc { max-width: 720px; margin: 0 0 18px; font-size: 16px; line-height: 1.45; }
+  .profile-chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; margin: 0 0 18px; }
+  .profile-char { border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 12px; }
+  .profile-char b { display: block; }
+  .profile-char span { display: block; margin-top: 4px; font-size: 14px; }
+  .profile-promo { max-width: 720px; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; background: var(--surface); }
+  .profile-promo h2 { margin: 0 0 6px; font-size: 16px; }
+  .profile-promo p { margin: 0; }
   #live-back { margin-left: 8px; }
   @media (max-width: 860px) {
     .live-station { grid-template-columns: 1fr; }
@@ -95,8 +106,8 @@
     .clip-media { grid-template-columns: 1fr; }
   }
 </style>
-<script src="patrol-data.js?v=0.9.14"></script>
-<script src="portal-patrol.js?v=0.9.14"></script>
+<script src="patrol-data.js?v=0.9.15"></script>
+<script src="portal-patrol.js?v=0.9.15"></script>
 </head>
 <body class="pg patrol">
   <div id="gate" class="visible">
@@ -123,6 +134,7 @@
     <button type="button" id="tab-live">Live Feed</button>
     <button type="button" id="tab-images">Images</button>
     <button type="button" id="tab-notes">Notes</button>
+    <button type="button" id="tab-profile">Profile</button>
   </nav>
   <section class="panel-tab on" id="panel-schedule">
     <p class="sub">The day, across every camera. Pick a camera underneath to change its times.</p>
@@ -156,6 +168,14 @@
     <p class="sub" id="note-count">Frames with a sentence, one camera at a time.</p>
     <div class="pick"><select id="note-cam" aria-label="Camera"></select></div>
     <div id="note-grid"></div>
+  </section>
+  <section class="panel-tab" id="panel-profile">
+    <p class="sub">The property record. The cameras compiled the description and the characters.</p>
+    <div id="profile-body"><p class="empty">Sign in to read the profile.</p></div>
+    <aside class="profile-promo">
+      <h2>More of this record is still to come</h2>
+      <p>A form will take the rest: who someone is, the routines you want the patrol to treat as usual, and other facts about the property. Until that form exists, this page shows only what the cameras have recorded.</p>
+    </aside>
   </section>
   <div id="clip-box" hidden>
     <div class="clip-card" id="clip-card">

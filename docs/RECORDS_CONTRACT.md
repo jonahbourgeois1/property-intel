@@ -472,6 +472,7 @@ Tracy's house is this Jones hub. The review bot is the writer of the first profi
 
 ## Changelog
 
+- **2026-10-15** — Virtual Patrol has a Profile tab. `GET ?route=patrol-profile&hub=&pass=` checks the row password and returns the name, address, account type, description, and characters. It does not return history. Critique build `v6.8.40`. Ping must show `patrol_profile: true` after paste, save, and a new deployment version. The customer form is not built.
 - **2026-10-15** — `patrol-clips` lists the visit names from the object keys and does not open each JSON. The page reads the sentence from the CDN. Critique build `v6.8.39`. The CHEKT clip search accepts `quick=1` for one page per category. That gateway change is not live until `chekt-viewer-gateway.py` is deployed.
 - **2026-10-15** — Virtual Patrol lists the live bot's Jones visits beside the CHEKT clips. `GET ?route=patrol-clips&hub=&pass=` checks the row password, then returns `camera-live/` visits from the last 7 days. It does not take `LIVE_STATION_KEY`. The station page still uses `live-clips`. Critique build `v6.8.38`. Ping must show `patrol_clips: true` after paste, save, and a new deployment version. The SAFE tabs do not call this route.
 - **2026-10-15** — The live bot reads the ping before the wall video. `GET ?route=live-patrol` returns `patrol_id` and `patrol` with no JPEG and no video. `live-look` repeats those two fields before `sheet_base64` and `feed_base64`. Critique build `v6.8.37`. Ping must show `live_patrol: true` after paste, save, and a new deployment version.

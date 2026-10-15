@@ -28,6 +28,7 @@
 //   GET  ?route=scan-list&hub=&pass=        -> camera list, or one camera's frames
 //   GET  ?route=scan-patrol&hub=&pass=      -> QA level and review times
 //   GET  ?route=patrol-clips&hub=&pass=     -> Jones visits the live bot saved, last 7 days
+//   GET  ?route=patrol-profile&hub=&pass=   -> name, address, description, and characters
 //   POST ?route=scan-patrol                 -> save that schedule (text/plain JSON)
 //   GET  ?route=scan-frame&hub=&pass=&key=  -> one JPEG plus its description
 //   GET  ?route=property-profile&review_key=&hub= -> read Tracy's profile
@@ -206,7 +207,7 @@ const CRITIQUE_PIN_SLOTS = 20;
 // Check with:  <your /exec URL>?route=ping
 // If `build` is not the value below, the deployment is behind: Deploy →
 // Manage deployments → edit → New version.
-const CRITIQUE_BUILD = 'v6.8.39 (2026-10-15) — patrol clip list does not open each visit';
+const CRITIQUE_BUILD = 'v6.8.40 (2026-10-15) — patrol profile tab';
 
 // ── The Element Critique layout ─────────────────────────────────────────────
 // ONE ROW PER SUBMISSION (Jonah, 2026-08-11), wide: a submission block, then
@@ -1865,6 +1866,7 @@ function critiqueApiGet_(e) {
                                 property_profile_key: (typeof recordsProfileKeyAllowed_ === 'function') ? recordsProfileKeyAllowed_() : false,
                                 patrol_ping: (typeof recordsPatrolPing_ === 'function'),
                                 patrol_clips: (typeof chektPatrolClips_ === 'function' && typeof recordsLiveClipShells_ === 'function'),
+                                patrol_profile: (typeof chektPatrolProfile_ === 'function' && typeof recordsPatrolProfilePublic_ === 'function'),
                                 property_profile_live_read: (typeof recordsProfileLiveReadOk_ === 'function'),
                                 server_time: new Date().toISOString() }, cb);
     }
@@ -1955,6 +1957,12 @@ function critiqueApiGet_(e) {
         throw new Error('chektPatrolClips_ is not defined — paste chekt-accounts.gs, save, and deploy a new version');
       }
       return critiqueJsonOut_(chektPatrolClips_({ hub: p.hub, pass: p.pass }), cb);
+    }
+    if (route === 'patrol-profile') {
+      if (typeof chektPatrolProfile_ !== 'function') {
+        throw new Error('chektPatrolProfile_ is not defined — paste chekt-accounts.gs, save, and deploy a new version');
+      }
+      return critiqueJsonOut_(chektPatrolProfile_({ hub: p.hub, pass: p.pass }), cb);
     }
     if (route === 'scan-roster') {
       if (typeof chektScanRoster_ !== 'function') {
