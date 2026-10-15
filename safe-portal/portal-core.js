@@ -186,6 +186,39 @@
     return R;
   }
 
+  var SCAN_CDN = 'https://d1h1on7f1v1lpy.cloudfront.net/';
+
+  function scanStillUrl(key) {
+    key = String(key || '').replace(/^\//, '').replace(/\.json$/, '.jpg');
+    if (key.indexOf('camera-scans/') !== 0) return '';
+    return SCAN_CDN + key;
+  }
+
+  // A camera with no technician still uses the newest Virtual Patrol frame.
+  // That frame is the JPEG named in camera-scan-state/{hub}.json previous.
+  function fillScanStills(R) {
+    var need = (R.live || []).filter(function (p) { return p.live && p.live.device && !p.photo; });
+    if (!need.length || !R.hub) return Promise.resolve(false);
+    return fetch(SCAN_CDN + 'camera-scan-state/' + R.hub + '.json')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (state) {
+        if (!state) return false;
+        var prev = state.previous || {};
+        var walks = state.walks || {};
+        var changed = false;
+        need.forEach(function (cam) {
+          var id = String(cam.live.device);
+          var slot = prev[id];
+          var key = slot && typeof slot === 'object' ? (slot.key || slot.at || '') : slot;
+          if (!key && walks[id]) key = walks[id].tip || walks[id].at || '';
+          var url = scanStillUrl(key);
+          if (url) { cam.photo = url; changed = true; }
+        });
+        return changed;
+      })
+      .catch(function () { return false; });
+  }
+
   // CHEKT roster is the camera count. A pin is used when its device id matches.
   // Cameras without a GPS pin stay in the live list and off the map.
   function rosterLive(fx, cams, byId) {
@@ -907,7 +940,7 @@
     esc: esc, icon: icon, color: color, fmt: fmt, sentences: sentences, toast: toast, haversine: haversine,
     load: load,
     createMap: createMap, createNadir: createNadir, createModel: createModel,
-    renderFeeds: renderFeeds, tileHTML: tileHTML, playerHTML: playerHTML, clipsHTML: clipsHTML,
+    renderFeeds: renderFeeds, tileHTML: tileHTML, playerHTML: playerHTML, clipsHTML: clipsHTML, fillScanStills: fillScanStills,
     safeHTML: safeHTML, pinRowHTML: pinRowHTML, limitsHTML: limitsHTML, factsHTML: factsHTML, legendHTML: legendHTML, cardHTML: cardHTML,
     measures: measures, measuresHTML: measuresHTML,
     stillHTML: stillHTML, thumbsHTML: thumbsHTML,

@@ -478,7 +478,15 @@
         }
         var R = ctx.R, playerEl = el.querySelector('.mod-player'), clipsEl = el.querySelector('.sp-clips');
         var st = { cam: null, clip: null, clipCam: null };
-        var feeds = SP.renderFeeds(el.querySelector('.mod-feeds'), R, { layout: opts.feedsLayout || 'grid2', small: true, onFocus: function (cam) { focus(cam.id, null); filter(cam.id); } });
+        var feedOpts = { layout: opts.feedsLayout || 'grid2', small: true, onFocus: function (cam) { focus(cam.id, null); filter(cam.id); } };
+        var feeds = SP.renderFeeds(el.querySelector('.mod-feeds'), R, feedOpts);
+        if (SP.fillScanStills) {
+          SP.fillScanStills(R).then(function (changed) {
+            if (!changed) return;
+            feeds = SP.renderFeeds(el.querySelector('.mod-feeds'), R, feedOpts);
+            if (st.cam && playerEl.classList.contains('on')) focus(st.cam, st.clip);
+          });
+        }
         function focus(id, clip, tab) {
           var cam = R.byId[id]; if (!cam) return;
           st.cam = id; st.clip = clip;
