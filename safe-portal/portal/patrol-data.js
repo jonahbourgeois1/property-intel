@@ -148,8 +148,31 @@
     return postApi({ route: 'scan-patrol', hub: HUB, pass: pass(), qa: qa, times: times });
   }
 
+  function readClips() {
+    try {
+      var raw = sessionStorage.getItem(CLIPS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
   function patrolClips() {
-    return callApi({ route: 'patrol-clips', hub: HUB, pass: pass() }, 90000);
+    if (clipPromise) return clipPromise;
+    clipPromise = callApi({ route: 'patrol-clips', hub: HUB, pass: pass() }, 90000).then(function (data) {
+      clipPromise = null;
+      if (data && data.ok && data.list !== false) {
+        try { sessionStorage.setItem(CLIPS_KEY, JSON.stringify(data)); } catch (e) {}
+      }
+      return data;
+    }, function (err) {
+      clipPromise = null;
+      throw err;
+    });
+    return clipPromise;
+  }
+
+  function prefetchClips() {
+    if (!pass()) return;
+    patrolClips().catch(function () {});
   }
 
   function patrolProfile() {
@@ -205,7 +228,9 @@
   var CACHE_KEY = 'safe-portal-patrol-cache';
   var STAMP_KEY = 'safe-portal-patrol-stamp';
   var WARM_KEY = 'safe-portal-patrol-warming';
+  var CLIPS_KEY = 'safe-portal-bot-clips';
   var warmPromise = null;
+  var clipPromise = null;
 
   function peek() {
     try {
@@ -218,6 +243,17 @@
     try {
       sessionStorage.setItem(CACHE_KEY, JSON.stringify(cache));
       sessionStorage.setItem(STAMP_KEY, String(Date.now()));
+    } catch (e) {}
+  }
+
+  function dropCache() {
+    warmPromise = null;
+    clipPromise = null;
+    try {
+      sessionStorage.removeItem(CACHE_KEY);
+      sessionStorage.removeItem(STAMP_KEY);
+      sessionStorage.removeItem(WARM_KEY);
+      sessionStorage.removeItem(CLIPS_KEY);
     } catch (e) {}
   }
 
@@ -674,6 +710,8 @@
     patrolGet: patrolGet,
     patrolSave: patrolSave,
     patrolClips: patrolClips,
+    clipsReady: readClips,
+    prefetchClips: prefetchClips,
     patrolProfile: patrolProfile,
     presets: presets,
     presetTimes: presetTimes,
@@ -681,6 +719,7 @@
     when: when,
     peek: peek,
     writeCache: writeCache,
+    dropCache: dropCache,
     watch: watch,
     warming: warming,
     whenReady: whenReady,

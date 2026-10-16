@@ -454,10 +454,14 @@
     return '<button type="button" class="live-clip' + (key === live.play ? ' on' : '') + '" data-k="' + esc(key) + '">' + thumb + '<span><b>' + esc(item.name) + '</b><span>' + esc(SP.when(item.when) || '') + '</span>' + sentence + '</span></button>';
   }
 
-  function paintGroup(id, list, prefix, empty) {
+  function paintGroup(id, list, prefix, empty, pending) {
     var box = el(id);
     if (!box) return;
     if (!list.length) {
+      if (pending) {
+        box.innerHTML = '<p class="empty">' + esc(empty) + '</p>';
+        return;
+      }
       var retry = /timed out|did not|failed|busy|not on this deployment/i.test(empty || '');
       box.innerHTML = '<p class="empty">' + esc(empty) + (retry ? ' <button type="button" class="live-retry">Retry</button>' : '') + '</p>';
       var again = box.querySelector('.live-retry');
@@ -480,8 +484,8 @@
     var total = bot.length + chekt.length;
     if (count) count.textContent = total ? '(' + total + ')' : '';
     live.byKey = {};
-    paintGroup('live-bot', bot, 'b', live.botNote || 'No bot clips in the last 7 days.');
-    paintGroup('live-clips', chekt, 'c', live.chektNote || 'No CHEKT clips in the last 7 days.');
+    paintGroup('live-bot', bot, 'b', live.botPending ? 'Loading bot clips…' : (live.botNote || 'No bot clips in the last 7 days.'), live.botPending);
+    paintGroup('live-clips', chekt, 'c', live.chektPending ? 'Loading CHEKT clips…' : (live.chektNote || 'No CHEKT clips in the last 7 days.'), live.chektPending);
   }
 
   function hideClip() {
@@ -559,30 +563,48 @@
     });
   }
 
+  function applyBot(rows) {
+    live.bot = (rows || []).map(function (row) { return asClip(row, 'bot'); });
+    live.botPending = false;
+    live.botNote = '';
+    paintClips();
+    hydrateBot(live.bot);
+  }
+
   function loadBot(gen) {
+    var cached = SP.clipsReady();
+    if (cached && cached.clips && cached.clips.length) applyBot(cached.clips);
+    else {
+      live.botPending = true;
+      live.botNote = 'Loading bot clips…';
+      if (!live.bot.length) el('live-bot').innerHTML = '<p class="empty">Loading bot clips…</p>';
+    }
     return SP.patrolClips().then(function (data) {
       if (gen !== live.clipGen || state.tab !== 'live') return;
       if (!data || data.ok === false) {
         var err = (data && data.error) || 'Bot clips did not load.';
         if (/unknown route/i.test(err)) err = 'Bot clips are not on this deployment yet.';
         if (/timed out/i.test(err)) err = 'Bot clips timed out.';
+        live.botPending = false;
+        if (live.bot.length) return;
         live.bot = [];
         live.botNote = err;
         paintClips();
         return;
       }
       if (data.list === false) {
+        live.botPending = false;
+        if (live.bot.length) return;
         live.bot = [];
         live.botNote = data.error || 'Bot clips did not load.';
         paintClips();
         return;
       }
-      live.bot = (data.clips || []).map(function (row) { return asClip(row, 'bot'); });
-      live.botNote = '';
-      paintClips();
-      hydrateBot(live.bot);
+      applyBot(data.clips || []);
     }).catch(function (e) {
       if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.botPending = false;
+      if (live.bot.length) return;
       live.bot = [];
       live.botNote = /timed out/i.test(e.message || '') ? 'Bot clips timed out.' : (e.message || 'Bot clips did not load.');
       paintClips();
@@ -591,15 +613,18 @@
 
   function loadChekt(gen) {
     if (gen !== live.clipGen || state.tab !== 'live') return;
+    live.chektPending = true;
     live.chektNote = 'Loading CHEKT clips…';
-    el('live-clips').innerHTML = '<p class="empty">Loading CHEKT clips…</p>';
+    if (!live.chekt.length) el('live-clips').innerHTML = '<p class="empty">Loading CHEKT clips…</p>';
     gwGet('/clips?property=' + encodeURIComponent(SP.HUB) + '&days=7&limit=20&quick=1', 70000).then(function (data) {
       if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.chektPending = false;
       live.chekt = ((data && data.events) || []).map(function (row) { return asClip(row, 'chekt'); });
       live.chektNote = '';
       paintClips();
     }).catch(function (e) {
       if (gen !== live.clipGen || state.tab !== 'live') return;
+      live.chektPending = false;
       live.chekt = [];
       live.chektNote = /timed out/i.test(e.message || '') ? 'CHEKT clips timed out.' : (e.message || 'CHEKT clips did not load.');
       paintClips();
@@ -629,10 +654,8 @@
     var fresh = live.cameras.length && (Date.now() - live.at) < 50 * 60 * 1000;
     if (!fresh) el('live-wall').innerHTML = '<p class="empty">Opening the cameras…</p>';
     else paintWall();
-    el('live-bot').innerHTML = '<p class="empty">Loading bot clips…</p>';
-    live.chekt = [];
-    live.chektNote = 'CHEKT clips load after the cameras.';
-    el('live-clips').innerHTML = '<p class="empty">CHEKT clips load after the cameras.</p>';
+    live.chektPending = true;
+    live.chektNote = 'Loading CHEKT clips…';
     var gen = ++live.clipGen;
     loadBot(gen);
     var startChekt = function () {
@@ -776,7 +799,8 @@
   }
 
   function show(cache) {
-    if (!cache) return;
+    if (!cache || !SP.pass()) return;
+    if (el('gate').classList.contains('visible')) return;
     var first = !state.painted;
     if (first) {
       state.painted = true;
@@ -808,27 +832,34 @@
     }, 4000);
   }
 
+  function closeLogin(msg) {
+    SP.setPass('');
+    SP.dropCache();
+    state.painted = false;
+    el('gate-enter').disabled = false;
+    el('gate-status').textContent = '';
+    showGate(msg);
+  }
+
   function enter(password) {
     if (!password) { showGate('Enter the property password'); return; }
-    el('gate-enter').disabled = true;
-    el('gate-status').textContent = 'Checking…';
     SP.setPass(password);
+    el('gate-pass').value = '';
+    el('gate-enter').disabled = false;
+    el('gate-status').textContent = '';
+    hideGate();
+    waitForPictures();
+    SP.prefetchClips();
     SP.check().then(function (data) {
+      if (!SP.pass()) return;
       if (!data.ok) {
-        SP.setPass('');
-        el('gate-enter').disabled = false;
-        el('gate-status').textContent = '';
-        showGate(data.error || 'That password did not open the property');
+        closeLogin(data.error || 'That password did not open the property');
         return;
       }
-      el('gate-pass').value = '';
-      hideGate();
-      SP.warm(data).then(show).catch(function (e) { setStatus(e.message); });
+      if (data.name) el('property-name').textContent = data.name;
     }).catch(function (e) {
-      SP.setPass('');
-      el('gate-enter').disabled = false;
-      el('gate-status').textContent = '';
-      showGate(e.message);
+      if (!SP.pass()) return;
+      closeLogin(e.message);
     });
   }
 
@@ -851,6 +882,7 @@
     if (!SP.pass()) { showGate(''); return; }
     hideGate();
     waitForPictures();
+    SP.prefetchClips();
   }
 
   window.SafePatrolPage = { boot: boot, show: show };
