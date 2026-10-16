@@ -22,7 +22,7 @@
 -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="../fixtures.js?v=0.9.10"></script>
-<script src="patrol-data.js?v=0.9.8"></script>
+<script src="patrol-data.js?v=0.9.17"></script>
 <style>
   :root {
     --top-h: 60px; --nav-w: 264px; --nav-w-min: 68px;
@@ -259,7 +259,7 @@
   }
 
   function pageUrl(id, p) {
-    if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme) + '&v=0.9.15';
+    if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme) + '&v=0.9.17';
     var q = new URLSearchParams();
     var slug = p || state.p;
     if (id === 'home') q.set('mode', 'portal');
@@ -355,29 +355,28 @@
     ev.preventDefault();
     var password = $('gate-pass').value;
     if (!password) { showGate('Enter the property password'); return; }
-    $('gate-enter').disabled = true;
-    $('gate-status').textContent = 'Checking…';
     SP.setPass(password);
-    SP.check().then(function (data) {
-      if (!data.ok) {
-        SP.setPass('');
-        $('gate-enter').disabled = false;
-        $('gate-status').textContent = '';
-        showGate(data.error || 'That password did not open the property');
-        return;
-      }
-      $('gate-pass').value = '';
-      hideGate();
-      loadPage();
-      SP.warm(data).catch(function (err) {
-        if (!err.auth) return;
-        SP.setPass('');
-        showGate(err.message);
-      });
-    }).catch(function (err) {
+    $('gate-pass').value = '';
+    $('gate-enter').disabled = false;
+    $('gate-status').textContent = '';
+    hideGate();
+    loadPage();
+    SP.warm().catch(function (err) {
+      if (!err || !err.auth || !SP.pass()) return;
       SP.setPass('');
-      $('gate-enter').disabled = false;
-      $('gate-status').textContent = '';
+      SP.dropCache();
+      showGate(err.message);
+    });
+    SP.check().then(function (data) {
+      if (!SP.pass()) return;
+      if (data.ok) return;
+      SP.setPass('');
+      SP.dropCache();
+      showGate(data.error || 'That password did not open the property');
+    }).catch(function (err) {
+      if (!SP.pass()) return;
+      SP.setPass('');
+      SP.dropCache();
       showGate(err.message);
     });
   };
