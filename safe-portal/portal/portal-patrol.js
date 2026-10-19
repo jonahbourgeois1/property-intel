@@ -477,9 +477,18 @@
     });
   }
 
+  function whenMs(item) {
+    var n = Date.parse(item && item.when || '');
+    return isNaN(n) ? 0 : n;
+  }
+
+  function byTime(a, b) {
+    return whenMs(b) - whenMs(a);
+  }
+
   function paintClips() {
-    var bot = live.bot || [];
-    var chekt = live.chekt || [];
+    var bot = (live.bot || []).slice().sort(byTime);
+    var chekt = (live.chekt || []).slice().sort(byTime);
     var count = el('live-clip-n');
     var total = bot.length + chekt.length;
     if (count) count.textContent = total ? '(' + total + ')' : '';
