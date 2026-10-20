@@ -1,0 +1,621 @@
+{
+  "schema": "vyanet-camera-catalog/1",
+  "generated": "2026-10-19",
+  "source_dir": "cameras-catalog/src (Vyanet spec sheets, products.zip)",
+  "rules_file": "rules.json",
+  "null_policy": "null = not printed on the spec sheet; never inferred",
+  "models": [
+    {
+      "model": "D1",
+      "name": "4MP Doorbell D1",
+      "type": "video doorbell",
+      "placement": "outdoor",
+      "resolution_mp": 4.0,
+      "resolution_px": "2560x1440",
+      "lens": "f1.9mm F2.0",
+      "fov_deg": {
+        "h": 152,
+        "v": 81,
+        "d": 170
+      },
+      "dori": {
+        "detect_m": 34.5,
+        "observe_m": 13.7,
+        "recognise_m": 6.9,
+        "identify_m": 3.5,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 5,
+        "ir": "1 pc 850nm SMD IR-LED",
+        "color_night": null
+      },
+      "power": {
+        "supply": "AC 8-24V (existing doorbell wiring) / USB-C 5V / DC 12-30V",
+        "poe": false,
+        "poe_standard": null,
+        "battery": null,
+        "solar": null,
+        "consumption_w": 8,
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": "2.4GHz + 5GHz, 802.11b/g/n/ac",
+        "ethernet": "USB-C to RJ45 transfer",
+        "p2p": true
+      },
+      "pan_tilt": null,
+      "auto_tracking": false,
+      "detection": [
+        "motion",
+        "sound",
+        "face detection",
+        "face recognition (max 20 persons, Vyanet Cloud only)"
+      ],
+      "deterrence": {
+        "siren_db": null,
+        "lights": null
+      },
+      "audio": "full duplex 2-way; visitor messages pushed to app",
+      "ip_rating": "IP65",
+      "operating_temp": "-20~50C (-4~122F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "HDR",
+        "works with existing electronic chime (power kit)",
+        "mounting kit incl. wedges"
+      ],
+      "source": "src/D1 Spec Sheet.pdf (image-only PDF; read from render)",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "E1",
+      "name": "E1 5MP Dome (outdoor Wi-Fi PT)",
+      "type": "pan-tilt dome",
+      "placement": "outdoor",
+      "resolution_mp": 5.0,
+      "resolution_px": "3072x1728",
+      "lens": "f4mm F1.6",
+      "fov_deg": {
+        "h": 90.7,
+        "v": 48,
+        "d": 106
+      },
+      "dori": {
+        "detect_m": 66.4,
+        "observe_m": 26.4,
+        "recognise_m": 13.3,
+        "identify_m": 6.6,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 20,
+        "ir": "8 pcs IR-LED + spotlights (6500K)",
+        "color_night": true
+      },
+      "power": {
+        "supply": "DC 12V/1.0A",
+        "poe": false,
+        "poe_standard": null,
+        "battery": null,
+        "solar": null,
+        "consumption_w": 12,
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": "2.4GHz + 5GHz Wi-Fi 6 (802.11ax)",
+        "ethernet": "10/100 RJ45",
+        "p2p": true
+      },
+      "pan_tilt": {
+        "pan_deg": 355,
+        "tilt_deg": 90
+      },
+      "auto_tracking": true,
+      "detection": [
+        "motion",
+        "human",
+        "vehicle",
+        "sound"
+      ],
+      "deterrence": {
+        "siren_db": 110,
+        "lights": "spotlights (white light)"
+      },
+      "audio": "full duplex 2-way",
+      "ip_rating": "IP65",
+      "operating_temp": "-20~45C (-4~113F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "WDR",
+        "20x digital zoom",
+        "Alexa / Google Home"
+      ],
+      "source": "src/E1 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "F1",
+      "name": "F1 5MP Blue and Red light Camera (outdoor PoE)",
+      "type": "deterrence turret/dome",
+      "placement": "outdoor",
+      "resolution_mp": 5.0,
+      "resolution_px": "3072x1728",
+      "lens": "f3mm F2.0",
+      "fov_deg": {
+        "h": 94.5,
+        "v": 53,
+        "d": 108
+      },
+      "dori": {
+        "detect_m": 65.2,
+        "observe_m": 25.9,
+        "recognise_m": 13.0,
+        "identify_m": 6.5,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 20,
+        "ir": "4 pcs IR-LED + spotlight (6000K)",
+        "color_night": true
+      },
+      "power": {
+        "supply": "PoE 802.3af or DC 12V/1.0A (adapter not included)",
+        "poe": true,
+        "poe_standard": "802.3af",
+        "battery": null,
+        "solar": null,
+        "consumption_w": 12,
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": null,
+        "ethernet": "10/100 RJ45",
+        "p2p": true
+      },
+      "pan_tilt": null,
+      "auto_tracking": false,
+      "detection": [
+        "motion",
+        "human",
+        "vehicle"
+      ],
+      "deterrence": {
+        "siren_db": 100,
+        "lights": "flashing red + blue lights and spotlight, triggered on intruder detection"
+      },
+      "audio": "full duplex 2-way",
+      "ip_rating": "IP66",
+      "operating_temp": "-20~50C (-4~122F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "WDR",
+        "20x digital zoom"
+      ],
+      "source": "src/F1 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "M1",
+      "name": "M1 8MP Millimeter Wave Radar Indoor PT",
+      "type": "indoor pan-tilt",
+      "placement": "indoor",
+      "resolution_mp": 8.0,
+      "resolution_px": "3840x2160",
+      "lens": "f2.8mm F1.6",
+      "fov_deg": {
+        "h": 108,
+        "v": 59.8,
+        "d": 124.5
+      },
+      "dori": {
+        "detect_m": 70.7,
+        "observe_m": 28.1,
+        "recognise_m": 14.1,
+        "identify_m": 7.1,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 8,
+        "ir": "8 pcs IR-LED",
+        "color_night": null
+      },
+      "power": {
+        "supply": "USB-C 5V/2A",
+        "poe": false,
+        "poe_standard": null,
+        "battery": null,
+        "solar": null,
+        "consumption_w": "<10",
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": "2.4GHz + 5GHz Wi-Fi 6 (802.11ax)",
+        "ethernet": "10/100 RJ45",
+        "p2p": true
+      },
+      "pan_tilt": {
+        "pan_deg": 350,
+        "tilt_deg": 150
+      },
+      "auto_tracking": "mmWave radar, 360 deg",
+      "detection": [
+        "motion",
+        "human",
+        "pet (dog/cat)",
+        "sound"
+      ],
+      "deterrence": {
+        "siren_db": 100,
+        "lights": null
+      },
+      "audio": "full duplex 2-way + one-touch calling",
+      "ip_rating": null,
+      "operating_temp": "-20~40C (-4~104F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "WDR",
+        "20x digital zoom"
+      ],
+      "source": "src/M1 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "P1",
+      "name": "P1 5MP Indoor PT Camera",
+      "type": "indoor pan-tilt (manual)",
+      "placement": "indoor",
+      "resolution_mp": 5.0,
+      "resolution_px": "3072x1728",
+      "lens": "f2.8mm F2.0",
+      "fov_deg": {
+        "h": 111.4,
+        "v": 60,
+        "d": 135
+      },
+      "dori": {
+        "detect_m": 52.2,
+        "observe_m": 20.7,
+        "recognise_m": 10.4,
+        "identify_m": 5.2,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 8,
+        "ir": "9 pcs IR-LED",
+        "color_night": null
+      },
+      "power": {
+        "supply": "USB-C 5V/1A",
+        "poe": false,
+        "poe_standard": null,
+        "battery": null,
+        "solar": null,
+        "consumption_w": "<4.8",
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": "2.4GHz + 5GHz (spec table: 802.11b/g/n; features list also says 802.11ac)",
+        "ethernet": "10/100 RJ45",
+        "p2p": true
+      },
+      "pan_tilt": {
+        "pan_deg": 360,
+        "tilt_deg": 310,
+        "note": "manual pan/tilt per features list"
+      },
+      "auto_tracking": false,
+      "detection": [
+        "motion",
+        "human",
+        "pet (dog/cat)",
+        "sound"
+      ],
+      "deterrence": {
+        "siren_db": 100,
+        "lights": null
+      },
+      "audio": "2-way",
+      "ip_rating": null,
+      "operating_temp": "-10~50C (14~122F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "WDR",
+        "20x digital zoom",
+        "black / white colour"
+      ],
+      "source": "src/P1 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "R5",
+      "name": "R5 5MP Indoor Wi-Fi PT (R5W / R5B, sheet rev \"R5 V6\")",
+      "type": "indoor pan-tilt",
+      "placement": "indoor",
+      "resolution_mp": 5.0,
+      "resolution_px": "2560x1920",
+      "lens": "f2.8mm F2.0",
+      "fov_deg": {
+        "h": 77.8,
+        "v": 58,
+        "d": 100
+      },
+      "dori": {
+        "detect_m": 58.7,
+        "observe_m": 23.3,
+        "recognise_m": 11.7,
+        "identify_m": 5.9,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 8,
+        "ir": "4 pcs SMD IR-LED",
+        "color_night": null
+      },
+      "power": {
+        "supply": "USB-C 5V/1.0A",
+        "poe": false,
+        "poe_standard": null,
+        "battery": null,
+        "solar": null,
+        "consumption_w": 7.5,
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": "802.11b/g/n (band not stated; b/g/n implies 2.4GHz)",
+        "ethernet": null,
+        "p2p": true
+      },
+      "pan_tilt": {
+        "pan_deg": 350,
+        "tilt_deg": 70
+      },
+      "auto_tracking": false,
+      "detection": [
+        "motion",
+        "sound",
+        "human"
+      ],
+      "deterrence": {
+        "siren_db": 100,
+        "lights": null
+      },
+      "audio": "2-way",
+      "ip_rating": null,
+      "operating_temp": "-10~40C (14~104F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "privacy block",
+        "WDR",
+        "20x digital zoom",
+        "max 15 fps at 5MP"
+      ],
+      "source": "src/R5 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "S2",
+      "name": "S2 4MP Solar Panel Bullet",
+      "type": "solar/battery bullet",
+      "placement": "outdoor",
+      "resolution_mp": 4.0,
+      "resolution_px": "2560x1440",
+      "lens": "f3.3mm F2.0",
+      "fov_deg": {
+        "h": 89,
+        "v": 48,
+        "d": 104
+      },
+      "dori": {
+        "detect_m": 56.4,
+        "observe_m": 22.4,
+        "recognise_m": 11.3,
+        "identify_m": 5.6,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 10,
+        "ir": "2 pcs spotlight + IR LED (6500K)",
+        "color_night": true
+      },
+      "power": {
+        "supply": "10000mAh rechargeable battery + 5W solar panel; optional DC 5V/2A USB (not included)",
+        "poe": false,
+        "poe_standard": null,
+        "battery": "10000mAh (life varies with settings, use, temperature)",
+        "solar": "5W panel",
+        "consumption_w": null,
+        "needs_wired_power": false
+      },
+      "connectivity": {
+        "wifi": "2.4GHz only, 802.11b/g/n",
+        "ethernet": null,
+        "p2p": true
+      },
+      "pan_tilt": null,
+      "auto_tracking": false,
+      "detection": [
+        "PIR (up to 8 m, 110 deg H)",
+        "human"
+      ],
+      "deterrence": {
+        "siren_db": 110,
+        "lights": "spotlight"
+      },
+      "audio": "full duplex 2-way",
+      "ip_rating": "IP66",
+      "operating_temp": "-20~60C (-4~140F); charging 0~45C",
+      "storage": "microSD up to 512GB, Vyanet cloud",
+      "extras": [
+        "privacy block",
+        "H.264 only",
+        "20 fps"
+      ],
+      "source": "src/S2 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "T1",
+      "name": "T1 5MP PoE Turret (sheet rev \"T1 V2\")",
+      "type": "turret",
+      "placement": "outdoor",
+      "resolution_mp": 5.0,
+      "resolution_px": "3072x1728",
+      "lens": "f4mm F2.1",
+      "fov_deg": {
+        "h": 91.6,
+        "v": 49.6,
+        "d": 107.9
+      },
+      "dori": {
+        "detect_m": 65.3,
+        "observe_m": 25.9,
+        "recognise_m": 13.1,
+        "identify_m": 6.5,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 20,
+        "ir": "4 pcs IR-LED + spotlight (4500K)",
+        "color_night": true
+      },
+      "power": {
+        "supply": "PoE 802.3af or DC 12V/1.0A (adapter not included)",
+        "poe": true,
+        "poe_standard": "802.3af",
+        "battery": null,
+        "solar": null,
+        "consumption_w": 5,
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": null,
+        "ethernet": "10/100 RJ45",
+        "p2p": true
+      },
+      "pan_tilt": null,
+      "auto_tracking": false,
+      "detection": [
+        "motion",
+        "human",
+        "vehicle"
+      ],
+      "deterrence": {
+        "siren_db": 100,
+        "lights": "spotlight"
+      },
+      "audio": "full duplex 2-way",
+      "ip_rating": "IP66",
+      "operating_temp": "-20~50C (-4~122F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "WDR",
+        "20x digital zoom"
+      ],
+      "source": "src/T1 Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    },
+    {
+      "model": "V5P",
+      "name": "V5P 5MP Wi-Fi Bullet",
+      "type": "bullet",
+      "placement": "outdoor",
+      "resolution_mp": 5.0,
+      "resolution_px": "3072x1728",
+      "lens": "f4mm F2.1",
+      "fov_deg": {
+        "h": 91.6,
+        "v": 49.6,
+        "d": 107.9
+      },
+      "dori": {
+        "detect_m": 65.3,
+        "observe_m": null,
+        "recognise_m": null,
+        "identify_m": null,
+        "note": "Sheet: \"DORI (for reference only)\", 25/63/125/250 px/m"
+      },
+      "night": {
+        "range_m": 20,
+        "ir": "4 pcs IR-LED + spotlight (4500K)",
+        "color_night": true
+      },
+      "power": {
+        "supply": "DC 12V/1A",
+        "poe": false,
+        "poe_standard": null,
+        "battery": null,
+        "solar": null,
+        "consumption_w": 5,
+        "needs_wired_power": true
+      },
+      "connectivity": {
+        "wifi": "802.11b/g/n/ac (features: 2.4G/5G dual band)",
+        "ethernet": "10/100 RJ45",
+        "p2p": true
+      },
+      "pan_tilt": null,
+      "auto_tracking": false,
+      "detection": [
+        "motion",
+        "human",
+        "vehicle"
+      ],
+      "deterrence": {
+        "siren_db": 100,
+        "lights": "spotlight (manual or alarm-linked)"
+      },
+      "audio": "full duplex 2-way",
+      "ip_rating": "IP66",
+      "operating_temp": "-20~50C (-4~122F)",
+      "storage": "microSD up to 512GB, local/FTP, Vyanet cloud",
+      "extras": [
+        "privacy block",
+        "WDR",
+        "20x digital zoom",
+        "sheet prints only Detect DORI; Observe/Recognise/Identify are not published"
+      ],
+      "source": "src/V5P Spec Sheet.pdf",
+      "price_usd": null,
+      "kind": "camera"
+    }
+  ],
+  "nvr": [
+    {
+      "model": "N85",
+      "kind": "nvr",
+      "name": "N85 5MP PoE NVR",
+      "channels": 8,
+      "recording": "up to 5MP per channel (8ch@5MP)",
+      "poe_standard": "IEEE 802.3at/af",
+      "poe_ports": null,
+      "poe_budget_w": null,
+      "hdd": "up to 16TB (HDD not stated as included)",
+      "video_out": [
+        "1x HDMI",
+        "1x VGA (display up to 3840x2160)"
+      ],
+      "network": "1x 10/100 RJ45",
+      "usb": "2x USB2.0",
+      "record_mode": "time scheduled / motion detect",
+      "compression": "H.264/H.264+",
+      "power": "DC 48V/2A",
+      "operating_temp": "0~50C (32~122F)",
+      "price_usd": null,
+      "source": "src/N85 Spec Sheet.pdf",
+      "pairs_with": [
+        "T1",
+        "F1"
+      ],
+      "note": "PoE port count and total PoE budget are not printed on the sheet; confirm before planning >4 PoE cameras on one unit."
+    }
+  ]
+}

@@ -34,7 +34,9 @@
   var PARCEL_BASE = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
   var DESCHUTES = { name: 'deschutes', lat0: 43.61, lng0: -122.01, step: 0.07 };
   var STILLS_BASE = 'https://responder-intel.vyanet.com/data/cameras/images/';
-  var MODEL_VIEWER = '../model-viewer.html';
+  // model-viewer.html lives at the repo root. The layout pages sit one level
+  // down (safe-portal/), the portal pages two (safe-portal/portal/).
+  var MODEL_VIEWER = /\/safe-portal\/portal\//.test(window.location.pathname) ? '../../model-viewer.html' : '../model-viewer.html';
 
   var COMP = {
     S: { label: 'Security', short: 'Security', color: '#3b82f6', what: 'Perimeter, approaches, sightlines, blind spots, structures and their functions. Cameras with field of view, motion, glass-break, door and window contacts.' },
@@ -138,7 +140,10 @@
   // Report prose → bullet list (the reference deck shows SHOULD KNOW and
   // RECOMMENDATIONS as bullets; the record stores them as paragraphs).
   function sentences(text) {
-    return String(text || '').split(SPLIT_RE).map(function (s) { return s.trim(); }).filter(Boolean);
+    var t = String(text || '');
+    // The mock-up package writes one knowledge line per row; keep those whole.
+    if (t.indexOf('\n') >= 0) return t.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    return t.split(SPLIT_RE).map(function (s) { return s.trim(); }).filter(Boolean);
   }
   var params = new URLSearchParams(window.location.search);
 
@@ -156,9 +161,11 @@
   }
 
   // ---------- record ----------
+  // load(slug) reads a fixture; load(fx) accepts a ready record (mock-data.js
+  // builds one from the mock-up package). loadAsync(p) picks between them.
   function load(slug) {
     var all = window.SAFE_FIXTURES || {};
-    var fx = all[slug] || all.residence;
+    var fx = (slug && typeof slug === 'object') ? slug : (all[slug] || all.residence);
     // Residence hides HOA lot-markers (those are the community picture).
     // Community keeps them — each mapped home is a Security pin.
     var pins = fx.pins.filter(function (p) { return fx.slug === 'hoa' || p.kind !== 'lot'; });
@@ -172,18 +179,25 @@
       if (p.photo && p.photo.indexOf('../data/cameras/images/') === 0) p.photo = STILLS_BASE + p.photo.slice('../data/cameras/images/'.length);
     });
     var live = rosterLive(fx, cams, byId);
-    var clips = (CLIPS[fx.slug] || []).map(function (c, i) {
+    // A package property built on top of a fixture (Jones on 'residence')
+    // keeps that fixture's drone tier and mock clips: fx.fixtureSlug.
+    var clips = (CLIPS[fx.fixtureSlug || fx.slug] || []).map(function (c, i) {
       return { i: i, cam: c.cam, camera: byId[c.cam] || null, t: c.t, kind: c.kind, title: c.title, dur: c.dur };
     });
     var R = {
       fx: fx, slug: fx.slug, hub: fx.id, name: fx.name, address: fx.address,
       pins: pins, byId: byId, byComp: byComp, cams: cams, live: live,
-      drone: DRONE[fx.slug] || null, clips: clips, events: fx.events || [],
+      drone: DRONE[fx.fixtureSlug || fx.droneSlug || fx.slug] || null, clips: clips, events: fx.events || [],
       counts: {}
     };
     ORDER.forEach(function (c) { R.counts[c] = byComp[c].length; });
     R.parcels = loadParcels(R);
     return R;
+  }
+  function loadAsync(p) {
+    var M = window.SafeMock, slug = M && M.slugFor ? M.slugFor(p) : null;
+    if (slug) return M.load(slug).then(load);
+    return Promise.resolve(load(p));
   }
 
   var SCAN_CDN = 'https://d1h1on7f1v1lpy.cloudfront.net/';
@@ -231,6 +245,7 @@
     return roster.map(function (row) {
       var pinned = byDevice[String(row.device)];
       if (pinned) return pinned;
+      var site = String(row.site || '3525');
       var cam = {
         id: 'roster-' + row.device,
         comp: 'S',
@@ -239,8 +254,9 @@
         vendor: 'CHEKT',
         status: 'live',
         placement: 'unplaced',
-        live: { name: row.name, device: String(row.device), site: '3525' },
-        desc: 'CHEKT camera on site 3525. It is live. It does not have a map pin yet.'
+        photo: row.photo || null,
+        live: { name: row.name, device: String(row.device), site: site },
+        desc: 'CHEKT camera on site ' + site + '. It is live. It does not have a map pin yet.'
       };
       byId[cam.id] = cam;
       return cam;
@@ -296,6 +312,51 @@
     var x1 = x + r * Math.sin(a1), y1 = y - r * Math.cos(a1);
     var large = fov > 180 ? 1 : 0;
     return 'M' + x.toFixed(2) + ' ' + y.toFixed(2) + 'L' + x0.toFixed(2) + ' ' + y0.toFixed(2) + 'A' + r.toFixed(2) + ' ' + r.toFixed(2) + ' 0 ' + large + ' 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2) + 'Z';
+  }
+  // A recommended (not installed) camera draws its cone dashed amber, the way
+  // the SAFE panel does; everything else keeps the component colour.
+  var REC_COLOR = '#f59e0b';
+  function coneColor(p) { return p.placement === 'recommended' ? REC_COLOR : color(p.comp); }
+  function coneClass(p, dimmed) {
+    return 'cone' + (p.status === 'live' ? ' live' : '') + (p.placement === 'recommended' ? ' rec' : '') + (p.status === 'offline' || dimmed ? ' dim' : '');
+  }
+  // ---------- generic shapes (the mock-up package's map features) ----------
+  // fx.shapes[]: { comp, kind: polygon|line|ring|x, points:[{lat,lng}] | point:{lat,lng},
+  //               r (px), under, label, style: { fill, stroke, width, dash, arrow:'start'|'end', casing, ruler } }
+  // qs = projected points, q = projected point. k = SVG user units per screen
+  // px (1 on the map; metres-per-px on the nadir) for ring radii and arrow
+  // heads; stroke widths stay screen px (vector-effect: non-scaling-stroke).
+  function shapeSVG(s, qs, q, k, dimmed, noLabels) {
+    var st = s.style || {}, out = [], cls = dimmed ? ' dim' : '', rPx = (s.r || 10) * k;
+    var sw = 'stroke:' + (st.stroke || '#fff') + ';stroke-width:' + (st.width || 2) + (st.dash ? ';stroke-dasharray:' + st.dash : '');
+    if (s.kind === 'polygon' && qs && qs.length >= 3) {
+      var d = qs.map(function (p, i) { return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join('') + 'Z';
+      out.push('<path class="shape poly' + cls + '" style="fill:' + (st.fill || 'none') + ';' + sw + '" d="' + d + '"/>');
+      if (s.label && !dimmed && !noLabels) {
+        var top = qs.reduce(function (a, p) { return p.y < a.y ? p : a; }, qs[0]);
+        out.push('<text class="shape-label" style="fill:' + (st.stroke || '#fff') + '" x="' + top.x.toFixed(1) + '" y="' + (top.y - 5).toFixed(1) + '">' + esc(s.label) + '</text>');
+      }
+    } else if (s.kind === 'line' && qs && qs.length >= 2) {
+      var dl = qs.map(function (p, i) { return (i ? 'L' : 'M') + p.x.toFixed(1) + ' ' + p.y.toFixed(1); }).join('');
+      if (st.casing) out.push('<path class="shape-casing" style="stroke-width:' + ((st.width || 3) + 3) + '" d="' + dl + '"/>');
+      out.push('<path class="shape line' + (st.ruler ? ' ruler' : '') + cls + '" style="fill:none;' + sw + '" d="' + dl + '"/>');
+      if (st.arrow && !dimmed) {
+        var a = st.arrow === 'start' ? qs[1] : qs[qs.length - 2], b = st.arrow === 'start' ? qs[0] : qs[qs.length - 1];
+        var ang = Math.atan2(b.y - a.y, b.x - a.x), L = (7 + (st.width || 3) * 1.6) * k;
+        var p1 = { x: b.x - L * Math.cos(ang - 0.45), y: b.y - L * Math.sin(ang - 0.45) }, p2 = { x: b.x - L * Math.cos(ang + 0.45), y: b.y - L * Math.sin(ang + 0.45) };
+        out.push('<path class="shape-arrow" style="fill:' + (st.stroke || '#fff') + '" d="M' + b.x.toFixed(1) + ' ' + b.y.toFixed(1) + 'L' + p1.x.toFixed(1) + ' ' + p1.y.toFixed(1) + 'L' + p2.x.toFixed(1) + ' ' + p2.y.toFixed(1) + 'Z"/>');
+      }
+      if (s.label && !dimmed && !noLabels) {
+        var m = qs[Math.floor(qs.length / 2)];
+        out.push('<text class="shape-label ruler" x="' + (m.x + 6).toFixed(1) + '" y="' + (m.y - 4).toFixed(1) + '">' + esc(s.label) + '</text>');
+      }
+    } else if (s.kind === 'ring' && q) {
+      out.push('<circle class="shape ring' + cls + '" style="fill:none;' + sw + '" cx="' + q.x.toFixed(1) + '" cy="' + q.y.toFixed(1) + '" r="' + rPx.toFixed(1) + '"/>');
+    } else if (s.kind === 'x' && q) {
+      var r = rPx;
+      out.push('<path class="shape x' + cls + '" style="fill:none;' + sw + '" d="M' + (q.x - r).toFixed(1) + ' ' + (q.y - r).toFixed(1) + 'L' + (q.x + r).toFixed(1) + ' ' + (q.y + r).toFixed(1) + 'M' + (q.x + r).toFixed(1) + ' ' + (q.y - r).toFixed(1) + 'L' + (q.x - r).toFixed(1) + ' ' + (q.y + r).toFixed(1) + '"/>');
+    }
+    return out.join('');
   }
 
   // ---------- Google Maps loader (one script per page) ----------
@@ -383,6 +444,11 @@
       routes.forEach(function (r) { r.__q = r.points.map(function (pt) { var q = project(pt.lat, pt.lng); pts.push(q); return q; }); });
       var areas = (fx.areas || []).filter(function (a) { return st.layers[a.comp]; });
       areas.forEach(function (a) { a.__q = project(a.lat, a.lng); pts.push(a.__q); });
+      var shapes = (fx.shapes || []).filter(function (s) { return st.layers[s.comp]; });
+      shapes.forEach(function (s) {
+        if (s.points) { s.__q = s.points.map(function (pt) { var q = project(pt.lat, pt.lng); pts.push(q); return q; }); }
+        if (s.point) { s.__p = project(s.point.lat, s.point.lng); pts.push(s.__p); }
+      });
       var parcels = st.lot ? st.parcels : [];
       parcels.forEach(function (pc) { pc.__q = pc.rings.map(function (ring) { return ring.map(function (pt) { var q = project(pt.lat, pt.lng); pts.push(q); return q; }); }); });
       if (!pts.length) { svg.innerHTML = ''; if (opts.onDraw) opts.onDraw(); return; }
@@ -403,12 +469,13 @@
         out.push('<circle class="zone' + (dim(z.comp) ? ' dim' : '') + '" cx="' + z.__q.x.toFixed(1) + '" cy="' + z.__q.y.toFixed(1) + '" r="' + z.__r.toFixed(1) + '"/>');
         if (z.__r > 28 && !dim(z.comp)) out.push('<text class="zone-label" x="' + (z.__q.x + z.__r * 0.72).toFixed(1) + '" y="' + (z.__q.y - z.__r * 0.72).toFixed(1) + '">' + esc(z.name) + '</text>');
       });
+      shapes.forEach(function (s) { if (s.under) out.push(shapeSVG(s, s.__q, s.__p, 1, dim(s.comp))); });
       pins.forEach(function (p) {
         if (p.kind !== 'camera' || p.heading == null) return;
-        var q = px[p.id], r = (p.range || 25) / mpp;
-        var cls = 'cone' + (p.status === 'live' ? ' live' : '') + (p.status === 'offline' || dim(p.comp) ? ' dim' : '');
-        out.push('<path class="' + cls + '" style="fill:' + color(p.comp) + ';stroke:' + color(p.comp) + '" d="' + conePath(q.x, q.y, r, p.heading, p.fov || 90) + '"/>');
+        var q = px[p.id], r = (p.range || 25) / mpp, cc = coneColor(p);
+        out.push('<path class="' + coneClass(p, dim(p.comp)) + '" style="fill:' + cc + ';stroke:' + cc + '" d="' + conePath(q.x, q.y, r, p.heading, p.fov || 90) + '"/>');
       });
+      shapes.forEach(function (s) { if (!s.under) out.push(shapeSVG(s, s.__q, s.__p, 1, dim(s.comp))); });
       areas.forEach(function (a) {
         var col = a.color || color(a.comp);
         out.push('<path class="area' + (dim(a.comp) ? ' dim' : '') + '" style="stroke:' + col + ';fill:' + col + '" d="' + rectPath(a.__q.x, a.__q.y, a.w_m / mpp, a.h_m / mpp) + '"/>');
@@ -605,12 +672,22 @@
         var q = mtr(z.lat, z.lng);
         out.push('<circle class="zone' + (dim(z.comp) ? ' dim' : '') + '" cx="' + q.x.toFixed(2) + '" cy="' + q.y.toFixed(2) + '" r="' + z.radius_m + '"/>');
       });
+      // Package shapes: the SVG is in metres here, so a ring radius given in
+      // screen px is converted with the current frame scale.
+      var mPerPx = frame.clientWidth ? W / frame.clientWidth : 0.1;
+      var shapes = (R.fx.shapes || []).filter(function (s) { return st.layers[s.comp]; });
+      function shapeM(s) {
+        var qs = s.points ? s.points.map(function (pt) { return mtr(pt.lat, pt.lng); }) : null;
+        var q = s.point ? mtr(s.point.lat, s.point.lng) : null;
+        return shapeSVG(s, qs, q, mPerPx, dim(s.comp), true);
+      }
+      shapes.forEach(function (s) { if (s.under) out.push(shapeM(s)); });
       R.pins.filter(visible).forEach(function (p) {
         if (p.kind !== 'camera' || p.heading == null) return;
-        var q = mtr(p.lat, p.lng);
-        var cls = 'cone' + (p.status === 'live' ? ' live' : '') + (p.status === 'offline' || dim(p.comp) ? ' dim' : '');
-        out.push('<path class="' + cls + '" style="fill:' + color(p.comp) + ';stroke:' + color(p.comp) + '" d="' + conePath(q.x, q.y, p.range || 25, p.heading, p.fov || 90) + '"/>');
+        var q = mtr(p.lat, p.lng), cc = coneColor(p);
+        out.push('<path class="' + coneClass(p, dim(p.comp)) + '" style="fill:' + cc + ';stroke:' + cc + '" d="' + conePath(q.x, q.y, p.range || 25, p.heading, p.fov || 90) + '"/>');
       });
+      shapes.forEach(function (s) { if (!s.under) out.push(shapeM(s)); });
       (R.fx.areas || []).filter(function (a) { return st.layers[a.comp]; }).forEach(function (a) {
         var q = mtr(a.lat, a.lng), col = a.color || color(a.comp);
         out.push('<path class="area' + (dim(a.comp) ? ' dim' : '') + '" style="stroke:' + col + ';fill:' + col + '" d="' + rectPath(q.x, q.y, a.w_m, a.h_m) + '"/>');
@@ -719,11 +796,13 @@
   }
 
   // ---------- obliques ----------
+  // The photo is the background; the caption is a thin bar over its foot that
+  // expands on click, so the notes never push the picture out of the frame.
   function stillHTML(ob) {
     var items = String(ob.desc || '').split('|').map(function (s) { return s.trim(); }).filter(Boolean);
     return '<div class="img"><img src="' + esc(ob.url) + '" alt="" referrerpolicy="no-referrer"></div>' +
-      '<div class="cap"><b>' + esc(ob.label) + ' · ' + esc(ob.side) + ' oblique · ' + ob.bearing + '° true</b>' +
-      '<ul>' + items.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></div>';
+      '<div class="cap"><details><summary><b>' + esc(ob.label) + ' · ' + esc(ob.side) + ' oblique · ' + ob.bearing + '° true</b><span class="hint">' + items.length + ' notes · click to read</span></summary>' +
+      '<ul>' + items.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ul></details></div>';
   }
   function thumbsHTML(R, active, withModel) {
     var D = R.drone; if (!D) return '';
@@ -793,7 +872,7 @@
     return '<span class="sp-st ' + esc(st) + '">' + esc(st) + '</span>';
   }
   function placementTag(pl) {
-    var txt = { surveyed: 'surveyed', estimated: 'estimated placement', mock: 'mock device' }[pl || 'surveyed'];
+    var txt = { surveyed: 'surveyed', estimated: 'estimated placement', mock: 'mock device', recommended: 'recommended · not installed', unplaced: 'no map pin yet' }[pl || 'surveyed'] || pl;
     return '<span class="sp-tag pl-' + (pl || 'surveyed') + '">' + txt + '</span>';
   }
   function pinRowHTML(p, opts) {
@@ -833,7 +912,12 @@
       if (fovs.length) out.push('cones ' + Math.min.apply(null, fovs) + '–' + Math.max.apply(null, fovs) + '° · 25 m');
     }
     if (c === 'A') { var m = d('gate-road', 'entry-court'); if (m) out.push('road entry → court ≈ ' + ft(m)); var g = d('gate-road', 'garage-door'); if (g) out.push('entry → garage ≈ ' + ft(g)); }
-    if (c === 'F') { (R.fx.zones || []).forEach(function (z) { out.push(z.name.split(' – ')[0] + ' r = ' + z.radius_m + ' m'); }); var h = R.byId['no-hydrant']; if (h) out.push('0 hydrants within 150 m'); }
+    if (c === 'F') {
+      (R.fx.zones || []).forEach(function (z) { out.push(z.name.split(' – ')[0] + ' r = ' + z.radius_m + ' m'); });
+      (R.fx.zoneLabels || []).forEach(function (z) { out.push(z); });
+      var h = R.byId['no-hydrant']; if (h) out.push('0 hydrants within 150 m');
+      var hy = (R.byComp.F || []).filter(function (p) { return p.kind === 'hydrant' && p.id.indexOf('hyd:') === 0; }).length; if (hy) out.push(hy + ' City hydrants on the map');
+    }
     if (c === 'E') {
       var ep = R.byComp.E || [];
       function count(kinds) { return ep.filter(function (p) { return kinds.indexOf(p.kind) >= 0; }).length; }
@@ -867,6 +951,7 @@
     opts = opts || {};
     var html = ORDER.map(function (c) { return '<div><span class="sw" style="background:' + color(c) + '"></span>' + COMP[c].label + '</div>'; }).join('');
     html += '<div><span class="sw" style="background:#555"></span>surveyed &nbsp;<span class="sw dash"></span>estimated / mock</div>';
+    if (R.fx.mock) html += '<div><span class="sw dash" style="border-color:' + REC_COLOR + '"></span>recommended camera · not installed</div>';
     html += '<div><span class="sw led"></span>live feed associated</div>';
     if (opts.lot !== false) html += '<div><span class="sw lot"></span>lot line (county parcel)</div>';
     return html;
@@ -883,11 +968,21 @@
     if (p.vendor) meta.push(['Vendor', p.vendor]);
     if (p.kind === 'camera') {
       meta.push(['Heading', p.heading != null ? p.heading + '° true' : '—']);
-      meta.push(['Field of view', (p.fov || 90) + '° · ' + (p.range || 25) + ' m']);
+      meta.push(['Field of view', (p.fov || 90) + '° · cone drawn ' + (p.range || 25) + ' m']);
       if (p.live) meta.push(['Live feed', p.live.name + ' · device ' + p.live.device]);
     }
-    if (p.lat != null && p.lng != null) meta.push(['Position', p.lat.toFixed(6) + ', ' + p.lng.toFixed(6)]);
+    if (p.rec) {
+      var rc = p.rec, mdl = rc.models || {};
+      meta.push(['Goal', String(rc.goal || '').replace(/_/g, ' ')]);
+      meta.push(['Distance to target', rc.distance_m != null ? '≈ ' + rc.distance_m + ' m' : 'not measured']);
+      meta.push(['Power at mount', (rc.power_available || 'unknown') + (rc.power_note ? ' · ' + rc.power_note : '')]);
+      meta.push(['Model pick', (mdl.primary || '—') + (mdl.alternates && mdl.alternates.length ? ' · alt ' + mdl.alternates.join(', ') : '')]);
+      if (rc.warnings && rc.warnings.length) meta.push(['Range checks', rc.warnings.length + ' warning' + (rc.warnings.length === 1 ? '' : 's') + ' — see Camera recommendations']);
+      if (rc.aim_note) meta.push(['Aim', rc.aim_note]);
+    }
+    if (p.lat != null && p.lng != null) meta.push(['Position', p.lat.toFixed(6) + ', ' + p.lng.toFixed(6) + (p.rec && p.rec.coord_source ? ' · ' + p.rec.coord_source : '')]);
     var acts = [];
+    if (p.rec) acts.push('<button class="sp-act" data-act="specs" data-model="' + esc((p.rec.models || {}).primary || '') + '">Specs · ' + esc((p.rec.models || {}).primary || '') + '</button>');
     if (p.kind === 'camera' && p.live && opts.live !== false) acts.push('<button class="sp-act live" data-act="live">Open live</button><button class="sp-act" data-act="clips">Clips</button>');
     if ((p.actions || []).indexOf('unlock') >= 0) acts.push('<button class="sp-act unlock" data-act="unlock">' + (/garage/i.test(p.name) ? 'Open' : 'Unlock') + '</button>');
     if (opts.showMap !== false) acts.push('<button class="sp-act" data-act="map">Show on map</button>');
@@ -938,7 +1033,7 @@
   window.SafePortal = {
     BUILD: BUILD, COMP: COMP, ORDER: ORDER, params: params,
     esc: esc, icon: icon, color: color, fmt: fmt, sentences: sentences, toast: toast, haversine: haversine,
-    load: load,
+    load: load, loadAsync: loadAsync,
     createMap: createMap, createNadir: createNadir, createModel: createModel,
     renderFeeds: renderFeeds, tileHTML: tileHTML, playerHTML: playerHTML, clipsHTML: clipsHTML, fillScanStills: fillScanStills,
     safeHTML: safeHTML, pinRowHTML: pinRowHTML, limitsHTML: limitsHTML, factsHTML: factsHTML, legendHTML: legendHTML, cardHTML: cardHTML,

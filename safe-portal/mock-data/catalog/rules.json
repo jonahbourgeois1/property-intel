@@ -1,0 +1,262 @@
+{
+  "schema": "vyanet-camera-rules/1",
+  "catalog": "catalog.json",
+  "note": "Goal -> model mapping for SAFE recommended camera positions. Numbers in rationale come from catalog.json (spec sheets). Output is an inferred recommendation: confirm mount, power, Wi-Fi signal and distance on site.",
+  "need_levels": {
+    "detect": "detect_m",
+    "observe": "observe_m",
+    "recognise": "recognise_m",
+    "identify": "identify_m"
+  },
+  "poe_note": "PoE models (T1, F1) pair with the N85 8-ch PoE NVR (802.3at/af, up to 5MP per channel). One N85 = max 8 cameras.",
+  "cable_note": "Ethernet runs over ~100 m need a switch/extender (Ethernet standard, not from the spec sheet).",
+  "goals": {
+    "entry_door_identify": {
+      "label": "Entry / door: identify faces",
+      "need": "identify",
+      "typical_m": "3-6",
+      "placement": "outdoor",
+      "primary": "E1",
+      "alternates": [
+        "T1",
+        "F1",
+        "D1"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "E1": "Longest outdoor Identify (6.6 m), auto-tracks a person at the door, 110 dB siren; Wi-Fi 6, needs 12 V.",
+        "T1": "Fixed view on the door, Identify 6.5 m, 20 m night, IP66; PoE.",
+        "F1": "Identify 6.5 m on the widest fixed outdoor lens (94.5 deg H), red/blue lights + siren; PoE.",
+        "D1": "Only at a doorbell position: Identify 3.5 m, 152 deg H, face recognition (Vyanet Cloud).",
+        "V5P": "Same lens as T1 on Wi-Fi + 12 V; sheet publishes Detect only.",
+        "S2": "No power at the door: solar/battery, Identify 5.6 m, 10 m night, 2.4 GHz Wi-Fi only."
+      }
+    },
+    "doorbell_visitor": {
+      "label": "Front door with doorbell: visitor + face",
+      "need": "identify",
+      "typical_m": "1-3.5",
+      "placement": "outdoor",
+      "primary": "D1",
+      "alternates": [
+        "E1",
+        "T1"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "D1": "Replaces the bell on existing 8-24 V AC wiring; Identify 3.5 m, 170 deg diag, face recognition, visitor messages.",
+        "T1": "If faces stand back >3.5 m: Identify 6.5 m, PoE.",
+        "E1": "Identify 6.6 m and tracks a visitor walking the porch; needs 12 V.",
+        "S2": "No doorbell wiring or outlet: solar/battery, Identify 5.6 m."
+      }
+    },
+    "driveway_vehicle_approach": {
+      "label": "Driveway / gate: vehicle approach",
+      "need": "recognise",
+      "typical_m": "8-15",
+      "placement": "outdoor",
+      "primary": "E1",
+      "alternates": [
+        "T1",
+        "F1",
+        "V5P"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "E1": "Longest outdoor Recognise (13.3 m) and auto-tracks a vehicle up the drive (355 deg pan), vehicle detection, 110 dB siren; 12 V.",
+        "T1": "Fixed view down the drive, vehicle detection, Recognise 13.1 m / Observe 25.9 m, 20 m night; PoE.",
+        "F1": "Recognise 13.0 m with red/blue lights + siren for after-hours arrivals; PoE.",
+        "V5P": "Vehicle detection, 20 m night on Wi-Fi + 12 V; sheet publishes Detect (65.3 m) only.",
+        "S2": "No power at the entry: solar/battery, Recognise 11.3 m, night range only 10 m, 2.4 GHz Wi-Fi must reach."
+      }
+    },
+    "wide_yard_overview": {
+      "label": "Wide lot / yard / open land overview",
+      "need": "observe",
+      "typical_m": "15-30",
+      "placement": "outdoor",
+      "primary": "E1",
+      "alternates": [
+        "F1",
+        "T1",
+        "V5P"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "E1": "Coverage by sweep: pans 355 deg and auto-tracks across the yard; Observe 26.4 m, Detect 66.4 m, 20 m night; 12 V.",
+        "F1": "Widest fixed outdoor view (94.5 deg H), Observe 25.9 m, lights + siren on detection; PoE.",
+        "T1": "Fixed 91.6 deg H, Observe 25.9 m, 20 m night; PoE.",
+        "V5P": "Fixed 91.6 deg H, Detect 65.3 m, 20 m night on Wi-Fi + 12 V.",
+        "S2": "No power: solar/battery, 89 deg H, Observe 22.4 m, 10 m night."
+      }
+    },
+    "street_frontage_property_edge": {
+      "label": "Street frontage / property edge (watch the property, not the road)",
+      "need": "observe",
+      "typical_m": "15-25 along the frontage",
+      "placement": "outdoor",
+      "primary": "E1",
+      "alternates": [
+        "F1",
+        "T1"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "aim": "Aim along the property edge or into the yard, not across the street; coverage width matters more than reach.",
+      "why": {
+        "E1": "Aim at the property side, not the road: pans 355 deg to sweep the frontage yard and its walk-in points; Observe 26.4 m, auto-tracking, 110 dB siren; 12 V.",
+        "F1": "Widest fixed outdoor view (94.5 deg H) aimed along the property edge, not across the road; Observe 25.9 m, lights + siren; PoE.",
+        "T1": "Fixed 91.6 deg H aimed along the frontage, Observe 25.9 m; PoE.",
+        "S2": "No power at the frontage: solar/battery, 89 deg H, Observe 22.4 m, 10 m night; aim along the property edge."
+      }
+    },
+    "perimeter_fence_line": {
+      "label": "Perimeter / long fence line (open yard side)",
+      "need": "observe",
+      "typical_m": "20-25 per camera",
+      "placement": "outdoor",
+      "primary": "E1",
+      "alternates": [
+        "F1",
+        "T1",
+        "V5P"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "E1": "Coverage by sweep: one PT dome pans 355 deg to cover two fence legs and auto-tracks; Observe 26.4 m, 20 m night; 12 V.",
+        "F1": "Widest fixed outdoor view (94.5 deg H) along the fence, Observe 25.9 m, lights + siren; PoE.",
+        "T1": "Fixed 91.6 deg H, Observe 25.9 m: plan one per ~20-25 m of fence; PoE.",
+        "V5P": "Fixed 91.6 deg H on Wi-Fi + 12 V, 20 m night.",
+        "S2": "Unpowered fence line: solar, Observe 22.4 m, 10 m night."
+      }
+    },
+    "side_yard_corridor": {
+      "label": "Narrow side yard / corridor (walls both sides)",
+      "need": "observe",
+      "typical_m": "10-25 along the strip",
+      "placement": "outdoor",
+      "primary": "T1",
+      "alternates": [
+        "F1",
+        "V5P"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "aim": "Aim down the length of the strip; a wide or panning view mostly sees the walls.",
+      "why": {
+        "T1": "Reach along the strip matters more than width: fixed view down the corridor, Observe 25.9 m, 20 m night; PoE.",
+        "F1": "Same Observe 25.9 m plus red/blue lights + siren where nobody else watches the blind side; PoE.",
+        "V5P": "Fixed bullet down the strip, 20 m night on Wi-Fi + 12 V; sheet publishes Detect only.",
+        "S2": "No power in the side yard: solar, Observe 22.4 m, 10 m night."
+      }
+    },
+    "parking_lot_deterrence": {
+      "label": "Parking lot: active deterrence",
+      "need": "recognise",
+      "typical_m": "10-20",
+      "placement": "outdoor",
+      "primary": "F1",
+      "alternates": [
+        "E1",
+        "V5P",
+        "T1"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "F1": "Flashing red/blue lights + spotlight + 100 dB siren on detection; widest outdoor lens 94.5 deg H; Recognise 13.0 m; PoE.",
+        "E1": "110 dB siren (loudest) and auto-tracking across the lot; Recognise 13.3 m; 12 V.",
+        "V5P": "Alarm-linked spotlight + 100 dB siren, vehicle detection; Wi-Fi + 12 V.",
+        "T1": "Spotlight + 100 dB siren, Recognise 13.1 m; PoE, lower profile.",
+        "S2": "No power in the lot: 110 dB siren + spotlight, solar; 10 m night."
+      }
+    },
+    "motor_court_tracking": {
+      "label": "Motor court / arrival court: follow arrivals",
+      "need": "recognise",
+      "typical_m": "8-15",
+      "placement": "outdoor",
+      "primary": "E1",
+      "alternates": [
+        "F1",
+        "T1"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "E1": "Auto-tracking pan/tilt (355 deg) follows vehicles and people; Recognise 13.3 m, 110 dB siren; 12 V.",
+        "F1": "After-hours arrivals get red/blue lights + siren; 94.5 deg H, Recognise 13.0 m; PoE.",
+        "T1": "Fixed view of the court mouth, Recognise 13.1 m, vehicle detection; PoE.",
+        "S2": "No power: solar, Recognise 11.3 m."
+      }
+    },
+    "remote_outbuilding_no_power": {
+      "label": "Remote outbuilding / gate with no power",
+      "need": "recognise",
+      "typical_m": "5-12",
+      "placement": "outdoor",
+      "primary": "S2",
+      "alternates": [
+        "V5P",
+        "E1"
+      ],
+      "no_power": [
+        "S2"
+      ],
+      "why": {
+        "S2": "Only catalog camera without wired power: 10000 mAh battery + 5 W solar, Recognise 11.3 m, 110 dB siren; 2.4 GHz Wi-Fi only.",
+        "V5P": "If 12 V is available at the building: 20 m night, vehicle detection, Wi-Fi.",
+        "E1": "If 12 V is available: pan/tilt tracking around the building, Wi-Fi 6."
+      }
+    },
+    "indoor_common_area": {
+      "label": "Indoor common area / lobby / large office",
+      "need": "identify",
+      "typical_m": "4-7",
+      "placement": "indoor",
+      "primary": "M1",
+      "alternates": [
+        "P1",
+        "R5"
+      ],
+      "no_power": [],
+      "why": {
+        "M1": "8MP, 108 deg H, Identify 7.1 m (best indoor), mmWave radar 360 deg auto-tracking; USB-C 5 V.",
+        "P1": "Widest view 111.4 deg H, Identify 5.2 m, manual pan/tilt; USB-C, <4.8 W.",
+        "R5": "Identify 5.9 m but narrower 77.8 deg H and 15 fps at 5MP; USB-C, no Ethernet."
+      }
+    },
+    "indoor_small_room": {
+      "label": "Indoor small office / room",
+      "need": "identify",
+      "typical_m": "2-5",
+      "placement": "indoor",
+      "primary": "P1",
+      "alternates": [
+        "R5",
+        "M1"
+      ],
+      "no_power": [],
+      "why": {
+        "P1": "111.4 deg H covers a small room from a corner, Identify 5.2 m; USB-C, <4.8 W.",
+        "R5": "Identify 5.9 m, 350 deg pan to aim at a desk or door; Wi-Fi b/g/n only.",
+        "M1": "Upgrade: 8MP, Identify 7.1 m, radar tracking."
+      }
+    }
+  },
+  "ranking_note": "Models are ranked by fit to the goal, not by a default favourite: coverage width / sweep for overview, perimeter and frontage; deterrence for lots; Identify range for entries; Recognise range for driveways; reach along the length for narrow corridors. No catalog camera has a 180 deg view: widest outdoor fixed is F1 at 94.5 deg H, E1 is 90.7 deg H but pans 355 deg, D1 is 152 deg H but is a doorbell only."
+}

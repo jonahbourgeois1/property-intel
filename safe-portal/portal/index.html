@@ -7,21 +7,25 @@
 <title>Vyanet SAFE — portal (mock)</title>
 <!--
   safe-portal/portal/index.html — MOCK of the Zoho Creator customer portal
-  chrome around the SAFE pages.  safe-portal 0.9.0
+  chrome around the SAFE pages.  safe-portal 0.10.1
 
-  Menu: Home · Residence (SAFE) · Community (SAFE). Each SAFE group embeds
-  the four lenses (security / access / fire / environment) for that picture.
-  Home explains the split. Residence is the Jones house; Community is
-  Highlands at Broken Top. Posts {type:'safe-nav', page, pin, p}.
+  Menu: Home · Virtual Patrol · Residence (SAFE) · Community (SAFE). Each SAFE
+  group embeds the four lenses (security / access / fire / environment) for
+  that picture. Home explains the split. Residence is one of the two mock-up
+  package properties (../mock-data.js): Jones (default) or Gartland, picked
+  in Mock controls. Community is Highlands at Broken Top (fixture).
+  Posts {type:'safe-nav', page, pin, p}.
 
-  Params: ?page=home|residence|community|security|access|fire|environment
+  Params: ?page=home|patrol|residence|community|security|access|fire|environment
           (?page=emergency still opens Environment)
-          &p=residence|hoa  &theme=light|dark
-  Layout is C (dashboard cards). Theme switch is the mock control.
+          &p=jones|gartland|hoa (residence = jones)  &theme=light|dark
+  Layout is C (dashboard cards). Theme and Property are the mock controls.
+  Virtual Patrol shows only for the property with CHEKT cameras (Jones).
   Residence / Community submenus collapse. Writes nothing.
 -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="../fixtures.js?v=0.9.10"></script>
+<script src="../mock-data.js?v=0.10.1"></script>
 <script src="patrol-data.js?v=0.9.18"></script>
 <style>
   :root {
@@ -149,8 +153,8 @@
   <form id="gate-form">
     <div class="gt-brand">VYANET SAFE</div>
     <div>
-      <div class="gt-name">Jones residence</div>
-      <div class="gt-addr">18775 Macalpine Loop, Bend, OR 97702</div>
+      <div class="gt-name" id="gate-name">Jones residence</div>
+      <div class="gt-addr" id="gate-addr">18775 MacAlpine Loop, Bend OR 97702</div>
     </div>
     <div class="gt-sub">Enter this property's password. It stays in this tab only.</div>
     <input id="gate-pass" type="password" autocomplete="current-password" placeholder="Password" aria-label="Property password">
@@ -167,7 +171,7 @@
   <span class="chip live" id="chip-live"></span>
   <span class="chip" id="chip-alarm"></span>
   <button class="icon-btn" title="Notifications"><svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span class="dot"></span></button>
-  <div class="user"><span class="av">TJ</span><div><b>Tracy Jones</b><span>Owner · portal user</span></div></div>
+  <div class="user"><span class="av" id="user-av">TJ</span><div><b id="user-name">Tracy Jones</b><span>Owner · portal user</span></div></div>
 </header>
 <div id="body">
   <nav id="nav">
@@ -178,9 +182,10 @@
     <div class="nav-spacer"></div>
     <div class="mock">
       <div class="lab">Mock controls</div>
+      <div class="row"><span>Property</span><div class="seg" id="seg-prop"><button data-v="jones" onclick="setProp('jones')">Jones</button><button data-v="gartland" onclick="setProp('gartland')">Gartland</button></div></div>
       <div class="row"><span>Theme</span><div class="seg" id="seg-theme"><button data-v="light" onclick="setTheme('light')">Light</button><button data-v="dark" onclick="setTheme('dark')">Dark</button></div></div>
     </div>
-    <div class="nav-foot">Zoho Creator portal chrome (imitation)<br>safe-portal 0.9.0 · Virtual Patrol saves the schedule</div>
+    <div class="nav-foot">Zoho Creator portal chrome (imitation)<br>safe-portal 0.10.1 · mock reports: Jones · Gartland</div>
   </nav>
   <main id="main">
     <div id="pagebar">
@@ -201,10 +206,15 @@
     { id: 'fire', comp: 'F', label: 'Fire' },
     { id: 'environment', comp: 'E', label: 'Environment' }
   ];
+  // Residence is a mock-up package property (../mock-data.js): jones or gartland.
+  var MOCK = window.SafeMock || null;
+  var PROPS = MOCK ? MOCK.PROPERTIES : { jones: { slug: 'jones', name: 'Jones residence', address: '18775 MacAlpine Loop, Bend OR 97702', cameras: true, label: 'Jones' } };
+  function propSlug(v) { return (MOCK && MOCK.slugFor(v)) || (PROPS[v] ? v : null); }
   var SCOPES = {
-    residence: { id: 'residence', p: 'residence', label: 'Residence', page: 'residence' },
+    residence: { id: 'residence', p: 'jones', label: 'Residence', page: 'residence' },
     community: { id: 'community', p: 'hoa', label: 'Community', page: 'community' }
   };
+  function isResidenceP(p) { return p !== 'hoa'; }
   var COLOR = { S: '#3b82f6', A: '#f59e0b', F: '#ef4444', E: '#22c55e' };
   var HOME_ICON = '<svg viewBox="0 0 24 24"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10v10h13V10"/><path d="M10 20v-6h4v6"/></svg>';
   var HOUSE_ICON = '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10.5V20h12V10.5"/><path d="M10 20v-6h4v6"/></svg>';
@@ -215,18 +225,47 @@
   var pageParam = params.get('page');
   if (pageParam === 'emergency') pageParam = 'environment';
   var knownPages = ['home', 'patrol', 'residence', 'community'].concat(LENSES.map(function (x) { return x.id; }));
+  var pParam = params.get('p');
+  // ?prop= names the residence when ?p=hoa points at the community map, so a
+  // reload keeps the same property selected.
+  var propParam = propSlug(pParam) || propSlug(params.get('prop')) || 'jones';
+  SCOPES.residence.p = propParam;
   var state = {
     page: knownPages.indexOf(pageParam) >= 0 ? pageParam : 'home',
     layout: 'c',
     theme: params.get('theme') === 'dark' ? 'dark' : 'light',
-    p: params.get('p') || (pageParam === 'community' ? 'hoa' : 'residence'),
+    prop: propParam,
+    p: pParam === 'hoa' || pageParam === 'community' ? 'hoa' : propParam,
     pin: null,
     navMin: false,
-    open: { residence: pageParam === 'residence' || (pageParam && ['security','access','fire','environment'].indexOf(pageParam) >= 0 && params.get('p') !== 'hoa'), community: pageParam === 'community' || params.get('p') === 'hoa' }
+    open: { residence: pageParam === 'residence' || (pageParam && ['security','access','fire','environment'].indexOf(pageParam) >= 0 && pParam !== 'hoa'), community: pageParam === 'community' || pParam === 'hoa' }
   };
-  if (pageParam === 'community') state.p = 'hoa';
-  if (pageParam === 'residence') state.p = 'residence';
-  function fixture(p) { return (window.SAFE_FIXTURES || {})[p] || window.SAFE_FIXTURES.residence; }
+  if (pageParam === 'residence') state.p = state.prop;
+  // Fixture record for the HOA; for a package property the loaded record
+  // (SafeMock.peek) or, until it arrives, a stub with the static identity.
+  function fixture(p) {
+    var slug = propSlug(p);
+    if (slug) {
+      var loaded = MOCK && MOCK.peek(slug);
+      if (loaded) return loaded;
+      var P = PROPS[slug];
+      return { slug: slug, name: P.name, address: P.address, pins: [], roster: [], links: [], report: { S: {}, A: {}, F: {}, E: {} }, monitoring: { alarm: '\u2014' } };
+    }
+    return (window.SAFE_FIXTURES || {})[p] || window.SAFE_FIXTURES.residence;
+  }
+  function hasCameras(prop) { var P = PROPS[prop]; return !!(P && P.cameras); }
+  // Community record for the current property: the fixture HOA slug, or null
+  // when the property is not in any community (Gartland). Blank, not guessed.
+  function hoaFor(prop) { var P = PROPS[prop]; return P && 'hoa' in P ? P.hoa : 'hoa'; }
+  function blankCommunityDoc() {
+    var dark = state.theme === 'dark';
+    return '<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:15px/1.5 "DM Sans",system-ui,sans-serif;background:' + (dark ? '#0a0c0f' : '#f3f5f8') + ';color:' + (dark ? '#f0f2f5' : '#0b1220') + '}' +
+      '.b{max-width:560px;margin:56px auto;padding:22px 24px;border:1px dashed ' + (dark ? 'rgba(255,255,255,0.22)' : 'rgba(16,24,40,0.28)') + ';border-radius:12px}' +
+      'h1{font-size:18px;margin:0 0 8px}p{margin:0 0 8px;color:' + (dark ? '#d0d5dd' : '#1d2939') + '}code{font:12px ui-monospace,monospace}</style></head><body><div class="b">' +
+      '<h1>Community &middot; none on record</h1>' +
+      '<p>' + esc((PROPS[state.prop] || {}).name || 'This property') + ' is not in an HOA or community SAFE map. This tab stays blank until a community (HOA, subdivision, campus) is assigned to the property record.</p>' +
+      '<p>Nothing is inferred from the address.</p></div></body></html>';
+  }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
   function $(id) { return document.getElementById(id); }
   function chektCount(fx) {
@@ -239,32 +278,47 @@
     return counts;
   }
   function paintChrome() {
-    var fx = fixture(state.p);
-    if (state.page === 'home') {
+    var fx = fixture(state.p), res = fixture(state.prop), P = PROPS[state.prop] || {};
+    var hoaSlug = hoaFor(state.prop), hoa = hoaSlug ? fixture(hoaSlug) : null;
+    if (state.page === 'home' || state.page === 'patrol') {
       $('prop-name').textContent = 'Vyanet SAFE portal';
-      $('prop-addr').textContent = 'Jones residence · Highlands at Broken Top';
-      $('chip-live').textContent = 'Residence · ' + chektCount(window.SAFE_FIXTURES.residence) + ' live';
-      $('chip-alarm').textContent = 'Community · 46 lots';
+      $('prop-addr').textContent = res.name + (hoa ? ' · ' + hoa.name : ' · no community on record');
+      $('chip-live').textContent = hasCameras(state.prop) ? 'Residence · ' + chektCount(res) + ' live' : 'Residence · 0 cameras on record';
+      $('chip-live').classList.toggle('live', hasCameras(state.prop));
+      $('chip-alarm').textContent = hoa ? 'Community · 46 lots' : 'Community · none';
+    } else if (state.p === 'hoa' && !hoa) {
+      $('prop-name').textContent = 'Community (SAFE)';
+      $('prop-addr').textContent = 'No community on record for ' + res.name;
+      $('chip-live').textContent = 'blank';
+      $('chip-live').classList.remove('live');
+      $('chip-alarm').textContent = 'none assigned';
     } else if (state.p === 'hoa') {
       $('prop-name').textContent = fx.name;
       $('prop-addr').textContent = fx.address;
       $('chip-live').textContent = '1 live canvas · 21 base SAFE';
+      $('chip-live').classList.add('live');
       $('chip-alarm').textContent = '46 lots';
     } else {
       $('prop-name').textContent = fx.name;
       $('prop-addr').textContent = fx.address;
-      $('chip-live').textContent = 'CHEKT · ' + chektCount(fx) + ' live';
-      $('chip-alarm').textContent = 'Alarm: ' + fx.monitoring.alarm;
+      $('chip-live').textContent = hasCameras(state.prop) ? 'CHEKT · ' + chektCount(fx) + ' live' : '0 cameras on record';
+      $('chip-live').classList.toggle('live', hasCameras(state.prop));
+      $('chip-alarm').textContent = fx.mock ? (fx.mock.property.site_no ? 'Site ' + fx.mock.property.site_no : 'Mock report') + ' · draft' : 'Alarm: ' + (fx.monitoring && fx.monitoring.alarm);
     }
+    $('gate-name').textContent = P.name || res.name;
+    $('gate-addr').textContent = P.address || res.address;
+    $('user-name').textContent = P.owner || 'Owner';
+    $('user-av').textContent = P.initials || 'O';
+    document.querySelectorAll('#seg-prop button').forEach(function (b) { b.classList.toggle('on', b.dataset.v === state.prop); });
   }
 
   function pageUrl(id, p) {
     if (id === 'patrol') return 'patrol.html?theme=' + encodeURIComponent(state.theme) + '&v=0.9.18';
     var q = new URLSearchParams();
     var slug = p || state.p;
-    if (id === 'home') q.set('mode', 'portal');
+    if (id === 'home') { q.set('mode', 'portal'); q.set('p', state.prop); }
     else q.set('p', slug);
-    q.set('v', '0.9.10');
+    q.set('v', '0.10.1');
     q.set('layout', state.layout); q.set('theme', state.theme);
     if (state.pin) q.set('pin', state.pin);
     var file = (id === 'home' || id === 'residence' || id === 'community') ? 'home.html' : id + '.html';
@@ -274,6 +328,11 @@
     var sc = SCOPES[scope];
     var active = (state.page === sc.page) || (LENSES.some(function (x) { return x.id === state.page; }) && state.p === sc.p);
     var icon = scope === 'residence' ? HOUSE_ICON : COMM_ICON;
+    if (scope === 'community' && !hoaFor(state.prop)) {
+      // No community on record: the tab stays, blank, with no lens pages under it.
+      return '<div class="nav-group' + (active ? ' active' : '') + '">' +
+        '<a class="nav-item parent' + (state.page === sc.page ? ' on' : '') + '" style="--c:#fff" href="?page=' + sc.page + '" onclick="return goNav(\'community\',\'community\')" title="Community (SAFE) \u2014 none on record"><span class="ic">' + icon + '</span><span class="t">' + esc(sc.label) + '<span class="tag">SAFE</span></span><span class="n" style="opacity:.6">none</span></a></div>';
+    }
     var kids = LENSES.map(function (pg) {
       var on = state.page === pg.id && state.p === sc.p ? ' on' : '';
       return '<a class="nav-item sub' + on + '" style="--c:' + COLOR[pg.comp] + '" href="?page=' + pg.id + '&p=' + sc.p + '" onclick="return goNav(\'' + scope + '\',\'' + pg.id + '\')" title="' + esc(sc.label + ' · ' + pg.label) + '"><span class="k">' + pg.comp + '</span><span class="t">' + esc(pg.label) + '</span><span class="n">' + (counts[pg.comp] || 0) + '</span></a>';
@@ -283,12 +342,15 @@
       '<div class="kids">' + kids + '</div></div>';
   }
   function renderNav() {
-    var res = countsFor('residence'), com = countsFor('hoa');
+    var res = countsFor(state.prop), com = countsFor('hoa');
+    SCOPES.residence.p = state.prop;   // tab stays "Residence"; the property name lives in the header
     $('nav-pages').innerHTML =
       '<a class="nav-item' + (state.page === 'home' ? ' on' : '') + '" style="--c:#fff" href="?page=home" onclick="return goNav(null,\'home\')" title="Home"><span class="ic">' + HOME_ICON + '</span><span class="t">Home</span></a>' +
-      '<a class="nav-item' + (state.page === 'patrol' ? ' on' : '') + '" style="--c:#fff" href="?page=patrol" onclick="return goNav(null,\'patrol\')" title="Virtual Patrol"><span class="ic">' + PATROL_ICON + '</span><span class="t">Virtual Patrol</span></a>' +
+      (hasCameras(state.prop) ? '<a class="nav-item' + (state.page === 'patrol' ? ' on' : '') + '" style="--c:#fff" href="?page=patrol" onclick="return goNav(null,\'patrol\')" title="Virtual Patrol"><span class="ic">' + PATROL_ICON + '</span><span class="t">Virtual Patrol</span></a>' : '') +
       scopeGroup('residence', res) + scopeGroup('community', com);
-    var fx = fixture(state.p);
+    // Resources follow the record on screen; a blank Community tab borrows
+    // nothing from the Highlands fixture, so fall back to the residence's links.
+    var fx = (state.p === 'hoa' && !hoaFor(state.prop)) ? fixture(state.prop) : fixture(state.p);
     var links = (fx.links || []).map(function (l) {
       return '<a class="nav-item" href="' + esc(l.href) + '" target="_blank" rel="noopener" title="' + esc(l.label) + '"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg></span><span class="t">' + esc(l.label) + '</span></a>';
     });
@@ -302,17 +364,26 @@
     var crumb = state.page === 'home' || state.page === 'patrol' ? 'Vyanet SAFE' : (state.p === 'hoa' ? 'Community' : 'Residence');
     $('page-title').textContent = title;
     document.querySelector('#pagebar .crumb').innerHTML = '<b>' + crumb + '</b> /';
-    $('page-status').textContent = state.page === 'patrol' ? '24-hour schedule' : (lens ? ((fx.report[lens.comp] || {}).status || '') : (state.page === 'home' ? 'One portal · two SAFE maps · residence and community' : (fx.report.S || {}).status || ''));
+    var blankCommunity = state.p === 'hoa' && !hoaFor(state.prop);
+    $('page-status').textContent = blankCommunity ? 'No community on record for this property' : (state.page === 'patrol' ? '24-hour schedule' : (lens ? ((fx.report[lens.comp] || {}).status || '') : (state.page === 'home' ? 'One portal · two SAFE maps · residence and community' : (fx.report.S || {}).status || '')));
     $('page-open').href = pageUrl(state.page, state.p);
-    $('frame').src = pageUrl(state.page, state.p);
+    $('page-open').style.visibility = blankCommunity ? 'hidden' : '';
+    if (blankCommunity) {
+      // srcdoc wins over src; a blank document, nothing borrowed from the Highlands.
+      $('frame').removeAttribute('src');
+      $('frame').srcdoc = blankCommunityDoc();
+    } else {
+      $('frame').removeAttribute('srcdoc');
+      $('frame').src = pageUrl(state.page, state.p);
+    }
     state.pin = null;
-    document.title = 'Vyanet SAFE — ' + title + (state.page === 'home' || state.page === 'patrol' ? '' : ' · ' + fx.name);
+    document.title = 'Vyanet SAFE — ' + title + (state.page === 'home' || state.page === 'patrol' ? '' : ' · ' + (blankCommunity ? 'none on record' : fx.name));
     document.body.classList.toggle('theme-dark', state.theme === 'dark');
     paintChrome();
     var q = new URLSearchParams();
     q.set('page', state.page);
     if (state.theme !== 'light') q.set('theme', state.theme);
-    if (state.page !== 'home' && state.p !== 'residence') q.set('p', state.p);
+    if (state.p === 'hoa') { q.set('p', 'hoa'); if (state.prop !== 'jones') q.set('prop', state.prop); } else if (state.prop !== 'jones') q.set('p', state.prop);
     try { history.replaceState(null, '', '?' + q.toString()); } catch (e) {}
     renderNav();
   }
@@ -321,11 +392,27 @@
       state.p = SCOPES[scope].p;
       state.open[scope] = true;
     }
-    if (page === 'home' || page === 'patrol') state.p = 'residence';
+    if (page === 'home' || page === 'patrol') state.p = state.prop;
     state.page = page;
     loadPage();
     return false;
   };
+  // Mock control: which package property is the Residence.
+  window.setProp = function (prop) {
+    if (!PROPS[prop] || prop === state.prop) return;
+    state.prop = prop;
+    if (state.p !== 'hoa') state.p = prop;
+    if (state.page === 'patrol' && !hasCameras(prop)) state.page = 'home';
+    loadPage();
+    ensureLoaded(prop);
+  };
+  // Pull the package record so menu counts and chrome reflect it once loaded.
+  function ensureLoaded(prop) {
+    if (!MOCK || !propSlug(prop) || MOCK.peek(prop)) return;
+    MOCK.load(prop).then(function () { renderNav(); paintChrome(); }, function (err) {
+      $('page-status').textContent = 'Mock-up data for ' + prop + ' did not load: ' + (err && err.message || err);
+    });
+  }
   window.toggleGroup = function (scope) {
     state.open[scope] = !state.open[scope];
     renderNav();
@@ -351,16 +438,30 @@
     else { $('gate-err').textContent = ''; $('gate-err').classList.remove('visible'); }
   }
   function hideGate() { $('gate').classList.remove('visible'); }
+  // A property with no CHEKT account has no row password to check against;
+  // the mock gate accepts any entry for this tab (Gartland). Jones stays
+  // checked against the Chekt row through scan-patrol.
+  var MOCK_GATE = 'safe-portal-mock-gate';
+  function mockGateOpen() { try { return sessionStorage.getItem(MOCK_GATE) === '1'; } catch (e) { return false; } }
   $('gate-form').onsubmit = function (ev) {
     ev.preventDefault();
     var password = $('gate-pass').value;
     if (!password) { showGate('Enter the property password'); return; }
+    if (!hasCameras(state.prop)) {
+      try { sessionStorage.setItem(MOCK_GATE, '1'); } catch (e) {}
+      $('gate-pass').value = '';
+      hideGate();
+      loadPage();
+      ensureLoaded(state.prop);
+      return;
+    }
     SP.setPass(password);
     $('gate-pass').value = '';
     $('gate-enter').disabled = false;
     $('gate-status').textContent = '';
     hideGate();
     loadPage();
+    ensureLoaded(state.prop);
     SP.warm().catch(function (err) {
       if (!err || !err.auth || !SP.pass()) return;
       SP.setPass('');
@@ -388,7 +489,13 @@
       showGate(err.message);
     });
     loadPage();
+    ensureLoaded(state.prop);
+  } else if (!hasCameras(state.prop) && mockGateOpen()) {
+    hideGate();
+    loadPage();
+    ensureLoaded(state.prop);
   } else {
+    paintChrome();
     showGate('');
   }
 })();

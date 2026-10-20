@@ -8,18 +8,22 @@
 <!--
   safe-portal/portal/security.html — the SECURITY page of the SAFE portal.
   One Zoho Creator page embeds this one HTML. Content: Security status, the
-  2D Google map / drone nadir / obliques / 3D model with the Security pins
-  (14 surveyed cameras with cones, alarm devices), CHEKT live feeds + clips,
-  Should know, Recommendations, pins, facts.  ?layout=a|b|c  ?theme=light|dark
-  Renderer: portal-page.js (SafePage.boot). Writes nothing.
+  delivered report panel / 2D Google map / drone nadir / obliques / 3D model
+  with the Security pins (surveyed cameras with cones, recommended positions
+  dashed amber), CHEKT live feeds + clips, Should know, Recommendations,
+  Camera recommendations (positions, model picks, range checks, the Vyanet
+  lineup with spec sheets), Report items, pins, facts.
+  ?p=jones|gartland (mock-up package)  ?layout=a|b|c  ?theme=light|dark
+  Renderer: portal-page.js (SafePage.boot); data: ../mock-data.js. Writes nothing.
 -->
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../portal-core.css">
-<link rel="stylesheet" href="portal-page.css">
+<link rel="stylesheet" href="../portal-core.css?v=0.10.1">
+<link rel="stylesheet" href="portal-page.css?v=0.10.1">
 <script src="../../nadir-geo.js"></script>
 <script src="../fixtures.js?v=0.9.10"></script>
-<script src="../portal-core.js?v=0.9.10"></script>
-<script src="portal-page.js?v=0.9.10"></script>
+<script src="../portal-core.js?v=0.10.1"></script>
+<script src="../mock-data.js?v=0.10.1"></script>
+<script src="portal-page.js?v=0.10.1"></script>
 </head>
 <body class="pg">
 <script>SafePage.boot('S');</script>

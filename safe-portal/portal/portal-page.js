@@ -1,6 +1,16 @@
 /*
   safe-portal/portal/portal-page.js — renders ONE SAFE component page for the
-  Zoho Creator portal mock.  safe-portal 0.7.0
+  Zoho Creator portal mock.  safe-portal 0.10.1
+
+  0.10.0: package properties (Jones, Gartland via ../mock-data.js) add a
+  Report panel stage view (the delivered panel JPEG), a Report items card
+  (data / inferred / recommendation with confidence) and, on Security, a
+  Camera recommendations card (recommended positions, model picks, range
+  checks, the lineup, spec modal). Fixture properties render as before.
+  0.10.1: a package property that also has a hand-built fixture (Jones) is
+  the fixture plus the package — the A/F/E modules render their original rows
+  whenever the lens has pins and append the package's Map key; the
+  package-only summary is the fallback for a lens with no pins (Gartland).
 
   The portal is built around SAFE: one portal page per component. Each page is
   its own HTML file (security.html / access.html / fire.html / environment.html)
@@ -34,7 +44,7 @@
   var SP = window.SafePortal;
   var P = SP.params;
   var esc = SP.esc;
-  var BUILD = 'safe-portal 0.7.0';
+  var BUILD = 'safe-portal 0.10.1';
 
   // ---------- callouts: the white boxes on the reference panels ----------
   // Authored per component for the reference property. `pins` anchors the box
@@ -117,21 +127,36 @@
     });
   }
   function calloutsFor(ctx) {
+    var mock = ctx.R.fx.mock;
+    // Package properties: the panel's own callout boxes, anchored to a ground
+    // point (or free label boxes), straight from safe.json map_features.
+    if (mock) return (mock.callouts[ctx.comp] || []).map(function (c) {
+      return { pins: [], route: null, point: c.point || null, side: c.side || null, alert: !!c.alert, n: null, title: c.title, text: c.text };
+    });
     var list = (CALLOUTS[ctx.R.slug] || {})[ctx.comp];
     if (!list) list = ctx.pins.slice(0, 8).map(function (p) { return { pins: [p.id], title: p.name, text: firstSentence(p.desc) }; });
     return list.map(function (c) {
       var p = c.pins && ctx.R.byId[c.pins[0]];
-      return { pins: c.pins || [], route: c.route || null, side: c.side || null, alert: !!c.alert, n: p ? p.n : null, title: fill(ctx, c.title), text: fill(ctx, c.text) };
+      return { pins: c.pins || [], route: c.route || null, point: null, side: c.side || null, alert: !!c.alert, n: p ? p.n : null, title: fill(ctx, c.title), text: fill(ctx, c.text) };
     });
   }
 
   // ---------- boot ----------
+  // Fixture properties render at once; package properties (mock-data.js)
+  // fetch their JSON first, so boot resolves the record and then renders.
   function boot(comp) {
-    var layout = String(P.get('layout') || 'c').toLowerCase();
-    if (['a', 'b', 'c'].indexOf(layout) < 0) layout = 'a';
     var theme = P.get('theme') === 'dark' ? 'dark' : 'light';
     document.documentElement.classList.add('theme-' + theme);
-    var R = SP.load(P.get('p') || 'residence');
+    var p = P.get('p') || 'residence';
+    var loader = SP.loadAsync ? SP.loadAsync(p) : Promise.resolve(SP.load(p));
+    loader.then(function (R) { render(comp, R, theme); }, function (err) {
+      document.body.className = 'pg';
+      document.body.innerHTML = '<div class="sp-note" style="margin:24px">This property\u2019s mock-up data did not load (' + esc(err && err.message || err) + '). The package files live under safe-portal/mock-data/ and need an http:// origin.</div>';
+    });
+  }
+  function render(comp, R, theme) {
+    var layout = String(P.get('layout') || 'c').toLowerCase();
+    if (['a', 'b', 'c'].indexOf(layout) < 0) layout = 'a';
     var ctx = {
       R: R, comp: comp, layout: layout, theme: theme,
       C: SP.COMP[comp], report: R.fx.report[comp], pins: R.byComp[comp], mod: MODULES[comp],
@@ -158,9 +183,11 @@
   // ---------- shared pieces ----------
   function onlyLayers(ctx) { var o = {}; SP.ORDER.forEach(function (c) { o[c] = ctx.state.all || c === ctx.comp; }); return o; }
   function firstSentence(t) { var s = SP.sentences(t); return s.length ? s[0] : ''; }
+  function panelUrl(ctx) { var m = ctx.R.fx.mock; return m && m.panels ? m.panels[ctx.comp] : null; }
   function segHTML(ctx) {
     var d = !!ctx.R.drone, dis = d ? '' : ' disabled title="No drone capture on this record"';
-    return '<div class="sp-seg seg"><button data-sub="nadir"' + dis + '>Drone nadir</button><button data-sub="map">2D map</button><button data-sub="still"' + dis + '>Obliques</button><button data-sub="3d"' + dis + '>3D model</button></div>';
+    var panel = panelUrl(ctx) ? '<button data-sub="panel" title="The delivered SAFE panel image for this lens">Report panel</button>' : '';
+    return '<div class="sp-seg seg">' + panel + '<button data-sub="nadir"' + dis + '>Drone nadir</button><button data-sub="map">2D map</button><button data-sub="still"' + dis + '>Obliques</button><button data-sub="3d"' + dis + '>3D model</button></div>';
   }
   function toolsHTML() {
     return '<button class="sp-tool on tool-co" title="Callout boxes on the image">Callouts</button><button class="sp-tool tool-all" title="Show the other SAFE layers, dimmed">All layers</button><button class="sp-tool tool-labels">Labels</button><button class="sp-tool on tool-lot">Lot</button><button class="sp-tool tool-fit">Fit</button>';
@@ -236,6 +263,7 @@
     function engine() { var s = ctx.state.sub; return s === 'map' ? stage.map : (s === 'nadir' ? stage.nadir : null); }
     function anchorPx(c) {
       var eng = engine(); if (!eng || !eng.containerPx) return null;
+      if (c.point) return eng.containerPx(c.point.lat, c.point.lng);
       if (c.route) {
         var r = (ctx.R.fx.routes || []).filter(function (x) { return x.id === c.route; })[0]; if (!r) return null;
         var pt = r.points[Math.floor(r.points.length / 2)]; return eng.containerPx(pt.lat, pt.lng);
@@ -302,9 +330,17 @@
   function buildStage(ctx, el, opts) {
     opts = opts || {};
     var R = ctx.R, st = ctx.state;
+    var panel = panelUrl(ctx);
     el.innerHTML = '<div class="sp-sub sub-map"></div><div class="sp-sub sub-nadir"></div>' +
       '<div class="sp-sub sub-still"><div class="sp-still"></div><div class="sp-thumbs"></div></div><div class="sp-sub sub-3d"></div>' +
+      (panel ? '<div class="sp-sub sub-panel"><img class="sp-panelimg" alt="SAFE panel \u2014 ' + esc(ctx.C.label) + '" title="Click to open full size"><div class="sp-panelcap">Delivered panel \u00b7 ' + esc(ctx.C.label) + ' \u00b7 ' + esc(R.name) + ' \u00b7 imagery baked in \u00b7 click to enlarge</div></div>' : '') +
       '<div class="sp-mapnote note"></div>' + (opts.legend === false ? '' : '<div class="sp-legend legend"></div>') + '<div class="sp-card card"></div>';
+    if (panel) {
+      var pimg = el.querySelector('.sp-panelimg');
+      pimg.addEventListener('click', function () { openPanelModal(ctx, panel); });
+      // The panel JPEGs are customer imagery; a checkout or origin without them still works.
+      pimg.addEventListener('error', function () { el.querySelector('.sp-panelcap').textContent = 'Panel image not available at this origin \u2014 safe-portal/mock-data/' + esc(R.slug) + '/panels/ is not published here. The map view draws the same features from safe.json.'; });
+    }
     var layers = onlyLayers(ctx);
     function onDraw() { if (ctx.co) ctx.co.schedule(); }
     var map = SP.createMap(el.querySelector('.sub-map'), R, {
@@ -335,14 +371,16 @@
       });
     }
     function setSub(s) {
-      if (s !== 'map' && !R.drone) return;
+      if (s === 'panel') { if (!panel) return; }
+      else if (s !== 'map' && !R.drone) return;
       var prev = st.sub; st.sub = s;
       el.querySelectorAll('.sp-sub').forEach(function (e) { e.classList.toggle('on', e.classList.contains('sub-' + s)); });
       document.querySelectorAll('.seg button').forEach(function (b) { b.classList.toggle('on', b.dataset.sub === s); });
       document.querySelectorAll('.tool-fit').forEach(function (b) { b.disabled = s !== 'map'; });
       if (legend) legend.style.display = (s === 'map' || s === 'nadir') ? '' : 'none';
+      if (s === 'panel') { var pi = el.querySelector('.sp-panelimg'); if (pi && !pi.getAttribute('src')) pi.src = panel; }
       var card = el.querySelector('.card');
-      if (s === 'still' || s === '3d') card.classList.remove('on'); else if (st.sel) renderCard(ctx, R.byId[st.sel]);
+      if (s === 'still' || s === '3d' || s === 'panel') card.classList.remove('on'); else if (st.sel) renderCard(ctx, R.byId[st.sel]);
       if (s === '3d' && model) model.show(); else if (prev === '3d' && model) model.hide();
       if (s === 'still') renderStill();
       if (s === 'map') map.resize();
@@ -415,6 +453,7 @@
         else if (act === 'live') openCamera(ctx, p, null, 'live');
         else if (act === 'clips') openCamera(ctx, p, null, 'clips');
         else if (act === 'unlock') SP.toast('<b>Unlock sent</b> \u2014 ' + esc(p.name) + '. Relocks in 30 s. Logged to events. (mock)');
+        else if (act === 'specs') openCamSpec(ctx, b.dataset.model, p.rec || null);
         else if (act === 'map') { ctx.stage.setSub('map'); ctx.stage.map.select(p.id, true, 'sync'); }
       });
     });
@@ -445,6 +484,19 @@
   function closeModal() { var m = document.getElementById('pg-modal'); if (m) { m.classList.remove('on'); m.innerHTML = ''; } }
 
   // ---------- modules ----------
+  // Package properties: the panel's status line and its colour key, so the
+  // module explains the map when the lens has no device pins of its own.
+  function mockKeyHTML(ctx) {
+    var mock = ctx.R.fx.mock; if (!mock) return '';
+    var sec = mock.sections[ctx.comp] || {};
+    if (!sec.legend) return '';
+    return '<div class="sp-h ' + ctx.comp + '">Map key</div><div class="mod-key">' + String(sec.legend).split('\n').map(function (l) { return '<div>' + esc(l) + '</div>'; }).join('') + '</div>';
+  }
+  function mockLegendHTML(ctx) {
+    var mock = ctx.R.fx.mock; if (!mock) return '';
+    var sec = mock.sections[ctx.comp] || {};
+    return '<div class="sp-note" style="margin:0 0 10px">' + esc(sec.status || (ctx.report && ctx.report.status) || '') + '</div>' + mockKeyHTML(ctx);
+  }
   var MODULES = {
     S: {
       title: function (ctx) { return ctx.R.slug === 'hoa' ? 'Lots on the circle' : 'Live cameras \u00b7 CHEKT'; },
@@ -453,9 +505,17 @@
           var lots = ctx.R.pins.filter(function (p) { return p.kind === 'lot'; });
           return lots.length + ' lots \u00b7 ' + lots.filter(function (p) { return p.coverage === 'canvas'; }).length + ' live canvas \u00b7 ' + lots.filter(function (p) { return p.coverage === 'safe'; }).length + ' base SAFE';
         }
+        if (!ctx.R.live.length && ctx.R.fx.mock) return '0 cameras on record \u00b7 no live view';
         return ctx.R.live.length + ' cameras \u00b7 site ' + ((ctx.R.live[0] && ctx.R.live[0].live.site) || '3525');
       },
       html: function (ctx) {
+        if (!ctx.R.live.length && ctx.R.fx.mock) {
+          var recs = ctx.R.fx.mock.recommended || [];
+          return '<div class="sp-note" style="margin:0 0 10px">' + esc(ctx.R.fx.mock.sections.S && ctx.R.fx.mock.sections.S.status || 'No cameras on record.') + '</div>' +
+            (recs.length ? '<div class="sp-h S">Recommended positions</div>' + recs.map(function (r) {
+              return '<div class="mod-row" data-id="' + esc(r.id) + '"><div><div class="nm"><span class="n S dash">' + esc(r.id.replace(/^R/, '')) + '</span>' + esc(r.id + ' \u00b7 ' + r.label) + '</div><div class="mt">' + esc((r.models && r.models.primary) || '') + (r.models && r.models.alternates && r.models.alternates.length ? ' \u00b7 alt ' + esc(r.models.alternates.join(', ')) : '') + ' \u00b7 ' + esc(String(r.goal || '').replace(/_/g, ' ')) + '</div></div><div class="acts"><button class="sp-act sm" data-act="map" data-id="' + esc(r.id) + '">Map</button></div></div>';
+            }).join('') + '<div class="sp-note" style="margin-top:10px">Details, model picks and range checks are in Camera recommendations below.</div>' : '');
+        }
         if (ctx.R.slug === 'hoa') {
           var lots = ctx.R.pins.filter(function (p) { return p.kind === 'lot'; });
           var cams = ctx.R.cams;
@@ -469,6 +529,7 @@
           '<div class="mod-clips"><div class="sp-h">Clips \u00b7 <span class="clips-title">last 7 days</span><button class="sp-tool sm clips-all" hidden style="margin-left:auto">All cameras</button></div><div class="sp-clips"></div></div>';
       },
       wire: function (ctx, el, opts) {
+        if (!ctx.R.live.length && ctx.R.fx.mock) return; // rows wired by wireRows (Map buttons)
         if (ctx.R.slug === 'hoa') {
           el.querySelectorAll('.mod-lot').forEach(function (row) {
             row.addEventListener('click', function () { showOnMap(ctx, row.dataset.id); });
@@ -518,11 +579,12 @@
       }
     },
     A: {
-      title: 'Openings & confirmation',
-      sub: function (ctx) { return ctx.pins.filter(function (p) { return (p.actions || []).indexOf('unlock') >= 0; }).length + ' remote-operable (proposed)'; },
+      title: function (ctx) { return ctx.R.fx.mock ? 'Access & emergency response' : 'Openings & confirmation'; },
+      sub: function (ctx) { return ctx.R.fx.mock ? 'routes, staging, patient path' : ctx.pins.filter(function (p) { return (p.actions || []).indexOf('unlock') >= 0; }).length + ' remote-operable (proposed)'; },
       html: function (ctx) {
         var R = ctx.R;
         var openings = ctx.pins.filter(function (p) { return p.kind === 'gate' || p.kind === 'door'; });
+        if (R.fx.mock && !openings.length) return mockLegendHTML(ctx) + '<div class="sp-note" style="margin-top:10px">Openings with remote unlock appear here once devices are on the record. The approach, staging and patient path are drawn on the map and listed under Report items.</div>';
         var others = ctx.pins.filter(function (p) { return p.kind !== 'gate' && p.kind !== 'door'; });
         var cams = {};
         openings.forEach(function (p) { if (p.near && R.byId[p.near]) cams[p.near] = R.byId[p.near]; });
@@ -538,6 +600,7 @@
         if (others.length) html += '<div class="sp-h A">Approach</div>' + others.map(function (p) {
           return '<div class="mod-row" data-id="' + p.id + '"><div><div class="nm"><span class="n A' + (p.placement !== 'surveyed' ? ' dash' : '') + '">' + p.n + '</span>' + esc(p.name) + '</div><div class="mt">' + esc(firstSentence(p.desc)) + '</div></div><div class="acts"><button class="sp-act sm" data-act="map" data-id="' + p.id + '">Map</button></div></div>';
         }).join('');
+        if (R.fx.mock) html += mockKeyHTML(ctx);
         return html;
       },
       wire: function (ctx, el) {
@@ -570,7 +633,9 @@
       sub: function (ctx) {
         if (ctx.R.slug === 'hoa') return '1 of 46 lots assessed \u00b7 hydrant survey pending';
         var t = ctx.pins.filter(function (p) { return p.status === 'trouble'; }).length;
-        return t ? t + ' device in trouble' : 'all devices normal';
+        if (t) return t + ' device in trouble';
+        if (ctx.R.fx.mock) { var hy = ctx.pins.filter(function (p) { return p.id.indexOf('hyd:') === 0; }).length; return hy ? hy + ' City hydrants on the map' : (ctx.pins.some(function (p) { return p.kind === 'smoke'; }) ? 'all devices normal' : 'no hydrant within 800 m'); }
+        return 'all devices normal';
       },
       html: function (ctx) {
         var R = ctx.R;
@@ -580,11 +645,20 @@
         function row(p, extra) {
           return '<div class="mod-row' + (p.status === 'trouble' ? ' alert' : '') + '" data-id="' + p.id + '"><div><div class="nm"><span class="n F' + (p.placement !== 'surveyed' ? ' dash' : '') + '">' + p.n + '</span>' + esc(p.name) + ' ' + (p.status && p.status !== 'n/a' ? '<span class="sp-st ' + esc(p.status) + '">' + esc(p.status) + '</span>' : '') + '</div><div class="mt">' + esc(extra || firstSentence(p.desc)) + '</div></div><div class="acts"><button class="sp-act sm" data-act="map" data-id="' + p.id + '">Map</button></div></div>';
         }
-        var html = '<div class="sp-h F">Life-safety detectors</div>' + det.map(function (p) { return row(p, p.status === 'trouble' ? 'Low-battery trouble reported 2 days ago \u2014 replace the battery or schedule service.' : (p.vendor + ' \u00b7 monitored by Vyanet central station')); }).join('');
-        html += '<div class="sp-h F">Water</div>' + water.map(function (p) { return row(p); }).join('');
+        var mock = !!R.fx.mock;
+        var html = mock ? '<div class="sp-note" style="margin:0 0 10px">' + esc((R.fx.mock.sections.F || {}).status || '') + '</div>' : '';
+        html += '<div class="sp-h F">Life-safety detectors</div>' + (det.length
+          ? det.map(function (p) { return row(p, p.status === 'trouble' ? 'Low-battery trouble reported 2 days ago \u2014 replace the battery or schedule service.' : (p.vendor + ' \u00b7 monitored by Vyanet central station')); }).join('')
+          : '<div class="sp-note" style="margin:0">Life-safety detectors appear here once devices are on the record.</div>');
+        html += '<div class="sp-h F">Water</div>' + (water.length
+          ? water.map(function (p) { return row(p, p.id.indexOf('hyd:') === 0 ? p.desc : null); }).join('')
+          : '<div class="sp-note" style="margin:0">No City hydrant on the map; see the status line for the water read.</div>');
         html += '<div class="sp-h F">Defensible space</div>' + (R.fx.zones || []).map(function (z) {
           return '<div class="mod-zone"><i></i><div><b>' + esc(z.name) + '</b><span>radius ' + z.radius_m + ' m \u00b7 ' + Math.round(z.radius_m * 3.28084) + ' ft \u00b7 dashed ring on the image</span></div></div>';
+        }).join('') + (R.fx.zoneLabels || []).map(function (z) {
+          return '<div class="mod-zone"><i></i><div><b>' + esc(z) + '</b><span>buffer around the house outline \u00b7 dashed ring on the image (convex approximation)</span></div></div>';
         }).join('') + haz.map(function (p) { return row(p); }).join('');
+        if (mock) html += mockKeyHTML(ctx);
         return html;
       },
       wire: function () {}
@@ -604,6 +678,7 @@
           var src = p.source ? ' \u00b7 ' + p.source : '';
           return '<div class="mod-row" data-id="' + p.id + '"><div><div class="nm"><span class="n E' + (p.placement !== 'surveyed' ? ' dash' : '') + '">' + p.n + '</span>' + esc(p.name) + (p.status && p.status !== 'n/a' ? ' <span class="sp-st ' + esc(p.status) + '">' + esc(p.status) + '</span>' : '') + '</div><div class="mt">' + esc(firstSentence(p.desc) + src) + '</div></div><div class="acts"><button class="sp-act sm" data-act="map" data-id="' + p.id + '">Map</button></div></div>';
         }
+        if (ctx.R.fx.mock && !ctx.pins.length) return '<div class="sp-note" style="margin:0 0 10px">' + esc((ctx.R.fx.mock.report.lenses.E || {}).status || '') + '</div><div class="sp-note" style="margin:0 0 10px">Observations are drawn on the map as rings, lines and callouts (roof, surfaces, storage, landscape) and listed under Report items. Vyanet identifies what the imagery shows; what to do about it is the owner\u2019s call, or their contractor\u2019s.</div>' + mockKeyHTML(ctx);
         var html = '<div class="sp-note" style="margin:0 0 10px">Observations from Nearmap and the aerial stills: trash, debris, hazards, road and roof condition, irrigation. Vyanet is not a property-maintenance contractor. Each pin says what is visible and which layer it came from. What to do about it is yours, or your contractor\u2019s.</div>';
         groups.forEach(function (g) {
           var pins = ctx.pins.filter(function (p) {
@@ -615,12 +690,213 @@
           pins.forEach(function (p) { used[p.id] = true; });
           html += '<div class="sp-h E">' + g[0] + '</div>' + pins.map(row).join('');
         });
+        if (ctx.R.fx.mock) html += mockKeyHTML(ctx);
         return html;
       },
       wire: function () {}
     }
   };
   function wireModule(ctx, el, opts) { el.innerHTML = ctx.mod.html(ctx); ctx.mod.wire(ctx, el, opts || {}); wireRows(ctx, el); }
+
+  // ---------- mock-up package: the delivered panel, full size ----------
+  function openPanelModal(ctx, url) {
+    var m = document.getElementById('pg-modal');
+    m.innerHTML = '<div class="box panel-box"><div class="top"><span class="sp-k ' + ctx.comp + '">' + ctx.comp + '</span><b>' + esc(ctx.C.label) + ' panel \u00b7 ' + esc(ctx.R.name) + '</b><a class="sp-act sm" href="' + esc(url) + '" target="_blank" rel="noopener">Open image \u2197</a><button class="close" title="Close">\u00d7</button></div>' +
+      '<img class="panel-full" src="' + esc(url) + '" alt="">' +
+      '<div class="sp-note" style="margin-top:10px">This is the panel the delivery writes to <code>safe/{hub}/' + ctx.comp.toLowerCase() + '.jpg</code> (imagery baked in). The map above redraws the same features from <code>safe.json</code>.</div></div>';
+    m.classList.add('on');
+    m.querySelector('.close').addEventListener('click', closeModal);
+  }
+
+  // ---------- mock-up package: report items (data · inferred · recommendation) ----------
+  function itemGeomPoints(it) {
+    var pts = [];
+    (it.geometry || []).forEach(function (g) {
+      var geom = g && g.geometry; if (!geom || !geom.coordinates_latlng) return;
+      var c = geom.coordinates_latlng;
+      if (geom.type === 'Point') pts.push({ lat: c[0], lng: c[1] });
+      else c.forEach(function (q) { pts.push({ lat: q[0], lng: q[1] }); });
+    });
+    return pts;
+  }
+  function itemsPanelHTML(ctx, cls) {
+    var mock = ctx.R.fx.mock; if (!mock) return '';
+    var all = (mock.items[ctx.comp] || []);
+    var items = all.filter(function (it) { return it.subkind !== 'model_pick'; });
+    var counts = { data: 0, inferred: 0, recommendation: 0 };
+    items.forEach(function (it) { counts[it.kind] = (counts[it.kind] || 0) + 1; });
+    var rows = items.map(function (it, i) {
+      var conf = it.confidence;
+      var meta = [];
+      if (it.sources && it.sources.length) meta.push('sources: ' + it.sources.join(', '));
+      if (conf) meta.push('confidence ' + conf.level + (conf.band_pct ? ' (' + conf.band_pct + ')' : ''));
+      else if (it.confidence_note) meta.push(it.confidence_note.replace(/^camera recommendation.*$/, 'camera recommendation: confidence not rated'));
+      if (it.confirm_by) meta.push('confirm by: ' + it.confirm_by);
+      var pts = itemGeomPoints(it), cams = it.camera_ids || [];
+      var acts = '';
+      if (pts.length) acts += '<button class="sp-act sm" data-act="fit" data-item="' + i + '">Map</button>';
+      else if (cams.length && cams[0] !== 'existing' && ctx.R.byId[cams[0]]) acts += '<button class="sp-act sm" data-act="map" data-id="' + esc(cams[0]) + '">Map</button>';
+      else if (cams[0] === 'existing' && ctx.R.cams.length) acts += '<button class="sp-act sm" data-act="fitcams">Cameras</button>';
+      var basis = conf && conf.basis ? '<div class="it-basis"><b>Basis.</b> ' + esc(conf.basis) + (conf.failure_risk ? ' <b>Risk.</b> ' + esc(conf.failure_risk) : '') + '</div>' : '';
+      return '<div class="it-row kind-' + esc(it.kind) + '" data-item="' + i + '"><span class="it-kind">' + esc(it.kind === 'recommendation' ? 'rec' : it.kind) + '</span>' +
+        '<div class="it-body"><div class="it-text">' + esc(it.text) + '</div>' + (meta.length ? '<div class="it-meta">' + esc(meta.join(' \u00b7 ')) + '</div>' : '') + basis + '</div>' +
+        '<div class="acts">' + acts + '</div></div>';
+    }).join('');
+    var legend = mock.legend && mock.legend[ctx.comp] ? '<div class="sp-note it-legend">' + esc(mock.legend[ctx.comp]).replace(/\n/g, '<br>') + '</div>' : '';
+    return '<section class="panel card-items ' + (cls || '') + '"><div class="panel-h"><span class="sp-k ' + ctx.comp + '" style="width:22px;height:22px;font-size:11px">' + ctx.comp + '</span><h2>Report items</h2><span class="sub">' + counts.data + ' data \u00b7 ' + counts.inferred + ' inferred \u00b7 ' + counts.recommendation + ' recommendations</span></div>' +
+      '<div class="panel-b"><div class="sp-note" style="margin:0 0 10px"><b>data</b> rests on a source (CHEKT, GPS survey, hydrant GIS, geocode). <b>inferred</b> is a judgement from imagery or data, with a self-assessed confidence band and what would confirm it. <b>rec</b> is a recommendation. Model picks are in Camera recommendations.</div>' +
+      '<div class="it-list">' + rows + '</div>' + legend + '</div></section>';
+  }
+  function wireItems(ctx, root) {
+    var mock = ctx.R.fx.mock; if (!mock) return;
+    var items = (mock.items[ctx.comp] || []).filter(function (it) { return it.subkind !== 'model_pick'; });
+    root.querySelectorAll('[data-act="fit"][data-item]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var it = items[Number(b.dataset.item)]; if (!it) return;
+        var pts = itemGeomPoints(it); if (!pts.length) return;
+        var S = ctx.stage; if (!S) return;
+        if (ctx.state.sub !== 'map') S.setSub('map');
+        S.map.fitPoints(pts, 90);
+        root.querySelectorAll('.it-row').forEach(function (r) { r.classList.toggle('sel', r.dataset.item === b.dataset.item); });
+        if (ctx.layout !== 'a') S.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
+    });
+    root.querySelectorAll('[data-act="fitcams"]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var S = ctx.stage; if (!S) return;
+        if (ctx.state.sub !== 'map') S.setSub('map');
+        S.map.fitPoints(ctx.R.cams.filter(function (p) { return p.lat != null; }), 90);
+      });
+    });
+  }
+
+  // ---------- mock-up package: camera recommendations (Security) ----------
+  function camsData(ctx) { var m = ctx.R.fx.mock; return (ctx.comp === 'S' && m && m.catalog) ? m : null; }
+  function modelOf(mock, id) { return (mock.catalog.byModel || {})[id] || null; }
+  function nz(v, unit) { return (v == null || v === '') ? '\u2014' : (v + (unit || '')); }
+  function modelChips(m) {
+    if (!m) return '';
+    var chips = [];
+    if (m.kind === 'nvr') { chips.push((m.channels || 8) + ' ch', 'PoE ' + (m.poe_standard || ''), m.hdd || ''); }
+    else {
+      chips.push(nz(m.resolution_mp, ' MP'));
+      if (m.fov_deg && m.fov_deg.h != null) chips.push(m.fov_deg.h + '\u00b0 wide');
+      if (m.night && m.night.range_m != null) chips.push(m.night.range_m + ' m night');
+      if (m.power) chips.push(m.power.poe ? 'PoE' : (m.power.solar ? 'Solar + battery' : (m.power.supply || '').split(/[;(]/)[0].trim()));
+      if (m.pan_tilt) chips.push('pan ' + m.pan_tilt.pan_deg + '\u00b0');
+      if (m.dori && m.dori.identify_m != null) chips.push('identify ' + m.dori.identify_m + ' m');
+    }
+    return chips.filter(Boolean).map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('');
+  }
+  function modelCardHTML(m, tag) {
+    var img = window.SafeMock ? SafeMock.modelImage(m.model) : '';
+    return '<button type="button" class="cam-card' + (tag ? ' ' + tag : '') + '" data-model="' + esc(m.model) + '" title="Specs \u00b7 ' + esc(m.name) + '">' +
+      '<div class="img' + (m.model === 'R5' || m.model === 'N85' ? ' dark' : '') + '"><img src="' + esc(img) + '" alt="" loading="lazy"></div>' +
+      '<div class="body"><div class="kind">' + esc(m.placement || '') + ' \u00b7 ' + esc(m.type || m.kind || '') + '</div>' +
+      '<div class="nm"><b>' + esc(m.model) + '</b>' + esc(m.name.replace(new RegExp('^' + m.model + '\\s*'), '')) + '</div>' +
+      '<div class="chips">' + modelChips(m) + '</div></div></button>';
+  }
+  function recRowHTML(ctx, r, i) {
+    var mock = ctx.R.fx.mock, mdl = r.models || {}, prim = modelOf(mock, mdl.primary);
+    var alts = (mdl.alternates || []).map(function (a) { return '<button type="button" class="cam-alt" data-model="' + esc(a) + '" title="Specs \u00b7 ' + esc(a) + '">' + esc(a) + '</button>'; }).join('');
+    var aim = [r.heading_deg != null ? 'heading ' + r.heading_deg + '\u00b0' : null, r.fov_deg != null ? 'FOV ' + r.fov_deg + '\u00b0' : null, r.distance_m != null ? '\u2248 ' + r.distance_m + ' m to target' : 'distance not measured', 'power ' + (r.power_available || 'unknown')].filter(Boolean).join(' \u00b7 ');
+    var warns = (r.warnings || []);
+    var warnHtml = warns.length ? '<details class="cam-warn"><summary>' + warns.length + ' range check' + (warns.length === 1 ? '' : 's') + '</summary><ul>' + warns.map(function (w) { return '<li>' + esc(w) + '</li>'; }).join('') + '</ul></details>' : '<div class="cam-ok">range checks: none raised</div>';
+    return '<div class="cam-rec" data-id="' + esc(r.id) + '">' +
+      '<div class="cam-rec-head"><span class="n S dash">' + esc(r.id.replace(/^R/, '')) + '</span><div class="nm"><b>' + esc(r.id) + '</b> ' + esc(r.label) + '<span class="goal">' + esc(String(r.goal || '').replace(/_/g, ' ')) + '</span></div>' +
+        '<div class="acts"><button class="sp-act sm" data-act="map" data-id="' + esc(r.id) + '">Map</button></div></div>' +
+      '<div class="cam-rec-aim">' + esc(aim) + (r.power_note ? ' \u00b7 ' + esc(r.power_note) : '') + '</div>' +
+      (r.aim_note ? '<div class="cam-aimnote"><b>Aim.</b> ' + esc(r.aim_note) + '</div>' : '') +
+      '<div class="cam-pick"><span class="lab">Pick</span><button type="button" class="cam-primary" data-model="' + esc(mdl.primary || '') + '">' + esc(mdl.primary || '\u2014') + (prim ? ' \u00b7 ' + esc(prim.name.replace(new RegExp('^' + prim.model + '\\s*'), '')) : '') + '</button>' + (alts ? '<span class="lab">alt</span>' + alts : '') + '</div>' +
+      (mdl.why ? '<div class="cam-why">' + esc(mdl.why) + '</div>' : '') +
+      warnHtml + '</div>';
+  }
+  function camsPanelHTML(ctx, cls) {
+    var mock = camsData(ctx); if (!mock) return '';
+    var recs = mock.recommended || [], models = mock.catalog.models || [];
+    var groups = [['Outdoor', function (m) { return m.kind !== 'nvr' && m.placement === 'outdoor' && m.type !== 'video doorbell'; }],
+                  ['Entry', function (m) { return m.type === 'video doorbell'; }],
+                  ['Indoor', function (m) { return m.kind !== 'nvr' && m.placement === 'indoor'; }],
+                  ['Recorder', function (m) { return m.kind === 'nvr'; }]];
+    var picked = {};
+    recs.forEach(function (r) { var md = r.models || {}; if (md.primary) picked[md.primary] = 'primary'; (md.alternates || []).forEach(function (a) { if (!picked[a]) picked[a] = 'alt'; }); });
+    var lineup = groups.map(function (g) {
+      var ms = models.filter(g[1]); if (!ms.length) return '';
+      return '<div class="sp-h S">' + g[0] + '</div><div class="cam-grid">' + ms.map(function (m) { return modelCardHTML(m, picked[m.model] ? 'pick-' + picked[m.model] : ''); }).join('') + '</div>';
+    }).join('');
+    var nvr = (mock.nvr || [])[0];
+    var nvrHtml = nvr ? '<div class="sp-note cam-nvr"><b>' + esc(nvr.name) + '.</b> Pairs with the PoE picks (' + esc((nvr.pairs_with || []).join(', ')) + '): ' + esc(nvr.recording) + ', ' + esc(nvr.poe_standard) + '. ' + esc(nvr.note || '') + '</div>' : '';
+    var notes = (mock.notes || []).map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('');
+    var intro = recs.length
+      ? 'Where a camera would add coverage on this property, and which model fits the spot. Positions are <b>recommended, not installed</b> (dashed amber on the map). Model picks come from the catalog rules and the spec sheets; confirm power, mount, Wi-Fi signal and distance on site.'
+      : 'No recommended positions in this package.';
+    return '<section class="panel card-cams ' + (cls || '') + '"><div class="panel-h"><span class="sp-k S" style="width:22px;height:22px;font-size:11px">S</span><h2>Camera recommendations</h2><span class="sub">' + recs.length + ' recommended position' + (recs.length === 1 ? '' : 's') + ' \u00b7 ' + models.length + ' models in the lineup</span></div>' +
+      '<div class="panel-b"><div class="sp-note" style="margin:0 0 10px">' + intro + '</div>' +
+      (recs.length ? '<div class="sp-h S">Recommended for this property</div><div class="cam-recs">' + recs.map(function (r, i) { return recRowHTML(ctx, r, i); }).join('') + '</div>' + nvrHtml : '') +
+      (notes ? '<ul class="cam-notes">' + notes + '</ul>' : '') +
+      '<div class="sp-h S" style="margin-top:14px">The lineup <span class="cam-legend"><i class="pick-primary"></i> primary pick <i class="pick-alt"></i> alternate</span></div>' +
+      '<div class="sp-note" style="margin:0 0 8px">Click a camera for its spec table and sheet. Values are read off the Vyanet spec sheets; a dash means the sheet is silent. Prices are not on the sheets.</div>' + lineup +
+      '</div></section>';
+  }
+  function wireCams(ctx, root) {
+    var mock = camsData(ctx); if (!mock) return;
+    root.querySelectorAll('.cam-card[data-model], .cam-primary[data-model], .cam-alt[data-model]').forEach(function (b) {
+      b.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var row = b.closest('.cam-rec'), rec = row ? (mock.recommended || []).filter(function (r) { return r.id === row.dataset.id; })[0] : null;
+        openCamSpec(ctx, b.dataset.model, rec || null);
+      });
+    });
+  }
+  function specRows(m, snap) {
+    var rows = [];
+    if (!m) return rows;
+    if (m.kind === 'nvr') {
+      rows.push(['Channels', (m.channels || '\u2014') + ' \u00b7 ' + (m.recording || '')], ['PoE', m.poe_standard || '\u2014'], ['Storage', m.hdd || '\u2014'], ['Video out', (m.video_out || []).join(' \u00b7 ')], ['Network', m.network || '\u2014'], ['USB', m.usb || '\u2014'], ['Recording', m.record_mode || '\u2014'], ['Compression', m.compression || '\u2014'], ['Power', m.power || '\u2014'], ['Operating', m.operating_temp || '\u2014'], ['Price', m.price_usd == null ? 'not on the sheet' : '$' + m.price_usd]);
+      return rows;
+    }
+    var f = m.fov_deg || {}, d = m.dori || {}, n = m.night || {}, p = m.power || {}, c = m.connectivity || {};
+    rows.push(['Image', nz(m.resolution_mp, ' MP') + (m.resolution_px ? ' (' + m.resolution_px + ')' : '')]);
+    rows.push(['Lens', nz(m.lens) + (f.d != null ? ' \u00b7 ' + f.d + '\u00b0 diagonal' : '') + (f.h != null ? ' \u00b7 ' + f.h + '\u00b0 horizontal' : '') + (f.v != null ? ' \u00b7 ' + f.v + '\u00b0 vertical' : '')]);
+    if (m.pan_tilt) rows.push(['Pan / tilt', 'pan ' + nz(m.pan_tilt.pan_deg, '\u00b0') + ' \u00b7 tilt ' + nz(m.pan_tilt.tilt_deg, '\u00b0') + (m.auto_tracking ? ' \u00b7 auto tracking' : '')]);
+    rows.push(['Night', nz(n.range_m, ' m') + (n.ir ? ' \u00b7 ' + n.ir : '') + (n.color_night ? ' \u00b7 colour at night' : '')]);
+    rows.push(['DORI', d.detect_m == null ? 'not on the sheet' : 'detect ' + d.detect_m + ' m \u00b7 observe ' + nz(d.observe_m, ' m') + ' \u00b7 recognise ' + nz(d.recognise_m, ' m') + ' \u00b7 identify ' + nz(d.identify_m, ' m')]);
+    rows.push(['Detection', (m.detection || []).join(' \u00b7 ') || '\u2014']);
+    if (m.deterrence && (m.deterrence.siren_db || m.deterrence.lights)) rows.push(['Deterrence', [m.deterrence.siren_db ? m.deterrence.siren_db + ' dB siren' : null, m.deterrence.lights].filter(Boolean).join(' \u00b7 ')]);
+    rows.push(['Audio', m.audio || '\u2014']);
+    rows.push(['Power', nz(p.supply) + (p.consumption_w != null ? ' \u00b7 ' + p.consumption_w + ' W max' : '') + (p.battery ? ' \u00b7 ' + p.battery : '') + (p.solar ? ' \u00b7 ' + p.solar : '')]);
+    rows.push(['Network', [c.wifi ? 'Wi-Fi ' + c.wifi : null, c.ethernet ? 'Ethernet ' + c.ethernet : null, c.p2p ? 'P2P' : null].filter(Boolean).join(' \u00b7 ') || '\u2014']);
+    rows.push(['Body', [m.ip_rating, m.operating_temp].filter(Boolean).join(' \u00b7 ') || '\u2014']);
+    rows.push(['Storage', m.storage || '\u2014']);
+    if (m.extras && m.extras.length) rows.push(['Also', m.extras.join(' \u00b7 ')]);
+    rows.push(['Price', m.price_usd == null ? 'not on the sheet' : '$' + m.price_usd]);
+    return rows;
+  }
+  function openCamSpec(ctx, id, rec) {
+    var mock = ctx.R.fx.mock; if (!mock || !mock.catalog) return;
+    var m = modelOf(mock, id) || ((mock.nvr || []).filter(function (n) { return n.model === id; })[0]);
+    if (!m) { SP.toast('No catalog entry for ' + esc(id)); return; }
+    var box = document.getElementById('pg-modal');
+    var img = window.SafeMock ? SafeMock.modelImage(m.model) : '', pdf = window.SafeMock ? SafeMock.modelPdf(m.model) : '';
+    var role = rec ? ((rec.models || {}).primary === m.model ? 'primary pick for ' + rec.id : ((rec.models || {}).alternates || []).indexOf(m.model) >= 0 ? 'alternate for ' + rec.id : '') : '';
+    var warns = rec ? (rec.warnings || []).filter(function (w) { return w.indexOf(m.model + ':') === 0; }) : [];
+    var shortName = String(m.name || '').replace(new RegExp('^' + m.model + '\\s*'), '');
+    box.innerHTML = '<div class="box cam-spec"><div class="top"><span class="sp-k S">S</span><b>' + esc(m.model) + ' \u00b7 ' + esc(shortName || m.name) + '</b><button class="close" title="Close">\u00d7</button></div>' +
+      '<div class="cam-spec-hero"><div class="img' + (m.model === 'R5' || m.model === 'N85' ? ' dark' : '') + '"><img src="' + esc(img) + '" alt=""></div><div>' +
+        '<div class="kind">' + esc(m.placement || '') + ' \u00b7 ' + esc(m.type || m.kind || '') + (role ? ' \u00b7 ' + esc(role) : '') + '</div>' +
+        '<div class="chips">' + modelChips(m) + '</div>' +
+        (warns.length ? '<ul class="cam-spec-warn">' + warns.map(function (w) { return '<li>' + esc(w.replace(m.model + ': ', '')) + '</li>'; }).join('') + '</ul>' : '') +
+        (rec && (rec.models || {}).why && (rec.models || {}).primary === m.model ? '<p class="why">' + esc(rec.models.why) + '</p>' : '') +
+      '</div></div>' +
+      '<dl>' + specRows(m).map(function (r) { return '<dt>' + esc(r[0]) + '</dt><dd>' + esc(r[1]) + '</dd>'; }).join('') + '</dl>' +
+      '<div class="acts"><a class="sp-act sm" href="' + esc(pdf) + '" target="_blank" rel="noopener">Spec sheet (PDF) \u2197</a>' + (rec ? '<button class="sp-act sm" data-act="map" data-id="' + esc(rec.id) + '">Show ' + esc(rec.id) + ' on map</button>' : '') + '</div>' +
+      '<div class="sp-note" style="margin-top:10px">Read off the Vyanet spec sheet' + (m.source ? ' (' + esc(String(m.source).replace(/^src\//, '')) + ')' : '') + '. A dash means the sheet does not print the value; nothing is inferred.</div></div>';
+    box.classList.add('on');
+    box.querySelector('.close').addEventListener('click', closeModal);
+    box.querySelectorAll('[data-act="map"][data-id]').forEach(function (b) { b.addEventListener('click', function () { closeModal(); showOnMap(ctx, b.dataset.id); }); });
+  }
 
   // ---------- layouts ----------
   function modulePanelHTML(ctx) {
@@ -650,32 +926,50 @@
       wireFigure(ctx, body.querySelector('.fig'));
       wireRows(ctx, body.querySelector('.pg-rail'));
       wireModule(ctx, body.querySelector('.mod'), { feedsLayout: 'grid2' });
+      wireExtras(ctx, body.querySelector('.pg-main'));
     },
     b: function (ctx) {
       var body = document.body;
       body.innerHTML = '<div class="wrap">' + figureHTML(ctx) +
         '<div class="two">' + modulePanelHTML(ctx) + pinsPanelHTML(ctx) + '</div>' +
+        camsPanelHTML(ctx, '') + itemsPanelHTML(ctx, '') +
         '<div class="two">' + (ctx.comp === 'E' ? limitsPanelHTML(ctx) : '') + factsPanelHTML(ctx, '', 9) + '</div>' +
       '</div>';
       wireFigure(ctx, body.querySelector('.fig'));
       wireRows(ctx, body.querySelector('.card-pins'));
       wireModule(ctx, body.querySelector('.mod'), { feedsLayout: 'strip', wide: true });
+      wireExtras(ctx, body);
     },
     c: function (ctx) {
       var body = document.body;
+      var mock = !!ctx.R.fx.mock;
       body.innerHTML =
         '<div class="grid">' +
           '<div class="card-fig">' + figureHTML(ctx) + '</div>' +
           '<div class="card-mod">' + modulePanelHTML(ctx) + '</div>' +
-          pinsPanelHTML(ctx, ctx.comp === 'E' ? 'card-4' : 'card-6') +
-          (ctx.comp === 'E' ? limitsPanelHTML(ctx, 'card-4') : '') +
-          factsPanelHTML(ctx, ctx.comp === 'E' ? 'card-4' : 'card-6') +
+          camsPanelHTML(ctx, 'card-12') +
+          itemsPanelHTML(ctx, 'card-12') +
+          pinsPanelHTML(ctx, ctx.comp === 'E' || mock ? 'card-4' : 'card-6') +
+          (ctx.comp === 'E' || mock ? limitsPanelHTML(ctx, 'card-4') : '') +
+          factsPanelHTML(ctx, ctx.comp === 'E' || mock ? 'card-4' : 'card-6') +
         '</div>';
       wireFigure(ctx, body.querySelector('.fig'));
       wireRows(ctx, body.querySelector('.card-pins'));
       wireModule(ctx, body.querySelector('.mod'), { feedsLayout: 'grid2' });
+      wireExtras(ctx, body);
     }
   };
+  // Layout A keeps the package cards under the figure (the rail is narrow).
+  function wireExtras(ctx, root) {
+    if (!ctx.R.fx.mock) return;
+    if (ctx.layout === 'a') {
+      var main = root.classList && root.classList.contains('pg-main') ? root : root.querySelector('.pg-main');
+      if (main) main.insertAdjacentHTML('beforeend', camsPanelHTML(ctx, 'rail-card') + itemsPanelHTML(ctx, 'rail-card'));
+      root = main || root;
+    }
+    root.querySelectorAll('.card-cams, .card-items').forEach(function (card) { wireRows(ctx, card); });
+    wireCams(ctx, root); wireItems(ctx, root);
+  }
 
   window.SafePage = { boot: boot, BUILD: BUILD, select: function (id) { if (window.SAFE_PAGE) selectPin(window.SAFE_PAGE, id, 'api'); } };
 })();

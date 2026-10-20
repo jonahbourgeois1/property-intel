@@ -136,6 +136,16 @@ a { color: inherit; }
 .sp-ovsvg .area.dim, .sp-nadir svg .area.dim { fill-opacity: 0.04; stroke-opacity: 0.25; }
 .sp-ovsvg .area-label { font: 700 10px var(--mono); letter-spacing: 0.06em; paint-order: stroke; stroke: rgba(0,0,0,0.75); stroke-width: 3px; }
 .sp-ovsvg .hl { fill: none; stroke: #fff; stroke-width: 2; stroke-opacity: 0.9; }
+/* recommended (not installed) camera: dashed amber cone, the SAFE panel convention */
+.sp-ovsvg .cone.rec, .sp-nadir svg .cone.rec { fill-opacity: 0.1; stroke-width: 1.5; stroke-dasharray: 5 4; stroke-opacity: 0.95; }
+/* package shapes: polygons, lines, arrows, rings, x marks, rulers (mock-data.js) */
+.sp-ovsvg .shape, .sp-nadir svg .shape { vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.sp-ovsvg .shape.dim, .sp-nadir svg .shape.dim { opacity: 0.15; }
+.sp-ovsvg .shape-casing, .sp-nadir svg .shape-casing { fill: none; stroke: rgba(0,0,0,0.7); vector-effect: non-scaling-stroke; stroke-linejoin: round; stroke-linecap: round; }
+.sp-ovsvg .shape-arrow, .sp-nadir svg .shape-arrow { stroke: rgba(0,0,0,0.6); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.sp-ovsvg .shape.ruler { stroke-opacity: 0.8; }
+.sp-ovsvg .shape-label { font: 700 10px var(--mono); letter-spacing: 0.04em; paint-order: stroke; stroke: rgba(0,0,0,0.8); stroke-width: 3px; }
+.sp-ovsvg .shape-label.ruler { font: 600 9.5px var(--mono); fill: #fff; }
 
 /* pins — numbered dots, shared by the Google map and the nadir */
 .sp-pin { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; z-index: 2; }
@@ -149,6 +159,8 @@ a { color: inherit; }
 .sp-pin.S .dot { background: var(--S); } .sp-pin.A .dot { background: var(--A); }
 .sp-pin.F .dot { background: var(--F); } .sp-pin.E .dot { background: var(--E); }
 .sp-pin.pl-estimated .dot, .sp-pin.pl-mock .dot { border-style: dashed; }
+.sp-pin.pl-recommended .dot { border-style: dashed; border-color: #f59e0b; background: rgba(245,158,11,0.9) !important; color: #1f1300; }
+.sp-pin.pl-recommended .lbl { border-color: rgba(245,158,11,0.6); }
 .sp-pin.st-offline .dot, .sp-pin.st-trouble .dot { filter: saturate(0.4) brightness(0.8); }
 .sp-pin .led {
   display: none; position: absolute; left: 6px; top: -13px; width: 9px; height: 9px; border-radius: 50%;
@@ -214,14 +226,19 @@ a { color: inherit; }
 .sp-nadir .rpt.dim { opacity: 0.25; }
 
 /* ---------- stills (obliques) ---------- */
-.sp-still { position: absolute; inset: 0; display: flex; flex-direction: column; background: #000; }
-.sp-still .img { flex: 1; min-height: 0; display: grid; place-items: center; }
-.sp-still .img img { max-width: 100%; max-height: 100%; display: block; }
-.sp-still .cap { flex-shrink: 0; padding: 10px 14px; background: rgba(10,12,15,0.92); border-top: 1px solid rgba(255,255,255,0.08); font-size: 12px; line-height: 1.5; color: #c7cdd6; max-height: 38%; overflow-y: auto; }
+.sp-still { position: absolute; inset: 0; background: #000; }
+.sp-still .img { position: absolute; inset: 0; display: grid; place-items: center; }
+.sp-still .img img { width: 100%; height: 100%; object-fit: contain; object-position: center; display: block; }
+/* caption = overlay bar at the foot of the photo; <details> opens the notes */
+.sp-still .cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 0; background: rgba(10,12,15,0.72); backdrop-filter: blur(2px); border-top: 1px solid rgba(255,255,255,0.1); font-size: 12px; line-height: 1.5; color: #c7cdd6; max-height: 60%; overflow-y: auto; }
+.sp-still .cap summary { list-style: none; display: flex; align-items: baseline; gap: 10px; padding: 8px 14px; cursor: pointer; }
+.sp-still .cap summary::-webkit-details-marker { display: none; }
+.sp-still .cap summary .hint { margin-left: auto; font: 10.5px var(--mono); color: #9aa3b2; white-space: nowrap; }
+.sp-still .cap details[open] summary .hint { color: #f0f2f5; }
 .sp-still .cap b { color: #f0f2f5; }
-.sp-still .cap ul { margin: 4px 0 0 16px; }
+.sp-still .cap ul { margin: 0 0 10px 30px; padding-right: 14px; }
 .sp-still .cap li { margin: 2px 0; }
-.sp-thumbs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.sp-thumbs { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 5px; }
 .sp-thumbs button { position: relative; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); background: #000; }
 .sp-thumbs button img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.85; }
 .sp-thumbs button span { position: absolute; left: 4px; bottom: 3px; font: 600 9.5px var(--mono); color: #fff; background: rgba(10,12,15,0.8); padding: 1px 5px; border-radius: 3px; }
@@ -350,6 +367,7 @@ a { color: inherit; }
 .sp-pinrow.S .num { background: var(--S); } .sp-pinrow.A .num { background: var(--A); }
 .sp-pinrow.F .num { background: var(--F); } .sp-pinrow.E .num { background: var(--E); }
 .sp-pinrow.pl-estimated .num, .sp-pinrow.pl-mock .num { border-style: dashed; }
+.sp-pinrow.pl-recommended .num { border-style: dashed; background: #f59e0b !important; color: #1f1300; }
 .sp-pinrow .nm { font-size: 14px; font-weight: 500; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sp-pinrow .mt { font: 12px var(--mono); color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sp-st { font: 700 9px var(--mono); letter-spacing: 0.08em; padding: 2px 5px; border-radius: 4px; border: 1px solid; white-space: nowrap; }
@@ -385,6 +403,8 @@ a { color: inherit; }
 .sp-tag.pl-surveyed { color: var(--E); border-color: rgba(34,197,94,0.5); }
 .sp-tag.pl-estimated { color: var(--A); border-color: rgba(245,158,11,0.5); }
 .sp-tag.pl-mock { color: #c084fc; border-color: rgba(192,132,252,0.5); }
+.sp-tag.pl-recommended { color: #f59e0b; border-color: rgba(245,158,11,0.6); border-style: dashed; }
+.sp-tag.pl-unplaced { color: var(--text3); }
 .sp-card .desc { font-size: 12.5px; line-height: 1.5; color: var(--text-soft); }
 .sp-card dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; font-size: 12px; margin: 8px 0; }
 .sp-card dt { color: var(--text3); font: 10.5px var(--mono); padding-top: 2px; }

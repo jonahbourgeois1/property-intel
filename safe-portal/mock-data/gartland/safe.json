@@ -1,0 +1,4962 @@
+{
+ "schema": "vyanet-safe-portal-mockup-v0 (LOCAL DRAFT, not the locked safe-report-v1)",
+ "generated": "2026-10-19T15:40:14-05:00",
+ "delivered": false,
+ "property": {
+  "slug": "gartland",
+  "name": "Gartland residence",
+  "owner_label": "GARTLAND RES (BRIAN & ASHLI)",
+  "address": "3255 NW Celilo Ln, Bend OR 97703",
+  "site_no": "35801",
+  "hubId": null,
+  "hubId_source": "Not known: no delivered record / safe-dest response for site 35801 exists locally (dry run only). Never computed.",
+  "chekt_hub": null,
+  "center": {
+   "lat": 44.05862,
+   "lng": -121.3677
+  },
+  "jurisdiction": "City of Bend",
+  "address_check": "GE roof-number label \"3255\" on the subject roof in 02 (verified 10/7/2026)",
+  "template": "residential-nocam"
+ },
+ "imagery": {
+  "source": "Google Earth",
+  "date": "6/22/2024",
+  "survey_date": "10/7/2026",
+  "nearmap": false,
+  "notes": "Google Earth web captures; \"date\" is the imagery date, \"survey_date\" is when we captured it."
+ },
+ "georef": {
+  "close_capture": {
+   "file": "02-top-close.png",
+   "center_latlng": [
+    44.05862,
+    -121.36772
+   ],
+   "center_px": [
+    639.5,
+    414
+   ],
+   "m_per_px": 0.1028,
+   "mpp_source": "facts",
+   "formula": "lat = cLat - (y - cy) * mpp / 111132 ; lng = cLng + (x - cx) * mpp / (111320 * cos(cLat))"
+  },
+  "context_capture": {
+   "file": "01-top-context.png",
+   "center_latlng": [
+    44.0586242,
+    -121.3677012
+   ],
+   "center_px": [
+    639.5,
+    414
+   ],
+   "m_per_px": 0.19355
+  },
+  "accuracy_note": "derived_from_px coordinates are approx ±1–3 m (north-up GE grab, scale-bar mpp); latlng = authored in lat/lng (GE survey clicks or GIS)"
+ },
+ "credit": "Sources: fresh Google Earth survey 10/7/2026 (imagery dated 6/22/2024) + City of Bend public hydrant GIS. No CHEKT cameras / pins / prior records exist or were used. Measurements via GE ruler; positions approx.",
+ "counts": {
+  "data": 3,
+  "inferred": 13,
+  "recommendation": 21
+ },
+ "sections": {
+  "S": {
+   "title": "Security",
+   "status": "0 cameras on record  ·  no live view  ·  no CHEKT cameras or pins  ·  imagery-only read (Google Earth, 6/22/2024)",
+   "legend": "Dashed amber cone = RECOMMENDED camera (not installed)\nNo existing cameras: none drawn  ·  Cyan = street frontage\nRed = blind side  ·  Orange = open native land  ·  Dashed white = fence/wall (approx)",
+   "panel_image": "images/SAFE-S-security.png",
+   "items": [
+    {
+     "id": "gartland-S-00",
+     "text": "There are no cameras and no live view at this address. Responders get no visual verification before arrival.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "chekt"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "85–95%",
+      "basis": "CHEKT: no devices on record for site 35801; consequence follows directly",
+      "failure_risk": "Owner has non-CHEKT cameras (doorbell etc.) not visible to responders"
+     },
+     "confirm_by": "Owner; CHEKT account",
+     "confidence_note": null,
+     "feature_ids": [],
+     "camera_ids": [],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-01",
+     "text": "Corner lot with two street frontages (NW Celilo Ln on the W, the collector on the N). Both are public approaches.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "85–95%",
+      "basis": "Clear top-down + 4 tilts; house sits between Celilo and the collector",
+      "failure_risk": "N side may be a rear lot line with wall/no vehicle access (still a foot approach)"
+     },
+     "confirm_by": "Taxlot (Deschutes DIAL)",
+     "confidence_note": null,
+     "feature_ids": [
+      "S-shape-2",
+      "S-shape-3",
+      "S-callout-0"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "S-shape-2",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.058817,
+          -121.3679918
+         ],
+         [
+          44.058706,
+          -121.3680124
+         ],
+         [
+          44.0586228,
+          -121.3680072
+         ],
+         [
+          44.0585673,
+          -121.3679764
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-shape-3",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0588078,
+          -121.3679378
+         ],
+         [
+          44.0587495,
+          -121.3676423
+         ],
+         [
+          44.0586986,
+          -121.3673852
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-callout-0",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587153,
+         -121.3680085
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-S-02",
+     "text": "The E/NE side opens onto undeveloped native land with no fence or gate identifiable. Approach from there is unobserved.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "55–70%",
+      "basis": "Imagery 6/22/2024 shows native tract; fences are hard to resolve overhead",
+      "failure_risk": "Subdivision was building out in 2024: tract may be developed by now; low fence present"
+     },
+     "confirm_by": "Nearmap (current); site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "S-shape-1",
+      "S-shape-5",
+      "S-shape-6",
+      "S-shape-7",
+      "S-callout-1"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "S-shape-1",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586468,
+          -121.3673788
+         ],
+         [
+          44.0586302,
+          -121.3672439
+         ],
+         [
+          44.0585895,
+          -121.3668969
+         ],
+         [
+          44.0584202,
+          -121.3668969
+         ],
+         [
+          44.0584202,
+          -121.3674623
+         ],
+         [
+          44.0584748,
+          -121.3674238
+         ],
+         [
+          44.0585395,
+          -121.3674109
+         ],
+         [
+          44.0585673,
+          -121.3673596
+         ],
+         [
+          44.0586228,
+          -121.3674045
+         ],
+         [
+          44.0586468,
+          -121.3673788
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-shape-5",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0585673,
+          -121.3671154
+         ],
+         [
+          44.0585996,
+          -121.3673467
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-shape-6",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.058484,
+          -121.3671025
+         ],
+         [
+          44.0585256,
+          -121.3673596
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-shape-7",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586366,
+          -121.3672182
+         ],
+         [
+          44.0586551,
+          -121.3673852
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-callout-1",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-S-03",
+     "text": "The south side yard along the fence/wall with 3261 is the blind side. The front entry is probably on the W by the pad (verify).",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "50–65%",
+      "basis": "Narrow side yard is clear in imagery; entry location is a guess from pad/walk layout",
+      "failure_risk": "Front door could face Celilo further S or be on the N frontage"
+     },
+     "confirm_by": "Site visit; Street View; owner",
+     "confidence_note": null,
+     "feature_ids": [
+      "S-shape-0",
+      "S-shape-4",
+      "S-callout-2",
+      "S-callout-3"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "S-shape-0",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0585534,
+          -121.3678029
+         ],
+         [
+          44.058497,
+          -121.367668
+         ],
+         [
+          44.0584766,
+          -121.3676063
+         ],
+         [
+          44.0584609,
+          -121.3676037
+         ],
+         [
+          44.0584887,
+          -121.3677708
+         ],
+         [
+          44.0585395,
+          -121.3678993
+         ],
+         [
+          44.0585534,
+          -121.3678029
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-shape-4",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0585673,
+          -121.3679699
+         ],
+         [
+          44.0584887,
+          -121.3677708
+         ],
+         [
+          44.0584609,
+          -121.3676037
+         ],
+         [
+          44.0584202,
+          -121.3675138
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-callout-2",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585071,
+         -121.3677194
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-callout-3",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586098,
+         -121.3677888
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-S-04",
+     "text": "Install a CHEKT hub + cameras at the dashed R1-R5 positions (drive/garage, front entry, E patio facing the tract, N frontage, S side yard).",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5"
+     ],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-05",
+     "text": "Add a Knox box / lockbox for keys so responders are not forcing entry.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "60–75%",
+      "basis": "Rule of thumb; lockboxes are never visible from overhead",
+      "failure_risk": "One already exists, or Bend Fire does not run a Knox program for homes"
+     },
+     "confirm_by": "Owner; Bend Fire & Rescue",
+     "confidence_note": null,
+     "feature_ids": [],
+     "camera_ids": [],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-06",
+     "text": "Put house numbers where they read from BOTH streets (Celilo and the collector), lit at night.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "75–90%",
+      "basis": "Two frontages are clear; generic best practice",
+      "failure_risk": "Numbers may already be posted on the collector side"
+     },
+     "confirm_by": "Street View; site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "S-shape-2",
+      "S-shape-3"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "S-shape-2",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.058817,
+          -121.3679918
+         ],
+         [
+          44.058706,
+          -121.3680124
+         ],
+         [
+          44.0586228,
+          -121.3680072
+         ],
+         [
+          44.0585673,
+          -121.3679764
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "S-shape-3",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0588078,
+          -121.3679378
+         ],
+         [
+          44.0587495,
+          -121.3676423
+         ],
+         [
+          44.0586986,
+          -121.3673852
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-S-07",
+     "text": "Once installed, pin each camera with GPS stills and true headings so the S panel can show live coverage.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5"
+     ],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-08",
+     "text": "R1 drive / garage pad: E1 (alt: T1, F1, S2); goal driveway vehicle approach; power unknown. Target ~15.1 m is past its Recognise range (13.3 m): recognise to 13.3 m, observe beyond; mount closer if recognise is needed at the far end.",
+     "kind": "recommendation",
+     "subkind": "model_pick",
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R1"
+     ],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-09",
+     "text": "R2 front entry (probable): E1 (alt: T1, F1, S2); goal entry door identify; power unknown. No distance (spot not measurable).",
+     "kind": "recommendation",
+     "subkind": "model_pick",
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R2"
+     ],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-10",
+     "text": "R3 E patio -> open tract: E1 (alt: F1, T1, S2); goal wide yard overview; power unknown. Target ~11.6 m is inside its Observe range (26.4 m).",
+     "kind": "recommendation",
+     "subkind": "model_pick",
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R3"
+     ],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-11",
+     "text": "R4 N frontage / collector: E1 (alt: F1, T1, S2); goal street frontage property edge; power unknown. Target ~25 m is inside its Observe range (26.4 m). Night view reaches 20 m of that.",
+     "kind": "recommendation",
+     "subkind": "model_pick",
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R4"
+     ],
+     "geometry": []
+    },
+    {
+     "id": "gartland-S-12",
+     "text": "R5 S side yard: T1 (alt: F1, V5P, S2); goal side yard corridor; power unknown. Target ~24.5 m is inside its Observe range (25.9 m). Night view reaches 20 m of that.",
+     "kind": "recommendation",
+     "subkind": "model_pick",
+     "sources": [],
+     "inferred": true,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "camera recommendation / model pick: confidence not rated (excluded from inferred-confidence.csv); see cameras.json checks",
+     "feature_ids": [],
+     "camera_ids": [
+      "R5"
+     ],
+     "geometry": []
+    }
+   ],
+   "map_features": [
+    {
+     "id": "S-shape-0",
+     "panel": "S",
+     "kind": "polygon",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0585534,
+        -121.3678029
+       ],
+       [
+        44.058497,
+        -121.367668
+       ],
+       [
+        44.0584766,
+        -121.3676063
+       ],
+       [
+        44.0584609,
+        -121.3676037
+       ],
+       [
+        44.0584887,
+        -121.3677708
+       ],
+       [
+        44.0585395,
+        -121.3678993
+       ],
+       [
+        44.0585534,
+        -121.3678029
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "blind_side",
+     "authored": null,
+     "style": {
+      "layer": "under",
+      "fill": [
+       235,
+       64,
+       52,
+       95
+      ]
+     }
+    },
+    {
+     "id": "S-shape-1",
+     "panel": "S",
+     "kind": "polygon",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0586468,
+        -121.3673788
+       ],
+       [
+        44.0586302,
+        -121.3672439
+       ],
+       [
+        44.0585895,
+        -121.3668969
+       ],
+       [
+        44.0584202,
+        -121.3668969
+       ],
+       [
+        44.0584202,
+        -121.3674623
+       ],
+       [
+        44.0584748,
+        -121.3674238
+       ],
+       [
+        44.0585395,
+        -121.3674109
+       ],
+       [
+        44.0585673,
+        -121.3673596
+       ],
+       [
+        44.0586228,
+        -121.3674045
+       ],
+       [
+        44.0586468,
+        -121.3673788
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "tract",
+     "authored": null,
+     "style": {
+      "layer": "under",
+      "fill": [
+       255,
+       140,
+       0,
+       70
+      ]
+     }
+    },
+    {
+     "id": "S-shape-2",
+     "panel": "S",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.058817,
+        -121.3679918
+       ],
+       [
+        44.058706,
+        -121.3680124
+       ],
+       [
+        44.0586228,
+        -121.3680072
+       ],
+       [
+        44.0585673,
+        -121.3679764
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "w_frontage",
+     "authored": null,
+     "style": {
+      "color": "cyan",
+      "width": 5,
+      "arrow": false
+     }
+    },
+    {
+     "id": "S-shape-3",
+     "panel": "S",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0588078,
+        -121.3679378
+       ],
+       [
+        44.0587495,
+        -121.3676423
+       ],
+       [
+        44.0586986,
+        -121.3673852
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "n_frontage",
+     "authored": null,
+     "style": {
+      "color": "cyan",
+      "width": 5,
+      "arrow": false
+     }
+    },
+    {
+     "id": "S-shape-4",
+     "panel": "S",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585673,
+        -121.3679699
+       ],
+       [
+        44.0584887,
+        -121.3677708
+       ],
+       [
+        44.0584609,
+        -121.3676037
+       ],
+       [
+        44.0584202,
+        -121.3675138
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "fence",
+     "authored": null,
+     "style": {
+      "color": "white",
+      "width": 3,
+      "dashed": true,
+      "dash": [
+       10,
+       7
+      ],
+      "arrow": false
+     }
+    },
+    {
+     "id": "S-shape-5",
+     "panel": "S",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585673,
+        -121.3671154
+       ],
+       [
+        44.0585996,
+        -121.3673467
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "hazard-red",
+      "width": 4,
+      "dashed": true,
+      "dash": [
+       12,
+       8
+      ],
+      "casing": false
+     }
+    },
+    {
+     "id": "S-shape-6",
+     "panel": "S",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.058484,
+        -121.3671025
+       ],
+       [
+        44.0585256,
+        -121.3673596
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "hazard-red",
+      "width": 4,
+      "dashed": true,
+      "dash": [
+       12,
+       8
+      ],
+      "casing": false
+     }
+    },
+    {
+     "id": "S-shape-7",
+     "panel": "S",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586366,
+        -121.3672182
+       ],
+       [
+        44.0586551,
+        -121.3673852
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "hazard-red",
+      "width": 4,
+      "dashed": true,
+      "dash": [
+       12,
+       8
+      ],
+      "casing": false
+     }
+    },
+    {
+     "id": "S-callout-0",
+     "panel": "S",
+     "kind": "callout",
+     "text": "1  CORNER LOT: two street\n    frontages (Celilo W + collector N)\n    = two public approaches",
+     "category": "security",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587153,
+       -121.3680085
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       225,
+       128
+      ]
+     }
+    },
+    {
+     "id": "S-callout-1",
+     "panel": "S",
+     "kind": "callout",
+     "text": "2  E / NE open to native land:\n    unobserved approach, no fence\n    or gate identified",
+     "category": "hazard",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       1015,
+       280
+      ]
+     }
+    },
+    {
+     "id": "S-callout-2",
+     "panel": "S",
+     "kind": "callout",
+     "text": "3  SOUTH SIDE = blind side: narrow\n    side yard along fence/wall with 3261",
+     "category": "hazard",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585071,
+       -121.3677194
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       450,
+       394
+      ]
+     }
+    },
+    {
+     "id": "S-callout-3",
+     "panel": "S",
+     "kind": "callout",
+     "text": "Garage faces W/SW onto pad;\ndoor count not visible.\nFront entry probably here (verify)",
+     "category": null,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586098,
+       -121.3677888
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": {
+      "named_point": "garage",
+      "authored": null
+     },
+     "label_box": {
+      "base": [
+       250,
+       205
+      ]
+     }
+    },
+    {
+     "id": "S-callout-4",
+     "panel": "S",
+     "kind": "callout",
+     "text": "E patio / entry area",
+     "category": null,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585442,
+       -121.367569
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": {
+      "named_point": "patio",
+      "authored": null
+     },
+     "label_box": {
+      "base": [
+       790,
+       225
+      ]
+     }
+    },
+    {
+     "id": "S-callout-5",
+     "panel": "S",
+     "kind": "callout",
+     "text": "RECOMMENDED (dashed, NOT installed):\nR1 drive/garage · R2 front entry\nR3 E patio→tract · R4 N frontage · R5 S side",
+     "category": "recommended",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       880,
+       388
+      ]
+     }
+    }
+   ]
+  },
+  "A": {
+   "title": "Access",
+   "status": "Access + emergency response  ·  pad off NW Celilo Ln (W)  ·  meet at the T, 22 m away  ·  stage on the collector  ·  ambulance fits the pad  ·  3 ways out  ·  no turnaround",
+   "legend": "Yellow = approach route  ·  Green = pad  ·  Yellow bars = GE ruler\nPurple = staging  ·  White/red box = ambulance (to scale)\nCyan dashed = on foot (patient path, rear access)\nOrange ring = meet point  ·  Green arrows = egress",
+   "panel_image": "images/SAFE-A-access.png",
+   "items": [
+    {
+     "id": "gartland-A-00",
+     "text": "Arrive on the collector (likely NW Skyline Ranch Rd, verify) and turn onto NW Celilo Ln at the T; the drive is 22 m (73 ft) from the T on the left. The T is the meet / ground-guide point, not a rated LZ.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "ge_ruler"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "60–75%",
+      "basis": "Ruler 22.3 m; T geometry clear. The collector name is unverified and the arrival direction depends on dispatch routing",
+      "failure_risk": "Wrong road name in a dispatch note; units arrive from the S on Celilo"
+     },
+     "confirm_by": "Road-name check (county GIS / Google Maps); Bend Fire routing",
+     "confidence_note": null,
+     "feature_ids": [
+      "A-shape-3",
+      "A-shape-11",
+      "A-callout-0",
+      "meas-0"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "A-shape-3",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586857,
+          -121.3669034
+         ],
+         [
+          44.0587578,
+          -121.3672567
+         ],
+         [
+          44.0588198,
+          -121.3675652
+         ],
+         [
+          44.0588466,
+          -121.3676937
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-11",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0588346,
+         -121.3679712
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-0",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      },
+      {
+       "feature_id": "meas-0",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586357,
+          -121.3680072
+         ],
+         [
+          44.0588346,
+          -121.3679712
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-01",
+     "text": "Driveway pad: 17.2 m (56 ft) street edge to garage face, 6.2 m (20 ft) wide at the mouth. An ambulance fits; there is no turnaround. Patient path: front entry / garage to the pad.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "ge_ruler"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "75–90%",
+      "basis": "Ruler 17.2 m and 6.2 m vs a typical ambulance (~7–7.5 m × 2.6 m with mirrors): fits with room",
+      "failure_risk": "Cars parked on the pad (2 in the imagery); slope; the 17.2 m includes apron/sidewalk"
+     },
+     "confirm_by": "Site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "A-shape-0",
+      "A-shape-2",
+      "meas-1",
+      "meas-2",
+      "A-callout-2",
+      "A-shape-9",
+      "A-shape-10",
+      "A-callout-3"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "A-shape-0",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586635,
+          -121.3680072
+         ],
+         [
+          44.058669,
+          -121.3678993
+         ],
+         [
+          44.0586172,
+          -121.3677888
+         ],
+         [
+          44.0585747,
+          -121.3677888
+         ],
+         [
+          44.0585654,
+          -121.3678222
+         ],
+         [
+          44.0586024,
+          -121.3679391
+         ],
+         [
+          44.0586228,
+          -121.3680072
+         ],
+         [
+          44.0586635,
+          -121.3680072
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-2",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586565,
+          -121.3679387
+         ],
+         [
+          44.0586434,
+          -121.3678531
+         ],
+         [
+          44.0586205,
+          -121.3678599
+         ],
+         [
+          44.0586336,
+          -121.3679455
+         ],
+         [
+          44.0586565,
+          -121.3679387
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "meas-1",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586246,
+          -121.3680072
+         ],
+         [
+          44.0586098,
+          -121.3677888
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "meas-2",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586663,
+          -121.3679699
+         ],
+         [
+          44.0586107,
+          -121.3679699
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-2",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586366,
+         -121.367925
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-9",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0585626,
+          -121.36779
+         ],
+         [
+          44.058595,
+          -121.3678196
+         ],
+         [
+          44.0586264,
+          -121.3678513
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-10",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586098,
+          -121.3677888
+         ],
+         [
+          44.0586301,
+          -121.3678488
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-3",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585626,
+         -121.36779
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-02",
+     "text": "Celilo is 11.5 m (38 ft) curb to curb with cars parked on both sides, so do not stage there. Stage in the collector curb / bike lane E of the T along the N frontage.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "ge_ruler",
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "50–65%",
+      "basis": "Ruler 11.5 m − 2 × ~2.2 m parked ≈ 7 m clear (sound). Collector bike lane ~1.5–2 m is narrower than an engine (~2.6 m)",
+      "failure_risk": "Staging in the bike lane intrudes on a travel lane; the agency may prefer Celilo or the T"
+     },
+     "confirm_by": "Fire district (Bend Fire)",
+     "confidence_note": null,
+     "feature_ids": [
+      "meas-3",
+      "A-callout-1",
+      "A-shape-1",
+      "A-callout-6"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "meas-3",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0587254,
+          -121.3681588
+         ],
+         [
+          44.0586746,
+          -121.3680329
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-1",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587014,
+         -121.3680342
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-1",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0587725,
+          -121.3674192
+         ],
+         [
+          44.0587216,
+          -121.3671722
+         ],
+         [
+          44.0586913,
+          -121.3671842
+         ],
+         [
+          44.0587423,
+          -121.3674313
+         ],
+         [
+          44.0587725,
+          -121.3674192
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-6",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587412,
+         -121.3672439
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-03",
+     "text": "Three ways out: the collector NW, the collector SE, and Celilo S/SW. The rear (E) side is reachable on foot across the N strip and lawn; gate status unknown.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "60–75%",
+      "basis": "Road network seen in 2024 context imagery; foot route clear overhead",
+      "failure_risk": "New streets or closures since 2024; fence/gate blocks the N strip"
+     },
+     "confirm_by": "Current map; site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "A-shape-5",
+      "A-shape-6",
+      "A-shape-7",
+      "A-shape-12",
+      "A-callout-4",
+      "A-callout-5",
+      "A-callout-7",
+      "A-callout-8"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "A-shape-5",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0588318,
+          -121.3677194
+         ],
+         [
+          44.0588448,
+          -121.3678479
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-6",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0586894,
+          -121.367064
+         ],
+         [
+          44.0586561,
+          -121.3669072
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-7",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0585025,
+          -121.3682462
+         ],
+         [
+          44.0584239,
+          -121.368349
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-12",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0587153,
+          -121.3675394
+         ],
+         [
+          44.058632,
+          -121.3674495
+         ],
+         [
+          44.0585673,
+          -121.3674688
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-4",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      },
+      {
+       "feature_id": "A-callout-5",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      },
+      {
+       "feature_id": "A-callout-7",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      },
+      {
+       "feature_id": "A-callout-8",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-04",
+     "text": "Back the ambulance onto the pad (nose out toward Celilo), or nose in and reverse out with a spotter. Engines and ladders work from the street or the collector.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "60–75%",
+      "basis": "Pad geometry (ruler) supports it; tactics are the crew's call",
+      "failure_risk": "Crew SOP differs; pad occupied"
+     },
+     "confirm_by": "Fire district / EMS agency",
+     "confidence_note": null,
+     "feature_ids": [
+      "A-shape-0",
+      "A-shape-2"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "A-shape-0",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586635,
+          -121.3680072
+         ],
+         [
+          44.058669,
+          -121.3678993
+         ],
+         [
+          44.0586172,
+          -121.3677888
+         ],
+         [
+          44.0585747,
+          -121.3677888
+         ],
+         [
+          44.0585654,
+          -121.3678222
+         ],
+         [
+          44.0586024,
+          -121.3679391
+         ],
+         [
+          44.0586228,
+          -121.3680072
+         ],
+         [
+          44.0586635,
+          -121.3680072
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-shape-2",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586565,
+          -121.3679387
+         ],
+         [
+          44.0586434,
+          -121.3678531
+         ],
+         [
+          44.0586205,
+          -121.3678599
+         ],
+         [
+          44.0586336,
+          -121.3679455
+         ],
+         [
+          44.0586565,
+          -121.3679387
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-05",
+     "text": "Keep the T clear for ground-guiding and agree any LZ with the agency. If fire is in the E/SE tract, evacuate W via Celilo or along the collector, away from the fuel.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "70–85%",
+      "basis": "Fuel is clearly E/SE in imagery; LZ deferred to the agency",
+      "failure_risk": "Wind or fire location makes W the wrong way"
+     },
+     "confirm_by": "Fire district evacuation plan",
+     "confidence_note": null,
+     "feature_ids": [
+      "A-shape-11",
+      "A-callout-9"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "A-shape-11",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0588346,
+         -121.3679712
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "A-callout-9",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-06",
+     "text": "Add a Knox box / lockbox (none visible in imagery; verify), confirm whether a side gate exists to the rear yard, and post house numbers visible from both streets.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "75–90%",
+      "basis": "Mostly verification asks; low risk",
+      "failure_risk": "Items already in place"
+     },
+     "confirm_by": "Owner; site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "A-callout-10"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "A-callout-10",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-A-07",
+     "text": "With no cameras, dispatch has no visual on arrival (see S). Verify the collector name and the front-entry location on a site visit.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "85–95%",
+      "basis": "CHEKT no-device record plus verification ask",
+      "failure_risk": "—"
+     },
+     "confirm_by": "Site visit",
+     "confidence_note": null,
+     "feature_ids": [],
+     "camera_ids": [],
+     "geometry": []
+    }
+   ],
+   "map_features": [
+    {
+     "id": "A-shape-0",
+     "panel": "A",
+     "kind": "polygon",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0586635,
+        -121.3680072
+       ],
+       [
+        44.058669,
+        -121.3678993
+       ],
+       [
+        44.0586172,
+        -121.3677888
+       ],
+       [
+        44.0585747,
+        -121.3677888
+       ],
+       [
+        44.0585654,
+        -121.3678222
+       ],
+       [
+        44.0586024,
+        -121.3679391
+       ],
+       [
+        44.0586228,
+        -121.3680072
+       ],
+       [
+        44.0586635,
+        -121.3680072
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "pad",
+     "authored": null,
+     "style": {
+      "layer": "under",
+      "fill": [
+       39,
+       174,
+       96,
+       95
+      ],
+      "outline": [
+       39,
+       174,
+       96,
+       255
+      ],
+      "width": 3
+     }
+    },
+    {
+     "id": "A-shape-1",
+     "panel": "A",
+     "kind": "polygon",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0587725,
+        -121.3674192
+       ],
+       [
+        44.0587216,
+        -121.3671722
+       ],
+       [
+        44.0586913,
+        -121.3671842
+       ],
+       [
+        44.0587423,
+        -121.3674313
+       ],
+       [
+        44.0587725,
+        -121.3674192
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "staging",
+     "authored": null,
+     "style": {
+      "layer": "under",
+      "fill": [
+       142,
+       68,
+       173,
+       110
+      ],
+      "outline": [
+       190,
+       120,
+       230,
+       255
+      ],
+      "width": 4
+     }
+    },
+    {
+     "id": "A-shape-2",
+     "panel": "A",
+     "kind": "rect_m",
+     "what": "ambulance ~7.0 x 2.6 m, true size",
+     "size_m": [
+      7.0,
+      2.6
+     ],
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0586565,
+        -121.3679387
+       ],
+       [
+        44.0586434,
+        -121.3678531
+       ],
+       [
+        44.0586205,
+        -121.3678599
+       ],
+       [
+        44.0586336,
+        -121.3679455
+       ],
+       [
+        44.0586565,
+        -121.3679387
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "style": {
+      "layer": "under",
+      "length_m": 7.0,
+      "width_m": 2.6,
+      "angle": 12,
+      "fill": [
+       255,
+       255,
+       255,
+       130
+      ],
+      "outline": [
+       200,
+       30,
+       60,
+       255
+      ],
+      "width": 3,
+      "what": "ambulance ~7.0 x 2.6 m, true size"
+     }
+    },
+    {
+     "id": "A-shape-3",
+     "panel": "A",
+     "kind": "route",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586857,
+        -121.3669034
+       ],
+       [
+        44.0587578,
+        -121.3672567
+       ],
+       [
+        44.0588198,
+        -121.3675652
+       ],
+       [
+        44.0588466,
+        -121.3676937
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "yellow",
+      "width": 6,
+      "arrow_from": 1,
+      "arrow_size": 20
+     }
+    },
+    {
+     "id": "A-shape-4",
+     "panel": "A",
+     "kind": "route",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0588466,
+        -121.3679378
+       ],
+       [
+        44.0588078,
+        -121.3680149
+       ],
+       [
+        44.0587338,
+        -121.368038
+       ],
+       [
+        44.0586598,
+        -121.3680342
+       ],
+       [
+        44.0586394,
+        -121.3680021
+       ],
+       [
+        44.058633,
+        -121.3679532
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "yellow",
+      "width": 6,
+      "arrow_size": 20
+     }
+    },
+    {
+     "id": "A-shape-5",
+     "panel": "A",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0588318,
+        -121.3677194
+       ],
+       [
+        44.0588448,
+        -121.3678479
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "egress",
+      "width": 6,
+      "casing": true,
+      "arrow_size": 22
+     }
+    },
+    {
+     "id": "A-shape-6",
+     "panel": "A",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586894,
+        -121.367064
+       ],
+       [
+        44.0586561,
+        -121.3669072
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "egress",
+      "width": 6,
+      "casing": true,
+      "arrow_size": 22
+     }
+    },
+    {
+     "id": "A-shape-7",
+     "panel": "A",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585025,
+        -121.3682462
+       ],
+       [
+        44.0584239,
+        -121.368349
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "egress",
+      "width": 6,
+      "casing": true,
+      "arrow_size": 22
+     }
+    },
+    {
+     "id": "A-shape-8",
+     "panel": "A",
+     "kind": "measurements",
+     "note": "draws facts.measurements (see meas-*)"
+    },
+    {
+     "id": "A-shape-9",
+     "panel": "A",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585626,
+        -121.36779
+       ],
+       [
+        44.058595,
+        -121.3678196
+       ],
+       [
+        44.0586264,
+        -121.3678513
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": [
+      {
+       "named_point": "entry",
+       "authored": null
+      },
+      null,
+      null
+     ],
+     "style": {
+      "color": "cyan",
+      "width": 5,
+      "dashed": true,
+      "dash": [
+       10,
+       6
+      ],
+      "arrow": true,
+      "arrow_size": 16
+     }
+    },
+    {
+     "id": "A-shape-10",
+     "panel": "A",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586098,
+        -121.3677888
+       ],
+       [
+        44.0586301,
+        -121.3678488
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": [
+      {
+       "named_point": "garage",
+       "authored": null
+      },
+      null
+     ],
+     "style": {
+      "color": "cyan",
+      "width": 5,
+      "dashed": true,
+      "dash": [
+       10,
+       6
+      ],
+      "arrow": false
+     }
+    },
+    {
+     "id": "A-shape-11",
+     "panel": "A",
+     "kind": "circle",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0588346,
+       -121.3679712
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": {
+      "named_point": "T",
+      "authored": null
+     },
+     "style": {
+      "r": 22,
+      "color": "orange",
+      "width": 4
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "A-shape-12",
+     "panel": "A",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0587153,
+        -121.3675394
+       ],
+       [
+        44.058632,
+        -121.3674495
+       ],
+       [
+        44.0585673,
+        -121.3674688
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "cyan",
+      "width": 4,
+      "dashed": true,
+      "dash": [
+       10,
+       7
+      ],
+      "arrow": true
+     }
+    },
+    {
+     "id": "A-callout-0",
+     "panel": "A",
+     "kind": "callout",
+     "text": "1  T = MEET / GROUND-GUIDE POINT (not a rated LZ).\n    Celilo meets the collector (likely NW Skyline\n    Ranch Rd, verify), 22 m from the drive.",
+     "category": "meet",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       480,
+       40
+      ]
+     }
+    },
+    {
+     "id": "A-callout-1",
+     "panel": "A",
+     "kind": "callout",
+     "text": "2  NW Celilo Ln: 11.5 m curb-curb,\n    cars parked BOTH sides narrow the\n    travel width. Do not stage here.",
+     "category": "route",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587014,
+       -121.3680342
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       200,
+       172
+      ]
+     }
+    },
+    {
+     "id": "A-callout-2",
+     "panel": "A",
+     "kind": "callout",
+     "text": "3  PAD + AMBULANCE: pad 17.2 m long, 6.2 m wide at\n    the mouth. Ambulance (~7 x 2.6 m, drawn to scale)\n    fits, nose out. NO turnaround: engines stay on street.",
+     "category": "access",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586366,
+       -121.367925
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       150,
+       292
+      ]
+     }
+    },
+    {
+     "id": "A-callout-3",
+     "panel": "A",
+     "kind": "callout",
+     "text": "Cyan dashed = patient path: front entry / garage → ambulance\nGarage faces W/SW  ·  front-entry location probable, verify",
+     "category": "foot",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585626,
+       -121.36779
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": {
+      "named_point": "entry",
+      "authored": null
+     },
+     "label_box": {
+      "base": [
+       445,
+       352
+      ]
+     }
+    },
+    {
+     "id": "A-callout-4",
+     "panel": "A",
+     "kind": "callout",
+     "text": "4  EGRESS: Celilo\n    continues S/SW\n    (2nd way out)",
+     "category": "egress",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       14,
+       392
+      ]
+     }
+    },
+    {
+     "id": "A-callout-5",
+     "panel": "A",
+     "kind": "callout",
+     "text": "5  Rear (E) side reachable ON FOOT from the\n    N sidewalk across the gravel strip / lawn.\n    No gate identified; side-gate status unknown.",
+     "category": "foot",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       890,
+       245
+      ]
+     }
+    },
+    {
+     "id": "A-callout-6",
+     "panel": "A",
+     "kind": "callout",
+     "text": "6  STAGING: collector curb / bike lane E of\n    the T on the N frontage. Keep the T clear.",
+     "category": "staging",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587412,
+       -121.3672439
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       1000,
+       40
+      ]
+     }
+    },
+    {
+     "id": "A-callout-7",
+     "panel": "A",
+     "kind": "callout",
+     "text": "EGRESS: collector NW",
+     "category": "egress",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       650,
+       6
+      ]
+     }
+    },
+    {
+     "id": "A-callout-8",
+     "panel": "A",
+     "kind": "callout",
+     "text": "EGRESS: collector SE",
+     "category": "egress",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       1110,
+       216
+      ]
+     }
+    },
+    {
+     "id": "A-callout-9",
+     "panel": "A",
+     "kind": "callout",
+     "text": "Fire in the E/SE tract? Evacuate W via Celilo\nor along the collector, AWAY from the fuel.",
+     "category": "hazard",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       980,
+       322
+      ]
+     }
+    },
+    {
+     "id": "A-callout-10",
+     "panel": "A",
+     "kind": "callout",
+     "text": "No Knox box / lockbox visible in imagery  ·  no gate at the drive",
+     "category": "hazard",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       980,
+       372
+      ]
+     }
+    },
+    {
+     "id": "meas-0",
+     "panel": "A",
+     "kind": "ruler",
+     "text": "22.3 m (73 ft) to T",
+     "capture": "10-measure-to-intersection",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586357,
+        -121.3680072
+       ],
+       [
+        44.0588346,
+        -121.3679712
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "note": "value is the Google Earth ruler readout; the drawn line endpoints are approximate"
+    },
+    {
+     "id": "meas-1",
+     "panel": "A",
+     "kind": "ruler",
+     "text": "17.2 m (56 ft)",
+     "capture": "07-measure-driveway-length",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586246,
+        -121.3680072
+       ],
+       [
+        44.0586098,
+        -121.3677888
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "note": "value is the Google Earth ruler readout; the drawn line endpoints are approximate"
+    },
+    {
+     "id": "meas-2",
+     "panel": "A",
+     "kind": "ruler",
+     "text": "6.2 m (20 ft)",
+     "capture": "08-measure-driveway-width",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586663,
+        -121.3679699
+       ],
+       [
+        44.0586107,
+        -121.3679699
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "note": "value is the Google Earth ruler readout; the drawn line endpoints are approximate"
+    },
+    {
+     "id": "meas-3",
+     "panel": "A",
+     "kind": "ruler",
+     "text": "11.5 m (38 ft)",
+     "capture": "09-measure-street-width",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0587254,
+        -121.3681588
+       ],
+       [
+        44.0586746,
+        -121.3680329
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "note": "value is the Google Earth ruler readout; the drawn line endpoints are approximate"
+    }
+   ]
+  },
+  "F": {
+   "title": "Fire",
+   "status": "WUI edge E/SE  ·  nearest hydrant 19 m (WFH005944)  ·  3 City hydrants within 115 m  ·  no pool / pond for drafting",
+   "legend": "Red = native fuel tract (WUI)  ·  Green = lawn\nYellow ≈ 30 ft (9 m) Zone 1 around roof\nH = City hydrant (GIS, approx)\nDashed red box = recommended engine spot",
+   "panel_image": "images/SAFE-F-fire.png",
+   "items": [
+    {
+     "id": "gartland-F-00",
+     "text": "Directly E/SE is an undeveloped tract of native juniper, pine and sagebrush, the WUI edge and the heaviest fuel load.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "80–90%",
+      "basis": "Clear in top-down and E tilt (6/22/2024)",
+      "failure_risk": "Tract cleared/developed since 2024"
+     },
+     "confirm_by": "Nearmap (current); Oregon wildfire hazard map",
+     "confidence_note": null,
+     "feature_ids": [
+      "F-shape-0",
+      "F-callout-1"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "F-shape-0",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586468,
+          -121.3673788
+         ],
+         [
+          44.0586302,
+          -121.3672439
+         ],
+         [
+          44.0585895,
+          -121.3668969
+         ],
+         [
+          44.0584202,
+          -121.3668969
+         ],
+         [
+          44.0584202,
+          -121.3674623
+         ],
+         [
+          44.0584748,
+          -121.3674238
+         ],
+         [
+          44.0585395,
+          -121.3674109
+         ],
+         [
+          44.0585673,
+          -121.3673596
+         ],
+         [
+          44.0586228,
+          -121.3674045
+         ],
+         [
+          44.0586468,
+          -121.3673788
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-callout-1",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-F-01",
+     "text": "An irrigated lawn buffers the E/SE side. Junipers stand 5-10 m east of the lawn; no trees touch or overhang the roof.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "65–75%",
+      "basis": "Green lawn is clear; 5–10 m is eyeballed from the scale bar, not a ruler line; 'irrigated' is inferred from June green",
+      "failure_risk": "Distance off by 3+ m; lawn browned since"
+     },
+     "confirm_by": "Earth ruler line; site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "F-shape-1",
+      "F-shape-3",
+      "F-shape-4",
+      "F-callout-2"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "F-shape-1",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586135,
+          -121.3674778
+         ],
+         [
+          44.0586024,
+          -121.3674238
+         ],
+         [
+          44.0585488,
+          -121.3674469
+         ],
+         [
+          44.0585025,
+          -121.3674881
+         ],
+         [
+          44.0584378,
+          -121.3675266
+         ],
+         [
+          44.0584378,
+          -121.3675754
+         ],
+         [
+          44.0584748,
+          -121.3675754
+         ],
+         [
+          44.0585395,
+          -121.3675266
+         ],
+         [
+          44.0586135,
+          -121.3674778
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-shape-3",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585562,
+         -121.3673788
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-shape-4",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0584701,
+         -121.3674109
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-callout-2",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585256,
+         -121.3674881
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-F-02",
+     "text": "Side walls are 3-6 m from the neighbour at 3261 (S): ember and radiant exposure in both directions. Construction lots lie W/SW.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "70–85%",
+      "basis": "Scale-bar estimate between roofs; framing visible in tilts",
+      "failure_risk": "Eaves vs walls confuse the spacing; construction finished"
+     },
+     "confirm_by": "Earth ruler line; Nearmap",
+     "confidence_note": null,
+     "feature_ids": [
+      "F-shape-5",
+      "F-callout-3"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "F-shape-5",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0585044,
+          -121.3676937
+         ],
+         [
+          44.0584674,
+          -121.3677091
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-callout-3",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0584748,
+         -121.3677708
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-F-03",
+     "text": "Hydrants (City GIS, 6 in): WFH005944 19 m NNW, WFH006140 78 m SW, WFH005943 114 m E. No pool, hot tub or pond visible.",
+     "kind": "data",
+     "subkind": null,
+     "sources": [
+      "city_hydrant_gis",
+      "imagery"
+     ],
+     "inferred": false,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "data item (no inference)",
+     "feature_ids": [
+      "hyd:WFH005944",
+      "hyd:WFH006140",
+      "hyd:WFH005943"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "hyd:WFH005944",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587914,
+         -121.3677471
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      },
+      {
+       "feature_id": "hyd:WFH006140",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0582254,
+         -121.3685131
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      },
+      {
+       "feature_id": "hyd:WFH005943",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0584389,
+         -121.366303
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-F-04",
+     "text": "Lay in from WFH005944: position the first engine in the collector curb lane beside it (dashed box), clear of the T.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [
+      "city_hydrant_gis"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "55–70%",
+      "basis": "City GIS hydrant 19.4 m @349°, 6 in; the GIS point is approximate",
+      "failure_risk": "Hydrant actually on the Celilo side or out of service; agency SOP"
+     },
+     "confirm_by": "Bend Fire; site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "F-shape-2",
+      "F-callout-0",
+      "hyd:WFH005944"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "F-shape-2",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0588259,
+          -121.3676646
+         ],
+         [
+          44.058796,
+          -121.3675201
+         ],
+         [
+          44.0587711,
+          -121.36753
+         ],
+         [
+          44.058801,
+          -121.3676745
+         ],
+         [
+          44.0588259,
+          -121.3676646
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-callout-0",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587874,
+         -121.3675394
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "hyd:WFH005944",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587914,
+         -121.3677471
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      }
+     ]
+    },
+    {
+     "id": "gartland-F-05",
+     "text": "Keep the lawn irrigated and extend a lean, clean 0-30 ft zone on the E/SE; limb up and thin the junipers nearest the lawn.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "80–90%",
+      "basis": "Standard home-ignition-zone guidance; fuel location clear",
+      "failure_risk": "Some of it already done"
+     },
+     "confirm_by": "Deschutes County FireFree / Bend Fire assessment",
+     "confidence_note": null,
+     "feature_ids": [
+      "F-zone-0",
+      "F-shape-1"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "F-zone-0",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0587661,
+          -121.3678993
+         ],
+         [
+          44.0587708,
+          -121.3678607
+         ],
+         [
+          44.0587449,
+          -121.3677451
+         ],
+         [
+          44.0586829,
+          -121.3676423
+         ],
+         [
+          44.0586256,
+          -121.3674906
+         ],
+         [
+          44.0585719,
+          -121.3675394
+         ],
+         [
+          44.0585673,
+          -121.3675844
+         ],
+         [
+          44.058521,
+          -121.3675844
+         ],
+         [
+          44.0584794,
+          -121.3676101
+         ],
+         [
+          44.0584979,
+          -121.3676744
+         ],
+         [
+          44.0585118,
+          -121.3677194
+         ],
+         [
+          44.0585395,
+          -121.3677836
+         ],
+         [
+          44.0585673,
+          -121.3678093
+         ],
+         [
+          44.0586135,
+          -121.3677888
+         ],
+         [
+          44.058632,
+          -121.3678222
+         ],
+         [
+          44.058669,
+          -121.3678993
+         ],
+         [
+          44.0587661,
+          -121.3678993
+         ]
+        ],
+        "note": "this is the SOURCE outline; render a 9.1 m buffer around it"
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "F-shape-1",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0586135,
+          -121.3674778
+         ],
+         [
+          44.0586024,
+          -121.3674238
+         ],
+         [
+          44.0585488,
+          -121.3674469
+         ],
+         [
+          44.0585025,
+          -121.3674881
+         ],
+         [
+          44.0584378,
+          -121.3675266
+         ],
+         [
+          44.0584378,
+          -121.3675754
+         ],
+         [
+          44.0584748,
+          -121.3675754
+         ],
+         [
+          44.0585395,
+          -121.3675266
+         ],
+         [
+          44.0586135,
+          -121.3674778
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-F-06",
+     "text": "Use ember-resistant vents and keep the N/W gravel strips free of bark mulch against the walls (verify materials on site).",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "60–75%",
+      "basis": "Gravel strips visible; vent type and mulch unknowable overhead (generic)",
+      "failure_risk": "Already compliant"
+     },
+     "confirm_by": "Site visit",
+     "confidence_note": null,
+     "feature_ids": [],
+     "camera_ids": [],
+     "geometry": []
+    },
+    {
+     "id": "gartland-F-07",
+     "text": "Confirm hydrant positions and flow on site; GIS points are approximate.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "90–95%",
+      "basis": "Verification ask; GIS points approximate",
+      "failure_risk": "—"
+     },
+     "confirm_by": "Bend Fire / water utility",
+     "confidence_note": null,
+     "feature_ids": [
+      "hyd:WFH005944",
+      "hyd:WFH006140",
+      "hyd:WFH005943"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "hyd:WFH005944",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587914,
+         -121.3677471
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      },
+      {
+       "feature_id": "hyd:WFH006140",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0582254,
+         -121.3685131
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      },
+      {
+       "feature_id": "hyd:WFH005943",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0584389,
+         -121.366303
+        ]
+       },
+       "coord_source": "latlng (City of Bend GIS, approx)"
+      }
+     ]
+    }
+   ],
+   "map_features": [
+    {
+     "id": "F-shape-0",
+     "panel": "F",
+     "kind": "polygon",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0586468,
+        -121.3673788
+       ],
+       [
+        44.0586302,
+        -121.3672439
+       ],
+       [
+        44.0585895,
+        -121.3668969
+       ],
+       [
+        44.0584202,
+        -121.3668969
+       ],
+       [
+        44.0584202,
+        -121.3674623
+       ],
+       [
+        44.0584748,
+        -121.3674238
+       ],
+       [
+        44.0585395,
+        -121.3674109
+       ],
+       [
+        44.0585673,
+        -121.3673596
+       ],
+       [
+        44.0586228,
+        -121.3674045
+       ],
+       [
+        44.0586468,
+        -121.3673788
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "tract",
+     "authored": null,
+     "style": {
+      "layer": "under",
+      "fill": [
+       235,
+       64,
+       52,
+       90
+      ]
+     }
+    },
+    {
+     "id": "F-shape-1",
+     "panel": "F",
+     "kind": "polygon",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0586135,
+        -121.3674778
+       ],
+       [
+        44.0586024,
+        -121.3674238
+       ],
+       [
+        44.0585488,
+        -121.3674469
+       ],
+       [
+        44.0585025,
+        -121.3674881
+       ],
+       [
+        44.0584378,
+        -121.3675266
+       ],
+       [
+        44.0584378,
+        -121.3675754
+       ],
+       [
+        44.0584748,
+        -121.3675754
+       ],
+       [
+        44.0585395,
+        -121.3675266
+       ],
+       [
+        44.0586135,
+        -121.3674778
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "lawn",
+     "authored": null,
+     "style": {
+      "layer": "under",
+      "outline": [
+       80,
+       220,
+       80,
+       255
+      ],
+      "width": 3
+     }
+    },
+    {
+     "id": "F-shape-2",
+     "panel": "F",
+     "kind": "rect_m",
+     "what": "recommended engine position",
+     "size_m": [
+      12.028,
+      2.878
+     ],
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0588259,
+        -121.3676646
+       ],
+       [
+        44.058796,
+        -121.3675201
+       ],
+       [
+        44.0587711,
+        -121.36753
+       ],
+       [
+        44.058801,
+        -121.3676745
+       ],
+       [
+        44.0588259,
+        -121.3676646
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "style": {
+      "length_m": 12.028,
+      "width_m": 2.878,
+      "angle": 16,
+      "dashed": true,
+      "outline": [
+       255,
+       80,
+       60
+      ],
+      "width": 4,
+      "what": "recommended engine position"
+     }
+    },
+    {
+     "id": "F-shape-3",
+     "panel": "F",
+     "kind": "circle",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585562,
+       -121.3673788
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 16,
+      "color": "gold",
+      "width": 3
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "F-shape-4",
+     "panel": "F",
+     "kind": "circle",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0584701,
+       -121.3674109
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 16,
+      "color": "gold",
+      "width": 3
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "F-shape-5",
+     "panel": "F",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585044,
+        -121.3676937
+       ],
+       [
+        44.0584674,
+        -121.3677091
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "gold",
+      "width": 4,
+      "arrow": false
+     }
+    },
+    {
+     "id": "F-shape-6",
+     "panel": "F",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0584859,
+        -121.3677014
+       ],
+       [
+        44.0585044,
+        -121.3676937
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "gold",
+      "width": 1,
+      "casing": false,
+      "head_only": true,
+      "arrow_size": 10
+     }
+    },
+    {
+     "id": "F-shape-7",
+     "panel": "F",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0584859,
+        -121.3677014
+       ],
+       [
+        44.0584674,
+        -121.3677091
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "gold",
+      "width": 1,
+      "casing": false,
+      "head_only": true,
+      "arrow_size": 10
+     }
+    },
+    {
+     "id": "F-callout-0",
+     "panel": "F",
+     "kind": "callout",
+     "text": "Recommended ENGINE position: curb lane of the\ncollector beside WFH005944 (within 20 m of house)",
+     "category": "hazard",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587874,
+       -121.3675394
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       805,
+       8
+      ]
+     }
+    },
+    {
+     "id": "F-callout-1",
+     "panel": "F",
+     "kind": "callout",
+     "text": "1  WUI EDGE: open tract of native\n    juniper, pine + sagebrush E/SE.\n    Heaviest fuel on the property.",
+     "category": "hazard",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       1000,
+       355
+      ]
+     }
+    },
+    {
+     "id": "F-callout-2",
+     "panel": "F",
+     "kind": "callout",
+     "text": "2  Irrigated lawn = buffer on E/SE.\n    Junipers 5-10 m E of the lawn;\n    no trees touch or overhang roof.",
+     "category": "access",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585256,
+       -121.3674881
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       835,
+       252
+      ]
+     }
+    },
+    {
+     "id": "F-callout-3",
+     "panel": "F",
+     "kind": "callout",
+     "text": "3  3-6 m between side walls: ember +\n    radiant exposure to/from 3261 (S)",
+     "category": "hazard",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0584748,
+       -121.3677708
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       322,
+       398
+      ]
+     }
+    },
+    {
+     "id": "F-callout-4",
+     "panel": "F",
+     "kind": "callout",
+     "text": "Dark grey hipped multi-wing roof,\nsingle storey, no solar visible",
+     "category": null,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586487,
+       -121.3676487
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       665,
+       150
+      ]
+     }
+    },
+    {
+     "id": "F-zone-0",
+     "panel": "F",
+     "kind": "buffer",
+     "radius_m": 9.1,
+     "of": "house",
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0587661,
+        -121.3678993
+       ],
+       [
+        44.0587708,
+        -121.3678607
+       ],
+       [
+        44.0587449,
+        -121.3677451
+       ],
+       [
+        44.0586829,
+        -121.3676423
+       ],
+       [
+        44.0586256,
+        -121.3674906
+       ],
+       [
+        44.0585719,
+        -121.3675394
+       ],
+       [
+        44.0585673,
+        -121.3675844
+       ],
+       [
+        44.058521,
+        -121.3675844
+       ],
+       [
+        44.0584794,
+        -121.3676101
+       ],
+       [
+        44.0584979,
+        -121.3676744
+       ],
+       [
+        44.0585118,
+        -121.3677194
+       ],
+       [
+        44.0585395,
+        -121.3677836
+       ],
+       [
+        44.0585673,
+        -121.3678093
+       ],
+       [
+        44.0586135,
+        -121.3677888
+       ],
+       [
+        44.058632,
+        -121.3678222
+       ],
+       [
+        44.058669,
+        -121.3678993
+       ],
+       [
+        44.0587661,
+        -121.3678993
+       ]
+      ],
+      "note": "this is the SOURCE outline; render a 9.1 m buffer around it"
+     },
+     "coord_source": "latlng"
+    },
+    {
+     "id": "hyd:WFH005944",
+     "panel": "F",
+     "kind": "hydrant",
+     "text": "WFH005944 19.4 m @349°",
+     "diameter_in": 6,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587914,
+       -121.3677471
+      ]
+     },
+     "coord_source": "latlng (City of Bend GIS, approx)"
+    },
+    {
+     "id": "hyd:WFH006140",
+     "panel": "F",
+     "kind": "hydrant",
+     "text": "WFH006140 78.5 m @236°",
+     "diameter_in": 6,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0582254,
+       -121.3685131
+      ]
+     },
+     "coord_source": "latlng (City of Bend GIS, approx)"
+    },
+    {
+     "id": "hyd:WFH005943",
+     "panel": "F",
+     "kind": "hydrant",
+     "text": "WFH005943 113.6 m @100°",
+     "diameter_in": 6,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0584389,
+       -121.366303
+      ]
+     },
+     "coord_source": "latlng (City of Bend GIS, approx)"
+    },
+    {
+     "id": "hyd:WFH006137",
+     "panel": "F",
+     "kind": "hydrant",
+     "text": "WFH006137 127.8 m @313°",
+     "diameter_in": 6,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0593958,
+       -121.3688774
+      ]
+     },
+     "coord_source": "latlng (City of Bend GIS, approx)"
+    },
+    {
+     "id": "hyd:WFH005945",
+     "panel": "F",
+     "kind": "hydrant",
+     "text": "WFH005945 135.8 m @3°",
+     "diameter_in": 6,
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0598382,
+       -121.3676209
+      ]
+     },
+     "coord_source": "latlng (City of Bend GIS, approx)"
+    }
+   ]
+  },
+  "E": {
+   "title": "Environment",
+   "status": null,
+   "legend": null,
+   "panel_image": "images/SAFE-E-environment.png",
+   "items": [
+    {
+     "id": "gartland-E-00",
+     "text": "Roof: dark grey, colour uniform across all wings; no patching, staining, moss or debris visible at this resolution. No trees touch or overhang it.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "75–85%",
+      "basis": "Clear top-down at ~0.10 m/px",
+      "failure_risk": "Defects smaller than resolution; 2024 imagery is stale"
+     },
+     "confirm_by": "Nearmap high-res; roofer",
+     "confidence_note": null,
+     "feature_ids": [
+      "E-callout-0"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-0",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058706,
+         -121.3677194
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-01",
+     "text": "Surfaces: the collector and NW Celilo Ln show no visible cracking or patching. The pad is dark and partly shaded, so its condition cannot be judged.",
+     "kind": "inferred",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "65–75%",
+      "basis": "New-subdivision roads look clean; fine cracks are below resolution",
+      "failure_risk": "Hairline cracking or post-construction damage"
+     },
+     "confirm_by": "Street View; site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "E-callout-2",
+      "E-callout-4",
+      "E-callout-6",
+      "E-shape-11",
+      "E-shape-12"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-2",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587282,
+         -121.3673467
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-callout-4",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586561,
+         -121.3680252
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-callout-6",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586246,
+         -121.3679378
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-11",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586746,
+         -121.3680188
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-12",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586561,
+         -121.3680252
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-02",
+     "text": "Landscape: the E/SE lawn appears uniformly green; N and W beds are gravel/rock with small shrubs. Overspray, pooling and irrigation heads are not visible.",
+     "kind": "data",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": false,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "data item (no inference)",
+     "feature_ids": [
+      "E-callout-8",
+      "E-shape-13",
+      "E-shape-14"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-8",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585719,
+         -121.3674649
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-13",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058669,
+         -121.367533
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-14",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586246,
+         -121.3674199
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-03",
+     "text": "Site: 2 cars on the pad and larger vehicles on Celilo; no bins or stored materials seen. Native tract E/SE (uneven, juniper + sage) and a construction yard W/SW.",
+     "kind": "data",
+     "subkind": null,
+     "sources": [
+      "imagery"
+     ],
+     "inferred": false,
+     "confidence": null,
+     "confirm_by": null,
+     "confidence_note": "data item (no inference)",
+     "feature_ids": [
+      "E-callout-3",
+      "E-callout-9",
+      "E-shape-0",
+      "E-shape-5",
+      "E-shape-6",
+      "E-shape-7",
+      "E-shape-8",
+      "E-shape-9",
+      "E-shape-15"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-3",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058706,
+         -121.3681717
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-callout-9",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058546,
+         -121.3675664
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-0",
+       "geometry": {
+        "type": "Polygon",
+        "coordinates_latlng": [
+         [
+          44.0587162,
+          -121.3681216
+         ],
+         [
+          44.0586484,
+          -121.3681558
+         ],
+         [
+          44.058657,
+          -121.3681884
+         ],
+         [
+          44.0587248,
+          -121.3681542
+         ],
+         [
+          44.0587162,
+          -121.3681216
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-5",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586339,
+         -121.3678286
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-6",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585932,
+         -121.3678633
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-7",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587569,
+         -121.368092
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-8",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0587236,
+         -121.3680213
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-9",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586006,
+         -121.3681151
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-15",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058546,
+         -121.3675664
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-04",
+     "text": "Roof: nothing observed to flag. Shingle-level wear is below this resolution; the owner can decide whether a closer look (e.g. a roofer) is wanted.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "Medium",
+      "band_pct": "65–80%",
+      "basis": "Same basis as the roof observation; resolution-limited",
+      "failure_risk": "Shingle-level wear missed"
+     },
+     "confirm_by": "Roofer; Nearmap",
+     "confidence_note": null,
+     "feature_ids": [
+      "E-callout-0"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-0",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058706,
+         -121.3677194
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-05",
+     "text": "Verify on site: the raised round roof element, the 2 dark rectangles at the Celilo curb, and the pale / darker patches by the N bed and lawn tip.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "85–95%",
+      "basis": "Features are visible in the imagery; this is a verification list",
+      "failure_risk": "—"
+     },
+     "confirm_by": "Site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "E-shape-4",
+      "E-callout-1",
+      "E-shape-11",
+      "E-shape-12",
+      "E-shape-13",
+      "E-shape-14"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-shape-4",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585608,
+         -121.367668
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-callout-1",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585608,
+         -121.367668
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-11",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586746,
+         -121.3680188
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-12",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586561,
+         -121.3680252
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-13",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058669,
+         -121.367533
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-14",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586246,
+         -121.3674199
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-06",
+     "text": "Pad surface and irrigation coverage could not be judged from imagery; check on site if they matter to the owner.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "85–95%",
+      "basis": "Honest limit statement",
+      "failure_risk": "—"
+     },
+     "confirm_by": "Site visit",
+     "confidence_note": null,
+     "feature_ids": [
+      "E-callout-6",
+      "E-shape-13"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-6",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0586246,
+         -121.3679378
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-13",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.058669,
+         -121.367533
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    },
+    {
+     "id": "gartland-E-07",
+     "text": "Construction W/SW was active at image date (dust, debris, traffic); check whether it is finished. The E/SE tract is uneven ground and fuel: see F.",
+     "kind": "recommendation",
+     "subkind": null,
+     "sources": [],
+     "inferred": true,
+     "confidence": {
+      "level": "High",
+      "band_pct": "85–95%",
+      "basis": "Framed houses and dirt lots visible in tilts",
+      "failure_risk": "—"
+     },
+     "confirm_by": "Nearmap (current)",
+     "confidence_note": null,
+     "feature_ids": [
+      "E-callout-5",
+      "E-callout-10",
+      "E-shape-1",
+      "E-shape-16"
+     ],
+     "camera_ids": [],
+     "geometry": [
+      {
+       "feature_id": "E-callout-5",
+       "geometry": null,
+       "coord_source": "none (label box only)"
+      },
+      {
+       "feature_id": "E-callout-10",
+       "geometry": {
+        "type": "Point",
+        "coordinates_latlng": [
+         44.0585673,
+         -121.3671154
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-1",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0585895,
+          -121.3668969
+         ],
+         [
+          44.0586302,
+          -121.3672439
+         ],
+         [
+          44.0586468,
+          -121.3673788
+         ],
+         [
+          44.0586228,
+          -121.3674045
+         ],
+         [
+          44.0585673,
+          -121.3673596
+         ],
+         [
+          44.0585395,
+          -121.3674109
+         ],
+         [
+          44.0584748,
+          -121.3674238
+         ],
+         [
+          44.0584202,
+          -121.3674623
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      },
+      {
+       "feature_id": "E-shape-16",
+       "geometry": {
+        "type": "LineString",
+        "coordinates_latlng": [
+         [
+          44.0584637,
+          -121.3682655
+         ],
+         [
+          44.0584637,
+          -121.3685264
+         ]
+        ]
+       },
+       "coord_source": "latlng"
+      }
+     ]
+    }
+   ],
+   "map_features": [
+    {
+     "id": "E-shape-0",
+     "panel": "E",
+     "kind": "rect_m",
+     "what": null,
+     "size_m": [
+      8.018,
+      2.776
+     ],
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0587162,
+        -121.3681216
+       ],
+       [
+        44.0586484,
+        -121.3681558
+       ],
+       [
+        44.058657,
+        -121.3681884
+       ],
+       [
+        44.0587248,
+        -121.3681542
+       ],
+       [
+        44.0587162,
+        -121.3681216
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "style": {
+      "layer": "under",
+      "length_m": 8.018,
+      "width_m": 2.776,
+      "angle": 110,
+      "fill": [
+       255,
+       176,
+       0,
+       50
+      ]
+     }
+    },
+    {
+     "id": "E-shape-1",
+     "panel": "E",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585895,
+        -121.3668969
+       ],
+       [
+        44.0586302,
+        -121.3672439
+       ],
+       [
+        44.0586468,
+        -121.3673788
+       ],
+       [
+        44.0586228,
+        -121.3674045
+       ],
+       [
+        44.0585673,
+        -121.3673596
+       ],
+       [
+        44.0585395,
+        -121.3674109
+       ],
+       [
+        44.0584748,
+        -121.3674238
+       ],
+       [
+        44.0584202,
+        -121.3674623
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "e-hazard",
+      "width": 4,
+      "dashed": true,
+      "dash": [
+       12,
+       8
+      ],
+      "arrow": false
+     }
+    },
+    {
+     "id": "E-shape-2",
+     "panel": "E",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0586302,
+        -121.3672349
+       ],
+       [
+        44.0584637,
+        -121.3673505
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "trail",
+      "width": 3,
+      "dashed": true,
+      "dash": [
+       8,
+       6
+      ],
+      "arrow": false
+     }
+    },
+    {
+     "id": "E-shape-3",
+     "panel": "E",
+     "kind": "line",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0585673,
+        -121.3679699
+       ],
+       [
+        44.0584887,
+        -121.3677708
+       ],
+       [
+        44.0584609,
+        -121.3676037
+       ],
+       [
+        44.0584202,
+        -121.3675138
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": "fence",
+     "authored": null,
+     "style": {
+      "color": "white",
+      "width": 3,
+      "dashed": true,
+      "dash": [
+       10,
+       7
+      ],
+      "arrow": false
+     }
+    },
+    {
+     "id": "E-shape-4",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585608,
+       -121.367668
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 11,
+      "color": "roof"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-5",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586339,
+       -121.3678286
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 14,
+      "color": "storage"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-6",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585932,
+       -121.3678633
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 14,
+      "color": "storage"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-7",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587569,
+       -121.368092
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 14,
+      "color": "storage"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-8",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587236,
+       -121.3680213
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 14,
+      "color": "storage"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-9",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586006,
+       -121.3681151
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 17,
+      "color": "storage"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-10",
+     "panel": "E",
+     "kind": "rect_m",
+     "what": null,
+     "size_m": [
+      8.018,
+      2.776
+     ],
+     "geometry": {
+      "type": "Polygon",
+      "coordinates_latlng": [
+       [
+        44.0587162,
+        -121.3681216
+       ],
+       [
+        44.0586484,
+        -121.3681558
+       ],
+       [
+        44.058657,
+        -121.3681884
+       ],
+       [
+        44.0587248,
+        -121.3681542
+       ],
+       [
+        44.0587162,
+        -121.3681216
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "style": {
+      "length_m": 8.018,
+      "width_m": 2.776,
+      "angle": 110,
+      "dashed": true,
+      "dash": [
+       8,
+       5
+      ],
+      "outline": "storage",
+      "width": 4
+     }
+    },
+    {
+     "id": "E-shape-11",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586746,
+       -121.3680188
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 8,
+      "color": "surface",
+      "width": 3
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-12",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586561,
+       -121.3680252
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 8,
+      "color": "surface",
+      "width": 3
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-13",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.058669,
+       -121.367533
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 24,
+      "color": "landscape",
+      "dotted": true
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-14",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586246,
+       -121.3674199
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 15,
+      "color": "landscape",
+      "dotted": true
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-15",
+     "panel": "E",
+     "kind": "ring",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.058546,
+       -121.3675664
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "style": {
+      "r": 13,
+      "color": "storage"
+     },
+     "note": "r is a marker radius in panel base px, not metres"
+    },
+    {
+     "id": "E-shape-16",
+     "panel": "E",
+     "kind": "arrow",
+     "geometry": {
+      "type": "LineString",
+      "coordinates_latlng": [
+       [
+        44.0584637,
+        -121.3682655
+       ],
+       [
+        44.0584637,
+        -121.3685264
+       ]
+      ]
+     },
+     "coord_source": "latlng",
+     "named_geometry": null,
+     "authored": null,
+     "style": {
+      "color": "e-hazard",
+      "width": 6,
+      "casing": true,
+      "arrow_size": 22
+     }
+    },
+    {
+     "id": "E-callout-0",
+     "panel": "E",
+     "kind": "callout",
+     "text": "ROOF: dark grey, colour uniform across all wings\n(overhead + 4 tilt views). No patching, staining,\nmoss or debris visible at this resolution. No trees\ntouch or overhang it.",
+     "category": "roof",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.058706,
+       -121.3677194
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       510,
+       8
+      ]
+     }
+    },
+    {
+     "id": "E-callout-1",
+     "panel": "E",
+     "kind": "callout",
+     "text": "raised round element: vent /\ncap / skylight? (verify)",
+     "category": "roof",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585608,
+       -121.367668
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       575,
+       322
+      ]
+     }
+    },
+    {
+     "id": "E-callout-2",
+     "panel": "E",
+     "kind": "callout",
+     "text": "COLLECTOR: uniform asphalt, crisp striping;\nno cracking or patching visible. Dark band\nalong the S gutter: likely curb shadow, verify.",
+     "category": "surface",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0587282,
+       -121.3673467
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       850,
+       8
+      ]
+     }
+    },
+    {
+     "id": "E-callout-3",
+     "panel": "E",
+     "kind": "callout",
+     "text": "VEHICLES at image date: 2 cars on the pad.\nOn Celilo: ~7-8 m white box vehicle (RV /\ntrailer / truck?) on the W curb; white pickup /\nvan + 2 cars on the E curb. No bins, stacked\nmaterials or stored items seen on the lot.",
+     "category": "storage",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.058706,
+       -121.3681717
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       14,
+       100
+      ]
+     }
+    },
+    {
+     "id": "E-callout-4",
+     "panel": "E",
+     "kind": "callout",
+     "text": "NW CELILO LN: no cracking or patching\nvisible; a few dark spots too small to\nidentify. 2 dark rectangles at the E curb\nN of the drive: storm inlets / vaults? verify",
+     "category": "surface",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586561,
+       -121.3680252
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       14,
+       262
+      ]
+     }
+    },
+    {
+     "id": "E-callout-5",
+     "panel": "E",
+     "kind": "callout",
+     "text": "CONSTRUCTION W/SW (off map, see inset):\ngraded dirt, framing, vehicles + stacked\nmaterials at image date: dust, windblown\ndebris, construction traffic nearby.",
+     "category": "e-hazard",
+     "geometry": null,
+     "coord_source": "none (label box only)",
+     "authored": null,
+     "label_box": {
+      "base": [
+       14,
+       348
+      ]
+     }
+    },
+    {
+     "id": "E-callout-6",
+     "panel": "E",
+     "kind": "callout",
+     "text": "PAD: dark + partly shaded; cracking\nor staining NOT judgeable here.",
+     "category": "surface",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0586246,
+       -121.3679378
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       330,
+       300
+      ]
+     }
+    },
+    {
+     "id": "E-callout-7",
+     "panel": "E",
+     "kind": "callout",
+     "text": "S SIDE YARD / 3261: dark line along the shared side\n(fence or wall shadow). Walls 3-6 m apart. Grade\nchange, retaining wall or drainage: not determinable.",
+     "category": "e-hazard",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0584803,
+       -121.3677194
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       300,
+       405
+      ]
+     }
+    },
+    {
+     "id": "E-callout-8",
+     "panel": "E",
+     "kind": "callout",
+     "text": "LANDSCAPE: lawn E/SE uniformly green, edges\neven; no brown or dry patches seen. N + W beds\n= gravel / rock + small shrubs. Dotted: pale patch\nin N bed + darker patch by lawn tip (material,\nshadow or low spot? too soft). Overspray /\npooling / heads: not visible at this resolution.",
+     "category": "landscape",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585719,
+       -121.3674649
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       955,
+       160
+      ]
+     }
+    },
+    {
+     "id": "E-callout-9",
+     "panel": "E",
+     "kind": "callout",
+     "text": "E patio: 2-3 small round\nobjects (pots / furniture?)",
+     "category": "storage",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.058546,
+       -121.3675664
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       780,
+       402
+      ]
+     }
+    },
+    {
+     "id": "E-callout-10",
+     "panel": "E",
+     "kind": "callout",
+     "text": "NATIVE TRACT E/SE (undeveloped): uneven\nnative ground, juniper + sagebrush; a trail /\ntwo-track (or fence line?) crosses it. No\ndumping or debris visible. Fuel: see F.",
+     "category": "e-hazard",
+     "geometry": {
+      "type": "Point",
+      "coordinates_latlng": [
+       44.0585673,
+       -121.3671154
+      ]
+     },
+     "coord_source": "latlng",
+     "authored": null,
+     "label_box": {
+      "base": [
+       1000,
+       330
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "files": {
+  "cameras": "cameras.json",
+  "report_locked": "report.json",
+  "images": "images/"
+ }
+}

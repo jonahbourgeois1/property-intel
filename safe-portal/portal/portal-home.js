@@ -29,7 +29,7 @@
   var SP = window.SafePortal;
   var P = SP.params;
   var esc = SP.esc;
-  var BUILD = 'safe-portal 0.9.0';
+  var BUILD = 'safe-portal 0.10.1';
   var PAGE = { S: 'security', A: 'access', F: 'fire', E: 'environment' };
   var SCOPE_PAGE = { residence: 'residence', hoa: 'community' };
 
@@ -106,18 +106,26 @@
   ];
 
   function boot() {
-    var layout = String(P.get('layout') || 'c').toLowerCase();
-    if (['a', 'b', 'c'].indexOf(layout) < 0) layout = 'a';
     var theme = P.get('theme') === 'dark' ? 'dark' : 'light';
     document.documentElement.classList.add('theme-' + theme);
+    var p = P.get('p') || 'residence';
+    var loader = SP.loadAsync ? SP.loadAsync(p) : Promise.resolve(SP.load(p));
+    loader.then(function (R) { render(R, theme); }, function (err) {
+      document.body.className = 'pg';
+      document.body.innerHTML = '<div class="sp-note" style="margin:24px">This property\u2019s mock-up data did not load (' + esc(err && err.message || err) + ').</div>';
+    });
+  }
+  function render(R, theme) {
+    var layout = String(P.get('layout') || 'c').toLowerCase();
+    if (['a', 'b', 'c'].indexOf(layout) < 0) layout = 'a';
     var portal = P.get('mode') === 'portal';
-    var R = SP.load(P.get('p') || 'residence');
-    var C = portal ? SP.load('hoa') : null;
+    var hoaSlug = hoaSlugFor(R);
+    var C = portal && hoaSlug ? SP.load(hoaSlug) : null;
     var ctx = { R: R, C: C, portal: portal, layout: layout, theme: theme, inFrame: window.parent !== window };
     document.body.className = 'pg pg-' + layout + ' pg-home' + (portal ? ' pg-portal' : '');
     document.title = portal ? 'Vyanet SAFE \u2014 Home (mock)' : 'Vyanet SAFE \u2014 ' + (R.slug === 'hoa' ? 'Community' : 'Residence') + ' \u00b7 ' + R.name + ' (mock)';
     if (portal) PORTAL[layout](ctx); else LAYOUTS[layout](ctx);
-    if (portal && window.SafePatrol) {
+    if (portal && window.SafePatrol && document.getElementById('hm-patrol-notes')) {
       SafePatrol.fillHome(document.getElementById('hm-patrol-notes'), function () {
         if (ctx.inFrame) {
           try { window.parent.postMessage({ type: 'safe-nav', page: 'patrol' }, '*'); } catch (e) {}
@@ -286,14 +294,33 @@
     });
   }
 
-  function portalHeroHTML() {
+  // Which community record belongs to this residence: the fixture residence is
+  // in the Highlands ('hoa'); a package property says so itself (hoaSlug), and
+  // Gartland has none, so its Community map stays blank.
+  function hoaSlugFor(R) { return R.fx.mock ? (R.fx.hoaSlug || null) : 'hoa'; }
+  function portalHeroHTML(ctx) {
+    var R = ctx.R, street = String(R.address || '').split(',')[0];
+    var hoa = ctx.C ? ctx.C.name : null;
+    var why = hoa
+      ? 'because a responder arriving at ' + esc(street) + ' is not working the same picture as the board looking at ' + esc(hoa) + '.'
+      : 'because a responder arriving at ' + esc(street) + ' works the house, and a community board works the circle around it. This property has no community on record, so its Community map is blank.';
     return '<div class="hm-hero-text">' +
       '<div class="hm-eyebrow">Vyanet <i>S</i><i>A</i><i>F</i><i>E</i> \u00b7 Property Intel portal</div>' +
       '<h1>Two pictures. Same four jobs.</h1>' +
-      '<p class="lede">This portal distinguishes the <b>residence</b> from the <b>community</b>. Each has its own SAFE map \u2014 <b class="S">S</b>ecurity, <b class="A">A</b>ccess, <b class="F">F</b>ire, <b class="E">E</b>nvironment \u2014 because a responder arriving at 18775 Macalpine Loop is not working the same picture as the board looking at Highlands at Broken Top. Home explains the split. Residence (SAFE) and Community (SAFE) are the two maps.</p>' +
+      '<p class="lede">This portal distinguishes the <b>residence</b> from the <b>community</b>. Each has its own SAFE map \u2014 <b class="S">S</b>ecurity, <b class="A">A</b>ccess, <b class="F">F</b>ire, <b class="E">E</b>nvironment \u2014 ' + why + ' Home explains the split. Residence (SAFE) and Community (SAFE) are the two maps.</p>' +
     '</div>';
   }
+  function communityCardHTML(ctx) {
+    if (ctx.C) return scopeCardHTML(ctx, ctx.C, 'com');
+    return '<section class="hm-scope scope-com hm-scope-blank">' +
+      '<div class="hm-scope-h"><span class="scope-k">C</span><div><h2>Community <i>SAFE</i></h2><b>No community on record</b><span>' + esc(ctx.R.name) + ' is not in an HOA or community SAFE map yet</span></div></div>' +
+      '<div class="sp-note" style="margin:12px 0 0">The Community tab stays blank until a community (HOA, subdivision, campus) is assigned to this property. Nothing here is inferred from the address.</div>' +
+    '</section>';
+  }
   function patrolNotesHTML(ctx) {
+    // Virtual Patrol is the Jones station. A property with no live cameras
+    // (Gartland in the mock-up package) has nothing to patrol.
+    if (ctx.R.fx.mock && !ctx.R.live.length) return '';
     return '<section class="hm-patrol" id="hm-patrol"><div class="hm-sec-h"><h2>Virtual Patrol</h2><span>Frames with a note</span>' +
       link(ctx, 'patrol', null, 'sp-act go', 'Open \u2192', '') +
       '</div><div id="hm-patrol-notes"></div></section>';
@@ -316,30 +343,31 @@
     a: function (ctx) {
       document.body.innerHTML =
         '<div class="pg-body"><div class="pg-main sp-scroll hm-main">' +
-          portalHeroHTML() +
+          portalHeroHTML(ctx) +
           patrolNotesHTML(ctx) +
-          '<div class="hm-scopes">' + scopeCardHTML(ctx, ctx.R, 'res') + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
+          '<div class="hm-scopes">' + scopeCardHTML(ctx, ctx.R, 'res') + communityCardHTML(ctx) + '</div>' +
           anatomyHTML() +
         '</div><aside class="pg-rail sp-scroll">' +
           '<div class="sec"><div class="sp-h">Who uses it</div>' + rolesHTML().replace('class="hm-roles"', 'class="hm-roles rail"') + '</div>' +
           '<div class="sec"><div class="sp-h">Residence activity</div>' + activityHTML({ R: ctx.R, layout: ctx.layout, theme: ctx.theme, inFrame: ctx.inFrame }) + '</div>' +
-          '<div class="sec"><div class="sp-h">Community activity</div>' + activityHTML({ R: ctx.C, layout: ctx.layout, theme: ctx.theme, inFrame: ctx.inFrame }) + '</div>' +
+          '<div class="sec"><div class="sp-h">Community activity</div>' + (ctx.C ? activityHTML({ R: ctx.C, layout: ctx.layout, theme: ctx.theme, inFrame: ctx.inFrame }) : '<div class="sp-note" style="margin:0">No community on record.</div>') + '</div>' +
         '</aside></div>';
     },
     b: function (ctx) {
       document.body.innerHTML = '<div class="wrap">' +
-        portalHeroHTML() +
+        portalHeroHTML(ctx) +
         patrolNotesHTML(ctx) +
-        '<div class="hm-scopes two-col">' + scopeCardHTML(ctx, ctx.R, 'res') + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
+        '<div class="hm-scopes two-col">' + scopeCardHTML(ctx, ctx.R, 'res') + communityCardHTML(ctx) + '</div>' +
         anatomyHTML() + rolesHTML() +
       '</div>';
     },
     c: function (ctx) {
+      var patrol = patrolNotesHTML(ctx);
       document.body.innerHTML = '<div class="grid">' +
-        '<div class="card-12"><section class="panel hm-hero-card">' + portalHeroHTML() + '</section></div>' +
-        '<div class="card-12"><section class="panel"><div class="panel-b">' + patrolNotesHTML(ctx) + '</div></section></div>' +
+        '<div class="card-12"><section class="panel hm-hero-card">' + portalHeroHTML(ctx) + '</section></div>' +
+        (patrol ? '<div class="card-12"><section class="panel"><div class="panel-b">' + patrol + '</div></section></div>' : '') +
         '<div class="card-6">' + scopeCardHTML(ctx, ctx.R, 'res') + '</div>' +
-        '<div class="card-6">' + scopeCardHTML(ctx, ctx.C, 'com') + '</div>' +
+        '<div class="card-6">' + communityCardHTML(ctx) + '</div>' +
         '<div class="card-8"><section class="panel"><div class="panel-b">' + anatomyHTML() + '</div></section></div>' +
         '<div class="card-4"><section class="panel"><div class="panel-b">' + rolesHTML() + '</div></section></div>' +
       '</div>';
