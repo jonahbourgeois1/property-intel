@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Awbrey Glen thermal ortho — 15 Oct 2026</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b2027; color: #eef2f6;
+    font-family: "Segoe UI", system-ui, sans-serif; }
+  body { display: flex; flex-direction: column; }
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 10px 16px; background: #232a33; border-bottom: 1px solid #3a444f;
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; }
+  header .sub { color: #9aa7b4; font-size: 13px; }
+  label.op { margin-left: auto; display: flex; align-items: center; gap: 8px;
+    color: #9aa7b4; font-size: 13px; }
+  #map { flex: 1; min-height: 0; background: #0a0c0f; }
+  #readout {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 12px; color: #9aa7b4;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Awbrey Glen thermal</h1>
+  <div class="sub">231 nadir frames · 15 Oct 2026 · 0.10 m/px</div>
+  <div id="readout">—</div>
+  <label class="op">Thermal
+    <input id="opacity" type="range" min="0" max="100" value="100">
+  </label>
+</header>
+<div id="map"></div>
+<script>
+var MAPS_KEY = 'AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI';
+var SOUTH = 44.08017758513527;
+var WEST = -121.35863041910869;
+var NORTH = 44.087363283580125;
+var EAST = -121.35304657893056;
+window.gm_authFailure = function () {
+  document.getElementById('readout').textContent = 'Maps key rejected this page';
+};
+window.thermalOrthoMapsReady = function () {
+  var bounds = new google.maps.LatLngBounds(
+    new google.maps.LatLng(SOUTH, WEST),
+    new google.maps.LatLng(NORTH, EAST)
+  );
+  var map = new google.maps.Map(document.getElementById('map'), {
+    center: bounds.getCenter(),
+    zoom: 16,
+    mapTypeId: 'satellite',
+    tilt: 0,
+    rotateControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    mapTypeControl: false,
+    gestureHandling: 'greedy',
+    clickableIcons: false
+  });
+  map.setTilt(0);
+  map.addListener('zoom_changed', function () { map.setTilt(0); });
+  var thermal = new google.maps.GroundOverlay('ortho.png', bounds, {
+    opacity: 1, clickable: false
+  });
+  thermal.setMap(map);
+  map.fitBounds(bounds, 16);
+  map.addListener('mousemove', function (e) {
+    document.getElementById('readout').textContent =
+      e.latLng.lat().toFixed(6) + ',  ' + e.latLng.lng().toFixed(6);
+  });
+  document.getElementById('opacity').addEventListener('input', function (e) {
+    thermal.setOpacity(Number(e.target.value) / 100);
+  });
+};
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=thermalOrthoMapsReady"></script>
+</body>
+</html>
