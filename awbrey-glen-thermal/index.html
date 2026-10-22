@@ -9,11 +9,22 @@
     font-family: "Segoe UI", system-ui, sans-serif; }
   body { display: flex; flex-direction: column; }
   header {
-    display: flex; align-items: center; gap: 16px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
     padding: 10px 16px; background: #232a33; border-bottom: 1px solid #3a444f;
   }
   header h1 { font-size: 15px; font-weight: 600; margin: 0; }
   header .sub { color: #9aa7b4; font-size: 13px; }
+  .keys { display: flex; align-items: center; gap: 14px; }
+  .keys label {
+    display: flex; align-items: center; gap: 6px;
+    color: #eef2f6; font-size: 13px; cursor: pointer;
+  }
+  .keys i {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block; box-shadow: 0 0 0 1.5px #1b2027;
+  }
+  .keys .h7 { background: #ffd23f; }
+  .keys .h17 { background: #4fd1c5; }
   label.op { margin-left: auto; display: flex; align-items: center; gap: 8px;
     color: #9aa7b4; font-size: 13px; }
   #map { flex: 1; min-height: 0; background: #0a0c0f; }
@@ -27,6 +38,10 @@
 <header>
   <h1>Awbrey Glen thermal</h1>
   <div class="sub">231 nadir frames · 15 Oct 2026 · 0.10 m/px</div>
+  <div class="keys">
+    <label><input id="pin7" type="checkbox" checked> <i class="h7"></i> Hole 7 · 15</label>
+    <label><input id="pin17" type="checkbox" checked> <i class="h17"></i> Hole 17 · 22</label>
+  </div>
   <div id="readout">—</div>
   <label class="op">Thermal
     <input id="opacity" type="range" min="0" max="100" value="100">
@@ -39,6 +54,45 @@ var SOUTH = 44.08017758513527;
 var WEST = -121.35863041910869;
 var NORTH = 44.087363283580125;
 var EAST = -121.35304657893056;
+var PINS = [
+  {"hole":7,"lat":44.082257,"lng":-121.357818},
+  {"hole":7,"lat":44.081245,"lng":-121.358022},
+  {"hole":7,"lat":44.081395,"lng":-121.358003},
+  {"hole":7,"lat":44.081123,"lng":-121.358085},
+  {"hole":7,"lat":44.081723,"lng":-121.357905},
+  {"hole":7,"lat":44.081923,"lng":-121.35784},
+  {"hole":7,"lat":44.082016,"lng":-121.357825},
+  {"hole":7,"lat":44.08274,"lng":-121.358063},
+  {"hole":7,"lat":44.081605,"lng":-121.357413},
+  {"hole":7,"lat":44.082283,"lng":-121.357733},
+  {"hole":7,"lat":44.081782,"lng":-121.357346},
+  {"hole":7,"lat":44.082447,"lng":-121.357325},
+  {"hole":7,"lat":44.082165,"lng":-121.357766},
+  {"hole":7,"lat":44.082526,"lng":-121.35783},
+  {"hole":7,"lat":44.082121,"lng":-121.357366},
+  {"hole":17,"lat":44.085914,"lng":-121.354622},
+  {"hole":17,"lat":44.085986,"lng":-121.354812},
+  {"hole":17,"lat":44.085916,"lng":-121.354783},
+  {"hole":17,"lat":44.085043,"lng":-121.354421},
+  {"hole":17,"lat":44.084974,"lng":-121.354388},
+  {"hole":17,"lat":44.085589,"lng":-121.354618},
+  {"hole":17,"lat":44.085811,"lng":-121.354137},
+  {"hole":17,"lat":44.085421,"lng":-121.354587},
+  {"hole":17,"lat":44.085347,"lng":-121.354489},
+  {"hole":17,"lat":44.08458,"lng":-121.354238},
+  {"hole":17,"lat":44.085818,"lng":-121.354723},
+  {"hole":17,"lat":44.085422,"lng":-121.354447},
+  {"hole":17,"lat":44.086386,"lng":-121.354831},
+  {"hole":17,"lat":44.084779,"lng":-121.354289},
+  {"hole":17,"lat":44.086282,"lng":-121.354734},
+  {"hole":17,"lat":44.085746,"lng":-121.354658},
+  {"hole":17,"lat":44.085142,"lng":-121.354454},
+  {"hole":17,"lat":44.086615,"lng":-121.354742},
+  {"hole":17,"lat":44.086385,"lng":-121.354926},
+  {"hole":17,"lat":44.086163,"lng":-121.354191},
+  {"hole":17,"lat":44.086551,"lng":-121.354623},
+  {"hole":17,"lat":44.085733,"lng":-121.354091}
+];
 window.gm_authFailure = function () {
   document.getElementById('readout').textContent = 'Maps key rejected this page';
 };
@@ -66,6 +120,45 @@ window.thermalOrthoMapsReady = function () {
   });
   thermal.setMap(map);
   map.fitBounds(bounds, 16);
+  var info = new google.maps.InfoWindow();
+  var markers = PINS.map(function (pin, i) {
+    var marker = new google.maps.Marker({
+      position: { lat: pin.lat, lng: pin.lng },
+      map: map,
+      title: 'Hole ' + pin.hole + ' sprinkler',
+      zIndex: 10 + i,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: pin.hole === 7 ? '#ffd23f' : '#4fd1c5',
+        fillOpacity: 1,
+        strokeColor: '#1b2027',
+        strokeWeight: 1.5
+      }
+    });
+    marker.addListener('click', function () {
+      info.setContent(
+        '<div style="font:14px Segoe UI,sans-serif;color:#1b2027">' +
+        '<b>Hole ' + pin.hole + ' sprinkler</b><br>' +
+        pin.lat.toFixed(6) + ', ' + pin.lng.toFixed(6) +
+        '</div>'
+      );
+      info.open(map, marker);
+    });
+    return marker;
+  });
+  function showHole(hole, on) {
+    markers.forEach(function (marker, i) {
+      if (PINS[i].hole === hole) marker.setMap(on ? map : null);
+    });
+  }
+  document.getElementById('pin7').addEventListener('change', function (e) {
+    showHole(7, e.target.checked);
+  });
+  document.getElementById('pin17').addEventListener('change', function (e) {
+    showHole(17, e.target.checked);
+  });
+  map.addListener('click', function () { info.close(); });
   map.addListener('mousemove', function (e) {
     document.getElementById('readout').textContent =
       e.latLng.lat().toFixed(6) + ',  ' + e.latLng.lng().toFixed(6);
