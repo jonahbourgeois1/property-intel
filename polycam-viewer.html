@@ -71,12 +71,14 @@
 <body>
 <header>
   <h1>Interior scan</h1>
-  <span id="build">polycam-viewer 1</span>
+  <span id="build">polycam-viewer 2</span>
   <div class="tabs">
     <button id="tab-both" class="on" type="button">Both</button>
     <button id="tab-plan" type="button">Floor plan</button>
     <button id="tab-model" type="button">3D</button>
   </div>
+  <button id="ceiling" type="button">Hide ceiling</button>
+  <button id="plan3d" type="button">3D plan</button>
   <button id="top" type="button">Top</button>
   <button id="reset" type="button">Reset</button>
   <span id="status"></span>
@@ -94,7 +96,7 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-const BUILD = 'polycam-viewer 1';
+const BUILD = 'polycam-viewer 2';
 import * as THREE from 'three';
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const { GLTFLoader } = await import(BASE + '/loaders/GLTFLoader.js');
@@ -148,6 +150,7 @@ plan.addEventListener('pointercancel', endDrag);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.localClippingEnabled = true;
 renderer.setClearColor(0x111318);
 modelEl.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
@@ -162,6 +165,9 @@ scene.add(sun);
 
 let home = null;
 let frame = null;
+let materials = [];
+let ceilingOff = false;
+const ceilingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
 function resize() {
   const w = modelEl.clientWidth, h = modelEl.clientHeight;
   if (w < 2 || h < 2) return;
@@ -186,16 +192,54 @@ function goHome() {
   camera.updateProjectionMatrix();
   controls.update();
 }
-function goTop() {
-  if (!frame) return;
-  camera.up.set(0, 0, -1);
-  camera.position.set(frame.center.x, frame.center.y + frame.dist, frame.center.z);
-  controls.target.copy(frame.center);
+function look(pos, target, up) {
+  camera.up.copy(up);
+  camera.position.copy(pos);
+  controls.target.copy(target);
   camera.updateProjectionMatrix();
   controls.update();
 }
-$('reset').addEventListener('click', goHome);
+function setCeiling(off) {
+  if (!frame) return;
+  ceilingOff = off;
+  ceilingPlane.constant = frame.cutY;
+  materials.forEach((m) => {
+    m.clippingPlanes = off ? [ceilingPlane] : null;
+  });
+  $('ceiling').classList.toggle('on', off);
+  $('ceiling').textContent = off ? 'Show ceiling' : 'Hide ceiling';
+}
+function goTop() {
+  if (!frame) return;
+  $('plan3d').classList.remove('on');
+  const c = frame.center;
+  look(
+    new THREE.Vector3(c.x, c.y + frame.dist, c.z),
+    c,
+    new THREE.Vector3(0, 0, -1)
+  );
+}
+function goPlan3d() {
+  if (!frame) return;
+  setCeiling(true);
+  if (document.body.classList.contains('mode-plan')) setMode('both');
+  $('plan3d').classList.add('on');
+  const c = frame.center;
+  const eye = frame.floorY + frame.height * 0.35;
+  look(
+    new THREE.Vector3(c.x + frame.dist * 0.08, frame.cutY + frame.dist * 0.55, c.z + frame.dist * 0.72),
+    new THREE.Vector3(c.x, eye, c.z),
+    new THREE.Vector3(0, 1, 0)
+  );
+}
+$('reset').addEventListener('click', () => {
+  $('plan3d').classList.remove('on');
+  setCeiling(false);
+  goHome();
+});
 $('top').addEventListener('click', goTop);
+$('ceiling').addEventListener('click', () => setCeiling(!ceilingOff));
+$('plan3d').addEventListener('click', goPlan3d);
 
 function showErr(msg) {
   $('loading').hidden = true;
@@ -207,16 +251,19 @@ function showErr(msg) {
 const loader = new GLTFLoader();
 loader.load('polycam/model.glb', (gltf) => {
   const root = gltf.scene;
+  const seen = new Set();
   root.traverse((o) => {
     if (!o.isMesh) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    mats.forEach((m) => {
-      if (!m) return;
+    const list = Array.isArray(o.material) ? o.material : [o.material];
+    list.forEach((m) => {
+      if (!m || seen.has(m)) return;
+      seen.add(m);
       m.side = THREE.DoubleSide;
       if (m.isMeshStandardMaterial) {
         m.metalness = 0;
         m.roughness = 1;
       }
+      materials.push(m);
     });
   });
   scene.add(root);
@@ -231,7 +278,9 @@ loader.load('polycam/model.glb', (gltf) => {
   camera.lookAt(center);
   controls.target.copy(center);
   controls.update();
-  frame = { center, dist };
+  const floorY = box.min.y;
+  const height = Math.max(size.y, 0.01);
+  frame = { center, dist, floorY, height, cutY: floorY + height * 0.55 };
   remember();
   $('loading').hidden = true;
   let count = 0;
