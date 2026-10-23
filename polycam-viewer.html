@@ -73,14 +73,14 @@
 <body>
 <header>
   <h1>Interior scan</h1>
-  <span id="build">polycam-viewer 3</span>
+  <span id="build">polycam-viewer 4</span>
   <div class="tabs">
     <button id="tab-both" class="on" type="button">Both</button>
     <button id="tab-plan" type="button">Floor plan</button>
     <button id="tab-model" type="button">3D</button>
   </div>
   <button id="ceiling" type="button">Hide ceiling</button>
-  <button id="plan3d" type="button">3D plan</button>
+  <button id="plan3d" type="button">3D floor plan</button>
   <button id="top" type="button">Top</button>
   <button id="reset" type="button">Reset</button>
   <span id="status"></span>
@@ -98,7 +98,7 @@
 { "imports": { "three": "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.module.js" } }
 </script>
 <script type="module">
-const BUILD = 'polycam-viewer 3';
+const BUILD = 'polycam-viewer 4';
 import * as THREE from 'three';
 const BASE = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm';
 const { GLTFLoader } = await import(BASE + '/loaders/GLTFLoader.js');
@@ -166,10 +166,21 @@ sun.position.set(2, 4, 3);
 scene.add(sun);
 
 let home = null;
-let frame = null;
+let scanFrame = null;
+let planFrame = null;
+let planMode = false;
+let wantPlan = false;
+let triLabel = '';
 let materials = [];
 let ceilingOff = false;
 const ceilingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+const scanRoot = new THREE.Group();
+const planRoot = new THREE.Group();
+const ceilingGroup = new THREE.Group();
+scene.add(scanRoot);
+scene.add(planRoot);
+planRoot.add(ceilingGroup);
+planRoot.visible = false;
 function resize() {
   const w = modelEl.clientWidth, h = modelEl.clientHeight;
   if (w < 2 || h < 2) return;
@@ -186,58 +197,91 @@ function remember() {
     up: camera.up.clone()
   };
 }
-function goHome() {
-  if (!home) return;
-  camera.up.copy(home.up);
-  camera.position.copy(home.pos);
-  controls.target.copy(home.target);
-  camera.updateProjectionMatrix();
-  controls.update();
-}
 function look(pos, target, up) {
+  const dist = Math.max(pos.distanceTo(target), 0.2);
+  camera.near = Math.max(0.02, dist / 200);
+  camera.far = dist * 40;
   camera.up.copy(up);
   camera.position.copy(pos);
   controls.target.copy(target);
   camera.updateProjectionMatrix();
   controls.update();
 }
+function goHome() {
+  if (!home) return;
+  look(home.pos, home.target, home.up);
+}
 function setCeiling(off) {
-  if (!frame) return;
   ceilingOff = off;
-  ceilingPlane.constant = frame.cutY;
-  materials.forEach((m) => {
-    m.clippingPlanes = off ? [ceilingPlane] : null;
-  });
+  if (planMode) {
+    ceilingGroup.visible = !off;
+  } else if (scanFrame) {
+    ceilingPlane.constant = scanFrame.cutY;
+    materials.forEach((m) => {
+      m.clippingPlanes = off ? [ceilingPlane] : null;
+    });
+  }
   $('ceiling').classList.toggle('on', off);
   $('ceiling').textContent = off ? 'Show ceiling' : 'Hide ceiling';
 }
+function activeFrame() {
+  return planMode ? planFrame : scanFrame;
+}
 function goTop() {
-  if (!frame) return;
-  $('plan3d').classList.remove('on');
-  const c = frame.center;
+  const framed = activeFrame();
+  if (!framed) return;
+  if (!planMode) $('plan3d').classList.remove('on');
+  const c = framed.center;
   look(
-    new THREE.Vector3(c.x, c.y + frame.dist, c.z),
+    new THREE.Vector3(c.x, c.y + framed.dist, c.z),
     c,
     new THREE.Vector3(0, 0, -1)
   );
 }
-function goPlan3d() {
-  if (!frame) return;
-  setCeiling(true);
-  if (document.body.classList.contains('mode-plan')) setMode('both');
-  $('plan3d').classList.add('on');
-  const c = frame.center;
-  const eye = frame.floorY + frame.height * 0.35;
-  look(
-    new THREE.Vector3(c.x + frame.dist * 0.08, frame.cutY + frame.dist * 0.55, c.z + frame.dist * 0.72),
-    new THREE.Vector3(c.x, eye, c.z),
-    new THREE.Vector3(0, 1, 0)
-  );
-}
-$('reset').addEventListener('click', () => {
+function showScan() {
+  planMode = false;
+  wantPlan = false;
+  scanRoot.visible = true;
+  planRoot.visible = false;
   $('plan3d').classList.remove('on');
   setCeiling(false);
+  if (triLabel) statusEl.textContent = triLabel;
   goHome();
+}
+function enterPlan() {
+  if (!planFrame) return;
+  planMode = true;
+  wantPlan = false;
+  scanRoot.visible = false;
+  planRoot.visible = true;
+  setMode('model');
+  $('plan3d').classList.add('on');
+  setCeiling(true);
+  const framed = planFrame;
+  const c = framed.center;
+  look(
+    new THREE.Vector3(c.x + framed.dist * 0.2, framed.floorY + framed.dist * 0.72, c.z + framed.dist * 0.85),
+    new THREE.Vector3(c.x, framed.floorY + framed.height * 0.28, c.z),
+    new THREE.Vector3(0, 1, 0)
+  );
+  statusEl.textContent = '3D floor plan';
+  statusEl.style.color = '#9fb0c3';
+}
+function goPlan3d() {
+  if (planMode) {
+    showScan();
+    return;
+  }
+  if (!planFrame) {
+    wantPlan = true;
+    statusEl.textContent = 'Opening the 3D floor plan…';
+    return;
+  }
+  enterPlan();
+}
+$('reset').addEventListener('click', () => {
+  if (document.body.classList.contains('mode-plan')) setMode('both');
+  showScan();
 });
 $('top').addEventListener('click', goTop);
 $('ceiling').addEventListener('click', () => setCeiling(!ceilingOff));
@@ -249,6 +293,74 @@ function showErr(msg) {
   $('err').textContent = msg;
   statusEl.textContent = '';
 }
+
+function solid(color, extra) {
+  return new THREE.MeshStandardMaterial(Object.assign({
+    color: color,
+    roughness: 1,
+    metalness: 0,
+    side: THREE.DoubleSide
+  }, extra || {}));
+}
+function ringMesh(ring, height, material, y) {
+  const shape = new THREE.Shape();
+  shape.moveTo(ring[0][0], ring[0][1]);
+  for (let i = 1; i < ring.length; i++) shape.lineTo(ring[i][0], ring[i][1]);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false });
+  const mesh = new THREE.Mesh(geo, material);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.position.y = y;
+  return mesh;
+}
+function addRings(rings, height, material, y, parent) {
+  (rings || []).forEach((ring) => {
+    if (!ring || ring.length < 3) return;
+    try { parent.add(ringMesh(ring, height, material, y)); }
+    catch (err) { /* a bad outline is skipped */ }
+  });
+}
+function measure(object) {
+  const box = new THREE.Box3().setFromObject(object);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const span = Math.max(size.x, size.y, size.z, 0.01);
+  const dist = (span / 2) / Math.tan((camera.fov * Math.PI / 180) / 2) * 1.45;
+  return {
+    center: center,
+    dist: dist,
+    floorY: box.min.y,
+    height: Math.max(size.y, 0.01),
+    cutY: box.min.y + size.y * 0.55
+  };
+}
+function buildPlan(data) {
+  const wallH = data.wallHeight || 2.45;
+  const floorColors = [0xf3efe6, 0xe4eef3, 0xf7efe4, 0xe7f0e8, 0xf6eee8];
+  (data.floors || []).forEach((ring, i) => {
+    try { planRoot.add(ringMesh(ring, 0.04, solid(floorColors[i % floorColors.length]), -0.04)); }
+    catch (err) { /* a bad outline is skipped */ }
+  });
+  addRings(data.walls, wallH, solid(0xf7f8f6), 0, planRoot);
+  addRings(data.doors, 2.05, solid(0xd7c4a3), 0, planRoot);
+  addRings(data.windows, 1.15, solid(0x9ec9e0, { transparent: true, opacity: 0.45 }), 0.95, planRoot);
+  (data.objects || []).forEach((obj) => {
+    try { planRoot.add(ringMesh(obj.ring, obj.h || 0.6, solid(0xd5dbe3), 0)); }
+    catch (err) { /* a bad outline is skipped */ }
+  });
+  addRings(data.floors, 0.05, solid(0xfbfbfb), wallH, ceilingGroup);
+  ceilingGroup.visible = false;
+  planFrame = measure(planRoot);
+  if (wantPlan) enterPlan();
+}
+fetch('polycam/floorplan-3d.json')
+  .then((res) => {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  })
+  .then(buildPlan)
+  .catch(() => {
+    if (!triLabel && !planMode) statusEl.textContent = '3D floor plan failed to load';
+  });
 
 const loader = new GLTFLoader();
 loader.load('polycam/model.glb', (gltf) => {
@@ -268,7 +380,7 @@ loader.load('polycam/model.glb', (gltf) => {
       materials.push(m);
     });
   });
-  scene.add(root);
+  scanRoot.add(root);
   const box = new THREE.Box3().setFromObject(root);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
@@ -282,7 +394,7 @@ loader.load('polycam/model.glb', (gltf) => {
   controls.update();
   const floorY = box.min.y;
   const height = Math.max(size.y, 0.01);
-  frame = { center, dist, floorY, height, cutY: floorY + height * 0.55 };
+  scanFrame = { center, dist, floorY, height, cutY: floorY + height * 0.55 };
   remember();
   $('loading').hidden = true;
   let count = 0;
@@ -291,8 +403,12 @@ loader.load('polycam/model.glb', (gltf) => {
     const g = o.geometry;
     count += g.index ? g.index.count / 3 : (g.attributes.position ? g.attributes.position.count / 3 : 0);
   });
-  statusEl.textContent = Math.round(count).toLocaleString() + ' triangles';
-  statusEl.style.color = '#9fb0c3';
+  triLabel = Math.round(count).toLocaleString() + ' triangles';
+  if (planMode) enterPlan();
+  else {
+    statusEl.textContent = triLabel;
+    statusEl.style.color = '#9fb0c3';
+  }
   resize();
 }, (e) => {
   if (!e.lengthComputable || !e.total) return;
