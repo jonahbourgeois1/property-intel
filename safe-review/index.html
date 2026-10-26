@@ -132,8 +132,8 @@ body.lbopen{overflow:hidden}
 .mwhat{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:420px}.mtab .yn{flex-wrap:nowrap}.mtab .ynnote{min-width:180px}
 /* R5 camera list capped to the nadir image height, scrolls inside */
 .pintbl{max-height:var(--pinh,70vh);overflow-y:auto;overscroll-behavior:contain;padding-right:6px;scrollbar-gutter:stable}
-.pintbl::-webkit-scrollbar{width:10px}.pintbl::-webkit-scrollbar-thumb{background:#b8c0cb;border-radius:5px;border:2px solid #fff}.pintbl::-webkit-scrollbar-track{background:#f0f2f5;border-radius:5px}
-.pintbl{scrollbar-width:thin;scrollbar-color:#b8c0cb #f0f2f5}
+.pintbl::-webkit-scrollbar{width:10px;-webkit-appearance:none}.pintbl::-webkit-scrollbar-thumb{background:#b8c0cb;border-radius:5px;border:2px solid #fff}.pintbl::-webkit-scrollbar-track{background:#f0f2f5;border-radius:5px}
+@supports not selector(::-webkit-scrollbar){.pintbl{scrollbar-width:thin;scrollbar-color:#b8c0cb #f0f2f5}}
 .pintbl table.pins thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 var(--line)}
 @media (max-width:900px){.pinlayout{grid-template-columns:1fr}.pinimg{position:static}.pintbl{max-height:65vh}}
 
