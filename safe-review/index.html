@@ -130,6 +130,12 @@ img.zoomable,.ovwrap{cursor:zoom-in}svg.pinsvg.placing{cursor:crosshair}
 .lbb{font:inherit;font-size:16px;min-width:36px;height:32px;border-radius:6px;border:1px solid #2d3743;background:#17202b;color:#fff;cursor:pointer}.lbb:disabled{opacity:.35}.lbx{background:#3a1f1f;border-color:#5a2d2d}
 body.lbopen{overflow:hidden}
 .mwhat{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:420px}.mtab .yn{flex-wrap:nowrap}.mtab .ynnote{min-width:180px}
+/* R5 camera list capped to the nadir image height, scrolls inside */
+.pintbl{max-height:var(--pinh,70vh);overflow-y:auto;overscroll-behavior:contain;padding-right:6px;scrollbar-gutter:stable}
+.pintbl::-webkit-scrollbar{width:10px}.pintbl::-webkit-scrollbar-thumb{background:#b8c0cb;border-radius:5px;border:2px solid #fff}.pintbl::-webkit-scrollbar-track{background:#f0f2f5;border-radius:5px}
+.pintbl{scrollbar-width:thin;scrollbar-color:#b8c0cb #f0f2f5}
+.pintbl table.pins thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 var(--line)}
+@media (max-width:900px){.pinlayout{grid-template-columns:1fr}.pinimg{position:static}.pintbl{max-height:65vh}}
 
 .lockscreen{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#eef2f7,#f8f9fb);display:grid;place-items:center}
 .lbox{background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:28px 30px;width:380px;max-width:92vw;box-shadow:0 8px 30px rgba(0,0,0,.06);text-align:center}
@@ -443,6 +449,17 @@ try{const s=JSON.parse(localStorage.getItem(LS_STATE)||'null');
     Object.values(s.qchecks||{}).forEach(q=>{const box=document.querySelector(`.pp[data-pp="${CSS.escape(q.slug)}"] .yn[data-kind="${q.kind}"][data-item="${CSS.escape(q.item)}"]`); if(box&&cardHash(box)===q.hash){st.qchecks[q.slug+'|'+q.kind+'|'+q.item]=q; box.querySelector('.ynnote').value=q.note||''; paintYN(box);}});
   }}catch(e){console.warn('restore',e)}
 document.getElementById('clearlocal').addEventListener('click',()=>{if(confirm('Clear all decisions saved in this browser?')){try{localStorage.removeItem(LS_STATE);}catch(e){} location.reload();}});
+// R5: cap the camera list to the rendered nadir image height (kept in sync on load / resize / tab switch)
+function syncPinH(lay){const w=lay.querySelector('.pinimg .ovwrap'); if(!w) return; const h=Math.round(w.getBoundingClientRect().height);
+  if(h>40) lay.style.setProperty('--pinh',h+'px'); else lay.style.removeProperty('--pinh');}
+const pinLays=[...document.querySelectorAll('.pinlayout')];
+pinLays.forEach(lay=>{const w=lay.querySelector('.pinimg .ovwrap'); if(!w) return; const im=w.querySelector('img'); if(im&&!im.complete) im.addEventListener('load',()=>syncPinH(lay));
+  if(window.ResizeObserver) new ResizeObserver(()=>syncPinH(lay)).observe(w); syncPinH(lay);});
+window.addEventListener('resize',()=>pinLays.forEach(syncPinH));
+// while dragging a grey pin toward the list, auto-scroll it near its top/bottom edge
+document.addEventListener('pointermove',ev=>{ if(!drag||!drag.moved) return; const lay=drag.svg.closest('.pinlayout'), box=lay&&lay.querySelector('.pintbl'); if(!box) return;
+  const r=box.getBoundingClientRect(); if(ev.clientX<r.left||ev.clientX>r.right) return; const m=40;
+  if(ev.clientY<r.top+m&&ev.clientY>r.top-m) box.scrollTop-=14; else if(ev.clientY>r.bottom-m&&ev.clientY<r.bottom+m) box.scrollTop+=14;});
 revUI(); tally(); route();
 window.SAFE_APP={st,openLB,closeLB,LB};
 }
