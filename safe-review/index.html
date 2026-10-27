@@ -1,559 +1,621 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8"/>
-<title>Lane 1 review</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob:; connect-src 'self' https://d1h1on7f1v1lpy.cloudfront.net/review/; base-uri 'none'; form-action 'none'">
+<title>SAFE lane 1 review</title>
 <style>
-body { font: 16px/1.45 Georgia, serif; margin: 0; color: #1c1915; background: #faf8f4; }
-#lock { max-width: 32rem; margin: 4rem auto; padding: 0 1rem; }
-#lock label { display: block; margin-bottom: 0.8rem; }
-#lock input { font: inherit; width: 100%; box-sizing: border-box; padding: 0.4rem 0.5rem; }
-#lock button { font: inherit; }
-#error { min-height: 1.2em; }
-.app { display: flex; min-height: 100vh; align-items: stretch; }
-.sidebar { width: 320px; flex: 0 0 320px; box-sizing: border-box; padding: 1rem; border-right: 1px solid #e4ddd0; background: #fff; overflow: auto; }
-.main { flex: 1; min-width: 0; padding: 1.25rem 1.5rem 3rem; overflow: auto; }
-.property-pack { max-width: 960px; }
-h1 { font-size: 1.4rem; margin: 0 0 0.8rem; }
-h2 { margin-top: 2.2rem; border-top: 1px solid #d9d2c5; padding-top: 1rem; }
-code, pre { font-family: ui-monospace, monospace; font-size: 0.85rem; }
-pre { white-space: pre-wrap; background: #fff; padding: 0.8rem; border: 1px solid #e4ddd0; }
-table { border-collapse: collapse; width: 100%; background: #fff; }
-th, td { border: 1px solid #e4ddd0; padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; }
-.banner { padding: 0.6rem 0.8rem; background: #fff; border-left: 4px solid #888; }
-.banner.approved { border-color: #1d7a46; }
-.banner.changes_requested { border-color: #a33b20; }
-.banner.pending { border-color: #b58105; }
-.cmd code { display: block; background: #fff; padding: 0.5rem; }
-.cards { display: flex; flex-wrap: wrap; gap: 1rem; }
-.card { width: 280px; background: #fff; padding: 0.5rem; border: 1px solid #e4ddd0; }
-.card img { max-width: 100%; height: auto; }
-dt { font-weight: bold; margin-top: 0.6rem; }
-dd { margin-left: 0; }
-.filters, .toolbar { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
-.filters { margin: 0.6rem 0; }
-.filters button, .toolbar button, .property-pick { font: inherit; }
-.filters button.on { background: #1c1915; color: #faf8f4; }
-#property-search { width: 100%; box-sizing: border-box; font: inherit; padding: 0.35rem 0.5rem; }
-#property-list { list-style: none; margin: 0; padding: 0; }
-#property-list li { margin: 0 0 0.45rem; }
-.property-pick { width: 100%; text-align: left; background: #faf8f4; border: 1px solid #e4ddd0; padding: 0.5rem; }
-li.selected .property-pick { outline: 2px solid #1c1915; }
-.account { display: block; font-weight: bold; }
-.address, .when { display: block; color: #5c564c; font-size: 0.85rem; }
-.points { display: flex; flex-wrap: wrap; gap: 0.2rem; margin-top: 0.35rem; }
-.chip { display: inline-block; padding: 0.05rem 0.4rem; border-radius: 999px; font-size: 0.75rem; background: #eee; }
-.chip.pending { background: #f4e4c4; }
-.chip.approved { background: #d9ead3; }
-.chip.changes_requested { background: #f4d6d0; }
-.chip.needs_clarification { background: #f3d48a; }
-.toolbar { margin-bottom: 1rem; }
-.decision { margin: 0.4rem 0 1rem; }
-.decision-result { min-height: 1.2em; }
-.pin-map { max-width: 100%; height: auto; background: #fff; }
-fieldset.pin-choice { border: 1px solid #e4ddd0; margin: 0.5rem 0; background: #fff; }
-[hidden] { display: none !important; }
-</style>
-</head>
-<body>
-<div id="lock">
-<h1>Lane 1 review</h1>
-<p>This review page is locked. The passphrase stays in this browser. Property data is loaded from CloudFront after it unlocks.</p>
-<p><label>Passphrase <input id="passphrase" type="password" autocomplete="current-password"/></label>
-<button type="button" id="unlock">Unlock</button></p>
-<p id="error"></p>
-</div>
-<div id="app" class="app" hidden>
-<aside class="sidebar">
-<h1>Lane 1 review</h1>
-<input id="property-search" type="search" placeholder="Search" autocomplete="off"/>
-<p class="filters">
-  <button type="button" data-filter="all" class="on">All</button>
-  <button type="button" data-filter="pending">Pending</button>
-  <button type="button" data-filter="changes_requested">Changes requested</button>
-  <button type="button" data-filter="needs_clarification">Needs clarification</button>
-  <button type="button" data-filter="approved">Approved</button>
-</p>
-<p id="list-empty" hidden>No properties match.</p>
-<ul id="property-list"></ul>
-</aside>
-<main class="main">
-<div class="toolbar">
-  <button type="button" id="prev-property">Previous</button>
-  <button type="button" id="next-property">Next</button>
-  <label>Reviewer <select id="reviewer-name" required>
-    <option value="">Choose</option>
-    <option>Bot</option>
-    <option>Eleanor</option>
-    <option>Ross</option>
-    <option>Steve</option>
-    <option>Jonah</option>
-  </select></label>
-  <button type="button" id="export-decisions">Export decisions</button>
-</div>
-<div id="packs"></div>
-</main>
-</div>
-<script>
+:root{--bg:#f5f6f8;--card:#fff;--line:#e3e6ea;--ink:#1d2430;--mut:#6a7380;--acc:#1f5fbf;--ok:#1e8a4c;--okb:#e5f4ea;--bad:#b93a32;--badb:#fbe9e7;--warn:#a86400;--warnb:#fff4dc;--pend:#5b6573;--pendb:#eef0f3}
+*{box-sizing:border-box}body{margin:0;font:14px/1.45 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);padding-bottom:64px}
+h1{font-size:18px;margin:0}h2{font-size:20px;margin:0 0 2px}h3{font-size:15px;margin:0;display:inline}h4{font-size:13px;margin:14px 0 6px}
+code{font:12px ui-monospace,Menlo,Consolas,monospace;background:#f0f2f5;padding:1px 4px;border-radius:4px}
+.muted{color:var(--mut)}.small{font-size:12px}
+.top{position:sticky;top:0;z-index:20;display:flex;justify-content:space-between;align-items:center;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.brand{display:flex;gap:12px;align-items:center}.logo{width:34px;height:34px;border-radius:8px;background:var(--acc);color:#fff;font-weight:700;display:grid;place-items:center;font-size:17px}
+.sub{font-size:12px;color:var(--mut)}.mock{margin-left:8px;font-size:10px;letter-spacing:.08em;color:#8a6d00;border:1px dashed #d8b84a;border-radius:4px;padding:0 5px;background:#fffbea}
+.tr{display:flex;gap:12px;align-items:center}.lock{font-size:12px;color:#2a4a2f;background:#e8f3ea;border:1px solid #cfe5d4;border-radius:999px;padding:3px 10px}
+.rev{font-size:12px;color:var(--mut);display:flex;gap:6px;align-items:center}.rev input{border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:170px;font:inherit}
+.b{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;color:var(--ink)}
+.b.primary{background:var(--acc);border-color:var(--acc);color:#fff}.b.ok{border-color:#9fd0b2;color:var(--ok)}.b.ok:hover,.b.ok.on{background:var(--ok);color:#fff}
+.b.bad{border-color:#e5b2ad;color:var(--bad)}.b.bad:hover,.b.bad.on{background:var(--bad);color:#fff}.b.sm{font-size:12px;padding:3px 8px}.b.on{font-weight:600}.b.ghost{opacity:.6}
+.b.mv.on{background:#7a5a00;color:#fff;border-color:#7a5a00}
+.layout{display:grid;grid-template-columns:270px 1fr;gap:0;min-height:calc(100vh - 56px)}
+.side{border-right:1px solid var(--line);background:#fbfbfc;padding:14px 12px;position:sticky;top:56px;height:calc(100vh - 120px);overflow:auto}
+.sh{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);margin:0 4px 8px}
+.prop{display:block;text-decoration:none;color:inherit;border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px 12px;margin-bottom:8px}
+.prop.sel{border-color:var(--acc);box-shadow:0 0 0 2px #dbe7fa}.pn{font-weight:600}.site{font-weight:400;color:var(--mut);font-size:12px}.pa{font-size:12px;color:var(--mut)}
+.pb{display:flex;align-items:center;gap:8px;margin-top:6px}.badge{font-size:11px;background:var(--pendb);border-radius:999px;padding:1px 8px;white-space:nowrap}.badge.done{background:var(--okb);color:var(--ok)}
+.bar{flex:1;height:5px;background:#eceef1;border-radius:3px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--ok)}
+.legend{margin-top:18px;padding:8px 4px;border-top:1px solid var(--line)}.legend>div{margin:4px 0}
+.main{padding:18px 26px 30px;max-width:1180px}
+.pp{display:none}.pp.on{display:block}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:14px}.ph p{margin:0}
+.jump a{font-size:12px;text-decoration:none;color:var(--acc);border:1px solid var(--line);background:#fff;border-radius:5px;padding:2px 7px;margin-left:4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;margin-bottom:16px;scroll-margin-top:72px}
+.card.approved{border-left:4px solid var(--ok)}.card.changes{border-left:4px solid var(--bad)}
+.ch{display:flex;justify-content:space-between;align-items:flex-start;padding:12px 16px 8px;border-bottom:1px solid #f0f1f3}
+.rid{display:inline-block;font-size:11px;font-weight:700;color:var(--acc);background:#eaf1fb;border-radius:4px;padding:1px 6px;margin-right:8px;vertical-align:2px}
+.ask{margin:3px 0 0;color:var(--mut);font-size:13px}.newtag{font-size:10px;background:#7b3fd1;color:#fff;border-radius:3px;padding:1px 5px;margin-left:6px;vertical-align:2px}
+.status{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;white-space:nowrap}.status.pending{background:var(--pendb);color:var(--pend)}
+.status.approved{background:var(--okb);color:var(--ok)}.status.changes{background:var(--badb);color:var(--bad)}
+.cb{padding:12px 16px}.cf{padding:10px 16px 12px;border-top:1px solid #f0f1f3;background:#fcfcfd;border-radius:0 0 10px 10px}
+.cf textarea{width:100%;min-height:38px;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:13px;resize:vertical}
+.cfr{display:flex;justify-content:space-between;align-items:center;margin-top:8px}.hash{font-size:11px;color:var(--mut)}.acts{display:flex;gap:8px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:4px 10px;margin:0}.kv dt{color:var(--mut);font-size:12px;padding-top:1px}.kv dd{margin:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px}.two.wide-left{grid-template-columns:1.45fr 1fr}
+.t{width:100%;border-collapse:collapse;font-size:13px;margin:6px 0}.t th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--mut);font-weight:600;border-bottom:1px solid var(--line);padding:5px 6px}
+.t td{border-bottom:1px solid #f1f2f4;padding:6px;vertical-align:top}.t tr.chosen td{background:#f2f9f4}
+.tag{display:inline-block;font-size:11px;border-radius:4px;padding:1px 6px;background:#eef0f3;color:#4b5563;white-space:nowrap}
+.tag.good{background:var(--okb);color:var(--ok)}.tag.bad{background:var(--badb);color:var(--bad)}.tag.warn{background:var(--warnb);color:var(--warn)}.tag.mid{background:#fff3d6;color:#8a5a00}
+.tag.s-complete{background:var(--okb);color:var(--ok)}.tag.s-claimed{background:#e9f0fb;color:var(--acc)}.tag.s-needs_question,.tag.s-blocked{background:var(--warnb);color:var(--warn)}
+.note{font-size:13px;border-radius:6px;padding:8px 10px;margin:10px 0;background:#f1f4f8;border:1px solid #e1e6ee}.note.ok{background:#eef8f1;border-color:#cfe8d7}.note.warn{background:var(--warnb);border-color:#f0dcae}
+.empty{padding:16px;border:1px dashed #cfd5dc;border-radius:8px;color:var(--mut);text-align:center;background:#fafbfc}
+.fig{margin:0}.fig img{width:100%;display:block;border-radius:6px;border:1px solid var(--line)}.fig figcaption{font-size:12px;color:var(--mut);margin-top:4px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}.grid .fig img{aspect-ratio:16/9;object-fit:cover}
+.ph .muted{font-weight:400}.fig.phfig .phbox{aspect-ratio:16/9;border:1px dashed #c4cbd4;border-radius:6px;display:grid;place-items:center;text-align:center;color:var(--mut);background:repeating-linear-gradient(45deg,#f6f7f9,#f6f7f9 10px,#eff1f4 10px,#eff1f4 20px);font-size:12px}
+.ovwrap{position:relative}.ovwrap img{width:100%;display:block;border-radius:6px;border:1px solid var(--line)}.ovwrap svg{position:absolute;inset:0;width:100%;height:100%}
+.parcel{fill:rgba(255,214,10,.06);stroke:#ffd60a;stroke-width:3;stroke-dasharray:10 6}.ctr{fill:#fff;stroke:#1f5fbf;stroke-width:3}
+.pin-l .wedge{fill:rgba(31,95,191,.28);stroke:#7fb0ff;stroke-width:2}.pin-u .wedge{fill:rgba(160,160,160,.22);stroke:#ddd;stroke-width:1.5;stroke-dasharray:6 4}
+.pin circle{stroke:#fff;stroke-width:3}.pin.pin-l circle{fill:#1f5fbf}.pin.pin-u circle{fill:#6b7280}.pin text{fill:#fff;font:700 23px sans-serif;text-anchor:middle}
+.pin.hl circle{stroke:#ffd60a;stroke-width:5}
+.hyd circle{fill:#d93025;stroke:#fff;stroke-width:3}.hyd text{fill:#fff;font:700 18px sans-serif;paint-order:stroke;stroke:#000;stroke-width:4px}
+.num{display:inline-grid;place-items:center;min-width:24px;height:24px;border-radius:12px;color:#fff;font-weight:700;font-size:12px;padding:0 4px}.num.nl{background:#1f5fbf}.num.nu{background:#9aa1ab}
+.still{width:110px;border-radius:4px;border:1px solid var(--line);display:block}.pins td{vertical-align:middle}.pinact{white-space:nowrap}.pinact .b{margin-right:3px}.warnt{color:var(--warn)}
+tr.p-approve td{background:#f2f9f4}tr.p-reject td{background:#fdf1f0}tr.p-move td{background:#fff8e6}
+.unl summary{cursor:pointer;font-size:13px;color:var(--acc);margin:8px 0}
+.atiles{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:8px}.atile{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fbfcfd}.aname{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.04em}.aval{font-weight:600;margin-top:2px}
+.qa{border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin:8px 0}.qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.qans{margin:5px 0 4px}.qact{display:flex;gap:16px;font-size:12px;color:var(--mut)}
+.mthumb{width:150px;border-radius:4px;border:1px solid var(--line);display:block}.meas td{vertical-align:middle}
+.gate{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#fff;border-top:1px solid var(--line);padding:9px 20px;display:flex;align-items:center;gap:18px;box-shadow:0 -2px 8px rgba(0,0,0,.04)}
+.gi{font-size:13px;white-space:nowrap}.gbar{flex:1;height:8px;background:#eceef1;border-radius:4px;overflow:hidden}.gbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1e8a4c,#38b26b)}
+.gate.open .gi b{color:var(--ok)}
+.lockscreen{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#eef2f7,#f8f9fb);display:grid;place-items:center}
+.lbox{background:#fff;border:1px solid var(--line);border-radius:12px;padding:28px 30px;width:380px;box-shadow:0 8px 30px rgba(0,0,0,.06);text-align:center}
+.lbox input{width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 10px;font:inherit;margin:14px 0 10px}.lbox .b{width:100%}
+.t td:nth-child(3){white-space:nowrap}
+.pinlayout{display:grid;grid-template-columns:1.05fr 1fr;gap:18px;align-items:start}.pinimg{position:sticky;top:70px}
+.pins td{padding:6px 4px}.pins .still{width:84px}.pins .cn{max-width:120px}.ev{margin-top:4px;color:#4b5563}
+.pinact .b{display:block;width:72px;margin:0 0 4px}.pinact .pstate{width:72px}
+.grid.g2{grid-template-columns:repeat(2,1fr)}.grid.meas .fig img{aspect-ratio:auto}.rd{color:var(--acc)}
+.parcel{stroke-width:4}.hyd text{font-size:26px}.hyd circle{r:13}
+.rev select{border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;min-width:150px;background:#fff}
+.rev select.need{border-color:#e0a100;box-shadow:0 0 0 3px #ffe9a8}
+body.norev .acts .b,body.norev .pinact .b{opacity:.55}
+.status.clarify{background:#fff1cc;color:#8a5a00;border:1px solid #f1cf73}
+.card.clarify{border-left:4px solid #e0a100}
+.b.q{border-color:#f1cf73;color:#8a5a00}.b.q:hover,.b.q.on{background:#e0a100;color:#fff;border-color:#e0a100}
+.cf textarea.need,.pnote.need{border-color:#e0a100;box-shadow:0 0 0 3px #ffe9a8}
+.who{font-size:11px;color:var(--mut);margin-top:4px}
+.pnote{width:100%;min-height:26px;font:inherit;font-size:11px;border:1px solid var(--line);border-radius:5px;padding:3px 5px;margin-top:3px;resize:vertical}
+tr.p-clarify td{background:#fff8e1}
+.qbadge{font-size:11px;border-radius:999px;padding:1px 8px;background:#f1f2f4;color:var(--mut);white-space:nowrap}.qbadge.has{background:#fff1cc;color:#8a5a00;font-weight:600}
+#toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);background:#1d2430;color:#fff;padding:8px 14px;border-radius:8px;font-size:13px;z-index:200;opacity:0;transition:opacity .2s;pointer-events:none}#toast.show{opacity:1}
+.phbox b{color:#8a5a00}
+.ghostlink{font-size:11px;color:var(--mut);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0}
+.top .lock{white-space:nowrap}
+.pstate{white-space:normal!important;overflow-wrap:anywhere;max-width:120px;font-size:11px}
+.grid.ev{grid-template-columns:repeat(4,1fr);margin:8px 0}.grid.ev figcaption{font-size:11px}
+/* lane 1 v2: pin placement */
+.mv{margin:4px 0;font-size:12px;color:#7a4a00;background:#fff4dc;border:1px solid #f0d9a8;border-radius:4px;padding:4px 6px}.mv input{width:58px;font:inherit;border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+tr.placing{outline:2px solid #e8890c;outline-offset:-2px}svg.pinsvg.placing{cursor:crosshair}
+.mvpin circle{fill:#e8890c;stroke:#fff;stroke-width:3}.mvpin text{fill:#fff;font:700 23px sans-serif;text-anchor:middle}.mvpin path{fill:rgba(232,137,12,.3);stroke:#ffb347;stroke-width:2}
+.unl[open] summary{margin-bottom:6px}
+/* lane 1 v3: draggable pins */
+svg.pinsvg{touch-action:none}svg.pinsvg g.pin{cursor:grab}svg.pinsvg g.pin.dragging{cursor:grabbing}svg.pinsvg .hdl{fill:#fff;stroke:#1f5fbf;stroke-width:3;cursor:alias}
+svg.pinsvg .pin-u .hdl{stroke:#6b7280}svg.pinsvg .hdl.nohd{fill:rgba(255,255,255,.6);stroke-dasharray:4 3}
+.pin.moved .pc,.pin.assigned .pc{fill:#e8890c}.pin.moved .wedge,.pin.assigned .wedge{fill:rgba(232,137,12,.3);stroke:#ffb347;stroke-dasharray:none}.pin.moved .hdl{stroke:#e8890c}
+.ghost{fill:none;stroke:#fff;stroke-width:2.5;stroke-dasharray:5 4;opacity:.85}
+svg.pinsvg.placing{cursor:crosshair}svg.pinsvg.placing .pin-u .pc{stroke:#ffd60a;stroke-width:5}
+tr.droptarget td{background:#fff1cc!important;outline:2px dashed #e0a100}
+.mv{margin:4px 0;font-size:11px;color:var(--mut);background:none;border:none;padding:0}.mv .pll.chg{color:#7a4a00;font-weight:600}.mv input{width:54px}
+.unlmoves{margin-top:6px;color:#7a4a00}.unlmoves .um{display:inline-block;margin-right:10px}
+.b.pl{border-color:#e8b46a;color:#7a4a00}.b.pl.on{background:#e8890c;color:#fff;border-color:#e8890c}
+/* R7 compact rows */
+.qlist{display:flex;flex-direction:column;gap:6px;margin:6px 0 4px}
+.qrow{display:grid;grid-template-columns:120px 1fr;gap:12px;align-items:start;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.qrow.yn-yes{background:#f2f9f4;border-color:#cfe8d7}.qrow.yn-no{background:#fdf1f0;border-color:#efc9c4}.qrow.yn-clarify{background:#fff8e1;border-color:#f1cf73}
+img.qthumb{width:120px;height:72px;object-fit:cover;border-radius:5px;border:1px solid var(--line);display:block}
+.phmini{width:120px;height:72px;border:1px dashed #c4cbd4;border-radius:5px;display:grid;place-items:center;font-size:10px;color:var(--mut);text-align:center;background:#f6f7f9}
+.qline{font-weight:600;font-size:14px}.qmeta{margin:1px 0 3px}
+.yn{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px}.yn .b{min-width:46px}.yn .ghostlink{font-size:11px;color:#8a5a00}.yn .ghostlink.on{font-weight:700}
+.ynnote{flex-basis:100%;min-height:26px;font:inherit;font-size:12px;border:1px solid var(--line);border-radius:5px;padding:3px 6px;resize:vertical}.ynnote.need{border-color:#e0a100;box-shadow:0 0 0 3px #ffe9a8}
+.qdet{margin-top:3px}.qdet summary{cursor:pointer;font-size:11px;color:var(--acc);display:inline}.qdet[open]{background:#fafbfc;border-radius:6px;padding:4px 6px}.qdet .grid.ev{grid-template-columns:repeat(4,1fr)}
+.qdet.in{display:inline}.olist{margin:4px 0;padding-left:18px;font-size:13px}.olist li{margin:3px 0}
+.mtab td{vertical-align:middle}img.mthumb,.mthumb.phmini{width:110px;height:66px;object-fit:cover}.mtab .yn{margin-top:2px}.mtab tr.yn-yes td{background:#f2f9f4}.mtab tr.yn-no td{background:#fdf1f0}.mtab tr.yn-clarify td{background:#fff8e1}
+/* lightbox */
+img.zoomable,.ovwrap{cursor:zoom-in}svg.pinsvg.placing{cursor:crosshair}
+#lb{position:fixed;inset:0;z-index:300;background:rgba(10,14,20,.92);display:flex;flex-direction:column}#lb[hidden]{display:none}
+#lb .lbstage{flex:1;position:relative;overflow:hidden;touch-action:none;cursor:grab}
+#lb .lbc{position:absolute;left:0;top:0;transform-origin:0 0}#lb .lbc>*{width:100%;height:100%;margin:0}#lb .lbc img{width:100%;height:100%;object-fit:contain;border:none;border-radius:0;cursor:inherit}
+#lb .lbc svg{pointer-events:none}#lb .lbc .ovwrap{cursor:inherit}
+#lb .lbbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:#0e131a;color:#dfe5ec;font-size:13px}
+#lb .lbcap{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#aab4c0}
+.lbb{font:inherit;font-size:16px;min-width:36px;height:32px;border-radius:6px;border:1px solid #2d3743;background:#17202b;color:#fff;cursor:pointer}.lbb:disabled{opacity:.35}.lbx{background:#3a1f1f;border-color:#5a2d2d}
+body.lbopen{overflow:hidden}
+.mwhat{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-width:420px}.mtab .yn{flex-wrap:nowrap}.mtab .ynnote{min-width:180px}
+/* R5 camera list capped to the nadir image height, scrolls inside */
+.pintbl{max-height:var(--pinh,70vh);overflow-y:auto;overscroll-behavior:contain;padding-right:6px;scrollbar-gutter:stable}
+.pintbl::-webkit-scrollbar{width:10px;-webkit-appearance:none}.pintbl::-webkit-scrollbar-thumb{background:#b8c0cb;border-radius:5px;border:2px solid #fff}.pintbl::-webkit-scrollbar-track{background:#f0f2f5;border-radius:5px}
+@supports not selector(::-webkit-scrollbar){.pintbl{scrollbar-width:thin;scrollbar-color:#b8c0cb #f0f2f5}}
+.pintbl table.pins thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 var(--line)}
+@media (max-width:900px){.pinlayout{grid-template-columns:1fr}.pinimg{position:static}.pintbl{max-height:65vh}}
 
-var REVIEW_DATA_BASE = "https://d1h1on7f1v1lpy.cloudfront.net/review";
-function reviewBytes(value) {
-  var binary = atob(value);
-  var out = new Uint8Array(binary.length);
-  for (var i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
-  return out;
+/* lane 1 v5: pin labels + summary */
+.pincol{display:flex;flex-direction:column;max-height:var(--pinh,70vh);min-height:0}
+.pincol .pintbl{max-height:none;flex:1 1 auto;min-height:0}
+.pinsum{flex:0 0 auto;margin:0 0 8px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:#f6f8fb;font-size:13px;color:#1f2937}
+.pinsum b{font-weight:700}
+svg.pinsvg g.pin:focus{outline:none}svg.pinsvg g.pin:focus .pc{stroke:#ffd60a;stroke-width:5}
+#pintip{position:fixed;z-index:1000;pointer-events:none;background:#111827;color:#fff;font:600 13px/1.25 sans-serif;padding:6px 10px 6px 6px;border-radius:6px;box-shadow:0 4px 14px rgba(0,0,0,.3);max-width:320px;display:flex;align-items:center;gap:7px}
+#pintip[hidden]{display:none}#pintip .tn{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:11px;background:#1f5fbf;font-size:12px;padding:0 4px}
+#pintip .tn.tu{background:#6b7280}
+@media (max-width:900px){.pincol{max-height:none}.pincol .pintbl{max-height:65vh}}
+
+.lockscreen{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#eef2f7,#f8f9fb);display:grid;place-items:center}
+.lbox{background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:28px 30px;width:380px;max-width:92vw;box-shadow:0 8px 30px rgba(0,0,0,.06);text-align:center}
+.lbox .logo{margin:0 auto 10px}.lbox input{box-sizing:border-box;width:100%;border:1px solid #e3e6ea;border-radius:6px;padding:9px 10px;font:inherit;margin:14px 0 10px}
+.lbox button{width:100%;font:inherit;font-size:13px;border-radius:6px;padding:8px 12px;cursor:pointer;background:#1f5fbf;border:1px solid #1f5fbf;color:#fff}
+.lbox button:disabled{opacity:.6;cursor:wait}#err{color:#b93a32;min-height:18px;margin:8px 0 0;font-size:13px}
+.loaderr{margin:10px 20px;padding:8px 12px;border:1px solid #f0c2bd;background:#fbe9e7;color:#8a2a22;border-radius:6px;font-size:13px}
+</style></head><body>
+<div class="lockscreen" id="lock"><div class="lbox"><div class="logo">S</div><h1>SAFE lane 1 review</h1>
+<p class="muted small">This page is encrypted. Enter the review passphrase to unlock it.</p>
+<form id="f" autocomplete="off"><input type="password" id="pw" placeholder="Review passphrase" autocomplete="current-password" autofocus><button id="go" type="submit">Unlock</button></form>
+<p id="err" role="alert"></p><p class="muted small" style="margin-top:12px">&#128274; Decrypted in your browser with AES-GCM; the passphrase is never sent anywhere.</p></div></div>
+<script>
+function safeApp(META){
+const REVIEWERS=META.reviewers;
+const LS_REV='safe-review.reviewer', LS_STATE='safe-review.state.v3';
+const SVGNS='http://www.w3.org/2000/svg';
+const LABEL={pending:'Pending',approved:'Approved',changes:'Changes requested',clarify:'Needs clarification'};
+const ACT={approve:'approved',changes:'changes',clarify:'clarify'};
+const PLABEL={approve:'approved',reject:'rejected',clarify:'needs clarification'};
+const YNL={yes:'Yes',no:'No',clarify:'Needs clarification'};
+const HUB={}, SITE={}; META.pkgs.forEach(p=>{HUB[p.slug]=p.hub; SITE[p.slug]=p.site_no;});
+const props=[...document.querySelectorAll('.pp')].map(e=>e.dataset.pp);
+const st={decisions:{},pins:{},qchecks:{}};
+const sel=document.getElementById('reviewer');
+let placing=null, drag=null, justDragged=0;
+const rev=()=>sel.value||'', now=()=>new Date().toISOString();
+function toast(msg){let t=document.getElementById('toast'); if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);} t.textContent=msg; t.className='show'; clearTimeout(t._h); t._h=setTimeout(()=>t.className='',3200);}
+function needRev(){ if(rev()) return true; sel.classList.add('need'); sel.focus(); toast('Choose who is reviewing (top right) before making a decision.'); return false; }
+try{const r=localStorage.getItem(LS_REV); if(r&&REVIEWERS.includes(r)) sel.value=r;}catch(e){}
+function revUI(){document.body.classList.toggle('norev',!rev()); sel.classList.toggle('need',!rev());}
+sel.addEventListener('change',()=>{try{localStorage.setItem(LS_REV,rev());}catch(e){} revUI(); toast(rev()?('Reviewing as '+rev()):'No reviewer chosen');});
+function save(){try{localStorage.setItem(LS_STATE,JSON.stringify({build:META.build,...st}));}catch(e){}}
+function pick(slug,anchor){
+  document.querySelectorAll('.pp').forEach(p=>p.classList.toggle('on',p.dataset.pp===slug));
+  document.querySelectorAll('.prop').forEach(p=>p.classList.toggle('sel',p.dataset.slug===slug));
+  if(anchor){const el=document.getElementById(anchor); if(el) el.scrollIntoView();} else window.scrollTo(0,0);
 }
-function reviewDataUrl(file) {
-  var base = String(REVIEW_DATA_BASE || "").replace(/\/$/, "");
-  if (!base) return file;
-  return base + "/" + String(file).replace(/^\//, "");
+function route(){const h=decodeURIComponent(location.hash.slice(1))||props[0]; const i=h.indexOf('--'); const slug=i>0?h.slice(0,i):h; pick(props.includes(slug)?slug:props[0], i>0?h:null);}
+window.addEventListener('hashchange',route);
+const slugOf=el=>el.closest('.pp').dataset.pp;
+function cardKey(card){return slugOf(card)+'|'+card.dataset.rid;}
+function paintCard(card,status){
+  const s=card.querySelector('.ch .status'); card.classList.remove('approved','changes','clarify');
+  s.className='status '+status; s.textContent=LABEL[status];
+  if(status!=='pending') card.classList.add(status);
+  card.querySelectorAll('[data-act]').forEach(b=>b.classList.toggle('on',ACT[b.dataset.act]===status));
+  const who=card.querySelector('.who'); const d=st.decisions[cardKey(card)];
+  who.textContent=(d&&status!=='pending')?(LABEL[status]+' by '+d.reviewer+' · '+new Date(d.decided_at).toLocaleString()):'';
 }
-function reviewDerive(passphrase, saltB64, iterations) {
-  return crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"])
-    .then(function (material) {
-      return crypto.subtle.deriveKey(
-        {name: "PBKDF2", salt: reviewBytes(saltB64), iterations: iterations, hash: "SHA-256"},
-        material,
-        {name: "AES-GCM", length: 256},
-        false,
-        ["decrypt"]
-      );
-    });
+function setCard(card,status){
+  const slug=slugOf(card), rid=card.dataset.rid, note=card.querySelector(':scope > .cf textarea').value.trim();
+  if(status==='pending'){delete st.decisions[cardKey(card)];}
+  else st.decisions[cardKey(card)]={slug,point:rid,status,note,reviewer:rev(),decided_at:now(),hash:card.dataset.hash};
+  paintCard(card,status); tally(); save();
 }
-function reviewDecrypt(key, ivB64, buffer) {
-  return crypto.subtle.decrypt({name: "AES-GCM", iv: reviewBytes(ivB64)}, key, buffer);
+
+// ================= R5 pins: drag to move, handle to turn, assign grey pins =================
+const geoOf=svg=>svg._geo||(svg._geo=JSON.parse(svg.dataset.geo));
+function px2ll(svg,x,y){const g=geoOf(svg), n=256*Math.pow(2,g.z); const wx=x/g.s+g.ox, wy=y/g.s+g.oy;
+  return [Math.atan(Math.sinh(Math.PI*(1-2*wy/n)))*180/Math.PI, wx/n*360-180];}
+function ll2px(svg,lat,lng){const g=geoOf(svg), n=256*Math.pow(2,g.z); const wx=(lng+180)/360*n;
+  const wy=(1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*n; return [(wx-g.ox)*g.s,(wy-g.oy)*g.s];}
+function svgPt(svg,cx,cy){const pt=svg.createSVGPoint(); pt.x=cx; pt.y=cy; return pt.matrixTransform(svg.getScreenCTM().inverse());}
+const num=v=>(v===''||v==null||isNaN(+v))?null:+v;
+const norm=h=>((h%360)+360)%360;
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
+function drawPin(g){
+  const svg=g.ownerSVGElement, R=geoOf(svg).r||60, x=+g.dataset.x, y=+g.dataset.y, hd=num(g.dataset.hd), fov=+(g.dataset.fov||70);
+  let w=g.querySelector('path.wedge'), h=g.querySelector('.hdl'), c=g.querySelector('.pc'), t=g.querySelector('text');
+  if(!w){w=el('path',{class:'wedge'}); g.insertBefore(w,g.firstChild);} if(!h){h=el('circle',{class:'hdl',r:11}); g.appendChild(h);}
+  const hh=hd==null?0:hd, a0=(hh-fov/2)*Math.PI/180, a1=(hh+fov/2)*Math.PI/180;
+  w.setAttribute('d',`M${x},${y} L${x+R*Math.sin(a0)},${y-R*Math.cos(a0)} A${R},${R} 0 ${fov>180?1:0} 1 ${x+R*Math.sin(a1)},${y-R*Math.cos(a1)} Z`);
+  w.style.display=hd==null?'none':''; h.classList.toggle('nohd',hd==null);
+  h.setAttribute('cx',x+R*Math.sin(hh*Math.PI/180)); h.setAttribute('cy',y-R*Math.cos(hh*Math.PI/180));
+  c.setAttribute('cx',x); c.setAttribute('cy',y); t.setAttribute('x',x); t.setAttribute('y',y+8); t.textContent=g.dataset.alab||g.dataset.lab;
+  let ti=g.querySelector(':scope > title'); if(!ti){ti=el('title',{}); g.appendChild(ti);} const pn=pinName(g); ti.textContent=pn;
+  g.setAttribute('aria-label',pn); if(!g.hasAttribute('tabindex')) g.setAttribute('tabindex','0');
+  g.classList.toggle('moved',!!(g.dataset.assigned||g.classList.contains('marker')||Math.abs(x-(+g.dataset.ox))>0.5||Math.abs(y-(+g.dataset.oy))>0.5||(num(g.dataset.hd)!==num(g.dataset.ohd))));
+  // ghost ring at the original spot
+  const gh=svg.querySelector('g.ghosts'); const id='gh-'+(g.dataset.pid||g.dataset.cam||'').replace(/[^A-Za-z0-9]/g,'_'); let r=gh&&gh.querySelector('#'+id);
+  const show=g.dataset.ox!==undefined&&g.dataset.ox!==''&&(Math.abs(x-(+g.dataset.ox))>0.5||Math.abs(y-(+g.dataset.oy))>0.5);
+  if(gh&&show){ if(!r){r=el('circle',{id,class:'ghost',r:20}); gh.appendChild(r);} r.setAttribute('cx',g.dataset.ox); r.setAttribute('cy',g.dataset.oy);} else if(r) r.remove();
 }
-function reviewInstallImages(key, hub, images) {
-  var jobs = (images || []).map(function (image) {
-    var chunks = image.chunks || [];
-    return Promise.all(chunks.map(function (chunk) {
-      return fetch(reviewDataUrl(hub + "/" + chunk.file), {cache: "no-store"}).then(function (response) {
-        if (!response.ok) throw new Error("missing image");
-        return response.arrayBuffer();
-      }).then(function (buffer) {
-        return reviewDecrypt(key, chunk.iv, buffer);
-      });
-    })).then(function (parts) {
-      var total = 0;
-      parts.forEach(function (part) { total += part.byteLength; });
-      var joined = new Uint8Array(total);
-      var offset = 0;
-      parts.forEach(function (part) {
-        joined.set(new Uint8Array(part), offset);
-        offset += part.byteLength;
-      });
-      var url = URL.createObjectURL(new Blob([joined], {type: image.type || "application/octet-stream"}));
-      var token = "review-blob:" + hub + ":" + image.id;
-      document.querySelectorAll("[src], [href]").forEach(function (node) {
-        ["src", "href"].forEach(function (attr) {
-          if (node.getAttribute(attr) === token) node.setAttribute(attr, url);
-        });
-      });
-    });
-  });
-  return Promise.all(jobs);
+function pinName(g){ const cam=g.dataset.assigned||g.dataset.cam, n=g.dataset.alab||g.dataset.lab;
+  if(cam){ const extra=g.dataset.assigned?(' (survey pin '+g.dataset.lab+' assigned by reviewer)'):g.classList.contains('marker')?' (placed by reviewer)':''; return n+' · '+cam+extra; }
+  return g.dataset.lab+' · Survey pin, no camera'; }
+// hover / keyboard-focus tooltip for nadir pins (native <title> is the fallback)
+function tipEl(){let t=document.getElementById('pintip'); if(!t){t=document.createElement('div'); t.id='pintip'; t.setAttribute('role','tooltip'); t.hidden=true; document.body.appendChild(t);} return t;}
+function showTip(g){ if(drag&&drag.moved) return; const t=tipEl(), cam=g.dataset.assigned||g.dataset.cam;
+  t.textContent=''; const n=document.createElement('span'); n.className='tn'+(cam?'':' tu'); n.textContent=g.dataset.alab||g.dataset.lab; t.appendChild(n);
+  t.appendChild(document.createTextNode(cam?cam:'Survey pin, no camera')); t.classList.toggle('grey',!cam); t.hidden=false;
+  const r=g.querySelector('.pc').getBoundingClientRect(), tw=t.offsetWidth, th=t.offsetHeight;
+  let lx=r.left+r.width/2-tw/2, ty=r.top-th-8; if(ty<4) ty=r.bottom+8; lx=Math.max(4,Math.min(window.innerWidth-tw-4,lx));
+  t.style.left=lx+'px'; t.style.top=ty+'px'; t._g=g; }
+function hideTip(g){const t=document.getElementById('pintip'); if(t&&(!g||t._g===g)){t.hidden=true; t._g=null;}}
+document.addEventListener('pointerover',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g) showTip(g);});
+document.addEventListener('pointerout',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g&&!(e.relatedTarget&&g.contains(e.relatedTarget))) hideTip(g);});
+document.addEventListener('focusin',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g) showTip(g);});
+document.addEventListener('focusout',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g) hideTip(g);});
+window.addEventListener('scroll',()=>hideTip(),true);
+function rowFor(pp,cam){return pp.querySelector(`tr[data-row="${CSS.escape(cam)}"]`);}
+function pinFor(pp,cam){return [...pp.querySelectorAll('svg.pinsvg g.pin')].find(g=>g.dataset.cam===cam||g.dataset.assigned===cam);}
+function keyOfPin(g){const slug=slugOf(g); const cam=g.dataset.cam||g.dataset.assigned; return slug+'|'+(cam||('pin:'+g.dataset.pid));}
+function entry(slug,rowKey,init){const k=slug+'|'+rowKey; if(!st.pins[k]&&init) st.pins[k]=Object.assign({slug,point:'R3',camera:rowKey.startsWith('pin:')?null:rowKey,pin_id:null,assigned:false,action:null,corr:null,note:'',reviewer:rev(),decided_at:now(),hash:null},init); return st.pins[k];}
+function cardHash(el){return el.closest('.card').dataset.hash;}
+function commitPin(g){
+  const svg=g.ownerSVGElement, slug=slugOf(g), cam=g.dataset.cam||g.dataset.assigned, rk=cam||('pin:'+g.dataset.pid);
+  const [lat,lng]=px2ll(svg,+g.dataset.x,+g.dataset.y);
+  const e=entry(slug,rk,{pin_id:g.dataset.pid||null,assigned:!!g.dataset.assigned,hash:cardHash(g)});
+  e.pin_id=g.dataset.pid||null; e.assigned=!!g.dataset.assigned; e.corr={lat:+lat.toFixed(7),lng:+lng.toFixed(7),heading:num(g.dataset.hd)};
+  e.reviewer=rev(); e.decided_at=now(); e.hash=cardHash(g);
+  const tr=cam&&rowFor(g.closest('.pp'),cam); if(tr) paintRow(tr); paintUnl(g.closest('.card')); tally(); save();
 }
-function reviewOpenPackage(passphrase, hub) {
-  return fetch(reviewDataUrl(hub + "/package.enc"), {cache: "no-store"}).then(function (response) {
-    if (!response.ok) throw new Error("missing package");
-    return response.json();
-  }).then(function (envelope) {
-    return reviewDerive(passphrase, envelope.salt, envelope.iterations).then(function (key) {
-      return reviewDecrypt(key, envelope.iv, reviewBytes(envelope.ciphertext)).then(function (plain) {
-        return {key: key, hub: hub, data: JSON.parse(new TextDecoder().decode(plain))};
-      });
-    });
-  });
+function paintRow(tr){
+  const pp=tr.closest('.pp'), cam=tr.dataset.row, e=st.pins[slugOf(tr)+'|'+cam], a=e&&e.action, g=pinFor(pp,cam);
+  tr.classList.remove('p-approve','p-move','p-reject','p-clarify'); if(a) tr.classList.add('p-'+a); else if(e&&e.corr) tr.classList.add('p-move');
+  tr.classList.toggle('placing',placing===tr);
+  tr.querySelectorAll('[data-pa]').forEach(x=>x.classList.toggle('on',x.dataset.pa===a||(x.dataset.pa==='place'&&placing===tr)));
+  const pll=tr.querySelector('.pll'), hd=tr.querySelector('.phd'), rst=tr.querySelector('.rst');
+  if(e&&e.corr){pll.textContent=(e.assigned?('assigned '+e.pin_id.replace('cam-','p')+' · '):(e.pin_id?'':'placed · '))+e.corr.lat.toFixed(6)+', '+e.corr.lng.toFixed(6); pll.classList.add('chg');}
+  else {pll.textContent=g?'original position':'not placed'; pll.classList.remove('chg');}
+  hd.disabled=!g; if(g&&document.activeElement!==hd) hd.value=num(g.dataset.hd)==null?'':Math.round(+g.dataset.hd);
+  rst.hidden=!(e&&e.corr);
+  const bits=[]; if(e&&e.corr) bits.push(e.assigned?'assigned':e.pin_id?'moved':'placed'); if(a) bits.push(PLABEL[a]);
+  tr.querySelector('.pstate').textContent=bits.length?(bits.join(' · ')+' · '+e.reviewer):(g?'pending':'needs placement');
 }
-function reviewUnlock() {
-  var field = document.getElementById("passphrase");
-  var error = document.getElementById("error");
-  var passphrase = field.value;
-  error.textContent = "";
-  if (!passphrase) {
-    error.textContent = "Enter the passphrase.";
-    return;
+function paintUnl(card){
+  const box=card.querySelector('.unlmoves'); if(!box) return; const slug=slugOf(card);
+  const items=Object.entries(st.pins).filter(([k,e])=>e.slug===slug&&!e.camera&&e.corr);
+  box.innerHTML=items.length?('Moved survey pins without a device: '+items.map(([k,e])=>`<span class="um">${e.pin_id.replace('cam-','p')} → ${e.corr.lat.toFixed(6)}, ${e.corr.lng.toFixed(6)} <button class="ghostlink" data-unreset="${e.pin_id}">reset</button></span>`).join(' ')):'';
+}
+function resetRow(tr){
+  const pp=tr.closest('.pp'), cam=tr.dataset.row, k=slugOf(tr)+'|'+cam, e=st.pins[k], g=pinFor(pp,cam);
+  if(g){ if(g.classList.contains('marker')){ g.remove(); const gh=pp.querySelector('#gh-'+cam.replace(/[^A-Za-z0-9]/g,'_')); if(gh) gh.remove(); }
+    else { g.dataset.x=g.dataset.ox; g.dataset.y=g.dataset.oy; g.dataset.hd=g.dataset.ohd; if(g.dataset.assigned){delete g.dataset.assigned; delete g.dataset.alab; g.classList.remove('assigned');} drawPin(g);} }
+  if(e){e.corr=null; e.assigned=false; e.pin_id=tr.dataset.pin||null; if(!e.action) delete st.pins[k];}
+  paintRow(tr); tally(); save();
+}
+function assign(g,tr,keepDragPos){
+  const cam=tr.dataset.row, n=tr.querySelector('.num').textContent;
+  if(!keepDragPos){g.dataset.x=g.dataset.ox; g.dataset.y=g.dataset.oy;}
+  const old=st.pins[slugOf(g)+'|pin:'+g.dataset.pid]; if(old&&!old.action) delete st.pins[slugOf(g)+'|pin:'+g.dataset.pid];
+  g.dataset.assigned=cam; g.dataset.alab=n; g.classList.add('assigned'); drawPin(g); stopPlacing(); commitPin(g);
+  toast('Survey pin '+g.dataset.lab+' assigned to '+cam+'. Drag it or its handle to adjust.');
+}
+function makeMarker(svg,tr,x,y){
+  toast('Pins already on the map can be dragged.'); return null;
+  const cam=tr.dataset.row, n=tr.querySelector('.num').textContent, hd=num(tr.querySelector('.phd').value);
+  const g=el('g',{class:'pin pin-l marker'}); Object.assign(g.dataset,{pid:'',cam,lab:n,x,y,ox:'',oy:'',hd:hd==null?'':hd,ohd:'',fov:70});
+  g.appendChild(el('circle',{class:'pc',r:24})); g.appendChild(el('text',{})); svg.appendChild(g); drawPin(g); return g;
+}
+function startPlacing(tr){
+  stopPlacing(); placing=tr; const svg=tr.closest('.pp').querySelector('.card.pincard svg.pinsvg');
+  if(!svg){toast('No pin image for this property.'); placing=null; return;}
+  svg.classList.add('placing'); paintRow(tr); toast('Click a grey pin to assign it to '+tr.dataset.row+', or click the image where the camera is.');
+}
+function stopPlacing(){ if(!placing) return; const p=placing; placing=null; const s=p.closest('.pp').querySelector('svg.pinsvg'); if(s) s.classList.remove('placing'); paintRow(p); }
+document.addEventListener('pointerdown',ev=>{
+  const g=ev.target.closest&&ev.target.closest('svg.pinsvg g.pin'); if(!g||ev.button>0) return;
+  ev.preventDefault(); if(!needRev()) return;
+  const svg=g.ownerSVGElement, p=svgPt(svg,ev.clientX,ev.clientY);
+  drag={g,svg,mode:ev.target.classList.contains('hdl')?'turn':'move',sx:ev.clientX,sy:ev.clientY,dx:p.x-(+g.dataset.x),dy:p.y-(+g.dataset.y),moved:false,id:ev.pointerId};
+  try{svg.setPointerCapture(ev.pointerId);}catch(e){} g.classList.add('dragging');
+});
+document.addEventListener('pointermove',ev=>{
+  if(!drag||ev.pointerId!==drag.id) return; ev.preventDefault();
+  if(!drag.moved&&Math.hypot(ev.clientX-drag.sx,ev.clientY-drag.sy)<4) return; if(!drag.moved) hideTip(); drag.moved=true;
+  const p=svgPt(drag.svg,ev.clientX,ev.clientY), g=drag.g;
+  if(drag.mode==='turn'){ g.dataset.hd=Math.round(norm(Math.atan2(p.x-(+g.dataset.x),-(p.y-(+g.dataset.y)))*180/Math.PI)); }
+  else { g.dataset.x=(p.x-drag.dx).toFixed(1); g.dataset.y=(p.y-drag.dy).toFixed(1); }
+  drawPin(g);
+  const tr=document.elementFromPoint(ev.clientX,ev.clientY); document.querySelectorAll('tr.droptarget').forEach(t=>t.classList.remove('droptarget'));
+  const row=tr&&tr.closest&&tr.closest('tr[data-placed="0"]');
+  if(row&&!g.dataset.cam&&!g.dataset.assigned&&!pinFor(row.closest('.pp'),row.dataset.row)) row.classList.add('droptarget');
+});
+function endDrag(ev){
+  if(!drag||ev.pointerId!==drag.id) return; const {g,svg,moved}=drag; drag=null; g.classList.remove('dragging');
+  try{svg.releasePointerCapture(ev.pointerId);}catch(e){} document.querySelectorAll('tr.droptarget').forEach(t=>t.classList.remove('droptarget'));
+  justDragged=Date.now();
+  const grey=!g.dataset.cam&&!g.dataset.assigned&&!g.classList.contains('marker');
+  if(grey){
+    const hit=document.elementFromPoint(ev.clientX,ev.clientY), row=hit&&hit.closest&&hit.closest('tr[data-placed="0"]');
+    if(moved&&row&&row.closest('.pp')===g.closest('.pp')&&!pinFor(row.closest('.pp'),row.dataset.row)){ assign(g,row,false); return; }
+    if(placing&&placing.closest('.pp')===g.closest('.pp')&&!pinFor(placing.closest('.pp'),placing.dataset.row)){ assign(g,placing,moved); return; }
   }
-  fetch("manifest.json", {cache: "no-store"})
-    .then(function (response) {
-      if (!response.ok) throw new Error("missing package");
-      return response.json();
-    })
-    .then(function (manifest) {
-      var hubs = manifest.hubs || [];
-      var chain = Promise.resolve();
-      hubs.forEach(function (hub) {
-        chain = chain.then(function () {
-          return reviewOpenPackage(passphrase, hub).then(function (opened) {
-            document.getElementById("property-list").insertAdjacentHTML("beforeend", opened.data.list_html || "");
-            document.getElementById("packs").insertAdjacentHTML("beforeend", opened.data.packs_html || "");
-            return reviewInstallImages(opened.key, hub, opened.data.images || []);
-          });
-        });
-      });
-      return chain;
-    })
-    .then(function () {
-      field.value = "";
-      document.getElementById("lock").hidden = true;
-      document.getElementById("app").hidden = false;
-      startReview();
-    })
-    .catch(function () {
-      field.value = "";
-      error.textContent = "That passphrase did not unlock this page.";
-    });
+  if(moved) commitPin(g);
 }
-document.getElementById("unlock").addEventListener("click", reviewUnlock);
-document.getElementById("passphrase").addEventListener("keydown", function (event) {
-  if (event.key === "Enter") reviewUnlock();
+document.addEventListener('pointerup',endDrag); document.addEventListener('pointercancel',endDrag);
+document.addEventListener('click',e=>{
+  const svg=e.target.closest('svg.pinsvg');
+  if(svg&&Date.now()-justDragged<350) return;
+  if(svg&&placing&&placing.closest('.pp')===svg.closest('.pp')&&!e.target.closest('g.pin')){
+    const p=svgPt(svg,e.clientX,e.clientY), tr=placing; let g=pinFor(tr.closest('.pp'),tr.dataset.row);
+    if(g&&g.classList.contains('marker')){g.dataset.x=p.x.toFixed(1); g.dataset.y=p.y.toFixed(1); drawPin(g);} else if(!g) g=makeMarker(svg,tr,p.x.toFixed(1),p.y.toFixed(1));
+    else {toast('This camera already has a pin; drag it instead.'); stopPlacing(); return;}
+    stopPlacing(); commitPin(g); toast('Position recorded for '+tr.dataset.row+'. Drag the handle or type a heading.'); return;}
+  if(svg&&e.target.closest('g.pin')) return;
+  const b=e.target.closest('[data-act]');
+  if(b){ if(!needRev()) return; const card=b.closest('.card'); const want=ACT[b.dataset.act]; const ta=card.querySelector(':scope > .cf textarea');
+    if((want==='changes'||want==='clarify')&&!ta.value.trim()){ta.classList.add('need');ta.focus();ta.placeholder=want==='clarify'?'Write your question: what is unclear?':'Say what needs to change so the pipeline can fix it';toast('A note is required for '+LABEL[want]+'.');return;}
+    ta.classList.remove('need'); setCard(card,card.classList.contains(want)?'pending':want); return;}
+  const p=e.target.closest('[data-pa]');
+  if(p){ if(!needRev()) return; const tr=p.closest('tr'), a=p.dataset.pa, slug=slugOf(tr), k=slug+'|'+tr.dataset.row, pp=tr.closest('.pp');
+    if(a==='place'){ if(placing===tr) stopPlacing(); else startPlacing(tr); return; }
+    const ta=tr.querySelector('.pnote'), note=ta.value.trim();
+    if(a==='clarify'&&!note){ta.classList.add('need');ta.focus();ta.placeholder='Write your question about this pin';toast('Write the question for this camera pin first.');return;}
+    if(a==='approve'&&!pinFor(pp,tr.dataset.row)){toast('Place this camera first (or Reject / Question it).');return;}
+    ta.classList.remove('need'); const e0=st.pins[k];
+    if(e0&&e0.action===a){ e0.action=null; if(!e0.corr) delete st.pins[k]; }
+    else { const g=pinFor(pp,tr.dataset.row); const e1=entry(slug,tr.dataset.row,{pin_id:g?(g.dataset.pid||null):(tr.dataset.pin||null),hash:cardHash(tr)}); e1.action=a; e1.note=note; e1.reviewer=rev(); e1.decided_at=now(); e1.hash=cardHash(tr); }
+    paintRow(tr); tally(); save(); return;}
+  const rs=e.target.closest('.rst'); if(rs){ if(!needRev()) return; resetRow(rs.closest('tr')); return; }
+  const ur=e.target.closest('[data-unreset]'); if(ur){ const card=ur.closest('.card'), g=card.querySelector(`g.pin[data-pid="${CSS.escape(ur.dataset.unreset)}"]`);
+    if(g){g.dataset.x=g.dataset.ox; g.dataset.y=g.dataset.oy; g.dataset.hd=g.dataset.ohd; drawPin(g);} delete st.pins[slugOf(card)+'|pin:'+ur.dataset.unreset]; paintUnl(card); save(); return; }
+  const y=e.target.closest('[data-yn]'); if(y){ ynClick(y); return; }
+  const z=e.target.closest('img.zoomable, .ovwrap'); if(z&&!(svg&&placing)){ const m=z.closest('.ovwrap')||z; if(m.tagName==='IMG'&&!m.naturalWidth) return; openLB(m); return; }
+});
+document.addEventListener('change',e=>{
+  const h=e.target.closest('input.phd');
+  if(h){ if(!needRev()) return; const tr=h.closest('tr'), g=pinFor(tr.closest('.pp'),tr.dataset.row); if(!g) return; const v=num(h.value); g.dataset.hd=v==null?'':norm(v); drawPin(g); commitPin(g); return; }
+  const n=e.target.closest('textarea.pnote');
+  if(n){const tr=n.closest('tr'), k=slugOf(tr)+'|'+tr.dataset.row; if(st.pins[k]){st.pins[k].note=n.value.trim(); save();} return;}
+  const yt=e.target.closest('textarea.ynnote'); if(yt){ const box=yt.closest('.yn'), k=ynKey(box);
+    if(st.qchecks[k]){ st.qchecks[k].note=yt.value.trim(); if(!st.qchecks[k].note&&st.qchecks[k].verdict!=='yes'){ delete st.qchecks[k]; } save(); paintYN(box); tally(); }
+    else if(box.dataset.pending&&yt.value.trim()){ recordYN(box,box.dataset.pending); } }
 });
 
-function startReview() {
-  var REVIEWER_KEY = "safe-pipeline-reviewer";
-  var DECISIONS_KEY = "safe-pipeline-review-decisions";
-  var KIND = "safe-pipeline/review-decisions-v1";
-  var filter = "all";
-
-  function readDecisions() {
-    try {
-      var parsed = JSON.parse(localStorage.getItem(DECISIONS_KEY) || "[]");
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (err) {
-      return [];
-    }
-  }
-
-  function writeDecisions(rows) {
-    localStorage.setItem(DECISIONS_KEY, JSON.stringify(rows));
-  }
-
-  var REVIEWERS = ["Bot", "Eleanor", "Ross", "Steve", "Jonah"];
-  var nameInput = document.getElementById("reviewer-name");
-  if (nameInput) {
-    var savedName = localStorage.getItem(REVIEWER_KEY) || "";
-    if (REVIEWERS.indexOf(savedName) !== -1) nameInput.value = savedName;
-    nameInput.addEventListener("change", function () {
-      var chosen = nameInput.value.trim();
-      if (REVIEWERS.indexOf(chosen) !== -1) localStorage.setItem(REVIEWER_KEY, chosen);
-    });
-  }
-
-  var exportButton = document.getElementById("export-decisions");
-  if (exportButton) {
-    exportButton.addEventListener("click", function () {
-      var payload = {kind: KIND, decisions: readDecisions()};
-      var blob = new Blob([JSON.stringify(payload, null, 2)], {type: "application/json"});
-      var link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "review-decisions.json";
-      link.click();
-    });
-  }
-
-  var items = Array.prototype.slice.call(document.querySelectorAll("#property-list [data-slug]"));
-  var search = document.getElementById("property-search");
-
-  function visibleItems() {
-    var query = search ? search.value.trim().toLowerCase() : "";
-    return items.filter(function (item) {
-      var status = item.getAttribute("data-status");
-      if (filter !== "all" && status !== filter) return false;
-      if (!query) return true;
-      return (item.getAttribute("data-search") || "").indexOf(query) !== -1;
-    });
-  }
-
-  function selectedSlug() {
-    var current = document.querySelector(".property-pack:not([hidden])");
-    return current ? current.getAttribute("data-slug") : "";
-  }
-
-  function show(slug) {
-    var known = false;
-    document.querySelectorAll(".property-pack").forEach(function (pack) {
-      var on = pack.getAttribute("data-slug") === slug;
-      pack.hidden = !on;
-      if (on) known = true;
-    });
-    if (!known) return;
-    items.forEach(function (item) {
-      item.classList.toggle("selected", item.getAttribute("data-slug") === slug);
-    });
-    var visible = visibleItems();
-    var index = -1;
-    visible.forEach(function (item, i) {
-      if (item.getAttribute("data-slug") === slug) index = i;
-    });
-    var prev = document.getElementById("prev-property");
-    var next = document.getElementById("next-property");
-    if (prev) prev.disabled = index <= 0;
-    if (next) next.disabled = index === -1 || index >= visible.length - 1;
-    if (window.history && window.history.replaceState) {
-      window.history.replaceState(null, "", "#" + slug);
-    }
-  }
-
-  function paintList() {
-    var visible = visibleItems();
-    items.forEach(function (item) {
-      item.hidden = visible.indexOf(item) === -1;
-    });
-    var slug = selectedSlug();
-    var stillVisible = visible.some(function (item) {
-      return item.getAttribute("data-slug") === slug;
-    });
-    if (!stillVisible && visible.length) show(visible[0].getAttribute("data-slug"));
-    else if (slug) show(slug);
-    var empty = document.getElementById("list-empty");
-    if (empty) empty.hidden = visible.length !== 0;
-  }
-
-  document.querySelectorAll(".filters [data-filter]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      filter = button.getAttribute("data-filter") || "all";
-      document.querySelectorAll(".filters [data-filter]").forEach(function (other) {
-        other.classList.toggle("on", other === button);
-      });
-      paintList();
-    });
-  });
-
-  if (search) search.addEventListener("input", paintList);
-
-  items.forEach(function (item) {
-    var button = item.querySelector("button");
-    if (!button) return;
-    button.addEventListener("click", function () {
-      show(item.getAttribute("data-slug"));
-    });
-  });
-
-  function move(delta) {
-    var visible = visibleItems();
-    var slug = selectedSlug();
-    var index = -1;
-    visible.forEach(function (item, i) {
-      if (item.getAttribute("data-slug") === slug) index = i;
-    });
-    var target = visible[index + delta];
-    if (target) show(target.getAttribute("data-slug"));
-  }
-
-  var prevButton = document.getElementById("prev-property");
-  var nextButton = document.getElementById("next-property");
-  if (prevButton) prevButton.addEventListener("click", function () { move(-1); });
-  if (nextButton) nextButton.addEventListener("click", function () { move(1); });
-
-  function collectPins(form) {
-    var boxes = form.querySelectorAll("[data-pin-id]");
-    if (!boxes.length) return null;
-    var pins = [];
-    for (var i = 0; i < boxes.length; i++) {
-      var box = boxes[i];
-      var checked = box.querySelector('input[type="radio"]:checked');
-      if (!checked) return {error: "Choose approve, move, reject, or needs clarification for each pin."};
-      var action = checked.value;
-      var row = {id: box.getAttribute("data-pin-id"), action: action, status: action};
-      if (action === "move") {
-        var lat = box.querySelector("[name=lat]");
-        var lng = box.querySelector("[name=lng]");
-        var heading = box.querySelector("[name=heading]");
-        var latText = lat ? lat.value.trim() : "";
-        var lngText = lng ? lng.value.trim() : "";
-        var headingText = heading ? heading.value.trim() : "";
-        if (!latText || !lngText || !headingText) {
-          return {error: "A moved pin needs lat, lng, and heading."};
-        }
-        row.lat = Number(latText);
-        row.lng = Number(lngText);
-        row.heading_deg = Number(headingText);
-        row.heading = row.heading_deg;
-        if (!isFinite(row.lat) || !isFinite(row.lng) || !isFinite(row.heading_deg)) {
-          return {error: "A moved pin needs lat, lng, and heading."};
-        }
-      }
-      if (action === "reject" || action === "needs_clarification") {
-        var pinNote = box.querySelector("[name=pin-note]");
-        row.note = pinNote ? pinNote.value.trim() : "";
-        if (action === "needs_clarification" && !row.note) {
-          return {error: "Needs clarification needs a note."};
-        }
-      }
-      pins.push(row);
-    }
-    return {pins: pins};
-  }
-
-  document.querySelectorAll("form.decision button[data-status]").forEach(function (button) {
-    button.addEventListener("click", function () {
-      var form = button.closest("form");
-      var result = form.querySelector(".decision-result");
-      var reviewer = nameInput ? nameInput.value.trim() : "";
-      var noteInput = form.querySelector("[name=note]");
-      var note = noteInput ? noteInput.value.trim() : "";
-      var status = button.getAttribute("data-status");
-      if (REVIEWERS.indexOf(reviewer) === -1) {
-        result.textContent = "Choose a reviewer. The choice is saved in this browser.";
-        if (nameInput) nameInput.focus();
-        return;
-      }
-      if (status === "changes_requested" && !note) {
-        result.textContent = "Request changes needs a note.";
-        return;
-      }
-      if (status === "needs_clarification" && !note) {
-        result.textContent = "Needs clarification needs a note.";
-        return;
-      }
-      var collected = collectPins(form);
-      if (collected && collected.error) {
-        result.textContent = collected.error;
-        return;
-      }
-      var body = {
-        slug: form.getAttribute("data-slug"),
-        point: form.getAttribute("data-point"),
-        status: status,
-        reviewer: reviewer,
-        note: note,
-        hash: form.getAttribute("data-hash")
-      };
-      var record = {
-        safe: form.getAttribute("data-safe"),
-        slug: body.slug,
-        point: body.point,
-        point_id: body.point,
-        status: status,
-        reviewer: reviewer,
-        note: note,
-        hash: body.hash,
-        section_hash: body.hash,
-        timestamp: new Date().toISOString()
-      };
-      if (collected && collected.pins) {
-        body.pins = collected.pins;
-        record.pins = collected.pins;
-      }
-      if (window.history && window.history.replaceState) {
-        window.history.replaceState(null, "", "#" + body.slug);
-      }
-      fetch("/api/review-approve", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(body)
-      }).then(function (response) {
-        if (response.ok) {
-          window.location.reload();
-          return;
-        }
-        response.json().then(function (payload) {
-          var message = (payload && payload.error) || (response.status === 409 ? "section hash does not match" : "not applied");
-          result.textContent = message;
-          if (response.status !== 400 && response.status !== 409) keepLocal(record, result);
-        }).catch(function () {
-          if (response.status === 409) result.textContent = "section hash does not match";
-          else if (response.status !== 400) keepLocal(record, result);
-          else result.textContent = "not applied";
-        });
-      }).catch(function () {
-        keepLocal(record, result);
-      });
-    });
-  });
-
-  function keepLocal(record, result) {
-    var rows = readDecisions().filter(function (row) {
-      return !(row.slug === record.slug && row.point === record.point);
-    });
-    rows.push(record);
-    writeDecisions(rows);
-    result.textContent = "Saved in this browser. Export decisions to apply them.";
-  }
-
-  function mercLat(bounds, t) {
-    var max = 85.05112878;
-    function yOf(lat) {
-      var clamped = Math.max(Math.min(lat, max), -max);
-      var rad = clamped * Math.PI / 180;
-      return Math.log(Math.tan(Math.PI / 4 + rad / 2));
-    }
-    var target = yOf(bounds.n) + t * (yOf(bounds.s) - yOf(bounds.n));
-    return Math.atan(Math.sinh(target)) * 180 / Math.PI;
-  }
-
-  function installReviewMedia() {
-    document.querySelectorAll("a.frame").forEach(function (link) {
-      link.addEventListener("click", function (event) {
-        event.preventDefault();
-        var existing = document.getElementById("lightbox");
-        if (existing) existing.remove();
-        var box = document.createElement("div");
-        box.id = "lightbox";
-        box.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.82);display:flex;align-items:center;justify-content:center;z-index:9";
-        var img = document.createElement("img");
-        img.alt = "";
-        img.style.maxWidth = "92vw";
-        img.style.maxHeight = "92vh";
-        img.src = link.getAttribute("href");
-        box.appendChild(img);
-        box.addEventListener("click", function () { box.remove(); });
-        document.body.appendChild(box);
-      });
-    });
-    document.querySelectorAll(".pin-marker").forEach(function (marker) {
-      marker.addEventListener("pointerdown", function (event) {
-        event.preventDefault();
-        var stage = marker.closest(".nadir-stage");
-        if (!stage) return;
-        var img = stage.querySelector("img");
-        if (!img) return;
-        var bounds = {
-          n: Number(stage.getAttribute("data-n")),
-          s: Number(stage.getAttribute("data-s")),
-          e: Number(stage.getAttribute("data-e")),
-          w: Number(stage.getAttribute("data-w"))
-        };
-        function place(clientX, clientY) {
-          var rect = img.getBoundingClientRect();
-          var x = (clientX - rect.left) / rect.width;
-          var y = (clientY - rect.top) / rect.height;
-          x = Math.max(0, Math.min(1, x));
-          y = Math.max(0, Math.min(1, y));
-          var lng = bounds.w + x * (bounds.e - bounds.w);
-          var lat = mercLat(bounds, y);
-          marker.style.left = (x * 100) + "%";
-          marker.style.top = (y * 100) + "%";
-          var pinId = marker.getAttribute("data-pin-id");
-          var form = stage.closest("form") || document;
-          var choice = form.querySelector('[data-pin-id="' + pinId + '"]');
-          if (!choice) return;
-          var latInput = choice.querySelector("[name=lat]");
-          var lngInput = choice.querySelector("[name=lng]");
-          var move = choice.querySelector('input[type="radio"][value="move"]');
-          if (latInput) latInput.value = lat.toFixed(6);
-          if (lngInput) lngInput.value = lng.toFixed(6);
-          if (move) move.checked = true;
-        }
-        function onMove(ev) { place(ev.clientX, ev.clientY); }
-        function onUp() {
-          window.removeEventListener("pointermove", onMove);
-          window.removeEventListener("pointerup", onUp);
-        }
-        window.addEventListener("pointermove", onMove);
-        window.addEventListener("pointerup", onUp);
-        place(event.clientX, event.clientY);
-      });
-    });
-  }
-
-  paintList();
-  var initial = (window.location.hash || "").replace(/^#/, "");
-  var known = items.some(function (item) { return item.getAttribute("data-slug") === initial; });
-  if (known) show(initial);
-  installReviewMedia();
+// ================= R7 yes / no rows =================
+function ynKey(box){return slugOf(box)+'|'+box.dataset.kind+'|'+box.dataset.item;}
+function recordYN(box,v){ const ta=box.querySelector('.ynnote'); st.qchecks[ynKey(box)]={slug:slugOf(box),point:'R4',kind:box.dataset.kind,item:box.dataset.item,verdict:v,note:ta.value.trim(),reviewer:rev(),decided_at:now(),hash:cardHash(box)};
+  delete box.dataset.pending; paintYN(box); tally(); save(); }
+function ynClick(b){
+  if(!needRev()) return; const box=b.closest('.yn'), v=b.dataset.yn, k=ynKey(box), ta=box.querySelector('.ynnote');
+  if(st.qchecks[k]&&st.qchecks[k].verdict===v){ delete st.qchecks[k]; delete box.dataset.pending; paintYN(box); tally(); save(); return; }
+  if(v!=='yes'){ ta.hidden=false; if(!ta.value.trim()){ box.dataset.pending=v; ta.classList.add('need'); ta.placeholder=v==='no'?'What is wrong? (short note, required for No)':'What is unclear? (required)'; ta.focus(); toast('Write a short note; it is saved when you leave the box.'); paintYN(box); return; } }
+  ta.classList.remove('need'); recordYN(box,v);
+}
+function paintYN(box){
+  const q=st.qchecks[ynKey(box)], v=q&&q.verdict, ta=box.querySelector('.ynnote'), row=box.closest('.qrow,tr');
+  box.querySelectorAll('[data-yn]').forEach(x=>x.classList.toggle('on',x.dataset.yn===v||(!v&&x.dataset.yn===box.dataset.pending)));
+  if(row){row.classList.remove('yn-yes','yn-no','yn-clarify'); if(v) row.classList.add('yn-'+v);}
+  ta.hidden=!(v==='no'||v==='clarify'||box.dataset.pending||(ta.value.trim()&&v)); if(v) ta.classList.remove('need');
+  box.querySelector('.ynst').textContent=v?(YNL[v]+' · '+q.reviewer):'';
 }
 
-</script>
-</body>
-</html>
+// ================= lightbox: every image, arrows within the card, wheel / pinch zoom, pan =================
+const LB={items:[],i:0,s:1,tx:0,ty:0,bw:0,bh:0,ptrs:new Map(),pinch:null,pan:null};
+function lbEl(){ let o=document.getElementById('lb'); if(o) return o;
+  o=document.createElement('div'); o.id='lb'; o.hidden=true;
+  o.innerHTML='<div class="lbstage"><div class="lbc"></div></div><div class="lbbar"><button class="lbb" data-lb="prev" title="Previous (←)">‹</button><span class="lbn"></span><button class="lbb" data-lb="next" title="Next (→)">›</button><span class="lbcap"></span><button class="lbb" data-lb="out" title="Zoom out (−)">−</button><button class="lbb" data-lb="fit" title="Fit (0)">fit</button><button class="lbb" data-lb="in" title="Zoom in (+)">+</button><button class="lbb lbx" data-lb="close" title="Close (Esc)">✕</button></div>';
+  document.body.appendChild(o);
+  const stg=o.querySelector('.lbstage');
+  o.addEventListener('click',e=>{const b=e.target.closest('[data-lb]'); if(b){const a=b.dataset.lb; if(a==='close') closeLB(); if(a==='prev') showLB(LB.i-1); if(a==='next') showLB(LB.i+1); if(a==='in') zoomAt(1.6); if(a==='out') zoomAt(1/1.6); if(a==='fit') fitLB(); return;}
+    if(e.target===stg&&!LB.movedPan) closeLB(); LB.movedPan=false;});
+  stg.addEventListener('wheel',e=>{e.preventDefault(); const r=stg.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  stg.addEventListener('dblclick',e=>{const r=stg.getBoundingClientRect(); if(LB.s>1.05) fitLB(); else zoomAt(2.5,e.clientX-r.left,e.clientY-r.top);});
+  stg.addEventListener('pointerdown',e=>{stg.setPointerCapture(e.pointerId); LB.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    if(LB.ptrs.size===2){const [a,b]=[...LB.ptrs.values()]; LB.pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),s:LB.s,tx:LB.tx,ty:LB.ty,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2}; LB.pan=null;}
+    else LB.pan={x:e.clientX,y:e.clientY,tx:LB.tx,ty:LB.ty}; LB.movedPan=false;});
+  stg.addEventListener('pointermove',e=>{ if(!LB.ptrs.has(e.pointerId)) return; LB.ptrs.set(e.pointerId,[e.clientX,e.clientY]); const r=stg.getBoundingClientRect();
+    if(LB.pinch&&LB.ptrs.size===2){const [a,b]=[...LB.ptrs.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]), P=LB.pinch; const s2=Math.min(10,Math.max(1,P.s*d/P.d));
+      const px=P.cx-r.left, py=P.cy-r.top; LB.s=s2; LB.tx=px-(px-P.tx)*(s2/P.s); LB.ty=py-(py-P.ty)*(s2/P.s); applyLB(); LB.movedPan=true; return;}
+    if(LB.pan){const dx=e.clientX-LB.pan.x, dy=e.clientY-LB.pan.y; if(Math.abs(dx)+Math.abs(dy)>3) LB.movedPan=true; LB.tx=LB.pan.tx+dx; LB.ty=LB.pan.ty+dy; applyLB();}});
+  const up=e=>{LB.ptrs.delete(e.pointerId); if(LB.ptrs.size<2) LB.pinch=null; if(!LB.ptrs.size) LB.pan=null;};
+  stg.addEventListener('pointerup',up); stg.addEventListener('pointercancel',up);
+  window.addEventListener('resize',()=>{if(!o.hidden) fitLB();});
+  return o;}
+function applyLB(){const c=document.querySelector('#lb .lbc'); c.style.transform=`translate(${LB.tx}px,${LB.ty}px) scale(${LB.s})`; c.dataset.scale=LB.s.toFixed(3);}
+function zoomAt(f,px,py){const stg=document.querySelector('#lb .lbstage'); if(px==null){px=stg.clientWidth/2; py=stg.clientHeight/2;}
+  const s2=Math.min(10,Math.max(1,LB.s*f)); LB.tx=px-(px-LB.tx)*(s2/LB.s); LB.ty=py-(py-LB.ty)*(s2/LB.s); LB.s=s2; if(s2===1) return fitLB(); applyLB();}
+function fitLB(){const stg=document.querySelector('#lb .lbstage'), c=stg.querySelector('.lbc'); const W=stg.clientWidth, H=stg.clientHeight, ar=LB.ar||1.5;
+  let bw=W, bh=W/ar; if(bh>H){bh=H; bw=H*ar;} c.style.width=bw+'px'; c.style.height=bh+'px'; LB.s=1; LB.tx=(W-bw)/2; LB.ty=(H-bh)/2; applyLB();}
+function lbItems(m){const card=m.closest('.card')||document; return [...card.querySelectorAll('img.zoomable, .ovwrap')].filter(x=>x.offsetParent!==null&&(x.tagName!=='IMG'||x.naturalWidth));}
+function openLB(m){const o=lbEl(); LB.items=lbItems(m); LB.i=Math.max(0,LB.items.indexOf(m)); o.hidden=false; document.body.classList.add('lbopen'); showLB(LB.i);}
+function showLB(i){const n=LB.items.length; if(!n) return; LB.i=(i+n)%n; const m=LB.items[LB.i], o=document.getElementById('lb'), c=o.querySelector('.lbc');
+  c.innerHTML=''; const img=m.tagName==='IMG'?m:m.querySelector('img'); LB.ar=(img.naturalWidth||16)/(img.naturalHeight||9);
+  const cl=m.cloneNode(true); cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id')); cl.classList.add('lbmedia'); c.appendChild(cl);
+  const fig=m.closest('figure'), cap=fig&&fig.querySelector('figcaption'); const alt=img.getAttribute('alt')||'';
+  o.querySelector('.lbcap').textContent=(cap?cap.textContent:alt).slice(0,220); o.querySelector('.lbn').textContent=(LB.i+1)+' / '+n;
+  o.querySelectorAll('[data-lb=prev],[data-lb=next]').forEach(b=>b.disabled=n<2); fitLB();}
+function closeLB(){const o=document.getElementById('lb'); if(o){o.hidden=true; o.querySelector('.lbc').innerHTML='';} document.body.classList.remove('lbopen');}
+document.addEventListener('keydown',e=>{const o=document.getElementById('lb'); if(!o||o.hidden) { if(e.key==='Escape') stopPlacing(); return; }
+  if(e.key==='Escape') closeLB(); else if(e.key==='ArrowRight') showLB(LB.i+1); else if(e.key==='ArrowLeft') showLB(LB.i-1);
+  else if(e.key==='+'||e.key==='=') zoomAt(1.6); else if(e.key==='-') zoomAt(1/1.6); else if(e.key==='0') fitLB(); else return; e.preventDefault();});
+
+// ================= tally, export, restore =================
+function tally(){
+  let all=0,ok=0,qs=0;
+  props.forEach(slug=>{
+    const cards=document.querySelectorAll(`.pp[data-pp="${CSS.escape(slug)}"] .card`); let a=0,q=0;
+    cards.forEach(c=>{if(c.classList.contains('approved'))a++; if(c.classList.contains('clarify'))q++;});
+    Object.values(st.pins).forEach(e=>{if(e.slug===slug&&e.action==='clarify')q++;});
+    Object.values(st.qchecks).forEach(e=>{if(e.slug===slug&&e.verdict==='clarify')q++;});
+    all+=cards.length; ok+=a; qs+=q;
+    const b=document.querySelector(`[data-badge="${CSS.escape(slug)}"]`); b.textContent=`${a}/${cards.length} approved`; b.classList.toggle('done',a===cards.length);
+    const qb=document.querySelector(`[data-qbadge="${CSS.escape(slug)}"]`); qb.textContent=`Questions: ${q}`; qb.classList.toggle('has',q>0);
+    document.querySelector(`[data-bar="${CSS.escape(slug)}"]`).style.width=(100*a/cards.length)+'%';
+  });
+  document.querySelectorAll('.card.pincard .pinsum').forEach(sm=>{ const pp=sm.closest('.pp'), rows=[...pp.querySelectorAll('.card.pincard tr[data-row]')];
+    const placed=rows.filter(tr=>pinFor(pp,tr.dataset.row)).length, sv=pp.querySelectorAll('.card.pincard svg.pinsvg g.pin.pin-u:not([data-assigned])').length;
+    sm.querySelector('.s-cam').textContent=rows.length; sm.querySelector('.s-pl').textContent=placed; sm.querySelector('.s-un').textContent=rows.length-placed;
+    if(pp.querySelector('.card.pincard svg.pinsvg')) sm.querySelector('.s-sv').textContent=sv; });
+  document.getElementById('gbar').style.width=(all?100*ok/all:0)+'%';
+  document.getElementById('gtxt').textContent=`${ok} of ${all} points approved across ${props.length} properties`+(qs?` · ${qs} open question${qs>1?'s':''}`:'');
+  document.querySelector('.gate').classList.toggle('open',all>0&&ok===all);
+}
+function pinStatus(e){return e.action==='reject'?'rejected':e.action==='clarify'?'clarify':e.corr?'move':e.action==='approve'?'approved':null;}
+function pinExport(e){
+  if(e.action==='reject') return 'reject';
+  if(e.action==='clarify') return 'needs_clarification';
+  if(e.corr) return 'move';
+  if(e.action==='approve') return 'approve';
+  return null;
+}
+function pinsFor(slug){
+  return Object.values(st.pins).filter(e=>e.slug===slug&&e.pin_id).map(e=>{
+    const action=pinExport(e); if(!action) return null;
+    const row={id:e.pin_id,action:action,note:e.note||''};
+    if(action==='move'&&e.corr){row.lat=e.corr.lat; row.lng=e.corr.lng; row.heading_deg=e.corr.heading;}
+    return row;
+  }).filter(Boolean);
+}
+document.getElementById('export').addEventListener('click',()=>{
+  if(!needRev()) return;
+  const CARD={approved:'approved',changes:'changes_requested',clarify:'needs_clarification'};
+  const decisions=[];
+  const seen=new Set();
+  Object.values(st.decisions).forEach(d=>{
+    const pp=document.querySelector(`.pp[data-pp="${CSS.escape(d.slug)}"]`);
+    const row={safe:pp?(pp.dataset.safe||''):'',slug:d.slug,point:d.point,point_id:d.point,status:CARD[d.status]||d.status,note:d.note||'',reviewer:d.reviewer,hash:d.hash,section_hash:d.hash,timestamp:d.decided_at};
+    if(d.point==='R3') row.pins=pinsFor(d.slug);
+    decisions.push(row); seen.add(d.slug+'|'+d.point);
+  });
+  const slugs=new Set(Object.values(st.pins).map(e=>e.slug));
+  slugs.forEach(slug=>{
+    if(seen.has(slug+'|R3')) return;
+    const pins=pinsFor(slug); if(!pins.length) return;
+    const pp=document.querySelector(`.pp[data-pp="${CSS.escape(slug)}"]`);
+    const card=pp&&pp.querySelector('.card.pincard');
+    const clarify=pins.some(p=>p.action==='needs_clarification'), reject=pins.some(p=>p.action==='reject');
+    decisions.push({safe:pp?(pp.dataset.safe||''):'',slug,point:'R3',point_id:'R3',status:clarify?'needs_clarification':reject?'changes_requested':'approved',note:pins.map(p=>p.note).filter(Boolean).join(' '),reviewer:rev(),hash:card?card.dataset.hash:'',section_hash:card?card.dataset.hash:'',timestamp:now(),pins});
+  });
+  const qc=Object.values(st.qchecks).map(q=>({slug:q.slug,point:q.point||'R4',item_kind:q.kind,item_id:q.item,verdict:q.verdict,note:q.note,reviewer:q.reviewer,section_hash:q.hash,timestamp:q.decided_at}));
+  const out={kind:'safe-pipeline/review-decisions-v1',build_id:META.build,exported_by:rev(),exported_at:now(),decisions,question_checks:qc};
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
+  a.download='review-decisions-'+rev().toLowerCase()+'-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'')+'.json'; document.body.appendChild(a); a.click(); a.remove();
+});
+document.querySelectorAll('svg.pinsvg g.pin').forEach(drawPin);
+try{const s=JSON.parse(localStorage.getItem(LS_STATE)||'null');
+  if(s){
+    Object.values(s.decisions||{}).forEach(d=>{const card=document.querySelector(`.pp[data-pp="${CSS.escape(d.slug)}"] .card[data-rid="${d.point}"]`); if(card&&card.dataset.hash===d.hash){st.decisions[d.slug+'|'+d.point]=d; card.querySelector(':scope > .cf textarea').value=d.note||''; paintCard(card,d.status);}});
+    Object.entries(s.pins||{}).forEach(([k,e])=>{const pp=document.querySelector(`.pp[data-pp="${CSS.escape(e.slug)}"]`); const card=pp&&pp.querySelector('.card.pincard'); if(!card||card.dataset.hash!==e.hash) return;
+      const svg=card.querySelector('svg.pinsvg'); st.pins[k]=e;
+      if(e.corr&&svg){ let g=e.pin_id?card.querySelector(`g.pin[data-pid="${CSS.escape(e.pin_id)}"]`):null; const tr=e.camera&&rowFor(pp,e.camera);
+        const [x,y]=ll2px(svg,e.corr.lat,e.corr.lng);
+        if(!g&&tr) g=makeMarker(svg,tr,x.toFixed(1),y.toFixed(1));
+        if(g){ if(e.assigned&&tr){g.dataset.assigned=e.camera; g.dataset.alab=tr.querySelector('.num').textContent; g.classList.add('assigned');}
+          g.dataset.x=x.toFixed(1); g.dataset.y=y.toFixed(1); g.dataset.hd=e.corr.heading==null?'':e.corr.heading; drawPin(g);} }
+      const tr=e.camera&&rowFor(pp,e.camera); if(tr){tr.querySelector('.pnote').value=e.note||''; paintRow(tr);} paintUnl(card);});
+    Object.values(s.qchecks||{}).forEach(q=>{const box=document.querySelector(`.pp[data-pp="${CSS.escape(q.slug)}"] .yn[data-kind="${q.kind}"][data-item="${CSS.escape(q.item)}"]`); if(box&&cardHash(box)===q.hash){st.qchecks[q.slug+'|'+q.kind+'|'+q.item]=q; box.querySelector('.ynnote').value=q.note||''; paintYN(box);}});
+  }}catch(e){console.warn('restore',e)}
+document.getElementById('clearlocal').addEventListener('click',()=>{if(confirm('Clear all decisions saved in this browser?')){try{localStorage.removeItem(LS_STATE);}catch(e){} location.reload();}});
+// R5: cap the camera list to the rendered nadir image height (kept in sync on load / resize / tab switch)
+function syncPinH(lay){const w=lay.querySelector('.pinimg .ovwrap'); if(!w) return; const h=Math.round(w.getBoundingClientRect().height);
+  if(h>40) lay.style.setProperty('--pinh',h+'px'); else lay.style.removeProperty('--pinh');}
+const pinLays=[...document.querySelectorAll('.pinlayout')];
+pinLays.forEach(lay=>{const w=lay.querySelector('.pinimg .ovwrap'); if(!w) return; const im=w.querySelector('img'); if(im&&!im.complete) im.addEventListener('load',()=>syncPinH(lay));
+  if(window.ResizeObserver) new ResizeObserver(()=>syncPinH(lay)).observe(w); syncPinH(lay);});
+window.addEventListener('resize',()=>pinLays.forEach(syncPinH));
+// while dragging a grey pin toward the list, auto-scroll it near its top/bottom edge
+document.addEventListener('pointermove',ev=>{ if(!drag||!drag.moved) return; const lay=drag.svg.closest('.pinlayout'), box=lay&&lay.querySelector('.pintbl'); if(!box) return;
+  const r=box.getBoundingClientRect(); if(ev.clientX<r.left||ev.clientX>r.right) return; const m=40;
+  if(ev.clientY<r.top+m&&ev.clientY>r.top-m) box.scrollTop-=14; else if(ev.clientY>r.bottom-m&&ev.clientY<r.bottom+m) box.scrollTop+=14;});
+revUI(); tally(); route();
+window.SAFE_APP={st,openLB,closeLB,LB};
+}
+
+(function(){
+const te=new TextEncoder(), td=new TextDecoder(), MAGIC='SRV1'; let KEYS={};
+const REVIEW_DATA_BASE = "https://d1h1on7f1v1lpy.cloudfront.net/review";
+const REVIEWERS=['Bot','Eleanor','Ross','Steve','Jonah'];
+function joinBase(base){ if(!base) return ''; return String(base).replace(/\/$/,'')+'/'; }
+function b64(s){ const bin=atob(s), out=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i); return out; }
+async function keyFor(pw,salt,iter){const id=[...salt].join(',')+'|'+iter; if(KEYS[id]) return KEYS[id];
+  if(!(iter>=200000)) throw new Error('KDF too weak');
+  const base=await crypto.subtle.importKey('raw',te.encode(pw),'PBKDF2',false,['deriveKey']);
+  return KEYS[id]=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:iter,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['decrypt']);}
+async function decryptSrv1(pw,b,hub,part){
+  if(td.decode(b.slice(0,4))!==MAGIC) throw new Error('not a review part');
+  const salt=b.slice(4,20), iter=new DataView(b.buffer,b.byteOffset+20,4).getUint32(0), iv=b.slice(24,36);
+  const key=await keyFor(pw,salt,iter);
+  const plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:te.encode('safe-review/v1|'+hub+'|'+part)},key,b.slice(36)));
+  return {plain,key};}
+function asPackage(data,hub,key,srv1){
+  const html=typeof data.html==='string'?data.html:(typeof data.packs_html==='string'?data.packs_html:'');
+  if(!html) throw new Error('package has no page');
+  const images=data.images==null?(srv1?{}:[]):data.images;
+  const packed={hub:data.hub||hub,slug:data.slug||hub,site_no:data.site_no||'',label:data.label||data.slug||hub,address:data.address||'',build:data.build||'',built_at:data.built_at||'',hashes:data.hashes||{},html,images,chunks:Number(data.chunks||0),_key:key,_srv1:!!srv1};
+  if(packed.hub!==hub) throw new Error('hub mismatch');
+  return packed;}
+async function openPackage(pw,base,hub){
+  const r=await fetch(base+hub+'/package.enc',{cache:'no-store',mode:'cors',credentials:'omit'}); if(!r.ok){const e=new Error('HTTP '+r.status+' for package.enc'); e.http=r.status; throw e;}
+  const b=new Uint8Array(await r.arrayBuffer());
+  if(b.length>=4&&td.decode(b.slice(0,4))===MAGIC){ const opened=await decryptSrv1(pw,b,hub,'package.enc'); return asPackage(JSON.parse(td.decode(opened.plain)),hub,opened.key,true); }
+  let envelope; try{ envelope=JSON.parse(td.decode(b)); }catch(e){ throw new Error('not a review part'); }
+  if(!envelope||!envelope.salt||!envelope.iv||!envelope.ciphertext) throw new Error('not a review part');
+  const key=await keyFor(pw,b64(envelope.salt),Number(envelope.iterations));
+  const plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(envelope.iv)},key,b64(envelope.ciphertext)));
+  return asPackage(JSON.parse(td.decode(plain)),hub,key,false);}
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function loadImages(pw,base,pkgs){
+  const jobs=[];
+  pkgs.forEach(p=>{
+    if(Array.isArray(p.images)) p.images.forEach(image=>jobs.push(['json',p,image]));
+    else for(let n=0;n<(p.chunks||0);n++) jobs.push(['srv1',p,n]);
+  });
+  let i=0;
+  async function worker(){while(i<jobs.length){const job=jobs[i++];
+    try{
+      if(job[0]==='json'){ const p=job[1], image=job[2], parts=[];
+        for(const chunk of (image.chunks||[])){
+          const r=await fetch(base+p.hub+'/'+chunk.file,{cache:'no-store',mode:'cors',credentials:'omit'}); if(!r.ok) throw new Error('HTTP '+r.status+' for '+chunk.file);
+          parts.push(new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(chunk.iv)},p._key,await r.arrayBuffer())));
+        }
+        let total=0; parts.forEach(part=>total+=part.length); const joined=new Uint8Array(total); let off=0; parts.forEach(part=>{joined.set(part,off); off+=part.length;});
+        const u=URL.createObjectURL(new Blob([joined],{type:image.type||'image/jpeg'}));
+        const scope=document.querySelector('.pp[data-hub="'+p.hub+'"]');
+        if(scope) scope.querySelectorAll('img[data-enc="'+image.id+'"]').forEach(im=>im.src=u);
+      }else{ const p=job[1], n=job[2], part='img-'+String(n).padStart(2,'0')+'.enc';
+        const r=await fetch(base+p.hub+'/'+part,{cache:'no-store',mode:'cors',credentials:'omit'}); if(!r.ok) throw new Error('HTTP '+r.status+' for '+part);
+        const opened=await decryptSrv1(pw,new Uint8Array(await r.arrayBuffer()),p.hub,part);
+        Object.entries(p.images||{}).forEach(([iid,loc])=>{ if(!Array.isArray(loc)||loc[0]!==n) return;
+          const u=URL.createObjectURL(new Blob([opened.plain.subarray(loc[1],loc[1]+loc[2])],{type:'image/jpeg'}));
+          const scope=document.querySelector('.pp[data-hub="'+p.hub+'"]');
+          if(scope) scope.querySelectorAll('img[data-enc="'+iid+'"]').forEach(im=>im.src=u); });
+      }
+    }catch(e){console.warn(job,e); const d=document.createElement('div'); d.className='loaderr'; d.textContent='Images for '+(job[1]&&job[1].label)+' could not be loaded: '+(e.message||e); const main=document.querySelector('.main'); if(main) main.prepend(d);}}}
+  await Promise.all([1,2,3,4].map(worker));
+  await Promise.all([...document.querySelectorAll('img[data-enc]')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+  window.SAFE_IMAGES_DONE=true;}
+document.getElementById('f').addEventListener('submit',async ev=>{
+  ev.preventDefault(); const btn=document.getElementById('go'), err=document.getElementById('err'), pwi=document.getElementById('pw');
+  const pw=pwi.value; if(!pw) return; KEYS={}; btn.disabled=true; btn.textContent='Unlocking…'; err.textContent='';
+  let man, pkgs=[], fails=[], base='';
+  try{ const r=await fetch('manifest.json',{cache:'no-store'}); if(!r.ok) throw new Error('manifest.json was not found beside this page'); man=await r.json();
+    if(!man||!Array.isArray(man.hubs)) throw new Error('manifest has no hubs');
+    base=joinBase(man.base||REVIEW_DATA_BASE);
+    const res=await Promise.allSettled(man.hubs.map(h=>openPackage(pw,base,h)));
+    res.forEach((x,i)=>{ if(x.status==='fulfilled') pkgs.push(x.value); else fails.push([x.reason,man.hubs[i]]); });
+    if(!pkgs.length){ const e=fails.find(f=>f[0]&&f[0].name==='OperationError'); throw e?e[0]:(fails[0]?fails[0][0]:new Error('no packages')); }
+  }catch(e){ btn.disabled=false; btn.textContent='Unlock'; err.textContent=(e&&e.name==='OperationError')?'That passphrase did not work.':'Could not unlock: '+(e.message||e); pwi.select(); return; }
+  pwi.value='';
+  const hashes={}; pkgs.forEach(p=>hashes[p.slug]=p.hashes);
+  const build=pkgs.map(p=>p.build).join('.'); const asof=pkgs.map(p=>p.built_at).sort().pop();
+  const side=pkgs.map(p=>`<a class="prop" href="#${esc(p.slug)}" data-slug="${esc(p.slug)}"><div class="pn">${esc(p.label)} <span class="site">${esc(p.site_no)}</span></div>
+<div class="pa">${esc(p.address)}</div><div class="pb"><span class="badge" data-badge="${esc(p.slug)}">0/8 approved</span><span class="qbadge" data-qbadge="${esc(p.slug)}">Questions: 0</span><span class="bar"><i data-bar="${esc(p.slug)}"></i></span></div></a>`).join('');
+  const opts=REVIEWERS.map(r=>`<option value="${r}">${r}</option>`).join('');
+  document.body.innerHTML=`<header class="top"><div class="brand"><div class="logo">S</div><div><h1>SAFE lane 1 review</h1><div class="sub">Security · Assets · Fire · Environment — pass 1 human review · build ${esc(build)} · data as of ${esc(asof)}</div></div></div>
+<div class="tr"><span class="lock" title="Encrypted packages, unlocked with the review passphrase">&#128274; Password-locked</span><label class="rev">Reviewer <select id="reviewer" required><option value="">Choose reviewer…</option>${opts}</select></label><button class="b primary" id="export">Export decisions</button></div></header>
+<div class="layout"><aside class="side"><div class="sh">Properties <span class="muted">(${pkgs.length})</span></div>${side}
+<div class="legend"><div><span class="status pending">Pending</span></div><div><span class="status approved">Approved</span></div><div><span class="status changes">Changes requested</span></div><div><span class="status clarify">Needs clarification</span></div>
+<p class="muted small">Choose your name before deciding. Every decision, note and pin call is stamped with the reviewer and time and kept in this browser until you export. Export the JSON and send it to the pipeline.</p><button class="ghostlink" id="clearlocal">Clear decisions saved in this browser</button></div></aside>
+<main class="main">${pkgs.map(p=>p.html).join('')}</main></div>
+<footer class="gate"><div class="gi">&#128274; <b>Environment, Assets, Fire and Security stay locked until every point is approved.</b> <span id="gtxt" class="muted"></span></div><div class="gbar"><i id="gbar"></i></div></footer>`;
+  fails.forEach(([e,h])=>{const d=document.createElement('div'); d.className='loaderr'; d.textContent='One property package ('+String(h).slice(0,6)+'…) could not be opened: '+((e&&e.message)||e); document.querySelector('.main').prepend(d);});
+  window.SAFE_IMAGES_DONE=false;
+  safeApp({build,hashes,reviewers:REVIEWERS,pkgs:pkgs.map(p=>({hub:p.hub,slug:p.slug,site_no:p.site_no}))});
+  loadImages(pw,base,pkgs);
+});
+})();
+</script></body></html>
