@@ -160,6 +160,13 @@ svg.pinsvg g.pin:focus{outline:none}svg.pinsvg g.pin:focus .pc{stroke:#ffd60a;st
 .legacy{display:none}body.legacy-on .layout,body.legacy-on .gate{display:none}body.legacy-on{padding-bottom:0}body.legacy-on .legacy.on{display:block}
 .legacy iframe{display:block;width:100%;border:0;background:var(--bg)}.legacy .loaderr,.legacy .lwait{margin:16px 20px}
 .loaderr{margin:10px 20px;padding:8px 12px;border:1px solid #f0c2bd;background:#fbe9e7;color:#8a2a22;border-radius:6px;font-size:13px}
+/* R6 measurements and R7 questions: cropped thumbnails, lines and marks drawn on the frame */
+.tcrop{position:relative;overflow:hidden;border-radius:5px;border:1px solid var(--line);cursor:zoom-in;background:#e9ecf0}.tcrop>.ovwrap{position:absolute}.tcrop>.ovwrap img{border:none;border-radius:0}
+.tcrop.mthumb{width:132px;height:76px}.tcrop.qthumb{width:120px;height:72px}.ovwrap.qthumb{width:120px}.ovwrap.mthumb{width:132px}
+.mline{fill:none;stroke:#ff3b30;stroke-width:3px;vector-effect:non-scaling-stroke;stroke-linecap:round}.mhalo{fill:none;stroke:#fff;stroke-width:6px;vector-effect:non-scaling-stroke;opacity:.85}
+.mend{fill:#ff3b30;stroke:#fff;stroke-width:2px;vector-effect:non-scaling-stroke}.mlab{font:700 28px system-ui,sans-serif;fill:#fff;stroke:#000;stroke-width:5px;paint-order:stroke;text-anchor:middle}
+.parcel.faint{stroke-width:2;opacity:.55}.qmark{fill:none;stroke:#ffd60a;stroke-width:3px;vector-effect:non-scaling-stroke}.qhalo{fill:none;stroke:#000;stroke-width:6px;vector-effect:non-scaling-stroke;opacity:.6}
+.mtab td.rd{white-space:nowrap;font-variant-numeric:tabular-nums}.fig.mall{max-width:760px;margin-top:6px}.fig.mall img{aspect-ratio:auto;object-fit:fill}
 </style></head><body>
 <div class="lockscreen" id="lock"><div class="lbox"><div class="logo">S</div><h1>SAFE lane 1 review</h1>
 <p class="muted small">This page is encrypted. Enter the review passphrase to unlock it.</p>
@@ -722,7 +729,7 @@ document.addEventListener('change',e=>{
 
 // ================= R7 yes / no rows =================
 function ynKey(box){return slugOf(box)+'|'+box.dataset.kind+'|'+box.dataset.item;}
-function recordYN(box,v){ const ta=box.querySelector('.ynnote'); st.qchecks[ynKey(box)]={slug:slugOf(box),point:'R4',kind:box.dataset.kind,item:box.dataset.item,verdict:v,note:ta.value.trim(),reviewer:rev(),decided_at:now(),hash:cardHash(box)};
+function recordYN(box,v){ const ta=box.querySelector('.ynnote'); st.qchecks[ynKey(box)]={slug:slugOf(box),point:(box.closest('.card')||{dataset:{}}).dataset.rid||'R7',kind:box.dataset.kind,item:box.dataset.item,verdict:v,note:ta.value.trim(),reviewer:rev(),decided_at:now(),hash:cardHash(box)};
   delete box.dataset.pending; paintYN(box); tally(); save(); }
 function ynClick(b){
   if(!needRev()) return; const box=b.closest('.yn'), v=b.dataset.yn, k=ynKey(box), ta=box.querySelector('.ynnote');
@@ -769,7 +776,7 @@ function lbItems(m){const card=m.closest('.card')||document; return [...card.que
 function openLB(m){const o=lbEl(); LB.items=lbItems(m); LB.i=Math.max(0,LB.items.indexOf(m)); o.hidden=false; document.body.classList.add('lbopen'); showLB(LB.i);}
 function showLB(i){const n=LB.items.length; if(!n) return; LB.i=(i+n)%n; const m=LB.items[LB.i], o=document.getElementById('lb'), c=o.querySelector('.lbc');
   c.innerHTML=''; const img=m.tagName==='IMG'?m:m.querySelector('img'); LB.ar=(img.naturalWidth||16)/(img.naturalHeight||9);
-  const cl=m.cloneNode(true); cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id')); cl.classList.add('lbmedia'); c.appendChild(cl);
+  const cl=m.cloneNode(true); cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id')); cl.removeAttribute('style'); cl.classList.add('lbmedia'); c.appendChild(cl);
   const fig=m.closest('figure'), cap=fig&&fig.querySelector('figcaption'); const alt=img.getAttribute('alt')||'';
   o.querySelector('.lbcap').textContent=(cap?cap.textContent:alt).slice(0,220); o.querySelector('.lbn').textContent=(LB.i+1)+' / '+n;
   o.querySelectorAll('[data-lb=prev],[data-lb=next]').forEach(b=>b.disabled=n<2); fitLB();}
