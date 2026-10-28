@@ -153,12 +153,357 @@ svg.pinsvg g.pin:focus{outline:none}svg.pinsvg g.pin:focus .pc{stroke:#ffd60a;st
 .lbox .logo{margin:0 auto 10px}.lbox input{box-sizing:border-box;width:100%;border:1px solid #e3e6ea;border-radius:6px;padding:9px 10px;font:inherit;margin:14px 0 10px}
 .lbox button{width:100%;font:inherit;font-size:13px;border-radius:6px;padding:8px 12px;cursor:pointer;background:#1f5fbf;border:1px solid #1f5fbf;color:#fff}
 .lbox button:disabled{opacity:.6;cursor:wait}#err{color:#b93a32;min-height:18px;margin:8px 0 0;font-size:13px}
+/* old-version comparison tabs */
+.tabs{display:flex;gap:6px;align-items:center}.tabs[hidden]{display:none}
+.tab{font:inherit;font-size:13px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 12px;cursor:pointer;color:var(--ink);white-space:nowrap}
+.tab.on{background:#eaf1fb;border-color:var(--acc);color:var(--acc);font-weight:600}
+.legacy{display:none}body.legacy-on .layout,body.legacy-on .gate{display:none}body.legacy-on{padding-bottom:0}body.legacy-on .legacy.on{display:block}
+.legacy iframe{display:block;width:100%;border:0;background:var(--bg)}.legacy .loaderr,.legacy .lwait{margin:16px 20px}
 .loaderr{margin:10px 20px;padding:8px 12px;border:1px solid #f0c2bd;background:#fbe9e7;color:#8a2a22;border-radius:6px;font-size:13px}
 </style></head><body>
 <div class="lockscreen" id="lock"><div class="lbox"><div class="logo">S</div><h1>SAFE lane 1 review</h1>
 <p class="muted small">This page is encrypted. Enter the review passphrase to unlock it.</p>
 <form id="f" autocomplete="off"><input type="password" id="pw" placeholder="Review passphrase" autocomplete="current-password" autofocus><button id="go" type="submit">Unlock</button></form>
 <p id="err" role="alert"></p><p class="muted small" style="margin-top:12px">&#128274; Decrypted in your browser with AES-GCM; the passphrase is never sent anywhere.</p></div></div>
+<script type="text/plain" id="oct26-app">/* Oct 26 review app (property-intel fd5527ccc0), used only inside the old-version tab. */
+function safeApp(META){
+const REVIEWERS=META.reviewers;
+const LS_REV='safe-review.reviewer', LS_STATE='safe-review.state.v3.oct26';
+const SVGNS='http://www.w3.org/2000/svg';
+const LABEL={pending:'Pending',approved:'Approved',changes:'Changes requested',clarify:'Needs clarification'};
+const ACT={approve:'approved',changes:'changes',clarify:'clarify'};
+const PLABEL={approve:'approved',reject:'rejected',clarify:'needs clarification'};
+const YNL={yes:'Yes',no:'No',clarify:'Needs clarification'};
+const HUB={}, SITE={}; META.pkgs.forEach(p=>{HUB[p.slug]=p.hub; SITE[p.slug]=p.site_no;});
+const props=[...document.querySelectorAll('.pp')].map(e=>e.dataset.pp);
+const st={decisions:{},pins:{},qchecks:{}};
+const sel=document.getElementById('reviewer');
+let placing=null, drag=null, justDragged=0;
+const rev=()=>sel.value||'', now=()=>new Date().toISOString();
+function toast(msg){let t=document.getElementById('toast'); if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);} t.textContent=msg; t.className='show'; clearTimeout(t._h); t._h=setTimeout(()=>t.className='',3200);}
+function needRev(){ if(rev()) return true; sel.classList.add('need'); sel.focus(); toast('Choose who is reviewing (top right) before making a decision.'); return false; }
+try{const r=localStorage.getItem(LS_REV); if(r&&REVIEWERS.includes(r)) sel.value=r;}catch(e){}
+function revUI(){document.body.classList.toggle('norev',!rev()); sel.classList.toggle('need',!rev());}
+sel.addEventListener('change',()=>{try{localStorage.setItem(LS_REV,rev());}catch(e){} revUI(); toast(rev()?('Reviewing as '+rev()):'No reviewer chosen');});
+function save(){try{localStorage.setItem(LS_STATE,JSON.stringify({build:META.build,...st}));}catch(e){}}
+function pick(slug,anchor){
+  document.querySelectorAll('.pp').forEach(p=>p.classList.toggle('on',p.dataset.pp===slug));
+  document.querySelectorAll('.prop').forEach(p=>p.classList.toggle('sel',p.dataset.slug===slug));
+  if(anchor){const el=document.getElementById(anchor); if(el) el.scrollIntoView();} else window.scrollTo(0,0);
+}
+function route(){const h=decodeURIComponent(location.hash.slice(1))||props[0]; const i=h.indexOf('--'); const slug=i>0?h.slice(0,i):h; pick(props.includes(slug)?slug:props[0], i>0?h:null);}
+window.addEventListener('hashchange',route);
+const slugOf=el=>el.closest('.pp').dataset.pp;
+function cardKey(card){return slugOf(card)+'|'+card.dataset.rid;}
+function paintCard(card,status){
+  const s=card.querySelector('.ch .status'); card.classList.remove('approved','changes','clarify');
+  s.className='status '+status; s.textContent=LABEL[status];
+  if(status!=='pending') card.classList.add(status);
+  card.querySelectorAll('[data-act]').forEach(b=>b.classList.toggle('on',ACT[b.dataset.act]===status));
+  const who=card.querySelector('.who'); const d=st.decisions[cardKey(card)];
+  who.textContent=(d&&status!=='pending')?(LABEL[status]+' by '+d.reviewer+' · '+new Date(d.decided_at).toLocaleString()):'';
+}
+function setCard(card,status){
+  const slug=slugOf(card), rid=card.dataset.rid, note=card.querySelector(':scope > .cf textarea').value.trim();
+  if(status==='pending'){delete st.decisions[cardKey(card)];}
+  else st.decisions[cardKey(card)]={slug,point:rid,status,note,reviewer:rev(),decided_at:now(),hash:card.dataset.hash};
+  paintCard(card,status); tally(); save();
+}
+
+// ================= R5 pins: drag to move, handle to turn, assign grey pins =================
+const geoOf=svg=>svg._geo||(svg._geo=JSON.parse(svg.dataset.geo));
+function px2ll(svg,x,y){const g=geoOf(svg), n=256*Math.pow(2,g.z); const wx=x/g.s+g.ox, wy=y/g.s+g.oy;
+  return [Math.atan(Math.sinh(Math.PI*(1-2*wy/n)))*180/Math.PI, wx/n*360-180];}
+function ll2px(svg,lat,lng){const g=geoOf(svg), n=256*Math.pow(2,g.z); const wx=(lng+180)/360*n;
+  const wy=(1-Math.log(Math.tan(lat*Math.PI/180)+1/Math.cos(lat*Math.PI/180))/Math.PI)/2*n; return [(wx-g.ox)*g.s,(wy-g.oy)*g.s];}
+function svgPt(svg,cx,cy){const pt=svg.createSVGPoint(); pt.x=cx; pt.y=cy; return pt.matrixTransform(svg.getScreenCTM().inverse());}
+const num=v=>(v===''||v==null||isNaN(+v))?null:+v;
+const norm=h=>((h%360)+360)%360;
+function el(tag,attrs){const e=document.createElementNS(SVGNS,tag); for(const k in attrs) e.setAttribute(k,attrs[k]); return e;}
+function drawPin(g){
+  const svg=g.ownerSVGElement, R=geoOf(svg).r||60, x=+g.dataset.x, y=+g.dataset.y, hd=num(g.dataset.hd), fov=+(g.dataset.fov||70);
+  let w=g.querySelector('path.wedge'), h=g.querySelector('.hdl'), c=g.querySelector('.pc'), t=g.querySelector('text');
+  if(!w){w=el('path',{class:'wedge'}); g.insertBefore(w,g.firstChild);} if(!h){h=el('circle',{class:'hdl',r:11}); g.appendChild(h);}
+  const hh=hd==null?0:hd, a0=(hh-fov/2)*Math.PI/180, a1=(hh+fov/2)*Math.PI/180;
+  w.setAttribute('d',`M${x},${y} L${x+R*Math.sin(a0)},${y-R*Math.cos(a0)} A${R},${R} 0 ${fov>180?1:0} 1 ${x+R*Math.sin(a1)},${y-R*Math.cos(a1)} Z`);
+  w.style.display=hd==null?'none':''; h.classList.toggle('nohd',hd==null);
+  h.setAttribute('cx',x+R*Math.sin(hh*Math.PI/180)); h.setAttribute('cy',y-R*Math.cos(hh*Math.PI/180));
+  c.setAttribute('cx',x); c.setAttribute('cy',y); t.setAttribute('x',x); t.setAttribute('y',y+8); t.textContent=g.dataset.alab||g.dataset.lab;
+  let ti=g.querySelector(':scope > title'); if(!ti){ti=el('title',{}); g.appendChild(ti);} const pn=pinName(g); ti.textContent=pn;
+  g.setAttribute('aria-label',pn); if(!g.hasAttribute('tabindex')) g.setAttribute('tabindex','0');
+  g.classList.toggle('moved',!!(g.dataset.assigned||g.classList.contains('marker')||Math.abs(x-(+g.dataset.ox))>0.5||Math.abs(y-(+g.dataset.oy))>0.5||(num(g.dataset.hd)!==num(g.dataset.ohd))));
+  // ghost ring at the original spot
+  const gh=svg.querySelector('g.ghosts'); const id='gh-'+(g.dataset.pid||g.dataset.cam||'').replace(/[^A-Za-z0-9]/g,'_'); let r=gh&&gh.querySelector('#'+id);
+  const show=g.dataset.ox!==undefined&&g.dataset.ox!==''&&(Math.abs(x-(+g.dataset.ox))>0.5||Math.abs(y-(+g.dataset.oy))>0.5);
+  if(gh&&show){ if(!r){r=el('circle',{id,class:'ghost',r:20}); gh.appendChild(r);} r.setAttribute('cx',g.dataset.ox); r.setAttribute('cy',g.dataset.oy);} else if(r) r.remove();
+}
+function pinName(g){ const cam=g.dataset.assigned||g.dataset.cam, n=g.dataset.alab||g.dataset.lab;
+  if(cam){ const extra=g.dataset.assigned?(' (survey pin '+g.dataset.lab+' assigned by reviewer)'):g.classList.contains('marker')?' (placed by reviewer)':''; return n+' · '+cam+extra; }
+  return g.dataset.lab+' · Survey pin, no camera'; }
+// hover / keyboard-focus tooltip for nadir pins (native <title> is the fallback)
+function tipEl(){let t=document.getElementById('pintip'); if(!t){t=document.createElement('div'); t.id='pintip'; t.setAttribute('role','tooltip'); t.hidden=true; document.body.appendChild(t);} return t;}
+function showTip(g){ if(drag&&drag.moved) return; const t=tipEl(), cam=g.dataset.assigned||g.dataset.cam;
+  t.textContent=''; const n=document.createElement('span'); n.className='tn'+(cam?'':' tu'); n.textContent=g.dataset.alab||g.dataset.lab; t.appendChild(n);
+  t.appendChild(document.createTextNode(cam?cam:'Survey pin, no camera')); t.classList.toggle('grey',!cam); t.hidden=false;
+  const r=g.querySelector('.pc').getBoundingClientRect(), tw=t.offsetWidth, th=t.offsetHeight;
+  let lx=r.left+r.width/2-tw/2, ty=r.top-th-8; if(ty<4) ty=r.bottom+8; lx=Math.max(4,Math.min(window.innerWidth-tw-4,lx));
+  t.style.left=lx+'px'; t.style.top=ty+'px'; t._g=g; }
+function hideTip(g){const t=document.getElementById('pintip'); if(t&&(!g||t._g===g)){t.hidden=true; t._g=null;}}
+document.addEventListener('pointerover',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g) showTip(g);});
+document.addEventListener('pointerout',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g&&!(e.relatedTarget&&g.contains(e.relatedTarget))) hideTip(g);});
+document.addEventListener('focusin',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g) showTip(g);});
+document.addEventListener('focusout',e=>{const g=e.target.closest&&e.target.closest('svg.pinsvg g.pin'); if(g) hideTip(g);});
+window.addEventListener('scroll',()=>hideTip(),true);
+function rowFor(pp,cam){return pp.querySelector(`tr[data-row="${CSS.escape(cam)}"]`);}
+function pinFor(pp,cam){return [...pp.querySelectorAll('svg.pinsvg g.pin')].find(g=>g.dataset.cam===cam||g.dataset.assigned===cam);}
+function keyOfPin(g){const slug=slugOf(g); const cam=g.dataset.cam||g.dataset.assigned; return slug+'|'+(cam||('pin:'+g.dataset.pid));}
+function entry(slug,rowKey,init){const k=slug+'|'+rowKey; if(!st.pins[k]&&init) st.pins[k]=Object.assign({slug,point:'R5',camera:rowKey.startsWith('pin:')?null:rowKey,pin_id:null,assigned:false,action:null,corr:null,note:'',reviewer:rev(),decided_at:now(),hash:null},init); return st.pins[k];}
+function cardHash(el){return el.closest('.card').dataset.hash;}
+function commitPin(g){
+  const svg=g.ownerSVGElement, slug=slugOf(g), cam=g.dataset.cam||g.dataset.assigned, rk=cam||('pin:'+g.dataset.pid);
+  const [lat,lng]=px2ll(svg,+g.dataset.x,+g.dataset.y);
+  const e=entry(slug,rk,{pin_id:g.dataset.pid||null,assigned:!!g.dataset.assigned,hash:cardHash(g)});
+  e.pin_id=g.dataset.pid||null; e.assigned=!!g.dataset.assigned; e.corr={lat:+lat.toFixed(7),lng:+lng.toFixed(7),heading:num(g.dataset.hd)};
+  e.reviewer=rev(); e.decided_at=now(); e.hash=cardHash(g);
+  const tr=cam&&rowFor(g.closest('.pp'),cam); if(tr) paintRow(tr); paintUnl(g.closest('.card')); tally(); save();
+}
+function paintRow(tr){
+  const pp=tr.closest('.pp'), cam=tr.dataset.row, e=st.pins[slugOf(tr)+'|'+cam], a=e&&e.action, g=pinFor(pp,cam);
+  tr.classList.remove('p-approve','p-move','p-reject','p-clarify'); if(a) tr.classList.add('p-'+a); else if(e&&e.corr) tr.classList.add('p-move');
+  tr.classList.toggle('placing',placing===tr);
+  tr.querySelectorAll('[data-pa]').forEach(x=>x.classList.toggle('on',x.dataset.pa===a||(x.dataset.pa==='place'&&placing===tr)));
+  const pll=tr.querySelector('.pll'), hd=tr.querySelector('.phd'), rst=tr.querySelector('.rst');
+  if(e&&e.corr){pll.textContent=(e.assigned?('assigned '+e.pin_id.replace('cam-','p')+' · '):(e.pin_id?'':'placed · '))+e.corr.lat.toFixed(6)+', '+e.corr.lng.toFixed(6); pll.classList.add('chg');}
+  else {pll.textContent=g?'original position':'not placed'; pll.classList.remove('chg');}
+  hd.disabled=!g; if(g&&document.activeElement!==hd) hd.value=num(g.dataset.hd)==null?'':Math.round(+g.dataset.hd);
+  rst.hidden=!(e&&e.corr);
+  const bits=[]; if(e&&e.corr) bits.push(e.assigned?'assigned':e.pin_id?'moved':'placed'); if(a) bits.push(PLABEL[a]);
+  tr.querySelector('.pstate').textContent=bits.length?(bits.join(' · ')+' · '+e.reviewer):(g?'pending':'needs placement');
+}
+function paintUnl(card){
+  const box=card.querySelector('.unlmoves'); if(!box) return; const slug=slugOf(card);
+  const items=Object.entries(st.pins).filter(([k,e])=>e.slug===slug&&!e.camera&&e.corr);
+  box.innerHTML=items.length?('Moved survey pins without a device: '+items.map(([k,e])=>`<span class="um">${e.pin_id.replace('cam-','p')} → ${e.corr.lat.toFixed(6)}, ${e.corr.lng.toFixed(6)} <button class="ghostlink" data-unreset="${e.pin_id}">reset</button></span>`).join(' ')):'';
+}
+function resetRow(tr){
+  const pp=tr.closest('.pp'), cam=tr.dataset.row, k=slugOf(tr)+'|'+cam, e=st.pins[k], g=pinFor(pp,cam);
+  if(g){ if(g.classList.contains('marker')){ g.remove(); const gh=pp.querySelector('#gh-'+cam.replace(/[^A-Za-z0-9]/g,'_')); if(gh) gh.remove(); }
+    else { g.dataset.x=g.dataset.ox; g.dataset.y=g.dataset.oy; g.dataset.hd=g.dataset.ohd; if(g.dataset.assigned){delete g.dataset.assigned; delete g.dataset.alab; g.classList.remove('assigned');} drawPin(g);} }
+  if(e){e.corr=null; e.assigned=false; e.pin_id=tr.dataset.pin||null; if(!e.action) delete st.pins[k];}
+  paintRow(tr); tally(); save();
+}
+function assign(g,tr,keepDragPos){
+  const cam=tr.dataset.row, n=tr.querySelector('.num').textContent;
+  if(!keepDragPos){g.dataset.x=g.dataset.ox; g.dataset.y=g.dataset.oy;}
+  const old=st.pins[slugOf(g)+'|pin:'+g.dataset.pid]; if(old&&!old.action) delete st.pins[slugOf(g)+'|pin:'+g.dataset.pid];
+  g.dataset.assigned=cam; g.dataset.alab=n; g.classList.add('assigned'); drawPin(g); stopPlacing(); commitPin(g);
+  toast('Survey pin '+g.dataset.lab+' assigned to '+cam+'. Drag it or its handle to adjust.');
+}
+function makeMarker(svg,tr,x,y){
+  const cam=tr.dataset.row, n=tr.querySelector('.num').textContent, hd=num(tr.querySelector('.phd').value);
+  const g=el('g',{class:'pin pin-l marker'}); Object.assign(g.dataset,{pid:'',cam,lab:n,x,y,ox:'',oy:'',hd:hd==null?'':hd,ohd:'',fov:70});
+  g.appendChild(el('circle',{class:'pc',r:24})); g.appendChild(el('text',{})); svg.appendChild(g); drawPin(g); return g;
+}
+function startPlacing(tr){
+  stopPlacing(); placing=tr; const svg=tr.closest('.pp').querySelector('.card[data-rid=R5] svg.pinsvg');
+  if(!svg){toast('No pin image for this property.'); placing=null; return;}
+  svg.classList.add('placing'); paintRow(tr); toast('Click a grey pin to assign it to '+tr.dataset.row+', or click the image where the camera is.');
+}
+function stopPlacing(){ if(!placing) return; const p=placing; placing=null; const s=p.closest('.pp').querySelector('svg.pinsvg'); if(s) s.classList.remove('placing'); paintRow(p); }
+document.addEventListener('pointerdown',ev=>{
+  const g=ev.target.closest&&ev.target.closest('svg.pinsvg g.pin'); if(!g||ev.button>0) return;
+  ev.preventDefault(); if(!needRev()) return;
+  const svg=g.ownerSVGElement, p=svgPt(svg,ev.clientX,ev.clientY);
+  drag={g,svg,mode:ev.target.classList.contains('hdl')?'turn':'move',sx:ev.clientX,sy:ev.clientY,dx:p.x-(+g.dataset.x),dy:p.y-(+g.dataset.y),moved:false,id:ev.pointerId};
+  try{svg.setPointerCapture(ev.pointerId);}catch(e){} g.classList.add('dragging');
+});
+document.addEventListener('pointermove',ev=>{
+  if(!drag||ev.pointerId!==drag.id) return; ev.preventDefault();
+  if(!drag.moved&&Math.hypot(ev.clientX-drag.sx,ev.clientY-drag.sy)<4) return; if(!drag.moved) hideTip(); drag.moved=true;
+  const p=svgPt(drag.svg,ev.clientX,ev.clientY), g=drag.g;
+  if(drag.mode==='turn'){ g.dataset.hd=Math.round(norm(Math.atan2(p.x-(+g.dataset.x),-(p.y-(+g.dataset.y)))*180/Math.PI)); }
+  else { g.dataset.x=(p.x-drag.dx).toFixed(1); g.dataset.y=(p.y-drag.dy).toFixed(1); }
+  drawPin(g);
+  const tr=document.elementFromPoint(ev.clientX,ev.clientY); document.querySelectorAll('tr.droptarget').forEach(t=>t.classList.remove('droptarget'));
+  const row=tr&&tr.closest&&tr.closest('tr[data-placed="0"]');
+  if(row&&!g.dataset.cam&&!g.dataset.assigned&&!pinFor(row.closest('.pp'),row.dataset.row)) row.classList.add('droptarget');
+});
+function endDrag(ev){
+  if(!drag||ev.pointerId!==drag.id) return; const {g,svg,moved}=drag; drag=null; g.classList.remove('dragging');
+  try{svg.releasePointerCapture(ev.pointerId);}catch(e){} document.querySelectorAll('tr.droptarget').forEach(t=>t.classList.remove('droptarget'));
+  justDragged=Date.now();
+  const grey=!g.dataset.cam&&!g.dataset.assigned&&!g.classList.contains('marker');
+  if(grey){
+    const hit=document.elementFromPoint(ev.clientX,ev.clientY), row=hit&&hit.closest&&hit.closest('tr[data-placed="0"]');
+    if(moved&&row&&row.closest('.pp')===g.closest('.pp')&&!pinFor(row.closest('.pp'),row.dataset.row)){ assign(g,row,false); return; }
+    if(placing&&placing.closest('.pp')===g.closest('.pp')&&!pinFor(placing.closest('.pp'),placing.dataset.row)){ assign(g,placing,moved); return; }
+  }
+  if(moved) commitPin(g);
+}
+document.addEventListener('pointerup',endDrag); document.addEventListener('pointercancel',endDrag);
+document.addEventListener('click',e=>{
+  const svg=e.target.closest('svg.pinsvg');
+  if(svg&&Date.now()-justDragged<350) return;
+  if(svg&&placing&&placing.closest('.pp')===svg.closest('.pp')&&!e.target.closest('g.pin')){
+    const p=svgPt(svg,e.clientX,e.clientY), tr=placing; let g=pinFor(tr.closest('.pp'),tr.dataset.row);
+    if(g&&g.classList.contains('marker')){g.dataset.x=p.x.toFixed(1); g.dataset.y=p.y.toFixed(1); drawPin(g);} else if(!g) g=makeMarker(svg,tr,p.x.toFixed(1),p.y.toFixed(1));
+    else {toast('This camera already has a pin; drag it instead.'); stopPlacing(); return;}
+    stopPlacing(); commitPin(g); toast('Position recorded for '+tr.dataset.row+'. Drag the handle or type a heading.'); return;}
+  if(svg&&e.target.closest('g.pin')) return;
+  const b=e.target.closest('[data-act]');
+  if(b){ if(!needRev()) return; const card=b.closest('.card'); const want=ACT[b.dataset.act]; const ta=card.querySelector(':scope > .cf textarea');
+    if((want==='changes'||want==='clarify')&&!ta.value.trim()){ta.classList.add('need');ta.focus();ta.placeholder=want==='clarify'?'Write your question: what is unclear?':'Say what needs to change so the pipeline can fix it';toast('A note is required for '+LABEL[want]+'.');return;}
+    ta.classList.remove('need'); setCard(card,card.classList.contains(want)?'pending':want); return;}
+  const p=e.target.closest('[data-pa]');
+  if(p){ if(!needRev()) return; const tr=p.closest('tr'), a=p.dataset.pa, slug=slugOf(tr), k=slug+'|'+tr.dataset.row, pp=tr.closest('.pp');
+    if(a==='place'){ if(placing===tr) stopPlacing(); else startPlacing(tr); return; }
+    const ta=tr.querySelector('.pnote'), note=ta.value.trim();
+    if(a==='clarify'&&!note){ta.classList.add('need');ta.focus();ta.placeholder='Write your question about this pin';toast('Write the question for this camera pin first.');return;}
+    if(a==='approve'&&!pinFor(pp,tr.dataset.row)){toast('Place this camera first (or Reject / Question it).');return;}
+    ta.classList.remove('need'); const e0=st.pins[k];
+    if(e0&&e0.action===a){ e0.action=null; if(!e0.corr) delete st.pins[k]; }
+    else { const g=pinFor(pp,tr.dataset.row); const e1=entry(slug,tr.dataset.row,{pin_id:g?(g.dataset.pid||null):(tr.dataset.pin||null),hash:cardHash(tr)}); e1.action=a; e1.note=note; e1.reviewer=rev(); e1.decided_at=now(); e1.hash=cardHash(tr); }
+    paintRow(tr); tally(); save(); return;}
+  const rs=e.target.closest('.rst'); if(rs){ if(!needRev()) return; resetRow(rs.closest('tr')); return; }
+  const ur=e.target.closest('[data-unreset]'); if(ur){ const card=ur.closest('.card'), g=card.querySelector(`g.pin[data-pid="${CSS.escape(ur.dataset.unreset)}"]`);
+    if(g){g.dataset.x=g.dataset.ox; g.dataset.y=g.dataset.oy; g.dataset.hd=g.dataset.ohd; drawPin(g);} delete st.pins[slugOf(card)+'|pin:'+ur.dataset.unreset]; paintUnl(card); save(); return; }
+  const y=e.target.closest('[data-yn]'); if(y){ ynClick(y); return; }
+  const z=e.target.closest('img.zoomable, .ovwrap'); if(z&&!(svg&&placing)){ const m=z.closest('.ovwrap')||z; if(m.tagName==='IMG'&&!m.naturalWidth) return; openLB(m); return; }
+});
+document.addEventListener('change',e=>{
+  const h=e.target.closest('input.phd');
+  if(h){ if(!needRev()) return; const tr=h.closest('tr'), g=pinFor(tr.closest('.pp'),tr.dataset.row); if(!g) return; const v=num(h.value); g.dataset.hd=v==null?'':norm(v); drawPin(g); commitPin(g); return; }
+  const n=e.target.closest('textarea.pnote');
+  if(n){const tr=n.closest('tr'), k=slugOf(tr)+'|'+tr.dataset.row; if(st.pins[k]){st.pins[k].note=n.value.trim(); save();} return;}
+  const yt=e.target.closest('textarea.ynnote'); if(yt){ const box=yt.closest('.yn'), k=ynKey(box);
+    if(st.qchecks[k]){ st.qchecks[k].note=yt.value.trim(); if(!st.qchecks[k].note&&st.qchecks[k].verdict!=='yes'){ delete st.qchecks[k]; } save(); paintYN(box); tally(); }
+    else if(box.dataset.pending&&yt.value.trim()){ recordYN(box,box.dataset.pending); } }
+});
+
+// ================= R7 yes / no rows =================
+function ynKey(box){return slugOf(box)+'|'+box.dataset.kind+'|'+box.dataset.item;}
+function recordYN(box,v){ const ta=box.querySelector('.ynnote'); st.qchecks[ynKey(box)]={slug:slugOf(box),point:'R7',kind:box.dataset.kind,item:box.dataset.item,verdict:v,note:ta.value.trim(),reviewer:rev(),decided_at:now(),hash:cardHash(box)};
+  delete box.dataset.pending; paintYN(box); tally(); save(); }
+function ynClick(b){
+  if(!needRev()) return; const box=b.closest('.yn'), v=b.dataset.yn, k=ynKey(box), ta=box.querySelector('.ynnote');
+  if(st.qchecks[k]&&st.qchecks[k].verdict===v){ delete st.qchecks[k]; delete box.dataset.pending; paintYN(box); tally(); save(); return; }
+  if(v!=='yes'){ ta.hidden=false; if(!ta.value.trim()){ box.dataset.pending=v; ta.classList.add('need'); ta.placeholder=v==='no'?'What is wrong? (short note, required for No)':'What is unclear? (required)'; ta.focus(); toast('Write a short note; it is saved when you leave the box.'); paintYN(box); return; } }
+  ta.classList.remove('need'); recordYN(box,v);
+}
+function paintYN(box){
+  const q=st.qchecks[ynKey(box)], v=q&&q.verdict, ta=box.querySelector('.ynnote'), row=box.closest('.qrow,tr');
+  box.querySelectorAll('[data-yn]').forEach(x=>x.classList.toggle('on',x.dataset.yn===v||(!v&&x.dataset.yn===box.dataset.pending)));
+  if(row){row.classList.remove('yn-yes','yn-no','yn-clarify'); if(v) row.classList.add('yn-'+v);}
+  ta.hidden=!(v==='no'||v==='clarify'||box.dataset.pending||(ta.value.trim()&&v)); if(v) ta.classList.remove('need');
+  box.querySelector('.ynst').textContent=v?(YNL[v]+' · '+q.reviewer):'';
+}
+
+// ================= lightbox: every image, arrows within the card, wheel / pinch zoom, pan =================
+const LB={items:[],i:0,s:1,tx:0,ty:0,bw:0,bh:0,ptrs:new Map(),pinch:null,pan:null};
+function lbEl(){ let o=document.getElementById('lb'); if(o) return o;
+  o=document.createElement('div'); o.id='lb'; o.hidden=true;
+  o.innerHTML='<div class="lbstage"><div class="lbc"></div></div><div class="lbbar"><button class="lbb" data-lb="prev" title="Previous (←)">‹</button><span class="lbn"></span><button class="lbb" data-lb="next" title="Next (→)">›</button><span class="lbcap"></span><button class="lbb" data-lb="out" title="Zoom out (−)">−</button><button class="lbb" data-lb="fit" title="Fit (0)">fit</button><button class="lbb" data-lb="in" title="Zoom in (+)">+</button><button class="lbb lbx" data-lb="close" title="Close (Esc)">✕</button></div>';
+  document.body.appendChild(o);
+  const stg=o.querySelector('.lbstage');
+  o.addEventListener('click',e=>{const b=e.target.closest('[data-lb]'); if(b){const a=b.dataset.lb; if(a==='close') closeLB(); if(a==='prev') showLB(LB.i-1); if(a==='next') showLB(LB.i+1); if(a==='in') zoomAt(1.6); if(a==='out') zoomAt(1/1.6); if(a==='fit') fitLB(); return;}
+    if(e.target===stg&&!LB.movedPan) closeLB(); LB.movedPan=false;});
+  stg.addEventListener('wheel',e=>{e.preventDefault(); const r=stg.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY*0.0015),e.clientX-r.left,e.clientY-r.top);},{passive:false});
+  stg.addEventListener('dblclick',e=>{const r=stg.getBoundingClientRect(); if(LB.s>1.05) fitLB(); else zoomAt(2.5,e.clientX-r.left,e.clientY-r.top);});
+  stg.addEventListener('pointerdown',e=>{stg.setPointerCapture(e.pointerId); LB.ptrs.set(e.pointerId,[e.clientX,e.clientY]);
+    if(LB.ptrs.size===2){const [a,b]=[...LB.ptrs.values()]; LB.pinch={d:Math.hypot(a[0]-b[0],a[1]-b[1]),s:LB.s,tx:LB.tx,ty:LB.ty,cx:(a[0]+b[0])/2,cy:(a[1]+b[1])/2}; LB.pan=null;}
+    else LB.pan={x:e.clientX,y:e.clientY,tx:LB.tx,ty:LB.ty}; LB.movedPan=false;});
+  stg.addEventListener('pointermove',e=>{ if(!LB.ptrs.has(e.pointerId)) return; LB.ptrs.set(e.pointerId,[e.clientX,e.clientY]); const r=stg.getBoundingClientRect();
+    if(LB.pinch&&LB.ptrs.size===2){const [a,b]=[...LB.ptrs.values()], d=Math.hypot(a[0]-b[0],a[1]-b[1]), P=LB.pinch; const s2=Math.min(10,Math.max(1,P.s*d/P.d));
+      const px=P.cx-r.left, py=P.cy-r.top; LB.s=s2; LB.tx=px-(px-P.tx)*(s2/P.s); LB.ty=py-(py-P.ty)*(s2/P.s); applyLB(); LB.movedPan=true; return;}
+    if(LB.pan){const dx=e.clientX-LB.pan.x, dy=e.clientY-LB.pan.y; if(Math.abs(dx)+Math.abs(dy)>3) LB.movedPan=true; LB.tx=LB.pan.tx+dx; LB.ty=LB.pan.ty+dy; applyLB();}});
+  const up=e=>{LB.ptrs.delete(e.pointerId); if(LB.ptrs.size<2) LB.pinch=null; if(!LB.ptrs.size) LB.pan=null;};
+  stg.addEventListener('pointerup',up); stg.addEventListener('pointercancel',up);
+  window.addEventListener('resize',()=>{if(!o.hidden) fitLB();});
+  return o;}
+function applyLB(){const c=document.querySelector('#lb .lbc'); c.style.transform=`translate(${LB.tx}px,${LB.ty}px) scale(${LB.s})`; c.dataset.scale=LB.s.toFixed(3);}
+function zoomAt(f,px,py){const stg=document.querySelector('#lb .lbstage'); if(px==null){px=stg.clientWidth/2; py=stg.clientHeight/2;}
+  const s2=Math.min(10,Math.max(1,LB.s*f)); LB.tx=px-(px-LB.tx)*(s2/LB.s); LB.ty=py-(py-LB.ty)*(s2/LB.s); LB.s=s2; if(s2===1) return fitLB(); applyLB();}
+function fitLB(){const stg=document.querySelector('#lb .lbstage'), c=stg.querySelector('.lbc'); const W=stg.clientWidth, H=stg.clientHeight, ar=LB.ar||1.5;
+  let bw=W, bh=W/ar; if(bh>H){bh=H; bw=H*ar;} c.style.width=bw+'px'; c.style.height=bh+'px'; LB.s=1; LB.tx=(W-bw)/2; LB.ty=(H-bh)/2; applyLB();}
+function lbItems(m){const card=m.closest('.card')||document; return [...card.querySelectorAll('img.zoomable, .ovwrap')].filter(x=>x.offsetParent!==null&&(x.tagName!=='IMG'||x.naturalWidth));}
+function openLB(m){const o=lbEl(); LB.items=lbItems(m); LB.i=Math.max(0,LB.items.indexOf(m)); o.hidden=false; document.body.classList.add('lbopen'); showLB(LB.i);}
+function showLB(i){const n=LB.items.length; if(!n) return; LB.i=(i+n)%n; const m=LB.items[LB.i], o=document.getElementById('lb'), c=o.querySelector('.lbc');
+  c.innerHTML=''; const img=m.tagName==='IMG'?m:m.querySelector('img'); LB.ar=(img.naturalWidth||16)/(img.naturalHeight||9);
+  const cl=m.cloneNode(true); cl.removeAttribute('id'); cl.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id')); cl.classList.add('lbmedia'); c.appendChild(cl);
+  const fig=m.closest('figure'), cap=fig&&fig.querySelector('figcaption'); const alt=img.getAttribute('alt')||'';
+  o.querySelector('.lbcap').textContent=(cap?cap.textContent:alt).slice(0,220); o.querySelector('.lbn').textContent=(LB.i+1)+' / '+n;
+  o.querySelectorAll('[data-lb=prev],[data-lb=next]').forEach(b=>b.disabled=n<2); fitLB();}
+function closeLB(){const o=document.getElementById('lb'); if(o){o.hidden=true; o.querySelector('.lbc').innerHTML='';} document.body.classList.remove('lbopen');}
+document.addEventListener('keydown',e=>{const o=document.getElementById('lb'); if(!o||o.hidden) { if(e.key==='Escape') stopPlacing(); return; }
+  if(e.key==='Escape') closeLB(); else if(e.key==='ArrowRight') showLB(LB.i+1); else if(e.key==='ArrowLeft') showLB(LB.i-1);
+  else if(e.key==='+'||e.key==='=') zoomAt(1.6); else if(e.key==='-') zoomAt(1/1.6); else if(e.key==='0') fitLB(); else return; e.preventDefault();});
+
+// ================= tally, export, restore =================
+function tally(){
+  let all=0,ok=0,qs=0;
+  props.forEach(slug=>{
+    const cards=document.querySelectorAll(`.pp[data-pp="${CSS.escape(slug)}"] .card`); let a=0,q=0;
+    cards.forEach(c=>{if(c.classList.contains('approved'))a++; if(c.classList.contains('clarify'))q++;});
+    Object.values(st.pins).forEach(e=>{if(e.slug===slug&&e.action==='clarify')q++;});
+    Object.values(st.qchecks).forEach(e=>{if(e.slug===slug&&e.verdict==='clarify')q++;});
+    all+=cards.length; ok+=a; qs+=q;
+    const b=document.querySelector(`[data-badge="${CSS.escape(slug)}"]`); b.textContent=`${a}/${cards.length} approved`; b.classList.toggle('done',a===cards.length);
+    const qb=document.querySelector(`[data-qbadge="${CSS.escape(slug)}"]`); qb.textContent=`Questions: ${q}`; qb.classList.toggle('has',q>0);
+    document.querySelector(`[data-bar="${CSS.escape(slug)}"]`).style.width=(100*a/cards.length)+'%';
+  });
+  document.querySelectorAll('.card[data-rid=R5] .pinsum').forEach(sm=>{ const pp=sm.closest('.pp'), rows=[...pp.querySelectorAll('.card[data-rid=R5] tr[data-row]')];
+    const placed=rows.filter(tr=>pinFor(pp,tr.dataset.row)).length, sv=pp.querySelectorAll('.card[data-rid=R5] svg.pinsvg g.pin.pin-u:not([data-assigned])').length;
+    sm.querySelector('.s-cam').textContent=rows.length; sm.querySelector('.s-pl').textContent=placed; sm.querySelector('.s-un').textContent=rows.length-placed;
+    if(pp.querySelector('.card[data-rid=R5] svg.pinsvg')) sm.querySelector('.s-sv').textContent=sv; });
+  document.getElementById('gbar').style.width=(all?100*ok/all:0)+'%';
+  document.getElementById('gtxt').textContent=`${ok} of ${all} points approved across ${props.length} properties`+(qs?` · ${qs} open question${qs>1?'s':''}`:'');
+  document.querySelector('.gate').classList.toggle('open',all>0&&ok===all);
+}
+function pinStatus(e){return e.action==='reject'?'rejected':e.action==='clarify'?'clarify':e.corr?'move':e.action==='approve'?'approved':null;}
+document.getElementById('export').addEventListener('click',()=>{
+  if(!needRev()) return;
+  const rows=[];
+  Object.values(st.decisions).forEach(d=>rows.push({hub:HUB[d.slug],slug:d.slug,site_no:SITE[d.slug],point_id:d.point,pin_id:null,camera:null,status:d.status,note:d.note,reviewer:d.reviewer,
+    section_hash:d.hash,timestamp:d.decided_at,corrected_lat:null,corrected_lng:null,corrected_heading:null}));
+  Object.values(st.pins).forEach(e=>{const s=pinStatus(e); if(!s) return; rows.push({hub:HUB[e.slug],slug:e.slug,site_no:SITE[e.slug],point_id:'R5',pin_id:e.pin_id,camera:e.camera,status:s,note:e.note,reviewer:e.reviewer,
+    section_hash:e.hash,timestamp:e.decided_at,corrected_lat:e.corr?e.corr.lat:null,corrected_lng:e.corr?e.corr.lng:null,corrected_heading:e.corr?e.corr.heading:null,
+    assigned_pin_id:e.assigned?e.pin_id:null,approved_with_correction:!!(e.corr&&e.action==='approve')});});
+  const qc=Object.values(st.qchecks).map(q=>({hub:HUB[q.slug],slug:q.slug,site_no:SITE[q.slug],point_id:'R7',item_kind:q.kind,item_id:q.item,question_id:q.kind==='question'?q.item:null,
+    measurement_id:q.kind==='measurement'?q.item:null,verdict:q.verdict,note:q.note,reviewer:q.reviewer,section_hash:q.hash,timestamp:q.decided_at}));
+  const out={kind:'safe-lane1-review',schema:'safe-review/lane1-export-v3',build_id:META.build,exported_by:rev(),exported_at:now(),decisions:rows,question_checks:qc,hashes:META.hashes};
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}));
+  a.download='safe-lane1-decisions-'+rev().toLowerCase()+'-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'')+'.json'; document.body.appendChild(a); a.click(); a.remove();
+});
+document.querySelectorAll('svg.pinsvg g.pin').forEach(drawPin);
+try{const s=JSON.parse(localStorage.getItem(LS_STATE)||'null');
+  if(s){
+    Object.values(s.decisions||{}).forEach(d=>{const card=document.querySelector(`.pp[data-pp="${CSS.escape(d.slug)}"] .card[data-rid="${d.point}"]`); if(card&&card.dataset.hash===d.hash){st.decisions[d.slug+'|'+d.point]=d; card.querySelector(':scope > .cf textarea').value=d.note||''; paintCard(card,d.status);}});
+    Object.entries(s.pins||{}).forEach(([k,e])=>{const pp=document.querySelector(`.pp[data-pp="${CSS.escape(e.slug)}"]`); const card=pp&&pp.querySelector('.card[data-rid=R5]'); if(!card||card.dataset.hash!==e.hash) return;
+      const svg=card.querySelector('svg.pinsvg'); st.pins[k]=e;
+      if(e.corr&&svg){ let g=e.pin_id?card.querySelector(`g.pin[data-pid="${CSS.escape(e.pin_id)}"]`):null; const tr=e.camera&&rowFor(pp,e.camera);
+        const [x,y]=ll2px(svg,e.corr.lat,e.corr.lng);
+        if(!g&&tr) g=makeMarker(svg,tr,x.toFixed(1),y.toFixed(1));
+        if(g){ if(e.assigned&&tr){g.dataset.assigned=e.camera; g.dataset.alab=tr.querySelector('.num').textContent; g.classList.add('assigned');}
+          g.dataset.x=x.toFixed(1); g.dataset.y=y.toFixed(1); g.dataset.hd=e.corr.heading==null?'':e.corr.heading; drawPin(g);} }
+      const tr=e.camera&&rowFor(pp,e.camera); if(tr){tr.querySelector('.pnote').value=e.note||''; paintRow(tr);} paintUnl(card);});
+    Object.values(s.qchecks||{}).forEach(q=>{const box=document.querySelector(`.pp[data-pp="${CSS.escape(q.slug)}"] .yn[data-kind="${q.kind}"][data-item="${CSS.escape(q.item)}"]`); if(box&&cardHash(box)===q.hash){st.qchecks[q.slug+'|'+q.kind+'|'+q.item]=q; box.querySelector('.ynnote').value=q.note||''; paintYN(box);}});
+  }}catch(e){console.warn('restore',e)}
+document.getElementById('clearlocal').addEventListener('click',()=>{if(confirm('Clear all decisions saved in this browser?')){try{localStorage.removeItem(LS_STATE);}catch(e){} location.reload();}});
+// R5: cap the camera list to the rendered nadir image height (kept in sync on load / resize / tab switch)
+function syncPinH(lay){const w=lay.querySelector('.pinimg .ovwrap'); if(!w) return; const h=Math.round(w.getBoundingClientRect().height);
+  if(h>40) lay.style.setProperty('--pinh',h+'px'); else lay.style.removeProperty('--pinh');}
+const pinLays=[...document.querySelectorAll('.pinlayout')];
+pinLays.forEach(lay=>{const w=lay.querySelector('.pinimg .ovwrap'); if(!w) return; const im=w.querySelector('img'); if(im&&!im.complete) im.addEventListener('load',()=>syncPinH(lay));
+  if(window.ResizeObserver) new ResizeObserver(()=>syncPinH(lay)).observe(w); syncPinH(lay);});
+window.addEventListener('resize',()=>pinLays.forEach(syncPinH));
+// while dragging a grey pin toward the list, auto-scroll it near its top/bottom edge
+document.addEventListener('pointermove',ev=>{ if(!drag||!drag.moved) return; const lay=drag.svg.closest('.pinlayout'), box=lay&&lay.querySelector('.pintbl'); if(!box) return;
+  const r=box.getBoundingClientRect(); if(ev.clientX<r.left||ev.clientX>r.right) return; const m=40;
+  if(ev.clientY<r.top+m&&ev.clientY>r.top-m) box.scrollTop-=14; else if(ev.clientY>r.bottom-m&&ev.clientY<r.bottom+m) box.scrollTop+=14;});
+revUI(); tally(); route();
+window.SAFE_APP={st,openLB,closeLB,LB};
+}
+</script>
 <script>
 function safeApp(META){
 const REVIEWERS=META.reviewers;
@@ -529,6 +874,7 @@ window.SAFE_APP={st,openLB,closeLB,LB};
 const te=new TextEncoder(), td=new TextDecoder(), MAGIC='SRV1'; let KEYS={};
 const REVIEW_DATA_BASE = "https://d1h1on7f1v1lpy.cloudfront.net/review";
 const REVIEWERS=['Bot','Eleanor','Ross','Steve','Jonah'];
+const OCT26_APP=(document.getElementById('oct26-app')||{}).textContent||'';
 function joinBase(base){ if(!base) return ''; return String(base).replace(/\/$/,'')+'/'; }
 function b64(s){ const bin=atob(s), out=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) out[i]=bin.charCodeAt(i); return out; }
 async function keyFor(pw,salt,iter){const id=[...salt].join(',')+'|'+iter; if(KEYS[id]) return KEYS[id];
@@ -558,7 +904,8 @@ async function openPackage(pw,base,hub){
   const plain=new Uint8Array(await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(envelope.iv)},key,b64(envelope.ciphertext)));
   return asPackage(JSON.parse(td.decode(plain)),hub,key,false);}
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function loadImages(pw,base,pkgs){
+async function loadImages(pw,base,pkgs,doc){
+  doc=doc||document;
   const jobs=[];
   pkgs.forEach(p=>{
     if(Array.isArray(p.images)) p.images.forEach(image=>jobs.push(['json',p,image]));
@@ -574,48 +921,96 @@ async function loadImages(pw,base,pkgs){
         }
         let total=0; parts.forEach(part=>total+=part.length); const joined=new Uint8Array(total); let off=0; parts.forEach(part=>{joined.set(part,off); off+=part.length;});
         const u=URL.createObjectURL(new Blob([joined],{type:image.type||'image/jpeg'}));
-        const scope=document.querySelector('.pp[data-hub="'+p.hub+'"]');
+        const scope=doc.querySelector('.pp[data-hub="'+p.hub+'"]');
         if(scope) scope.querySelectorAll('img[data-enc="'+image.id+'"]').forEach(im=>im.src=u);
       }else{ const p=job[1], n=job[2], part='img-'+String(n).padStart(2,'0')+'.enc';
         const r=await fetch(base+p.hub+'/'+part,{cache:'no-store',mode:'cors',credentials:'omit'}); if(!r.ok) throw new Error('HTTP '+r.status+' for '+part);
         const opened=await decryptSrv1(pw,new Uint8Array(await r.arrayBuffer()),p.hub,part);
         Object.entries(p.images||{}).forEach(([iid,loc])=>{ if(!Array.isArray(loc)||loc[0]!==n) return;
           const u=URL.createObjectURL(new Blob([opened.plain.subarray(loc[1],loc[1]+loc[2])],{type:'image/jpeg'}));
-          const scope=document.querySelector('.pp[data-hub="'+p.hub+'"]');
+          const scope=doc.querySelector('.pp[data-hub="'+p.hub+'"]');
           if(scope) scope.querySelectorAll('img[data-enc="'+iid+'"]').forEach(im=>im.src=u); });
       }
-    }catch(e){console.warn(job,e); const d=document.createElement('div'); d.className='loaderr'; d.textContent='Images for '+(job[1]&&job[1].label)+' could not be loaded: '+(e.message||e); const main=document.querySelector('.main'); if(main) main.prepend(d);}}}
+    }catch(e){console.warn(job,e); const d=document.createElement('div'); d.className='loaderr'; d.textContent='Images for '+(job[1]&&job[1].label)+' could not be loaded: '+(e.message||e); const main=doc.querySelector('.main'); if(main) main.prepend(d);}}}
   await Promise.all([1,2,3,4].map(worker));
-  await Promise.all([...document.querySelectorAll('img[data-enc]')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
-  window.SAFE_IMAGES_DONE=true;}
+  await Promise.all([...doc.querySelectorAll('img[data-enc]')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;})));
+  if(doc===document) window.SAFE_IMAGES_DONE=true;}
+function oldDay(p){ const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(p.built_at||''); if(!m) return 'old version';
+  return 'old version ('+new Date(+m[1],+m[2]-1,+m[3]).toLocaleDateString('en-US',{month:'short',day:'numeric'})+')'; }
+// Oct 26 page for one old package, rendered by the Oct 26 app inside its own frame so it cannot touch the lane 1 page.
+function legacyDoc(p){
+  const css=[...document.querySelectorAll('head style')].map(x=>x.textContent).join('\n');
+  const opts=REVIEWERS.map(r=>`<option value="${r}">${r}</option>`).join('');
+  const side=`<a class="prop" href="#${esc(p.slug)}" data-slug="${esc(p.slug)}"><div class="pn">${esc(p.label)} <span class="site">${esc(p.site_no)}</span></div>
+<div class="pa">${esc(p.address)}</div><div class="pb"><span class="badge" data-badge="${esc(p.slug)}">0/8 approved</span><span class="qbadge" data-qbadge="${esc(p.slug)}">Questions: 0</span><span class="bar"><i data-bar="${esc(p.slug)}"></i></span></div></a>`;
+  const body=`<header class="top"><div class="brand"><div class="logo">S</div><div><h1>SAFE lane 1 review</h1><div class="sub">Security · Assets · Fire · Environment — pass 1 human review · build ${esc(p.build)} · data as of ${esc(p.built_at)}</div></div></div>
+<div class="tr"><span class="lock" title="Encrypted packages, unlocked with the review passphrase">&#128274; Password-locked</span><label class="rev">Reviewer <select id="reviewer" required><option value="">Choose reviewer…</option>${opts}</select></label><button class="b primary" id="export">Export decisions</button></div></header>
+<div class="layout"><aside class="side"><div class="sh">Properties <span class="muted">(1)</span></div>${side}
+<div class="legend"><div><span class="status pending">Pending</span></div><div><span class="status approved">Approved</span></div><div><span class="status changes">Changes requested</span></div><div><span class="status clarify">Needs clarification</span></div>
+<p class="muted small">Choose your name before deciding. Every decision, note and pin call is stamped with the reviewer and time and kept in this browser until you export. Export the JSON and send it to the pipeline.</p><button class="ghostlink" id="clearlocal">Clear decisions saved in this browser</button></div></aside>
+<main class="main">${p.html}</main></div>
+<footer class="gate"><div class="gi">&#128274; <b>Environment, Assets, Fire and Security stay locked until every point is approved.</b> <span id="gtxt" class="muted"></span></div><div class="gbar"><i id="gbar"></i></div></footer>`;
+  const hashNav="document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^=\"#\"]');if(a){e.preventDefault();var h=a.getAttribute('href').slice(1);if(location.hash.slice(1)===h){window.dispatchEvent(new HashChangeEvent('hashchange'));}else{location.hash=h;}}},true);";
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><style>'+css+'</style></head><body>'+body+'<script>'+hashNav+'<\/script><script>'+OCT26_APP+'<\/script></body></html>';}
+function legacyError(pane,msg){ pane.textContent=''; const d=document.createElement('div'); d.className='loaderr'; d.textContent=msg; pane.appendChild(d); }
+function fitLegacy(){ const top=document.querySelector('header.top'), h=Math.max(320,window.innerHeight-(top?top.offsetHeight:0));
+  document.querySelectorAll('.legacy iframe').forEach(f=>f.style.height=h+'px'); }
+function showTab(id){
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===id));
+  document.querySelectorAll('.legacy').forEach(x=>x.classList.toggle('on',x.dataset.tab===id));
+  document.body.classList.toggle('legacy-on',id!=='lane1'); window.scrollTo(0,0); fitLegacy(); }
+function mountLegacy(pane,tab,p,pw,base){
+  if(!OCT26_APP){ legacyError(pane,'The October 26 viewer code is missing from this page.'); return; }
+  tab.textContent=p.label+' · '+oldDay(p);
+  const fr=document.createElement('iframe'); fr.title=p.label+' · '+oldDay(p);
+  fr.addEventListener('load',()=>{ try{
+      const w=fr.contentWindow; if(typeof w.safeApp!=='function') throw new Error('the October 26 viewer did not start');
+      w.safeApp({build:p.build,hashes:{[p.slug]:p.hashes},reviewers:REVIEWERS,pkgs:[{hub:p.hub,slug:p.slug,site_no:p.site_no}]});
+      loadImages(pw,base,[p],fr.contentDocument).then(()=>{window.SAFE_LEGACY_DONE=true;});
+    }catch(e){ console.warn('old version',e); legacyError(pane,'The old version could not be shown: '+(e.message||e)); window.SAFE_LEGACY_DONE=true; } },{once:true});
+  fr.srcdoc=legacyDoc(p); pane.textContent=''; pane.appendChild(fr); fitLegacy(); }
+window.addEventListener('resize',fitLegacy);
 document.getElementById('f').addEventListener('submit',async ev=>{
   ev.preventDefault(); const btn=document.getElementById('go'), err=document.getElementById('err'), pwi=document.getElementById('pw');
   const pw=pwi.value; if(!pw) return; KEYS={}; btn.disabled=true; btn.textContent='Unlocking…'; err.textContent='';
-  let man, pkgs=[], fails=[], base='';
+  let man, pkgs=[], fails=[], base='', legacyHubs=[], legacyP=Promise.resolve([]);
   try{ const r=await fetch('manifest.json',{cache:'no-store'}); if(!r.ok) throw new Error('manifest.json was not found beside this page'); man=await r.json();
     if(!man||!Array.isArray(man.hubs)) throw new Error('manifest has no hubs');
     base=joinBase(man.base||REVIEW_DATA_BASE);
+    legacyHubs=(Array.isArray(man.legacy_hubs)?man.legacy_hubs:[]).filter(h=>typeof h==='string'&&!man.hubs.includes(h));
+    legacyP=Promise.allSettled(legacyHubs.map(h=>openPackage(pw,base,h)));
     const res=await Promise.allSettled(man.hubs.map(h=>openPackage(pw,base,h)));
     res.forEach((x,i)=>{ if(x.status==='fulfilled') pkgs.push(x.value); else fails.push([x.reason,man.hubs[i]]); });
-    if(!pkgs.length){ const e=fails.find(f=>f[0]&&f[0].name==='OperationError'); throw e?e[0]:(fails[0]?fails[0][0]:new Error('no packages')); }
+    if(!pkgs.length&&!(await legacyP).some(x=>x.status==='fulfilled')){ const e=fails.find(f=>f[0]&&f[0].name==='OperationError'); throw e?e[0]:(fails[0]?fails[0][0]:new Error('no packages')); }
   }catch(e){ btn.disabled=false; btn.textContent='Unlock'; err.textContent=(e&&e.name==='OperationError')?'That passphrase did not work.':'Could not unlock: '+(e.message||e); pwi.select(); return; }
   pwi.value='';
   const hashes={}; pkgs.forEach(p=>hashes[p.slug]=p.hashes);
-  const build=pkgs.map(p=>p.build).join('.'); const asof=pkgs.map(p=>p.built_at).sort().pop();
+  const build=pkgs.map(p=>p.build).join('.'); const asof=pkgs.map(p=>p.built_at).sort().pop()||'';
+  const tabs=legacyHubs.length?`<nav class="tabs" aria-label="Review tabs"><button class="tab on" type="button" data-tab="lane1">Lane 1 review</button>${legacyHubs.map((h,i)=>`<button class="tab" type="button" data-tab="old-${i}">Old version</button>`).join('')}</nav>`:'';
+  const panes=legacyHubs.map((h,i)=>`<section class="legacy" data-tab="old-${i}"><div class="lwait muted">Opening the old version…</div></section>`).join('');
   const side=pkgs.map(p=>`<a class="prop" href="#${esc(p.slug)}" data-slug="${esc(p.slug)}"><div class="pn">${esc(p.label)} <span class="site">${esc(p.site_no)}</span></div>
 <div class="pa">${esc(p.address)}</div><div class="pb"><span class="badge" data-badge="${esc(p.slug)}">0/8 approved</span><span class="qbadge" data-qbadge="${esc(p.slug)}">Questions: 0</span><span class="bar"><i data-bar="${esc(p.slug)}"></i></span></div></a>`).join('');
   const opts=REVIEWERS.map(r=>`<option value="${r}">${r}</option>`).join('');
   document.body.innerHTML=`<header class="top"><div class="brand"><div class="logo">S</div><div><h1>SAFE lane 1 review</h1><div class="sub">Security · Assets · Fire · Environment — pass 1 human review · build ${esc(build)} · data as of ${esc(asof)}</div></div></div>
-<div class="tr"><span class="lock" title="Encrypted packages, unlocked with the review passphrase">&#128274; Password-locked</span><label class="rev">Reviewer <select id="reviewer" required><option value="">Choose reviewer…</option>${opts}</select></label><button class="b primary" id="export">Export decisions</button></div></header>
+${tabs}<div class="tr"><span class="lock" title="Encrypted packages, unlocked with the review passphrase">&#128274; Password-locked</span><label class="rev">Reviewer <select id="reviewer" required><option value="">Choose reviewer…</option>${opts}</select></label><button class="b primary" id="export">Export decisions</button></div></header>
 <div class="layout"><aside class="side"><div class="sh">Properties <span class="muted">(${pkgs.length})</span></div>${side}
 <div class="legend"><div><span class="status pending">Pending</span></div><div><span class="status approved">Approved</span></div><div><span class="status changes">Changes requested</span></div><div><span class="status clarify">Needs clarification</span></div>
 <p class="muted small">Choose your name before deciding. Every decision, note and pin call is stamped with the reviewer and time and kept in this browser until you export. Export the JSON and send it to the pipeline.</p><button class="ghostlink" id="clearlocal">Clear decisions saved in this browser</button></div></aside>
 <main class="main">${pkgs.map(p=>p.html).join('')}</main></div>
-<footer class="gate"><div class="gi">&#128274; <b>Environment, Assets, Fire and Security stay locked until every point is approved.</b> <span id="gtxt" class="muted"></span></div><div class="gbar"><i id="gbar"></i></div></footer>`;
+<footer class="gate"><div class="gi">&#128274; <b>Environment, Assets, Fire and Security stay locked until every point is approved.</b> <span id="gtxt" class="muted"></span></div><div class="gbar"><i id="gbar"></i></div></footer>${panes}`;
   fails.forEach(([e,h])=>{const d=document.createElement('div'); d.className='loaderr'; d.textContent='One property package ('+String(h).slice(0,6)+'…) could not be opened: '+((e&&e.message)||e); document.querySelector('.main').prepend(d);});
   window.SAFE_IMAGES_DONE=false;
   safeApp({build,hashes,reviewers:REVIEWERS,pkgs:pkgs.map(p=>({hub:p.hub,slug:p.slug,site_no:p.site_no}))});
   loadImages(pw,base,pkgs);
+  if(legacyHubs.length){
+    document.querySelectorAll('.tabs .tab').forEach(t=>t.addEventListener('click',()=>showTab(t.dataset.tab)));
+    window.SAFE_LEGACY_DONE=false;
+    legacyP.then(lr=>lr.forEach((x,i)=>{ const pane=document.querySelector(`.legacy[data-tab="old-${i}"]`), tab=document.querySelector(`.tabs .tab[data-tab="old-${i}"]`);
+      try{ if(x.status==='fulfilled') mountLegacy(pane,tab,x.value,pw,base);
+        else { legacyError(pane,'The old version ('+String(legacyHubs[i]).slice(0,6)+'…) could not be opened: '+(x.reason&&x.reason.name==='OperationError'?'the review passphrase did not open it.':((x.reason&&x.reason.message)||x.reason))); window.SAFE_LEGACY_DONE=true; } }
+      catch(e){ console.warn('old version',e); legacyError(pane,'The old version could not be shown: '+(e.message||e)); window.SAFE_LEGACY_DONE=true; } }))
+    .catch(e=>{ console.warn('old version',e); window.SAFE_LEGACY_DONE=true; });
+  }
 });
 })();
 </script></body></html>
