@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jones · 18775 Macalpine Loop · ATTOM</title>
+<style>
+  :root {
+    --ink: #1c1915;
+    --muted: #5c564c;
+    --line: #e4ddd2;
+    --paper: #f6f3ee;
+    --card: #fffcf8;
+    --accent: #8c4a2f;
+    --lot: #2f6f4e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font: 15px/1.45 "Segoe UI", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+  }
+  header {
+    display: flex; justify-content: space-between; gap: 24px;
+    padding: 18px 22px 14px; border-bottom: 1px solid var(--line); background: var(--card);
+  }
+  header h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.02em; }
+  header p { margin: 4px 0 0; color: var(--muted); }
+  header .ids { text-align: right; color: var(--muted); font-size: 13px; }
+  header .ids b { color: var(--ink); font-weight: 600; }
+  .layout { display: grid; grid-template-columns: minmax(420px, 1.15fr) minmax(340px, 0.85fr); min-height: 560px; }
+  #map { min-height: 560px; background: #d9e2d4; }
+  aside { padding: 16px; overflow: auto; max-height: calc(100vh - 78px); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+  .card h2 { margin: 0 0 8px; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .row { display: flex; justify-content: space-between; gap: 16px; padding: 3px 0; border-top: 1px solid #f0ebe4; }
+  .row:first-of-type { border-top: 0; }
+  .row span { color: var(--muted); }
+  .row b { font-weight: 600; text-align: right; }
+  .value { font-size: 28px; font-weight: 680; letter-spacing: -0.03em; }
+  .sub { color: var(--muted); margin-top: 2px; }
+  .note { font-size: 13px; color: var(--muted); }
+  section.fields { padding: 8px 22px 28px; }
+  section.fields h2 { font-size: 16px; margin: 8px 0; }
+  .tools { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+  input[type="search"] {
+    flex: 1; font: inherit; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--card);
+  }
+  table { width: 100%; border-collapse: collapse; background: var(--card); }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: #f3efe8; }
+  td.name { font-family: ui-monospace, Consolas, monospace; font-size: 12px; width: 42%; }
+  #map { height: 100%; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    header { flex-direction: column; }
+    header .ids { text-align: left; }
+    aside { max-height: none; }
+    #map { min-height: 420px; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Jones residence</h1>
+    <p>18775 Macalpine Loop, Bend, OR 97702 · Highlands at Broken Top, lot 36</p>
+  </div>
+  <div class="ids">
+    <div>ATTOM ID <b id="attom"></b></div>
+    <div>Taxlot <b>181102C000600</b></div>
+    <div>Account <b id="account"></b></div>
+  </div>
+</header>
+<div class="layout">
+  <div id="map"></div>
+  <aside id="cards"></aside>
+</div>
+<section class="fields">
+  <h2>Assessor fields with a value</h2>
+  <div class="tools">
+    <input id="q" type="search" placeholder="Filter field name or value" autocomplete="off">
+    <span class="note" id="count"></span>
+  </div>
+  <table>
+    <thead><tr><th>Field</th><th>Value</th></tr></thead>
+    <tbody id="fields"></tbody>
+  </table>
+</section>
+<script>
+const DATA = {"assessor":[{"name":"ATTOMID_TEXT","value":"23651588"},{"name":"ATTOMID","value":"23651588"},{"name":"SITUSSTATECODE","value":"OR"},{"name":"SITUSCOUNTY","value":"Deschutes"},{"name":"PROPERTYJURISDICTIONNAME","value":"DESCHUTES"},{"name":"SITUSSTATECOUNTYFIPS","value":"41017"},{"name":"COMBINEDSTATISTICALAREA","value":"Bend-Prineville, OR"},{"name":"CBSANAME","value":"BEND, OR METROPOLITAN STATISTICAL AREA"},{"name":"CBSACODE","value":"13460"},{"name":"MSANAME","value":"BEND, OR"},{"name":"MSACODE","value":"13460"},{"name":"MINORCIVILDIVISIONNAME","value":"BEND"},{"name":"MINORCIVILDIVISIONCODE","value":"90306"},{"name":"CENSUSFIPSPLACECODE","value":"72820"},{"name":"CENSUSTRACT","value":"1401"},{"name":"CENSUSBLOCKGROUP","value":"3"},{"name":"CENSUSBLOCK","value":"3012"},{"name":"PARCELNUMBERRAW","value":"181102 C0 00600"},{"name":"PARCELNUMBERYEARADDED","value":"2005"},{"name":"PARCELNUMBERYEARCHANGE","value":"0"},{"name":"PARCELACCOUNTNUMBER","value":"246187"},{"name":"PROPERTYADDRESSFULL","value":"18775 MACALPINE LOOP"},{"name":"PROPERTYADDRESSHOUSENUMBER","value":"18775"},{"name":"PROPERTYADDRESSSTREETNAME","value":"MACALPINE"},{"name":"PROPERTYADDRESSSTREETSUFFIX","value":"LOOP"},{"name":"PROPERTYADDRESSCITY","value":"BEND"},{"name":"PROPERTYADDRESSSTATE","value":"OR"},{"name":"PROPERTYADDRESSZIP","value":"97702"},{"name":"PROPERTYADDRESSZIP4","value":"9189"},{"name":"PROPERTYADDRESSCRRT","value":"R035"},{"name":"CONGRESSIONALDISTRICTHOUSE","value":"328"},{"name":"LATITUDE","value":"44.041393"},{"name":"LONGITUDE","value":"-121.378788"},{"name":"GEOQUALITYCODE","value":"0"},{"name":"LEGALDESCRIPTION","value":"LOT:36 SUBD:HIGHLANDS AT BROKEN TOP PHASE 2 SEC/TWN/RNG/MER:SEC 02 TWN 18 RNG 11 MAP REF:181102-C0"},{"name":"LEGALRANGE","value":"11E"},{"name":"LEGALTOWNSHIP","value":"18S"},{"name":"LEGALSECTION","value":"2"},{"name":"LEGALQUARTER","value":"SW"},{"name":"LEGALQUARTERQUARTER","value":"0"},{"name":"LEGALSUBDIVISION","value":"HIGHLANDS AT BROKEN TOP PHASE 2"},{"name":"LEGALTRACTNUMBER","value":"0"},{"name":"LEGALLOTNUMBER1","value":"36"},{"name":"PARTYOWNER1NAMEFULL","value":"TRACY A JONES"},{"name":"PARTYOWNER1NAMEFIRST","value":"TRACY"},{"name":"PARTYOWNER1NAMEMIDDLE","value":"A"},{"name":"PARTYOWNER1NAMELAST","value":"JONES"},{"name":"COMPANYFLAG","value":"N"},{"name":"PARTYOWNER2NAMEFULL","value":"TAMMY J JONES"},{"name":"PARTYOWNER2NAMEFIRST","value":"TAMMY"},{"name":"PARTYOWNER2NAMEMIDDLE","value":"J"},{"name":"PARTYOWNER2NAMELAST","value":"JONES"},{"name":"CONTACTOWNERMAILINGCOUNTY","value":"DESCHUTES"},{"name":"CONTACTOWNERMAILINGFIPS","value":"41017"},{"name":"CONTACTOWNERMAILADDRESSFULL","value":"18775 MACALPINE LOOP"},{"name":"CONTACTOWNERMAILADDRESSHOUSENUMBER","value":"18775"},{"name":"CONTACTOWNERMAILADDRESSSTREETNAME","value":"MACALPINE"},{"name":"CONTACTOWNERMAILADDRESSSTREETSUFFIX","value":"LOOP"},{"name":"CONTACTOWNERMAILADDRESSCITY","value":"BEND"},{"name":"CONTACTOWNERMAILADDRESSSTATE","value":"OR"},{"name":"CONTACTOWNERMAILADDRESSZIP","value":"97702"},{"name":"CONTACTOWNERMAILADDRESSZIP4","value":"9189"},{"name":"CONTACTOWNERMAILADDRESSCRRT","value":"R025"},{"name":"CONTACTOWNERMAILADDRESSINFOFORMAT","value":"S"},{"name":"STATUSOWNEROCCUPIEDFLAG","value":"1"},{"name":"DEEDOWNER1NAMEFULL","value":"TRACY A JONES"},{"name":"DEEDOWNER1NAMEFIRST","value":"TRACY"},{"name":"DEEDOWNER1NAMEMIDDLE","value":"A"},{"name":"DEEDOWNER1NAMELAST","value":"JONES"},{"name":"DEEDOWNER2NAMEFULL","value":"TAMMY J JONES"},{"name":"DEEDOWNER2NAMEFIRST","value":"TAMMY"},{"name":"DEEDOWNER2NAMEMIDDLE","value":"J"},{"name":"DEEDOWNER2NAMELAST","value":"JONES"},{"name":"TAXYEARASSESSED","value":"2025"},{"name":"TAXASSESSEDVALUETOTAL","value":"1718810"},{"name":"TAXASSESSEDVALUEIMPROVEMENTS","value":"0"},{"name":"TAXASSESSEDVALUELAND","value":"0"},{"name":"TAXASSESSEDIMPROVEMENTSPERC","value":"0"},{"name":"PREVIOUSASSESSEDVALUE","value":"1668760"},{"name":"TAXMARKETVALUEYEAR","value":"2025"},{"name":"TAXMARKETVALUETOTAL","value":"7351850"},{"name":"TAXMARKETVALUEIMPROVEMENTS","value":"5235420"},{"name":"TAXMARKETVALUELAND","value":"2116430"},{"name":"TAXMARKETIMPROVEMENTSPERC","value":"71"},{"name":"TAXFISCALYEAR","value":"2025"},{"name":"TAXRATEAREA","value":"1017"},{"name":"TAXBILLEDAMOUNT","value":"23485.33"},{"name":"LASTASSESSORTAXROLLUPDATE","value":"2025-09-30"},{"name":"ASSRLASTUPDATED","value":"2026-01-12"},{"name":"YEARBUILT","value":"2006"},{"name":"ZONEDCODELOCAL","value":"UT"},{"name":"PROPERTYUSEMUNI","value":"174"},{"name":"PROPERTYUSEGROUP","value":"Residential"},{"name":"PROPERTYUSESTANDARDIZED","value":"385"},{"name":"ASSESSORLASTSALEDATE","value":"2009-12-14"},{"name":"ASSESSORLASTSALEAMOUNT","value":"2400000"},{"name":"ASSESSORPRIORSALEDATE","value":"2009-11-25"},{"name":"ASSESSORPRIORSALEAMOUNT","value":"1624943"},{"name":"LASTOWNERSHIPTRANSFERDATE","value":"2009-12-14"},{"name":"LASTOWNERSHIPTRANSFERDOCUMENTNUMBER","value":"52374"},{"name":"LASTOWNERSHIPTRANSFERTRANSACTIONID","value":"279498911"},{"name":"DEEDLASTDOCUMENTNUMBER","value":"2009-52374"},{"name":"DEEDLASTSALEDATE","value":"2009-12-14"},{"name":"DEEDLASTSALEPRICE","value":"2400000"},{"name":"DEEDLASTSALETRANSACTIONID","value":"279498911"},{"name":"AREABUILDING","value":"8070"},{"name":"AREABUILDINGDEFINITIONCODE","value":"10"},{"name":"AREA1STFLOOR","value":"6240"},{"name":"AREA2NDFLOOR","value":"580"},{"name":"AREAUPPERFLOORS","value":"0"},{"name":"AREALOTACRES","value":"5.0100002"},{"name":"AREALOTSF","value":"218236"},{"name":"AREALOTDEPTH","value":"0"},{"name":"AREALOTWIDTH","value":"0"},{"name":"ROOMSATTICAREA","value":"0"},{"name":"ROOMSBASEMENTAREA","value":"0"},{"name":"PARKINGGARAGE","value":"11"},{"name":"PARKINGGARAGEAREA","value":"2650"},{"name":"PARKINGCARPORT","value":"0"},{"name":"HVACHEATINGDETAIL","value":"219"},{"name":"UTILITIESMOBILEHOMEHOOKUPFLAG","value":"0"},{"name":"CONSTRUCTION","value":"0"},{"name":"PLUMBINGFIXTURESCOUNT","value":"0"},{"name":"SAFETYFIRESPRINKLERSFLAG","value":"0"},{"name":"BATHCOUNT","value":"6"},{"name":"BATHPARTIALCOUNT","value":"0"},{"name":"BEDROOMSCOUNT","value":"3"},{"name":"ROOMSCOUNT","value":"0"},{"name":"STORIESCOUNT","value":"2"},{"name":"UNITSCOUNT","value":"0"},{"name":"ROOMSBONUSROOMFLAG","value":"0"},{"name":"ROOMSBREAKFASTNOOKFLAG","value":"0"},{"name":"ROOMSCELLARFLAG","value":"0"},{"name":"ROOMSCELLARWINEFLAG","value":"0"},{"name":"ROOMSEXERCISEFLAG","value":"0"},{"name":"ROOMSFAMILYCODE","value":"0"},{"name":"ROOMSGAMEFLAG","value":"0"},{"name":"ROOMSGREATFLAG","value":"0"},{"name":"ROOMSHOBBYFLAG","value":"0"},{"name":"ROOMSLAUNDRYFLAG","value":"0"},{"name":"ROOMSMEDIAFLAG","value":"0"},{"name":"ROOMSMUDFLAG","value":"0"},{"name":"ROOMSOFFICEFLAG","value":"0"},{"name":"ROOMSSAFEROOMFLAG","value":"0"},{"name":"ROOMSSITTINGFLAG","value":"0"},{"name":"ROOMSSTORMSHELTER","value":"0"},{"name":"ROOMSSTUDYFLAG","value":"0"},{"name":"ROOMSSUNROOMFLAG","value":"0"},{"name":"ROOMSUTILITYCODE","value":"0"},{"name":"FIREPLACE","value":"1"},{"name":"FIREPLACECOUNT","value":"3"},{"name":"ACCESSIBILITYHANDICAPFLAG","value":"0"},{"name":"ESCALATORFLAG","value":"0"},{"name":"CONTENTSOUNDSYSTEMFLAG","value":"0"},{"name":"WETBARFLAG","value":"0"},{"name":"STRUCTURESTYLE","value":"17"},{"name":"EXTERIOR1CODE","value":"0A"},{"name":"CONTENTSTORMSHUTTERFLAG","value":"0"},{"name":"CONTENTOVERHEADDOORFLAG","value":"0"},{"name":"VIEWDESCRIPTION","value":"0"},{"name":"PORCHAREA","value":"0"},{"name":"PATIOAREA","value":"0"},{"name":"DECKFLAG","value":"0"},{"name":"DECKAREA","value":"160"},{"name":"PARKINGRVPARKINGFLAG","value":"0"},{"name":"PARKINGSPACECOUNT","value":"0"},{"name":"DRIVEWAYAREA","value":"0"},{"name":"POOL","value":"999"},{"name":"POOLAREA","value":"480"},{"name":"TOPOGRAPHYCODE","value":"0"},{"name":"FENCEAREA","value":"0"},{"name":"COURTYARDFLAG","value":"0"},{"name":"ARBORPERGOLAFLAG","value":"0"},{"name":"GOLFCOURSEGREENFLAG","value":"0"},{"name":"TENNISCOURTFLAG","value":"0"},{"name":"SPORTSCOURTFLAG","value":"0"},{"name":"ARENAFLAG","value":"0"},{"name":"WATERFEATUREFLAG","value":"0"},{"name":"PONDFLAG","value":"0"},{"name":"BOATLIFTFLAG","value":"0"},{"name":"BUILDINGSCOUNT","value":"2"},{"name":"BATHHOUSEFLAG","value":"0"},{"name":"BOATACCESSFLAG","value":"0"},{"name":"BOATHOUSEFLAG","value":"0"},{"name":"CABINFLAG","value":"0"},{"name":"GREENHOUSEFLAG","value":"0"},{"name":"GUESTHOUSEFLAG","value":"0"},{"name":"KENNELFLAG","value":"0"},{"name":"LOADINGPLATFORMFLAG","value":"0"},{"name":"MILKHOUSEFLAG","value":"0"},{"name":"OUTDOORKITCHENFIREPLACEFLAG","value":"0"},{"name":"POOLHOUSEFLAG","value":"0"},{"name":"POULTRYHOUSEFLAG","value":"0"},{"name":"QUONSETFLAG","value":"0"},{"name":"SHEDCODE","value":"0"},{"name":"SILOFLAG","value":"0"},{"name":"STABLEFLAG","value":"0"},{"name":"STORAGEBUILDINGFLAG","value":"0"},{"name":"POLESTRUCTUREFLAG","value":"0"},{"name":"PUBLICATIONDATE","value":"2026-01-14"},{"name":"PARCELSHELLRECORD","value":"0"},{"name":"DBCREATEDATE","value":"2025-02-11 12:52"},{"name":"DBUPDATEDATE","value":"2026-01-14 06:54"}],"avm":[{"name":"ATTOMID","value":"23651588"},{"name":"CONFIDENCESCORE","value":"90"},{"name":"CREATEDATE","value":"2026-10-02"},{"name":"ESTIMATEDMAXVALUE","value":"6511856"},{"name":"ESTIMATEDMINVALUE","value":"5338412"},{"name":"ESTIMATEDVALUE","value":"5925134"},{"name":"FSD","value":"10"},{"name":"LASTUPDATEDATE","value":"2026-10-02"},{"name":"PUBLICATIONDATE","value":"2026-10-03"},{"name":"VALUATIONDATE","value":"2026-09-24"},{"name":"SNOWFLAKECREATEDATE","value":"2026-10-03 04:11"},{"name":"SNOWFLAKEUPDATEDATE","value":"2026-10-03 04:11"}],"parcel":{"latlngs":[[44.040356,-121.377633],[44.0403565,-121.3775685],[44.040358,-121.377504],[44.042399,-121.3776005],[44.0422535,-121.3791725],[44.0416125,-121.3807625],[44.04157,-121.380725],[44.0415315,-121.3806895],[44.041493,-121.380653],[44.041455,-121.3806155],[44.041418,-121.3805775],[44.041381,-121.380538],[44.0413445,-121.380498],[44.041309,-121.380457],[44.0412735,-121.3804155],[44.0412385,-121.380373],[44.0412045,-121.3803295],[44.0411705,-121.380285],[44.0411375,-121.38024],[44.04110499999999,-121.380194],[44.041073,-121.3801475],[44.0410415,-121.3801],[44.0410105,-121.380052],[44.0409805,-121.380003],[44.040951,-121.3799535],[44.04092199999999,-121.379903],[44.0408935,-121.379852],[44.040866,-121.3798005],[44.040839,-121.379748],[44.0408125,-121.379695],[44.04078699999999,-121.3796415],[44.040762,-121.379587],[44.0407375,-121.379532],[44.040714,-121.3794765],[44.040691,-121.3794205],[44.040669,-121.379364],[44.0406475,-121.379307],[44.04062649999999,-121.3792495],[44.0406065,-121.3791915],[44.0405875,-121.379133],[44.040569,-121.379074],[44.040551,-121.3790145],[44.040534,-121.3789545],[44.0405175,-121.378894],[44.040502,-121.3788335],[44.0404875,-121.3787725],[44.0404735,-121.378711],[44.04046,-121.3786495],[44.0404475,-121.3785875],[44.040436,-121.378525],[44.040425,-121.3784625],[44.040415,-121.3783995],[44.0404055,-121.3783365],[44.040397,-121.3782735],[44.0403895,-121.37821],[44.0403825,-121.378146],[44.0403765,-121.3780825],[44.040371,-121.3780185],[44.0403665,-121.3779545],[44.040363,-121.37789],[44.04036,-121.377826],[44.040358,-121.3777615],[44.0403565,-121.377697],[44.040356,-121.377633]],"ids":["750c2ec874153e7df7b1f7c925d14080","d25cd29d7ed707b8c3372b2934f7678f"],"srcs":["bd1da34d-fa57-4990-8260-bbf4e8fb4cb1","1acfab37-1d09-44aa-bc13-c70891d578cb"],"created":"2026-10-16 13:51","apn":"181102C000600","lat":44.041363,"lng":-121.379035}};
+const byName = Object.fromEntries(DATA.assessor.map(f => [f.name, f.value]));
+const avm = Object.fromEntries(DATA.avm.map(f => [f.name, f.value]));
+
+function money(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return n || "—";
+  return x.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+}
+function num(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return n || "—";
+  return x.toLocaleString("en-US");
+}
+function field(name) { return byName[name] || "—"; }
+
+document.getElementById("attom").textContent = field("ATTOMID");
+document.getElementById("account").textContent = field("PARCELACCOUNTNUMBER");
+
+function card(title, rows) {
+  const body = rows.map(([k, v]) => `<div class="row"><span>${k}</span><b>${v}</b></div>`).join("");
+  return `<div class="card"><h2>${title}</h2>${body}</div>`;
+}
+
+const avmValue = money(avm.ESTIMATEDVALUE);
+const avmRange = money(avm.ESTIMATEDMINVALUE) + " – " + money(avm.ESTIMATEDMAXVALUE);
+document.getElementById("cards").innerHTML = [
+  `<div class="card"><h2>AVM · ${avm.VALUATIONDATE || ""}</h2>
+     <div class="value">${avmValue}</div>
+     <div class="sub">${avmRange}</div>
+     <div class="row"><span>FSD</span><b>${avm.FSD}%</b></div>
+     <div class="row"><span>Confidence</span><b>${avm.CONFIDENCESCORE}</b></div>
+     <p class="note">No row in the one-year AVM history for this ATTOM ID. This is the only valuation date in the share.</p>
+   </div>`,
+  card("Owners", [
+    ["Owner 1", field("PARTYOWNER1NAMEFULL")],
+    ["Owner 2", field("PARTYOWNER2NAMEFULL")],
+    ["Occupied", field("STATUSOWNEROCCUPIEDFLAG") === "1" ? "Yes" : field("STATUSOWNEROCCUPIEDFLAG")],
+    ["Mailing", field("CONTACTOWNERMAILADDRESSFULL")],
+  ]),
+  card("Building", [
+    ["Year built", field("YEARBUILT")],
+    ["Building area", num(field("AREABUILDING")) + " sq ft"],
+    ["First floor", num(field("AREA1STFLOOR")) + " sq ft"],
+    ["Second floor", num(field("AREA2NDFLOOR")) + " sq ft"],
+    ["Garage", num(field("PARKINGGARAGEAREA")) + " sq ft"],
+    ["Beds / baths", field("BEDROOMSCOUNT") + " / " + field("BATHCOUNT")],
+    ["Stories", field("STORIESCOUNT")],
+    ["Buildings", field("BUILDINGSCOUNT")],
+    ["Pool", num(field("POOLAREA")) + " sq ft"],
+    ["Deck", num(field("DECKAREA")) + " sq ft"],
+    ["Use", field("PROPERTYUSEGROUP") + " · code " + field("PROPERTYUSESTANDARDIZED")],
+  ]),
+  card("Tax · " + field("TAXYEARASSESSED"), [
+    ["Assessed", money(field("TAXASSESSEDVALUETOTAL"))],
+    ["Market", money(field("TAXMARKETVALUETOTAL"))],
+    ["Market, improvements", money(field("TAXMARKETVALUEIMPROVEMENTS"))],
+    ["Market, land", money(field("TAXMARKETVALUELAND"))],
+    ["Tax bill", money(field("TAXBILLEDAMOUNT"))],
+    ["Roll updated", field("LASTASSESSORTAXROLLUPDATE")],
+  ]),
+  card("Sales on the roll", [
+    ["Last sale", field("DEEDLASTSALEDATE") + " · " + money(field("DEEDLASTSALEPRICE"))],
+    ["Document", field("DEEDLASTDOCUMENTNUMBER")],
+    ["Prior sale", field("ASSESSORPRIORSALEDATE") + " · " + money(field("ASSESSORPRIORSALEAMOUNT"))],
+  ]),
+  card("Lot", [
+    ["Acres", field("AREALOTACRES")],
+    ["Lot sq ft", num(field("AREALOTSF"))],
+    ["Subdivision", field("LEGALSUBDIVISION")],
+    ["Lot", field("LEGALLOTNUMBER1")],
+    ["Section / township / range", field("LEGALSECTION") + " / " + field("LEGALTOWNSHIP") + " / " + field("LEGALRANGE")],
+    ["Parcel copies", "2 identical rings"],
+    ["Geometry loaded", DATA.parcel.created],
+  ]),
+].join("");
+
+const tbody = document.getElementById("fields");
+const count = document.getElementById("count");
+function draw(q) {
+  const query = q.trim().toLowerCase();
+  const rows = DATA.assessor.filter(f => !query || (f.name + " " + f.value).toLowerCase().includes(query));
+  tbody.innerHTML = rows.map(f => `<tr><td class="name">${f.name}</td><td>${f.value}</td></tr>`).join("");
+  count.textContent = rows.length + " of " + DATA.assessor.length;
+}
+document.getElementById("q").addEventListener("input", e => draw(e.target.value));
+draw("");
+
+const MAPS_KEY = "AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI";
+
+function initMap() {
+  const path = DATA.parcel.latlngs.map(function (p) { return { lat: p[0], lng: p[1] }; });
+  const bounds = new google.maps.LatLngBounds();
+  path.forEach(function (p) { bounds.extend(p); });
+  const map = new google.maps.Map(document.getElementById("map"), {
+    mapTypeId: "hybrid",
+    tilt: 0,
+    rotateControl: false,
+    mapTypeControl: true,
+    streetViewControl: false,
+    fullscreenControl: true
+  });
+  map.setTilt(0);
+  map.fitBounds(bounds, 28);
+  google.maps.event.addListenerOnce(map, "idle", function () { map.setTilt(0); });
+  const lot = new google.maps.Polygon({
+    paths: path,
+    strokeColor: "#2f6f4e",
+    strokeWeight: 2,
+    fillColor: "#2f6f4e",
+    fillOpacity: 0.18,
+    map: map
+  });
+  const info = new google.maps.InfoWindow();
+  lot.addListener("click", function (e) {
+    info.setContent("Taxlot 181102C000600<br>Two ATTOM source ids, one ring.");
+    info.setPosition(e.latLng);
+    info.open(map);
+  });
+  function dot(lat, lng, stroke, fill, title, html) {
+    const marker = new google.maps.Marker({
+      position: { lat: lat, lng: lng },
+      map: map,
+      title: title,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: fill,
+        fillOpacity: 1,
+        strokeColor: stroke,
+        strokeWeight: 2
+      }
+    });
+    marker.addListener("click", function () {
+      info.setContent(html);
+      info.open(map, marker);
+    });
+  }
+  dot(Number(field("LATITUDE")), Number(field("LONGITUDE")), "#8c4a2f", "#e7b89a", "Assessor point",
+    "Assessor point<br>" + field("LATITUDE") + ", " + field("LONGITUDE"));
+  dot(DATA.parcel.lat, DATA.parcel.lng, "#1c1915", "#ffffff", "Parcel centroid", "Parcel centroid");
+}
+
+function loadGoogleMaps() {
+  const el = document.getElementById("map");
+  window.__attomMapsReady = function () { initMap(); };
+  window.gm_authFailure = function () {
+    el.textContent = "Google Maps rejected the key for this page. Open the viewer from localhost.";
+  };
+  const s = document.createElement("script");
+  s.src = "https://maps.googleapis.com/maps/api/js?key=" + encodeURIComponent(MAPS_KEY) + "&callback=__attomMapsReady&v=weekly";
+  s.async = true;
+  s.onerror = function () { el.textContent = "Google Maps did not load."; };
+  document.head.appendChild(s);
+}
+loadGoogleMaps();
+</script>
+</body>
+</html>
