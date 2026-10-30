@@ -53,6 +53,20 @@
     transition: transform 0.28s ease;
   }
   #tab-rail.shifted { transform: translateX(calc(-1 * var(--panel-w))); }
+  #source-rail {
+    display: none;
+    position: fixed; top: 16px; left: 16px; z-index: 60;
+    flex-direction: column; align-items: flex-start; gap: 8px;
+  }
+  #source-rail button {
+    background: #12161b; color: #d5dbe3; border: 1px solid #3a4450;
+    font-family: monospace; font-size: 12.5px; font-weight: 700;
+    letter-spacing: 0.1em; padding: 10px 18px; border-radius: 6px;
+    cursor: pointer;
+  }
+  #source-rail button.on {
+    background: #143024; color: #b6f3c8; border-color: #3ecf8e;
+  }
   .dp-head {
     padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
     flex-shrink: 0; display: flex; align-items: flex-start; gap: 8px;
@@ -753,6 +767,10 @@
   <div id="ortho-pins"></div>
   <div id="ortho-hint">drag to pan · wheel to zoom · ORTHO again for the model</div>
 </div>
+<div id="source-rail">
+  <button id="src-original" class="on" onclick="selectSource('original')">V1</button>
+  <button id="src-spray" onclick="selectSource('spray')">V2</button>
+</div>
 <div id="tab-rail">
   <button id="live-tab" onclick="toggleLiveMode()">LIVE FEED</button>
   <button id="ortho-tab" onclick="toggleOrthoMode()">ORTHO</button>
@@ -865,6 +883,24 @@ const { DRACOLoader }    = await import(`${BASE}/loaders/DRACOLoader.js`);
 const { OrbitControls }  = await import(`${BASE}/controls/OrbitControls.js`);
 // ── URL param ─────────────────────────────────────────────────────────
 const params  = new URLSearchParams(window.location.search);
+// /hole17 keeps the address bar short. The two captures, their orthophotos,
+// and the pin placement live here instead of in a long query string.
+if (window.location.pathname.replace(/\/+$/, '') === '/hole17' || params.get('set') === 'hole17') {
+  const hole17 = {
+    model: '/awbrey-hole17/hole17.glb',
+    ortho: '/awbrey-hole17/ortho.jpg',
+    pinOrigin: '631743.0902,4882759.7681,1104.2014',
+    model2: '/awbrey-hole17/hole17-spray.glb',
+    ortho2: '/awbrey-hole17/ortho-spray.jpg',
+    pinOrigin2: '631753.4059,4882696.1237,1104.1172',
+    orthoGeo2: '631686.0005192161,4882813.0193606,0.03',
+    pins: '/awbrey-hole17/sprinklers.geojson',
+    gw: '0'
+  };
+  Object.keys(hole17).forEach(function (key) {
+    if (!params.get(key)) params.set(key, hole17[key]);
+  });
+}
 let glbUrl  = params.get('model');
 // ── Optional property record ──────────────────────────────────────────
 // `?model=<glb>` plus headless capture params is unchanged. `?property=<id>`
@@ -1012,6 +1048,7 @@ if (autocapture) {
   document.getElementById('live-tab').style.display = 'none';
   document.getElementById('ortho-tab').style.display = 'none';
   document.getElementById('pins-tab').style.display = 'none';
+  document.getElementById('source-rail').style.display = 'none';
 }
 // Same axis convention as positionCameraForDefaultView below: Z-up,
 // +Y = north, +X = east (confirmed by the existing default view's
@@ -1209,7 +1246,9 @@ loader.setDRACOLoader(dracoLoader);
 // Filled once the GLB is in the scene; the directions layer needs all three
 // to drape a route (raycast origin height, tube radius, marker size).
 let modelRoot = null, modelBox = null, modelSpan = 0;
+let modelLoadToken = 0;
 function startModelLoad(url) {
+  const token = ++modelLoadToken;
   if (!url) {
     showErr(propertyId
       ? 'This property has no GLB. The view record needs viewer360 with model=.'
@@ -1220,6 +1259,8 @@ function startModelLoad(url) {
   loader.load(
   url,
   function(gltf) {
+    if (token !== modelLoadToken) return;
+    if (modelRoot) scene.remove(modelRoot);
     const model = gltf.scene;
     model.traverse(function (o) {
       if (!o.isMesh) return;
@@ -3387,9 +3428,69 @@ window.toggleOrthoMode = function () {
   }, { passive: false });
 })();
 const pinsUrl = params.get('pins');
-const pinOrigin = (params.get('pinOrigin') || '').split(',').map(Number);
+function parseOrthoGeo(raw) {
+  if (!raw) return null;
+  const parts = raw.split(',').map(Number);
+  if (parts.length < 3 || parts.some(function (n) { return !isFinite(n); })) return null;
+  return parts;
+}
+function addCaptureSource(id, modelKey, orthoKey, originKey, geoKey) {
+  const model = params.get(modelKey);
+  if (!model) return;
+  captureSources.push({
+    id: id,
+    model: model,
+    ortho: params.get(orthoKey) || '',
+    origin: (params.get(originKey) || '').split(',').map(Number),
+    geo: parseOrthoGeo(params.get(geoKey))
+  });
+}
+const captureSources = [];
+addCaptureSource('original', 'model', 'ortho', 'pinOrigin', 'orthoGeo');
+addCaptureSource('spray', 'model2', 'ortho2', 'pinOrigin2', 'orthoGeo2');
+let activeCapture = captureSources[0] || null;
+let pinOrigin = activeCapture ? activeCapture.origin.slice() : (params.get('pinOrigin') || '').split(',').map(Number);
 let proposedPins = [];
 let pinsOn = true;
+function pinPixel(pin) {
+  const geo = activeCapture && activeCapture.geo;
+  if (!geo) return pin.pixel;
+  return [
+    (pin.utm_easting - geo[0]) / geo[2],
+    (geo[1] - pin.utm_northing) / geo[2]
+  ];
+}
+function clearModelPins() {
+  while (pinGroup.children.length) pinGroup.remove(pinGroup.children[0]);
+}
+window.selectSource = function (id) {
+  const next = captureSources.filter(function (source) { return source.id === id; })[0];
+  if (!next || (activeCapture && next.id === activeCapture.id)) return;
+  activeCapture = next;
+  pinOrigin = next.origin.slice();
+  const originalBtn = document.getElementById('src-original');
+  const sprayBtn = document.getElementById('src-spray');
+  if (originalBtn) originalBtn.classList.toggle('on', id === 'original');
+  if (sprayBtn) sprayBtn.classList.toggle('on', id === 'spray');
+  clearModelPins();
+  const layer = document.getElementById('ortho-pins');
+  if (layer) layer.innerHTML = '';
+  proposedPins.forEach(function (pin) { pin._el = null; });
+  document.getElementById('loading').classList.remove('hidden');
+  const img = document.getElementById('ortho-img');
+  if (next.ortho && img) {
+    const apply = function () {
+      if (document.getElementById('ortho-mode').classList.contains('open')) fitOrtho();
+      else placeOrthoPins();
+    };
+    if (img.getAttribute('src') === next.ortho && img.naturalWidth) apply();
+    else {
+      img.onload = function () { img.onload = null; apply(); };
+      img.src = next.ortho;
+    }
+  }
+  startModelLoad(next.model);
+};
 function placeOrthoPins() {
   const layer = document.getElementById('ortho-pins');
   if (!layer || !proposedPins.length) return;
@@ -3409,9 +3510,10 @@ function placeOrthoPins() {
     });
   }
   proposedPins.forEach(function (pin) {
-    if (!pin._el || !pin.pixel) return;
-    pin._el.style.left = (orthoX + pin.pixel[0] * orthoScale) + 'px';
-    pin._el.style.top = (orthoY + pin.pixel[1] * orthoScale) + 'px';
+    const px = pinPixel(pin);
+    if (!pin._el || !px) return;
+    pin._el.style.left = (orthoX + px[0] * orthoScale) + 'px';
+    pin._el.style.top = (orthoY + px[1] * orthoScale) + 'px';
   });
 }
 function scalePinMarkers() {
@@ -4777,6 +4879,9 @@ if (!autocapture && propertyId && !GW_OFF && !embedded) {
   document.getElementById('live-tab').style.display = 'block';
 }
 const orthoUrl = params.get('ortho');
+if (!autocapture && params.get('model2')) {
+  document.getElementById('source-rail').style.display = 'flex';
+}
 if (!autocapture && orthoUrl) {
   document.getElementById('ortho-tab').style.display = 'block';
   document.getElementById('ortho-img').src = orthoUrl;
