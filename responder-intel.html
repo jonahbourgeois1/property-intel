@@ -712,6 +712,25 @@
   #immersive-overlay.visible { display: flex; }
   #immersive-overlay.panel-hidden { right: 0; }
   #immersive-frame { flex: 1; position: relative; background: #000; }
+  #nomap-embed {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    background: #faf8f4;
+  }
+  #nomap-embed.visible { display: flex; }
+  #nomap-embed p {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 500;
+    color: #2c2c2c;
+    text-align: center;
+    line-height: 1.4;
+  }
   #matterport-iframe { width: 100%; height: 100%; border: none; display: none; }
   #matterport-iframe.visible { display: block; }
   #street-view-div { width: 100%; height: 100%; display: none; }
@@ -812,38 +831,9 @@
     #immersive-overlay { right: 0; }
   }
 
-  /* Missing drone record: cover the page instead of GitHub's 404. */
-  #page-nomap {
-    display: none;
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    background: #faf8f4;
-    align-items: center;
-    justify-content: center;
-    padding: 32px;
-  }
-  #page-nomap.visible { display: flex; }
-  #page-nomap p {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 22px;
-    font-weight: 500;
-    color: #2c2c2c;
-    text-align: center;
-    line-height: 1.4;
-  }
-  /* Property links stay blank until the record resolves, so a missing
-     file does not flash the marketing page before the message. */
-  html.await-property #page-landing,
-  html.await-property #tab-nav { visibility: hidden; }
-
 </style>
-<script>
-if (new URLSearchParams(location.search).get('property')) document.documentElement.classList.add('await-property');
-</script>
 </head>
 <body>
-<div id="page-nomap"><p>No drone mapping available</p></div>
 <!-- ── Navigation ── -->
 <nav id="tab-nav">
   <img src="Vyanet_Responder_Intel.png" alt="Vyanet Responder Intel" class="nav-logo">
@@ -1002,7 +992,7 @@ if (new URLSearchParams(location.search).get('property')) document.documentEleme
         <div class="status-dot"></div>
         <span id="viewer-toggle-label">View Intel</span>
       </button>
-      <div id="viewer-version">v2.5.5 — Responder Intel</div>
+      <div id="viewer-version">v2.5.6 — Responder Intel</div>
     </div>
   </div>
   <!-- viewer body -->
@@ -1010,6 +1000,7 @@ if (new URLSearchParams(location.search).get('property')) document.documentEleme
     <div id="viewer-map"></div>
     <div id="immersive-overlay">
       <div id="immersive-frame">
+        <div id="nomap-embed"><p>No drone mapping available</p></div>
         <div id="street-view-div"></div>
         <iframe id="matterport-iframe" allowfullscreen allow="xr-spatial-tracking; fullscreen; accelerometer; gyroscope; magnetometer"></iframe>
       </div>
@@ -1056,7 +1047,7 @@ if (new URLSearchParams(location.search).get('property')) document.documentEleme
 
 <script>
 // ── Constants ──────────────────────────────────────────────────────────────
-const VERSION      = 'v2.5.5';
+const VERSION      = 'v2.5.6';
 const BASE_URL    = 'https://responder-intel.vyanet.com/data/responder-drone/';
 const DATA_ROOT   = 'https://responder-intel.vyanet.com/data/';
 const PARCEL_BASE  = 'https://raw.githubusercontent.com/jonahbourgeois1/property-intel/main/data/parcels/';
@@ -1392,8 +1383,13 @@ function updateGroundBanner() {
     b.querySelector('.ground-exit').onclick = djiViewerActive ? exitDjiViewer : exitImmersive;
   } else { b.style.display = 'none'; }
 }
+function hideNoDroneMapping() {
+  var el = document.getElementById('nomap-embed');
+  if (el) el.classList.remove('visible');
+}
 function exitImmersive() {
   document.getElementById('immersive-overlay').classList.remove('visible');
+  hideNoDroneMapping();
   document.getElementById('matterport-iframe').src = '';
   document.getElementById('matterport-iframe').classList.remove('visible');
   document.getElementById('street-view-div').classList.remove('visible');
@@ -1404,14 +1400,28 @@ function exitImmersive() {
 }
 function exitDjiViewer() {
   document.getElementById('immersive-overlay').classList.remove('visible');
+  hideNoDroneMapping();
   document.getElementById('matterport-iframe').src = '';
   document.getElementById('matterport-iframe').classList.remove('visible');
   activeMarkers.forEach(function(m) { m.setMap(map); });
   djiViewerActive = false; updateGroundBanner();
 }
 function showNoDroneMapping() {
-  var el = document.getElementById('page-nomap');
+  hideNoDroneMapping();
+  document.getElementById('immersive-overlay').classList.add('visible');
+  document.getElementById('immersive-overlay').classList.toggle('panel-hidden', !viewerPanelOpen);
+  document.getElementById('matterport-iframe').src = 'about:blank';
+  document.getElementById('matterport-iframe').classList.remove('visible');
+  document.getElementById('street-view-div').classList.remove('visible');
+  var el = document.getElementById('nomap-embed');
   if (el) el.classList.add('visible');
+  activeMarkers.forEach(function(m) { m.setMap(null); });
+  djiViewerActive = true;
+  updateGroundBanner();
+}
+function droneViewUrl(url) {
+  var v = String(url || '').trim();
+  return /^https?:\/\//i.test(v) ? v : '';
 }
 function isSiteUrl(url) {
   var abs;
@@ -1423,16 +1433,18 @@ function isSiteUrl(url) {
     || host === window.location.hostname.toLowerCase();
 }
 async function showDjiViewer() {
-  if (!currentData || !currentData.viewer360) { showNoDroneMapping(); return; }
-  if (isSiteUrl(currentData.viewer360)) {
+  var url = currentData && droneViewUrl(currentData.viewer360);
+  if (url && isSiteUrl(url)) {
     try {
-      var probe = await fetch(currentData.viewer360, { method: 'HEAD' });
-      if (probe.status === 404) { showNoDroneMapping(); return; }
-    } catch (e) { /* leave the viewer URL to load in the frame */ }
+      var probe = await fetch(url, { method: 'HEAD' });
+      if (probe.status === 404) url = '';
+    } catch (e) { /* leave a reachable viewer URL to load in the frame */ }
   }
+  if (!url) { showNoDroneMapping(); return; }
+  hideNoDroneMapping();
   document.getElementById('immersive-overlay').classList.add('visible');
   document.getElementById('immersive-overlay').classList.toggle('panel-hidden', !viewerPanelOpen);
-  document.getElementById('matterport-iframe').src = currentData.viewer360;
+  document.getElementById('matterport-iframe').src = url;
   document.getElementById('matterport-iframe').classList.add('visible');
   document.getElementById('street-view-div').classList.remove('visible');
   activeMarkers.forEach(function(m) { m.setMap(null); });
@@ -1555,8 +1567,7 @@ async function initViewer() {
     setViewerLoading('Loading property data...');
     if (!propertyPromise) propertyPromise = loadPropertyData();
     const d = await propertyPromise;
-    if (!d) { showNoDroneMapping(); return; }
-    document.documentElement.classList.remove('await-property');
+    if (!d) { showViewerError('Property not found. (' + hash.substring(0,8) + '...)'); return; }
     currentData = d;
     setNavProperty(d.name);
     dbg('Property loaded: ' + (d.name || hash), 'ok');
@@ -1568,10 +1579,7 @@ async function initViewer() {
     buildTabContent(d, 'imagery');
     if (mapsApiReady) { resolveAndInitMap(d); }
     else { pendingEntry = d; }
-  } catch(e) {
-    document.documentElement.classList.remove('await-property');
-    showViewerError('Failed to load: ' + e.message);
-  }
+  } catch(e) { showViewerError('Failed to load: ' + e.message); }
 }
 
 window.initGoogleMaps = function() {
@@ -1587,14 +1595,8 @@ window.initGoogleMaps = function() {
   if (!getPropertyHash()) return;
   propertyPromise = loadPropertyData();
   propertyPromise.then(function (d) {
-    if (!d) { showNoDroneMapping(); return; }
-    document.documentElement.classList.remove('await-property');
-    currentData = d;
-    setNavProperty(d.name);
-  }).catch(function (e) {
-    document.documentElement.classList.remove('await-property');
-    dbg('Preload failed: ' + e.message, 'error');
-  });
+    if (d) { currentData = d; setNavProperty(d.name); }
+  }).catch(function (e) { dbg('Preload failed: ' + e.message, 'error'); });
 })();
 </script>
 <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD2tWrnRhCaicAwtp_32xe5zG5YGuntfuI&callback=initGoogleMaps"></script>
