@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Highlands SAFE: Nearmap survey compare (internal)</title>
+<style>body{font-family:Jost,Arial,sans-serif;background:#0f0f0e;color:#ece8df;margin:0;padding:24px}h1{font-weight:400;letter-spacing:.1em;text-transform:uppercase;font-size:22px}
+.spot{margin:28px 0;padding:16px;background:#181816;border-left:4px solid #C9A96E}.cmp{position:relative;display:inline-block;max-width:100%;user-select:none}
+.cmp img{display:block;max-width:100%}.cmp .top{position:absolute;top:0;left:0;overflow:hidden;height:100%}.cmp .top img{max-width:none}
+.bar{position:absolute;top:0;bottom:0;width:2px;background:#fff;box-shadow:0 0 4px #000}.lab{position:absolute;top:6px;padding:2px 6px;background:rgba(0,0,0,.6);font-size:13px}
+select,input{margin:6px 8px 6px 0}.mut{color:#a9a396;font-size:14px}</style></head><body>
+<h1>Nearmap survey compare: Highlands (internal review)</h1>
+<p class="mut">Nearmap vertical imagery, cached locally, with no live calls. Pick two survey dates and drag the slider. North is up. Anything seen here is visible in imagery only and must be verified on site.</p>
+<div id="app"></div>
+<script>const S=[{"id": "forest-edge", "label": "West forest edge next to priority lot 1 (USFS land)", "lat": 44.0476, "lng": -121.3842, "z": 19, "cols": 4, "rows": 4, "x0": 85363, "y0": 190543, "dates": ["2018-08-31", "2021-05-12", "2024-06-23", "2026-07-02"], "note": "Tree cover and the forest track on the national forest side of the west edge. Compare stand density across dates; any thinning is visible in imagery only, so verify with the USFS treatment records."}, {"id": "north-gate", "label": "North entry (gatehouse)", "lat": 44.05102, "lng": -121.36454, "z": 20, "cols": 3, "rows": 3, "x0": 170787, "y0": 381075, "dates": ["2018-08-31", "2021-05-12", "2024-06-23", "2026-07-02"], "note": "Gatehouse island and both lanes. Vegetation on the island grows in over time. Gate hardware is not resolved from overhead imagery, so verify on site."}, {"id": "south-gate", "label": "South entry", "lat": 44.04436, "lng": -121.36658, "z": 20, "cols": 3, "rows": 3, "x0": 170781, "y0": 381102, "dates": ["2018-08-31", "2021-05-12", "2024-06-23", "2026-07-02"], "note": "Skyline Ranch Rd junction at the south entry (OSM gate point is near the frame centre). Gate panels or arms are not resolved overhead, so verify on site."}, {"id": "pond", "label": "Common pond", "lat": 44.04329, "lng": -121.37532, "z": 19, "cols": 3, "rows": 3, "x0": 85377, "y0": 190552, "dates": ["2018-08-31", "2021-05-12", "2024-06-23", "2026-07-02", "2025-08-14"], "note": "Common pond. Water extent and colour change between surveys (2025-08-14 added as a late-summer comparison). This says nothing about draft access."}, {"id": "lot-1", "label": "Priority lot 1 (AI test lot)", "lat": 44.04756, "lng": -121.38239, "z": 20, "cols": 4, "rows": 3, "x0": 170734, "y0": 381089, "dates": ["2018-08-31", "2021-05-12", "2024-06-23", "2026-07-02"], "note": "Priority lot 1 house and yard (built 2017). Lawn and planting fill in around the house after 2018."}];
+const app=document.getElementById('app');
+S.forEach(s=>{const d=document.createElement('div');d.className='spot';
+const opts=s.dates.map(x=>`<option>${x}</option>`).join('');
+d.innerHTML=`<h3>${s.label}</h3><div class="mut">${s.note} · centre ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)} · zoom ${s.z}</div>
+Left <select class="a">${opts}</select> Right <select class="b">${opts}</select> <input type="range" min="0" max="100" value="50" class="r">
+<div class="cmp"><img class="base"><div class="top"><img class="ti"></div><div class="bar"></div><span class="lab la" style="left:6px"></span><span class="lab lb" style="right:6px"></span></div>`;
+app.appendChild(d);const a=d.querySelector('.a'),b=d.querySelector('.b'),r=d.querySelector('.r');a.value=s.dates[0];b.value=s.dates[s.dates.length-1].startsWith('2025')?'2026-07-02':s.dates[s.dates.length-1];
+const base=d.querySelector('.base'),ti=d.querySelector('.ti'),top=d.querySelector('.top'),bar=d.querySelector('.bar');
+function src(){base.src=`img/${s.id}-${b.value}.jpg`;ti.src=`img/${s.id}-${a.value}.jpg`;d.querySelector('.la').textContent=a.value;d.querySelector('.lb').textContent=b.value;}
+function up(){const w=base.clientWidth||base.naturalWidth;ti.style.width=w+'px';top.style.width=(r.value/100*w)+'px';bar.style.left=(r.value/100*w)+'px';}
+a.onchange=b.onchange=src;r.oninput=up;base.onload=up;window.addEventListener('resize',up);src();});
+</script></body></html>
