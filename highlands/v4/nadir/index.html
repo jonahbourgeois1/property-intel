@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>The Highlands | Aerial Viewer</title>
+<style>
+  html,body{margin:0;height:100%;background:#111;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}
+  header{position:fixed;top:0;left:0;right:0;height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;background:#0b2540;box-shadow:0 2px 6px rgba(0,0,0,.4);z-index:10}
+  header h1{font-size:19px;margin:0;font-weight:600;letter-spacing:.2px}
+  header .sub{font-size:13px;opacity:.8}
+  #viewer{position:absolute;top:52px;left:0;right:0;bottom:0;background:#1b1b1b}
+  .hint{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.65);padding:6px 14px;border-radius:16px;font-size:13px;z-index:10;pointer-events:none;transition:opacity 1s}
+  .north{position:fixed;top:66px;right:16px;z-index:10;background:rgba(255,255,255,.9);color:#0b2540;width:38px;height:38px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;font-size:12px;line-height:1;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .north span{font-size:15px}
+  .mk{width:34px;height:34px;margin:0;border-radius:50%;border:4px solid #ff2d2d;box-shadow:0 0 0 2px #fff,0 0 10px rgba(0,0,0,.6);box-sizing:border-box;pointer-events:none;animation:mkp 1.6s ease-out 3}
+  .mk span{position:absolute;left:38px;top:4px;background:#ff2d2d;color:#fff;font-size:12px;font-weight:700;padding:2px 6px;border-radius:4px;white-space:nowrap}
+  @keyframes mkp{0%{transform:scale(2.2);opacity:.2}100%{transform:scale(1);opacity:1}}
+</style>
+</head>
+<body>
+<header>
+  <h1>The Highlands</h1>
+  <div class="sub">SAFE Assessment &middot; Overhead view &middot; imagery: colleague v4 review, overhead survey July 2, 2026</div>
+</header>
+<div id="viewer"></div>
+<div class="north" title="North is up"><span>&#9650;</span>N</div>
+<div class="hint" id="hint">Scroll or pinch to zoom &middot; Drag to move &middot; Home resets the view</div>
+<script>
+  if (/[?&]embed=1/.test(location.search)) {
+    document.write('<style>header{display:none}#viewer{top:0}.north{top:14px}</style>');
+  }
+</script>
+<script src="../lib/openseadragon.min.js"></script>
+<script>
+  var viewer = OpenSeadragon({
+    id: "viewer",
+    prefixUrl: "../lib/images/",
+    tileSources: "nadir.dzi",
+    showNavigator: true,
+    navigatorPosition: "BOTTOM_RIGHT",
+    showRotationControl: false,
+    showFullPageControl: true,
+    showHomeControl: true,
+    showZoomControl: true,
+    maxZoomPixelRatio: 3,
+    visibilityRatio: 0.5,
+    constrainDuringPan: true,
+    animationTime: 0.6,
+    zoomPerScroll: 1.3,
+    gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true },
+    gestureSettingsTouch: { pinchToZoom: true, flickEnabled: true }
+  });
+  setTimeout(function(){ document.getElementById('hint').style.opacity = 0; }, 6000);
+  // Deep links: #x=0.42&y=0.37&z=6&l=S01 (x,y normalized 0..1 across the image, north up; z = zoom, 1 = whole width)
+  function parseP(s){ var o={}; (s||'').replace(/^[#?]/,'').split('&').forEach(function(kv){ var i=kv.indexOf('='); if(i>0) o[kv.slice(0,i)]=decodeURIComponent(kv.slice(i+1)); }); return o; }
+  var mk=null, opened=false;
+  function goTo(p, now){
+    if(!opened || p.x===undefined || p.y===undefined) return;
+    var x=parseFloat(p.x), y=parseFloat(p.y), z=parseFloat(p.z||6);
+    if(!(x>=0&&x<=1&&y>=0&&y<=1)) return;
+    var sz=viewer.world.getItemAt(0).getContentSize(), pt=new OpenSeadragon.Point(x, y*sz.y/sz.x);
+    viewer.viewport.zoomTo(z, null, now); viewer.viewport.panTo(pt, now);
+    if(!mk){ mk=document.createElement('div'); mk.className='mk'; mk.id='marker'; }
+    mk.innerHTML = p.l ? '<span></span>' : ''; if(p.l) mk.firstChild.textContent=p.l;
+    mk.style.animation='none'; void mk.offsetWidth; mk.style.animation='';
+    if(viewer.getOverlayById('marker')) viewer.updateOverlay(mk, pt, OpenSeadragon.Placement.CENTER);
+    else viewer.addOverlay({element:mk, location:pt, placement:OpenSeadragon.Placement.CENTER, checkResize:false});
+    document.getElementById('hint').style.opacity = 0;
+  }
+  function fromUrl(now){ var p=parseP(location.search); var h=parseP(location.hash); for(var k in h) p[k]=h[k]; goTo(p, now); }
+  viewer.addHandler('open', function(){ opened=true; fromUrl(true); });
+  window.addEventListener('hashchange', function(){ fromUrl(false); });
+  window.addEventListener('message', function(e){ if(e.origin===location.origin && e.data && e.data.goto) goTo(e.data.goto, false); });
+  window.viewerGoTo = goTo;
+</script>
+</body>
+</html>
