@@ -216,17 +216,23 @@
     .brand { min-width: 0; }
     .sub, #build { display: none; }
     .filters {
-      width: 100%; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto;
+      width: 100%; justify-content: flex-start; flex-wrap: wrap; overflow: visible;
     }
     .chip { white-space: nowrap; }
-    #q { width: 148px; flex: 0 0 auto; }
+    #q { width: 100%; flex: 1 1 160px; }
     #page { overflow: hidden; }
     #workspace { display: block; height: 100%; min-height: 0; }
     #map, #list-wrap, #detail, #ranks, footer { display: none; }
-    body[data-pane="map"] #map { display: block; height: 100%; }
+    body[data-pane="map"] #map { display: block; height: 100%; min-height: 0; }
     body[data-pane="list"] #list-wrap,
     body[data-pane="school"] #detail {
-      display: block; height: 100%; max-height: none; border: 0;
+      display: flex; flex-direction: column; height: 100%; max-height: none;
+      border: 0; overflow: hidden;
+    }
+    body[data-pane="list"] .pane-head { position: static; flex: 0 0 auto; }
+    body[data-pane="list"] #list,
+    body[data-pane="school"] #detail > * {
+      flex: 1 1 auto; min-height: 0; overflow: auto;
     }
     body[data-pane="ranks"] #page { overflow: auto; }
     body[data-pane="ranks"] #workspace { display: none; }
@@ -353,6 +359,7 @@ const state = {
 };
 
 let map = null;
+let ring = null;
 let cluster = null;
 const markers = Object.create(null);
 
@@ -878,14 +885,15 @@ function initMap() {
     maxZoom: 19
   }).addTo(map);
   const center = [DATA.center[0], DATA.center[1]];
-  L.circle(center, {
+  ring = L.circle(center, {
     radius: DATA.radiusMiles * 1609.344,
     color: "#4fd1c5",
     weight: 1,
     dashArray: "4 6",
     fillColor: "#4fd1c5",
     fillOpacity: 0.04
-  }).addTo(map).bindTooltip("10 miles from the Highlands center");
+  }).addTo(map);
+  ring.bindTooltip("10 miles from the Highlands center");
   L.marker(center, {
     icon: L.divIcon({
       className: "hoa-dot",
@@ -917,7 +925,22 @@ function initMap() {
     cluster.addLayer(marker);
   });
   map.addLayer(cluster);
-  map.fitBounds(L.latLng(center).toBounds(DATA.radiusMiles * 1609.344), { padding: [24, 24] });
+  fitMap();
+}
+
+function fitMap() {
+  if (!map || !ring) return;
+  map.invalidateSize({ animate: false });
+  const bounds = L.latLng(ring.getLatLng()).toBounds(DATA.radiusMiles * 1609.344 * 2);
+  if (isMobile()) {
+    map.fitBounds(bounds, {
+      paddingTopLeft: [16, 16],
+      paddingBottomRight: [16, 56],
+      animate: false
+    });
+  } else {
+    map.fitBounds(bounds, { padding: [24, 24], animate: false });
+  }
 }
 
 document.getElementById("build").textContent = "schools · " + BUILD;
@@ -957,19 +980,21 @@ bindClicks(document.getElementById("detail"), false);
 bindClicks(document.getElementById("rank-cols"), true);
 bindClicks(document.getElementById("compare-board"), true);
 
-initMap();
 render();
+initMap();
 document.getElementById("mobile-nav").addEventListener("click", function (event) {
   const button = event.target.closest("[data-pane]");
   if (!button) return;
   setMobilePane(button.getAttribute("data-pane"));
 });
 window.matchMedia("(max-width: 900px)").addEventListener("change", function () {
-  if (map) map.invalidateSize();
+  fitMap();
 });
 const hash = (location.hash || "").replace("#", "");
 if (BY_ID[hash]) select(hash, false);
-if (isMobile() && map) map.invalidateSize();
+requestAnimationFrame(function () {
+  if (!state.selected) fitMap();
+});
 </script>
 </body>
 </html>
