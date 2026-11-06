@@ -1,5 +1,8 @@
 /* Memory-profile wrapper around the same rendered-frame player as operators.
  * Load hls.min.js, near_live_player.js and this file before partner-player.js.
+ * Snapshot fallback is one request in flight for the viewer: at most one start
+ * per second, the least-recently-attempted stalled tile, and Retry-After on
+ * 429 or 503. Healthy HLS tiles are not snapshotted.
  */
 (function(root){
   'use strict';
@@ -8,6 +11,7 @@
       this.container=container;this.renewSession=renewSession;this.names=cameraNames;
       this.tiles=new Map();this.epoch=0;this.closed=false;this.suspended=false;
       this.skew=0;this.misses=0;this.controller=null;this.lastGood=0;
+      this.snapshotFlight=null;this.snapshotNotBefore=0;
       this.visibility=()=>document.hidden?this.suspend():this.resume();
       this.pagehide=event=>event.persisted?this.suspend():this.destroy();
       this.pageshow=event=>{if(event.persisted)this.resume();};
@@ -31,7 +35,8 @@
         video.setAttribute('aria-label',title.textContent);image.alt='Recent snapshot';image.hidden=true;
         status.setAttribute('role','status');status.textContent='Starting video…';
         card.append(title,video,image,status);this.container.append(card);
-        this.tiles.set(stream.camera_id,{card,video,image,status,stream,player:null,url:null,retired:false});
+        const snapshotUrl=stream.snapshot_url?new URL(stream.snapshot_url,session.status_url).href:null;
+        this.tiles.set(stream.camera_id,{card,video,image,status,stream,snapshotUrl,player:null,url:null,retired:false});
       }
       if(this.renewSession)this.renewTimer=setTimeout(()=>this.renew(),Math.max(1000,Date.parse(session.expires_at)-Date.now()-45000));
       if(this.suspended||document.hidden){
@@ -51,6 +56,7 @@
     attach(tile,camera){
       // Never turn a fresh server status into a claim about displayed pixels.
       // Generation/source changes rebuild; ordinary polls never interrupt HLS.
+      if(camera.snapshot_url)tile.snapshotUrl=new URL(camera.snapshot_url,this.session.status_url).href;
       const url=camera.hls_url?new URL(camera.hls_url,this.session.status_url).href:null;
       if(tile.url!==url)this.detach(tile);
       if(!tile.player&&url){
@@ -71,21 +77,46 @@
         const [state,text]=tile.player?.tick()||['connecting','Waiting for fresh video…'];
         tile.card.dataset.state=state;tile.status.textContent=text;
         if(state==='live')tile.image.hidden=true;
-        if(['stale','delayed'].includes(state))this.fallback(tile);
         if(!tile.image.hidden&&Date.now()+this.skew-tile.captured>15000){
           tile.image.hidden=true;tile.image.removeAttribute('src');
         }
       }
+      this.queueSnapshot();
+    }
+    retryAfterMs(header){
+      const raw=String(header||'').trim();
+      if(/^\d+$/.test(raw))return Math.max(1000,Number(raw)*1000);
+      const when=Date.parse(raw);
+      if(Number.isFinite(when))return Math.max(1000,when-Date.now());
+      return 1000;
+    }
+    queueSnapshot(){
+      if(this.closed||this.suspended||this.snapshotFlight||Date.now()<this.snapshotNotBefore)return;
+      let chosen=null,oldest=Infinity;
+      for(const tile of this.tiles.values()){
+        if(tile.retired||!tile.snapshotUrl)continue;
+        const state=tile.card.dataset.state;
+        if(state!=='stale'&&state!=='delayed')continue;
+        if(!tile.image.hidden&&Number.isFinite(tile.captured)&&Date.now()+this.skew-tile.captured<=15000)continue;
+        const attempted=tile.lastSnapshot||0;
+        if(attempted<oldest){oldest=attempted;chosen=tile;}
+      }
+      if(chosen)this.fallback(chosen);
     }
     async fallback(tile){
-      if(!tile.stream.snapshot_url||tile.snapshotBusy||this.closed||this.suspended||tile.retired||
-          Date.now()-(tile.lastSnapshot||0)<5000)return;
-      const epoch=this.epoch,abort=new AbortController();tile.snapshotAbort=abort;tile.snapshotBusy=true;tile.lastSnapshot=Date.now();
+      if(!tile.snapshotUrl||this.snapshotFlight||this.closed||this.suspended||tile.retired)return;
+      const epoch=this.epoch,abort=new AbortController();
+      this.snapshotFlight=abort;tile.snapshotAbort=abort;tile.lastSnapshot=Date.now();
+      this.snapshotNotBefore=Date.now()+1000;
       const timeout=setTimeout(()=>abort.abort(),5000);
       try{
-        const response=await fetch(tile.stream.snapshot_url,{credentials:'omit',cache:'no-store',signal:abort.signal});
+        const response=await fetch(tile.snapshotUrl,{credentials:'omit',cache:'no-store',signal:abort.signal});
         if(epoch!==this.epoch||this.closed||tile.retired)return;
         if([401,403,410].includes(response.status)){this.stop('Viewing access ended. Reopen the viewer.');return;}
+        if(response.status===429||response.status===503){
+          this.snapshotNotBefore=Date.now()+this.retryAfterMs(response.headers.get('Retry-After'));
+          return;
+        }
         if(!response.ok)return;
         const captured=Date.parse(response.headers.get('X-Snapshot-Captured-At'));
         const age=Number(response.headers.get('X-Media-Age-Seconds'));
@@ -98,7 +129,7 @@
         tile.image.alt='Snapshot captured '+new Date(captured).toLocaleTimeString();
         tile.status.textContent='Snapshot · '+new Date(captured).toLocaleTimeString();
       }catch(_error){/* The independent frame watchdog retains the stale label. */}
-      finally{clearTimeout(timeout);tile.snapshotBusy=false;if(tile.snapshotAbort===abort)tile.snapshotAbort=null;}
+      finally{clearTimeout(timeout);if(this.snapshotFlight===abort)this.snapshotFlight=null;if(tile.snapshotAbort===abort)tile.snapshotAbort=null;}
     }
     async poll(){
       if(this.closed||this.suspended||document.hidden)return;
