@@ -901,6 +901,17 @@ if (window.location.pathname.replace(/\/+$/, '') === '/hole17' || params.get('se
     if (!params.get(key)) params.set(key, hole17[key]);
   });
 }
+// /tracy is the Macalpine mapping review. Same short-link pattern as /hole17.
+if (window.location.pathname.replace(/\/+$/, '') === '/tracy' || params.get('set') === 'tracy') {
+  const tracy = {
+    model: '/tracy-macalpine/tracy.glb',
+    ortho: '/tracy-macalpine/ortho.jpg',
+    gw: '0'
+  };
+  Object.keys(tracy).forEach(function (key) {
+    if (!params.get(key)) params.set(key, tracy[key]);
+  });
+}
 let glbUrl  = params.get('model');
 // ── Optional property record ──────────────────────────────────────────
 // `?model=<glb>` plus headless capture params is unchanged. `?property=<id>`
