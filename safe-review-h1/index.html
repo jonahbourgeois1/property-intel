@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/review/; worker-src blob:; base-uri 'none'; form-action 'none'">
+<title>H1 review</title>
+<style>
+:root{
+  --bg:#f5f6f4; --panel:#ffffff; --ink:#1c2321; --ink2:#4a5551; --ink3:#7b8682; --line:#e3e7e4; --line2:#eef1ef;
+  --accent:#1f5f57; --accent2:#e6f0ee; --amber:#a35d05; --amberbg:#fff4df; --amberline:#f3d29c;
+  --miss:#8a3b3b; --missbg:#fbeeee; --ok:#2f7a4a; --okbg:#e8f4ec; --blue:#2c5d8f; --bluebg:#eaf1f8;
+  --shadow:0 1px 2px rgba(20,30,25,.05),0 4px 14px rgba(20,30,25,.05);
+  --r:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;font-weight:650;letter-spacing:-.01em}
+a{color:var(--accent)}
+button{font:inherit}
+.num{font-variant-numeric:tabular-nums}
+/* lock */
+#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#eef3f1,#f7f5ef)}
+#lock .box{width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px 34px 28px}
+#lock .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink3)}
+#lock h1{font-size:24px;margin:6px 0 4px}
+#lock p{color:var(--ink2);margin:0 0 20px;font-size:14px}
+#lock input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:15px;outline:none}
+#lock input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent2)}
+#lock button{margin-top:12px;width:100%;padding:12px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+#lock .err{color:var(--miss);font-size:13px;min-height:20px;margin-top:8px}
+/* app */
+#app{display:none;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+aside{background:#17221f;color:#d7e0dc}
+aside .inner{position:sticky;top:0;max-height:100vh;overflow:auto;padding:26px 16px}
+aside .brand{padding:0 10px 22px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:14px}
+aside .brand .t{font-size:18px;font-weight:650;color:#fff}
+aside .brand .s{font-size:12.5px;color:#9fb0aa;margin-top:2px}
+aside nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:#c4d0cb;text-decoration:none;font-size:14px;margin-bottom:2px}
+aside nav a .n{width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.07);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#9fb0aa}
+aside nav a .c{margin-left:auto;font-size:11.5px;color:#8fa29b}
+aside nav a:hover{background:rgba(255,255,255,.05)}
+aside nav a.on{background:#24403a;color:#fff}
+aside nav a.on .n{background:#3c7a6f;color:#fff}
+aside .foot{margin-top:24px;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#8fa29b;line-height:1.5}
+main{padding:34px 44px 80px;min-width:0}
+.wrap{max-width:1240px;margin:0 auto}
+section.page{display:none}
+section.page.on{display:block}
+.ph{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin-bottom:22px}
+.ph h2{font-size:26px}
+.ph .lead{color:var(--ink2);margin-top:4px;max-width:760px}
+.eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink3);font-weight:600}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+.card.pad{padding:20px 22px}
+.card h3{font-size:15.5px;margin-bottom:12px}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:1fr 1fr}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.mt{margin-top:18px}.mt2{margin-top:28px}
+.muted{color:var(--ink3)}.small{font-size:13px}.tiny{font-size:12px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink3);background:var(--line2);border-radius:999px;padding:1px 8px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.b-prov{background:var(--amberbg);color:var(--amber);border:1px solid var(--amberline)}
+.b-miss{background:var(--missbg);color:var(--miss)}
+.b-ok{background:var(--okbg);color:var(--ok)}
+.b-blue{background:var(--bluebg);color:var(--blue)}
+.b-grey{background:var(--line2);color:var(--ink2)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+/* hero */
+.hero{display:grid;grid-template-columns:1.25fr 1fr;gap:0;overflow:hidden}
+.hero .l{padding:28px 30px}
+.hero h1{font-size:34px;line-height:1.1}
+.hero h1 span{font-weight:400;color:var(--ink3)}
+.hero .addr{font-size:17px;color:var(--ink2);margin-top:8px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:14px 18px;margin-top:22px}
+.kv div .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3)}
+.kv div .v{font-size:15px;font-weight:550;margin-top:2px}
+.hero .r{position:relative;background:#222;min-height:300px;cursor:pointer}
+.hero .r svg{position:absolute;inset:0;width:100%;height:100%}
+.hero .r .cap{position:absolute;left:12px;bottom:10px;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:3px 9px;border-radius:999px}
+.kpi{padding:16px 18px}
+.kpi .k{font-size:12.5px;color:var(--ink2)}
+.kpi .v{font-size:27px;font-weight:650;margin-top:4px;letter-spacing:-.02em}
+.kpi .v small{font-size:14px;font-weight:500;color:var(--ink3);margin-left:4px}
+.kpi .s{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.peril{display:flex;gap:16px;align-items:center}
+.scorebar{display:flex;gap:4px;margin-top:6px}
+.scorebar i{width:22px;height:8px;border-radius:3px;background:var(--line)}
+.status{display:flex;align-items:stretch;overflow:hidden}
+.status>div{flex:1;padding:16px 18px;border-right:1px solid var(--line)}
+.status>div:last-child{border-right:0}
+.status .v{font-size:22px;font-weight:650}
+.status .k{font-size:12.5px;color:var(--ink2)}
+.status .first{background:var(--okbg)}
+.status .first .v{color:var(--ok)}
+ul.clean{list-style:none;margin:0;padding:0}
+ul.clean li{padding:9px 0;border-bottom:1px solid var(--line2)}
+ul.clean li:last-child{border-bottom:0}
+.prov-item{display:flex;gap:12px}
+.prov-item b{min-width:132px;font-weight:600}
+/* tables */
+table{width:100%;border-collapse:collapse}
+th{font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);font-weight:600;text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);background:#fafbfa}
+td{padding:12px 14px;border-bottom:1px solid var(--line2);vertical-align:top}
+tr:last-child td{border-bottom:0}
+.facts td.l{width:30%;color:var(--ink2)}
+.facts td.v{font-weight:550}
+.facts td.s{width:24%;text-align:right}
+.facts tr.miss td.v{color:var(--miss);font-weight:500}
+.why{font-size:13px;color:var(--ink2);margin-top:5px;font-weight:400;line-height:1.5}
+details summary{cursor:pointer;color:var(--accent);font-size:12.5px;list-style:none;display:inline-flex;align-items:center;gap:4px;user-select:none}
+details summary::-webkit-details-marker{display:none}
+details summary:before{content:"▸";font-size:10px}
+details[open] summary:before{content:"▾"}
+details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
+.tblhead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px}
+.tblhead h3{margin:0}
+.hl{animation:hl 2.2s ease}
+@keyframes hl{0%,40%{background:#fff2c4}100%{background:transparent}}
+/* layers */
+.layer{display:grid;grid-template-columns:220px 1fr 210px;gap:18px;padding:16px 20px;border-bottom:1px solid var(--line2)}
+.layer:last-child{border-bottom:0}
+.layer .nm{font-weight:600}
+.layer .src{text-align:right}
+/* map */
+.mapbox{position:relative;background:#1b1f1d;border-radius:var(--r);overflow:hidden}
+.mapbox svg{display:block;width:100%;height:auto}
+.maptools{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:9px;padding:3px}
+.seg button{border:0;background:transparent;padding:5px 12px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--ink2)}
+.seg button.on{background:var(--accent);color:#fff}
+.legend{display:flex;gap:8px;flex-wrap:wrap}
+.legend label{display:inline-flex;align-items:center;gap:7px;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer;user-select:none}
+.legend label input{margin:0;accent-color:var(--accent)}
+.sw{width:16px;height:3px;border-radius:2px;display:inline-block}
+.svgtip{position:absolute;pointer-events:none;background:rgba(15,20,18,.92);color:#fff;font-size:12.5px;padding:6px 10px;border-radius:7px;white-space:nowrap;transform:translate(-50%,-130%);display:none;z-index:5}
+/* gallery */
+.gal{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tile{cursor:pointer;overflow:hidden}
+.tile .im{aspect-ratio:16/9;background:#ddd center/cover no-repeat;border-radius:var(--r) var(--r) 0 0}
+.tile .cap{padding:11px 14px}
+.tile .cap b{font-weight:600;font-size:14px}
+.tile:hover .im{filter:brightness(1.05)}
+#lb{position:fixed;inset:0;background:rgba(8,12,10,.92);display:none;align-items:center;justify-content:center;z-index:50;flex-direction:column}
+#lb img{max-width:92vw;max-height:82vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#lb .t{color:#fff;margin-top:14px;font-size:14px;text-align:center}
+#lb .t span{color:#a9b6b1;margin-left:8px}
+#lb .x,#lb .pv,#lb .nx{position:absolute;color:#fff;background:rgba(255,255,255,.1);border:0;border-radius:999px;width:44px;height:44px;font-size:20px;cursor:pointer}
+#lb .x{top:20px;right:24px}#lb .pv{left:24px;top:50%}#lb .nx{right:24px;top:50%}
+/* nearmap */
+.packs{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.pack .n{font-size:30px;font-weight:650}
+.pack .cls{margin-top:10px;font-size:12.5px;color:var(--ink2)}
+.pack .cls div{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.zone{display:grid;grid-template-columns:110px 1fr 120px;gap:14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line2)}
+.zone:last-child{border-bottom:0}
+.bar{height:12px;border-radius:6px;background:var(--line2);overflow:hidden;display:flex}
+.bar i{display:block;height:100%}
+.pcard{padding:20px 22px}
+.pcard .big{font-size:44px;font-weight:700;line-height:1}
+.pcard .big small{font-size:16px;color:var(--ink3);font-weight:500}
+.pcard dl{display:grid;grid-template-columns:1fr auto;gap:6px 10px;margin:14px 0 0;font-size:13.5px}
+.pcard dt{color:var(--ink2)}.pcard dd{margin:0;font-weight:600;text-align:right}
+.callout{border-radius:10px;padding:12px 14px;font-size:13.5px;line-height:1.5}
+.callout.amber{background:var(--amberbg);border:1px solid var(--amberline);color:#6b3f06}
+.callout.blue{background:var(--bluebg);color:#1f466c}
+.callout.grey{background:var(--line2);color:var(--ink2)}
+.statrow{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line2);font-size:14px;gap:12px}
+.statrow:last-child{border-bottom:0}
+.statrow span:first-child{color:var(--ink2)}
+.statrow span:last-child{font-weight:550;text-align:right}
+/* measurements */
+.mrow td.v{white-space:nowrap;font-weight:650;font-size:16px}
+.mrow td.v small{font-weight:500;color:var(--ink3);font-size:13px;margin-left:3px}
+.alts{margin-top:8px;background:#fafbfa;border:1px solid var(--line2);border-radius:8px;padding:6px 10px}
+.alts div{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:3px 0;color:var(--ink2)}
+.alts div b{font-weight:600;color:var(--ink)}
+/* assets */
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;cursor:pointer;color:var(--ink2)}
+.chip b{font-weight:600;color:var(--ink3);margin-left:4px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.on b{color:#cfe3de}
+.assetwrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+.assetwrap .mapcol{position:sticky;top:20px}
+.atbl{table-layout:fixed}
+.atbl .tag{white-space:normal;text-align:right;display:inline-block;margin:2px 0}
+.atbl tr{cursor:pointer}
+.atbl tr:hover td{background:#fafcfb}
+.atbl tr.sel td{background:#eef6f4}
+.aid{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;color:var(--ink2);white-space:nowrap}
+/* cameras */
+.cams{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.cam .im{aspect-ratio:16/9;background:#222 center/cover no-repeat;border-radius:var(--r) var(--r) 0 0;cursor:pointer;position:relative}
+.cam .im .pinno{position:absolute;top:10px;left:10px;background:#2f7a4a;color:#fff;font-weight:700;font-size:12px;border-radius:999px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px #fff}
+.cam .b{padding:12px 14px}
+.cam .b .nm{font-weight:600}
+.cam .b .meta{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}
+/* questions */
+.qtools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.qtools input[type=search]{padding:8px 12px;border:1px solid var(--line);border-radius:9px;min-width:260px;font-size:14px}
+.qgroup h3{font-size:16px;margin:26px 0 10px;display:flex;align-items:center;gap:10px}
+.q{padding:16px 20px;margin-bottom:10px}
+.q .top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.q .qid{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;font-weight:600;color:var(--accent)}
+.q .txt{font-size:15px}
+.q .ans{margin-top:10px}
+.q .foot{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--ink3)}
+.linkchip{cursor:pointer;background:var(--accent2);color:var(--accent);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;border:0}
+.empty{padding:30px;text-align:center;color:var(--ink3)}
+@media (max-width:1100px){.g4{grid-template-columns:repeat(2,1fr)}.packs{grid-template-columns:repeat(2,1fr)}.assetwrap{grid-template-columns:1fr}.assetwrap .mapcol{position:static}.cams,.gal{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}}
+.cta{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.btnl{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff!important;text-decoration:none;border-radius:9px;padding:9px 14px;font-weight:600;font-size:13.5px;border:0;cursor:pointer}
+.btnl.ghost{background:#fff;color:var(--accent)!important;border:1px solid var(--line)}
+.rchip{display:inline-block;font-family:ui-monospace,Consolas,monospace;font-size:11.5px;padding:1px 7px;border-radius:6px;border:1px solid var(--line);margin:2px 3px 0 0;text-decoration:none;color:var(--ink2);background:#fff}
+.rchip.p{border-color:var(--accent);color:var(--accent);font-weight:600}
+.rchip:hover{background:var(--accent2)}
+.rgn{cursor:pointer}
+.rgn.hl{stroke:#fff!important;stroke-width:3px!important;fill-opacity:.55!important}
+.regleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;margin:8px 0}
+.regleg label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.regleg .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+.camstat{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 8px;border-radius:999px;background:var(--line2);color:var(--ink2)}
+.camstat i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.qopts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.qopt{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
+.qopt:hover{border-color:var(--accent)}
+.qopt.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.q textarea{width:100%;margin-top:8px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px;min-height:36px;resize:vertical}
+.q.done{border-left:4px solid var(--ok)}
+.q .look{font-size:12.5px;color:var(--ink3);margin-top:4px}
+.qbar{position:sticky;top:0;z-index:3;background:var(--bg,#f6f7f5);padding:10px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.qprog{flex:1;min-width:200px;height:8px;border-radius:9px;background:var(--line2);overflow:hidden}
+.qprog i{display:block;height:100%;background:var(--ok)}
+.qstat{font-size:12.5px;color:var(--ink3)}
+.qstat.err{color:var(--miss)}
+
+/* questions split map */
+html.qmode,html.qmode body{height:100vh;overflow:hidden}
+html.qmode #app{height:100vh;overflow:hidden}
+html.qmode main{padding:0;overflow:hidden;min-height:0;display:flex;flex-direction:column}
+html.qmode main .wrap{max-width:none;width:100%;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
+html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
+.qsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;height:100%}
+.qmap{position:relative;min-width:0;min-height:0;background:#141816;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.qmap-tools{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 12px;background:rgba(20,24,22,.92);color:#d7e0dc;z-index:3;flex-shrink:0}
+.qmap-tools .seg{background:#1c2321;border-color:#3a4440}
+.qmap-tools .seg button{color:#c4d0cb}
+.qmap-tools .seg button.on{background:var(--accent);color:#fff}
+.qlab{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#c4d0cb;user-select:none;cursor:pointer}
+.qlab input{margin:0;accent-color:var(--accent)}
+.qmap-hint{font-size:12px;color:#8fa29b;margin-left:auto}
+.qmap-stage{position:relative;flex:1;min-height:0;overflow:hidden;background:#1b1f1d;cursor:grab;touch-action:none}
+.qmap-stage.drag{cursor:grabbing}
+.qpane{position:absolute;inset:0;display:none}
+.qpane.on{display:block}
+#q3d.on{display:block}
+#q3d canvas{display:block;width:100%;height:100%}
+.q2inner{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+.q2inner img,.q2inner svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
+.q2inner svg{overflow:visible}
+.qnorth{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;z-index:2;pointer-events:none}
+.qnorth i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:translateX(-50%)}
+.qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em}
+.qmap-status{position:absolute;left:12px;bottom:12px;z-index:2;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:3px 9px;border-radius:999px;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.q3wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c4d0cb;background:#1b1f1d;z-index:1;padding:24px;text-align:center}
+.qside{overflow:auto;padding:22px 26px 48px;background:var(--bg);min-width:0}
+.qside .ph{margin-bottom:14px}
+.qside .qbar{position:sticky;top:0;background:var(--bg);z-index:3}
+.q.sel{box-shadow:0 0 0 2px var(--accent)}
+@media (max-width:900px){
+  .qsplit{grid-template-columns:1fr;grid-template-rows:minmax(240px,42vh) minmax(0,1fr)}
+  .qmap{border-right:0;border-bottom:1px solid var(--line)}
+  .qmap-hint{margin-left:0}
+}
+</style>
+<script src="vendor/h1-crypto.js"></script>
+</head>
+<body>
+<div id="lock">
+  <form class="box" id="lockform" autocomplete="off">
+    <div class="eyebrow">SAFE · Pass 1 review</div>
+    <h1>H1 review</h1>
+    <p>This reviewer is encrypted. Enter the passphrase to open it.</p>
+    <input id="pw" type="password" placeholder="Passphrase" autofocus>
+    <button type="submit" id="unl">Unlock</button>
+    <div class="err" id="err"></div>
+  </form>
+</div>
+<div id="app">
+  <aside><div class="inner">
+    <div class="brand"><div class="t">Highlands 1</div><div class="s">Reference lot · Pass 1 review</div></div>
+    <nav id="nav"></nav>
+    <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" style="color:#9fd4c8">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8">Camera pins ↗</a></div></div>
+  </div></aside>
+  <main><div class="wrap" id="pages"></div></main>
+</div>
+<div id="lb"><button class="x" onclick="lbClose()">✕</button><button class="pv" onclick="lbStep(-1)">‹</button><button class="nx" onclick="lbStep(1)">›</button><img id="lbimg" alt=""><div class="t" id="lbt"></div></div>
+<script>
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+let KEY=null, D=null; const URLS={};
+async function dec(buf){return H1Crypto.dec(buf);}
+async function fetchDec(f,opts){return H1Crypto.fetchDec(f,opts);}
+async function afterUnlock(){
+  KEY=H1Crypto.getKey();
+  D=JSON.parse(new TextDecoder().decode(await fetchDec('data.bin')));
+  await Promise.all(Object.entries(D.files).map(async([k,f])=>{URLS[k]=URL.createObjectURL(new Blob([await fetchDec(f)],{type:'image/jpeg'}))}));
+  document.getElementById('lock').remove();document.getElementById('app').style.display='grid';
+  render();
+}
+H1Crypto.wireUnlock({onReady:afterUnlock});
+const esc=s=>s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const tag=s=>s?`<span class="tag" title="${esc(s)}">${esc(s)}</span>`:'';
+const prov=(t='provisional')=>`<span class="badge b-prov"><span class="dot"></span>${t}</span>`;
+const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Assets'],['cameras','Cameras'],['questions','Reviewer questions']];
+
+/* ---------------- map ---------------- */
+const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
+let mapSeq=0;
+function mapSVG(o){
+  const M=D.map, id='m'+(++mapSeq), c=M.crop[o.crop||'parcel'];
+  const sw=c[2]/700; // stroke scale
+  let s=`<svg viewBox="${c.join(' ')}" xmlns="http://www.w3.org/2000/svg" data-map="${id}" preserveAspectRatio="xMidYMid meet">`;
+  s+=`<image href="${URLS.nadir}" x="0" y="0" width="${M.w}" height="${M.h}"/>`;
+  const L=o.layers||{};
+  if(L.zones) M.zones.forEach((z,i)=>{const col=['#ff6b6b','#ffa94d','#ffd43b'][i];z.forEach(r=>s+=`<polygon class="ly-zones" points="${pts(r)}" fill="${col}" fill-opacity=".10" stroke="${col}" stroke-width="${1.6*sw}" stroke-dasharray="${4*sw} ${3*sw}"/>`)});
+  if(L.parcel!==undefined) s+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="${2.6*sw}" ${L.parcel?'':'style="display:none"'}/>`;
+  if(L.sbfo!==undefined) M.sbfo.forEach(r=>s+=`<polygon class="ly-sbfo" points="${pts(r)}" fill="none" stroke="#ff5c5c" stroke-width="${1.8*sw}" stroke-dasharray="${5*sw} ${3*sw}" ${L.sbfo?'':'style="display:none"'}/>`);
+  if(L.trace!==undefined) s+=`<polygon class="ly-trace" points="${pts(M.trace)}" fill="none" stroke="#5ce1e6" stroke-width="${1.8*sw}" ${L.trace?'':'style="display:none"'}/>`;
+  if(L.ai!==undefined) M.ai_roof.forEach(r=>s+=`<polygon class="ly-ai" points="${pts(r)}" fill="#b197fc" fill-opacity=".18" stroke="#b197fc" stroke-width="${1.8*sw}" ${L.ai?'':'style="display:none"'}/>`);
+  if(L.drive!==undefined){s+=`<polyline class="ly-drive" points="${pts(M.drive)}" fill="none" stroke="#69db7c" stroke-width="${2*sw}" ${L.drive?'':'style="display:none"'}/>`;}
+  if(o.points){const r=o.pr||5;o.points.forEach(p=>{
+    s+=`<g class="pt" data-id="${esc(p.id)}" data-tip="${esc(p.tip)}" style="cursor:pointer"><circle cx="${p.px[0]}" cy="${p.px[1]}" r="${r*1.9}" fill="${p.color}" fill-opacity=".0" class="halo"/><circle cx="${p.px[0]}" cy="${p.px[1]}" r="${r}" fill="${p.color}" stroke="#fff" stroke-width="${r*.35}"/>${p.label?`<text x="${p.px[0]}" y="${p.px[1]+r*.38}" text-anchor="middle" font-size="${r*1.05}" font-weight="700" fill="#fff" style="pointer-events:none;font-family:Inter,Segoe UI,sans-serif">${esc(p.label)}</text>`:''}</g>`;});}
+  if(o.scale){const m=20,px=m/D.map.m_per_px;const x=c[0]+c[2]*.04,y=c[1]+c[3]*.95;s+=`<g><rect x="${x-4*sw}" y="${y-14*sw}" width="${px+8*sw}" height="${20*sw}" rx="${3*sw}" fill="rgba(0,0,0,.5)"/><line x1="${x}" y1="${y}" x2="${x+px}" y2="${y}" stroke="#fff" stroke-width="${2*sw}"/><text x="${x+px/2}" y="${y-4*sw}" fill="#fff" font-size="${10*sw}" text-anchor="middle" style="font-family:Inter,Segoe UI,sans-serif">${m} m</text></g>`;}
+  s+=`<g transform="translate(${c[0]+c[2]*.95},${c[1]+c[3]*.08})"><circle r="${13*sw}" fill="rgba(0,0,0,.5)"/><path d="M0,${-9*sw} L${5*sw},${6*sw} L0,${3*sw} L${-5*sw},${6*sw}Z" fill="#fff"/><text y="${-15*sw}" fill="#fff" font-size="${10*sw}" text-anchor="middle" font-weight="700" style="font-family:Inter,Segoe UI,sans-serif">N</text></g>`;
+  return s+'</svg><div class="svgtip"></div>';
+}
+function wireMap(box,onClick){
+  const tip=box.querySelector('.svgtip');
+  box.querySelectorAll('.pt').forEach(g=>{
+    g.addEventListener('mouseenter',e=>{tip.textContent=g.dataset.tip;tip.style.display='block'});
+    g.addEventListener('mousemove',e=>{const r=box.getBoundingClientRect();tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px'});
+    g.addEventListener('mouseleave',()=>tip.style.display='none');
+    if(onClick)g.addEventListener('click',()=>onClick(g.dataset.id));
+  });
+}
+function setCrop(box,crop){box.querySelector('svg').setAttribute('viewBox',D.map.crop[crop].join(' '));}
+function mapTools(key,crops,legend){
+  return `<div class="maptools"><div class="seg" data-seg="${key}">${crops.map((c,i)=>`<button data-crop="${c[0]}" class="${i==0?'on':''}">${c[1]}</button>`).join('')}</div><div class="legend">${legend.map(l=>`<label><input type="checkbox" data-ly="${l[0]}" ${l[3]===false?'':'checked'}><span class="sw" style="background:${l[1]}"></span>${l[2]}</label>`).join('')}</div></div>`;
+}
+function wireTools(root,box){
+  root.querySelectorAll('[data-crop]').forEach(b=>b.onclick=()=>{b.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');setCrop(box,b.dataset.crop)});
+  root.querySelectorAll('[data-ly]').forEach(c=>c.onchange=()=>box.querySelectorAll('.ly-'+c.dataset.ly).forEach(e=>e.style.display=c.checked?'':'none'));
+}
+
+/* ---------------- lightbox ---------------- */
+let LB=[],LBi=0;
+function lbOpen(list,i){LB=list;LBi=i;lbShow();document.getElementById('lb').style.display='flex'}
+function lbShow(){const it=LB[LBi];document.getElementById('lbimg').src=URLS[it.img];document.getElementById('lbt').innerHTML=esc(it.label)+`<span>${esc(it.sub||'')}</span>`;document.querySelector('#lb .pv').style.display=document.querySelector('#lb .nx').style.display=LB.length>1?'':'none'}
+function lbStep(d){LBi=(LBi+d+LB.length)%LB.length;lbShow()}
+function lbClose(){document.getElementById('lb').style.display='none'}
+document.addEventListener('keydown',e=>{if(document.getElementById('lb').style.display!=='flex')return;if(e.key==='Escape')lbClose();if(e.key==='ArrowLeft')lbStep(-1);if(e.key==='ArrowRight')lbStep(1)});
+document.getElementById('lb').addEventListener('click',e=>{if(e.target.id==='lb')lbClose()});
+
+/* ---------------- render ---------------- */
+function render(){
+  const counts={parcel:D.facts.length,layers:D.layers.length,assets:D.assets.located.length,cameras:D.cams.length,questions:D.questions.length};
+  document.getElementById('nav').innerHTML=SECTIONS.map(([k,l],i)=>`<a href="#${k}" data-k="${k}"><span class="n">${i+1}</span>${l}${counts[k]?`<span class="c">${counts[k]}</span>`:''}</a>`).join('');
+  document.getElementById('footsurvey').textContent='Imagery survey: '+D.overview.survey;
+  const P=document.getElementById('pages');
+  P.innerHTML=SECTIONS.map(([k])=>`<section class="page" id="pg-${k}"></section>`).join('');
+  rOverview();rParcel();rLayers();rImagery();rNearmap();rMeas();rAssets();rCams();rQuestions();
+  window.addEventListener('hashchange',route);route();
+}
+function route(){
+  let h=(location.hash||'#overview').slice(1);const [k,target]=h.split(':');
+  const key=SECTIONS.some(s=>s[0]===k)?k:'overview';
+  document.documentElement.classList.toggle('qmode',key==='questions');
+  document.body.classList.toggle('qmode',key==='questions');
+  document.querySelectorAll('section.page').forEach(s=>s.classList.toggle('on',s.id==='pg-'+key));
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
+  if(key==='questions') requestAnimationFrame(()=>{if(QMODE==='2d')applyQ2();else if(Q3&&Q3.resize)Q3.resize();});
+  if(target&&key==='assets'&&ATYPE!=='all'){document.querySelector('#achips .chip[data-t=all]').click();}
+  if(target){const el=document.getElementById(target);if(el){const d=el.closest('details');if(d)d.open=true;el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets')selectAsset(target.replace('asset-',''),false);}}
+  else window.scrollTo(0,0);
+}
+function go(sec,id){location.hash=sec+(id?':'+id:'');}
+const head=(eb,t,lead,right='')=>`<div class="ph"><div><div class="eyebrow">${eb}</div><h2>${t}</h2>${lead?`<div class="lead">${lead}</div>`:''}</div>${right}</div>`;
+
+function rOverview(){
+  const O=D.overview, S=O.status, N=D.nearmap;
+  const scoreBar=(v,col)=>`<div class="scorebar">${[1,2,3,4,5].map(i=>`<i style="${i<=v?'background:'+col:''}"></i>`).join('')}</div>`;
+  const pcol=v=>v>=4?'#2f7a4a':v>=3?'#a08a1f':'#b5542b';
+  let h=`<div class="card hero"><div class="l"><div class="eyebrow">${esc(O.customer_type)}</div><h1>${esc(O.title)} <span>· ${esc(O.subtitle)}</span></h1><div class="addr">${esc(O.situs)}</div>
+  <div class="kv"><div><div class="k">Taxlot</div><div class="v num">${esc(O.taxlot)}</div></div><div><div class="k">Account</div><div class="v num">${esc(O.account)}</div></div><div><div class="k">Lot size</div><div class="v">${esc(O.acres)} acres</div></div>
+  <div><div class="k">Zoning</div><div class="v">${esc(O.zoning)}</div></div><div><div class="k">County</div><div class="v">${esc(O.county)}</div></div><div><div class="k">Imagery survey</div><div class="v">${esc(O.survey)}</div></div></div></div>
+  <div class="r" onclick="go('imagery')">${mapSVG({crop:'parcel',layers:{parcel:true,ai:true}})}<span class="cap">Nadir 2 Jul 2026 · parcel and 2026 roof · open imagery →</span></div></div>`;
+  h+=`<div class="grid g3 mt">`+O.kpis.map(k=>`<div class="card kpi"><div class="k">${esc(k.label)}</div><div class="v num">${esc(k.value)}<small>${esc(k.unit)}</small></div><div class="s">${tag(k.src)}${k.provisional?prov():''}</div></div>`).join('')+`</div>`;
+  h+=`<div class="grid g3 mt">`+N.perils.map(p=>`<div class="card kpi"><div class="k">Nearmap ${p.label.toLowerCase()} score</div><div class="peril"><div class="v num">${p.score}<small>/ 5</small></div><div>${scoreBar(p.score,pcol(p.score))}<div class="tiny muted" style="margin-top:4px">5 = most resilient</div></div></div><div class="s">${tag('Nearmap AI · 2 Jul 2026')}<span class="tag">footprint capped at 1,000 m²</span></div></div>`).join('')+`</div>`;
+  h+=`<div class="card status mt"><div class="first"><div class="v">✓ ${esc(S.audit)}</div><div class="k">Pass 1 completeness check</div></div>
+   <div><div class="v num">${S.facts}</div><div class="k">assessor facts · ${S.facts_missing} missing</div></div>
+   <div><div class="v num">${S.layers}</div><div class="k">map layers</div></div>
+   <div><div class="v num">${S.assets}</div><div class="k">assets located · +${S.assets_record} on record</div></div>
+   <div><div class="v num">${S.cameras}</div><div class="k">cameras · 4 surveyed</div></div>
+   <div><div class="v num">${S.questions}</div><div class="k">open questions · ${S.prov_questions} provisional</div></div></div>`;
+  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Provisional calls <span class="badge b-prov" style="margin-left:6px"><span class="dot"></span>to decide later</span></h3><ul class="clean">${O.provisional.map(p=>`<li class="prov-item"><b>${esc(p.k)}</b><span>${esc(p.v)}</span></li>`).join('')}</ul></div>
+  <div class="card pad"><h3>Not available in the data</h3><ul class="clean">${O.missing.map(m=>`<li><span class="badge b-miss">missing</span> &nbsp;${esc(m)}</li>`).join('')}<li><span class="badge b-grey">not purchased</span> &nbsp;Nearmap DSM (heights come from the 3D mesh)</li><li><span class="badge b-grey">pending</span> &nbsp;9 of 13 camera placements await review</li></ul></div></div>`;
+  h+=`<div class="card pad mt"><h3>Pass 1 stations run</h3><div class="small muted" style="margin:-4px 0 10px">Pass 1 lint status: pending reviewer gate.</div><div class="chips">${S.stations.map(s=>`<span class="badge b-grey">${esc(s)}</span>`).join('')}</div><div class="small muted" style="margin-top:12px">${esc(S.audit_detail)}. This page shows Pass 1 data only: no hazard, value or concealment judgments and no recommendations.</div></div>`;
+  document.getElementById('pg-overview').innerHTML=h;
+}
+function factRow(f){
+  const v=f.missing?`<span class="badge b-miss">missing</span>`:esc(f.value);
+  let extra='';
+  if(f.missing) extra+=`<div class="why">${esc(f.missing_reason)}</div>`;
+  if(f.note||f.checked.length) extra+=`<details><summary>${f.missing?'Sources checked':'Details'}</summary><div class="body">${f.note?esc(f.note):''}${f.checked.length?`<ul style="margin:6px 0 0;padding-left:18px">${f.checked.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:''}</div></details>`;
+  return `<tr id="fact-${f.id}" class="${f.missing?'miss':''}"><td class="l">${esc(f.label)}</td><td class="v">${v}${extra}</td><td class="s">${tag(f.tag)}${f.as_of?`<div class="tiny muted" style="margin-top:4px">as of ${esc(f.as_of)}</div>`:''}</td></tr>`;
+}
+function rParcel(){
+  const groups=['Building','Values & sale','Land'];
+  let h=head('Section 2','Parcel & assessor','Facts as recorded by Deschutes County (DIAL assessor record and county GIS). Missing facts show the reason and the sources that were checked.');
+  h+=`<div class="grid" style="grid-template-columns:2fr 1fr;align-items:start">`;
+  h+=`<div>`+groups.map(g=>`<div class="card mt" style="margin-top:${g==='Building'?0:18}px"><div class="tblhead"><h3>${g}</h3><span class="muted small">${D.facts.filter(f=>f.group===g).length} facts</span></div><table class="facts"><tbody>${D.facts.filter(f=>f.group===g).map(factRow).join('')}</tbody></table></div>`).join('')+`</div>`;
+  h+=`<div><div class="card pad"><h3>Value history</h3><div class="small" style="color:var(--ink2)">${esc(D.rmv_note)}</div><div class="small" style="color:var(--ink2);margin-top:10px">${esc(D.assessed_note)}</div></div>
+  <div class="card pad mt"><h3>Record notes</h3><ul class="clean small"><li>Square footage is “from plans” (DIAL).</li><li>Later finaled permits: 2010 and 2025 (see question q-year-built-later-permits).</li><li>Owner names were removed at retrieval; this page uses “reference lot”.</li></ul></div></div></div>`;
+  document.getElementById('pg-parcel').innerHTML=h;
+}
+function rLayers(){
+  let h=head('Section 3','Map layers','Public GIS layers intersected with the taxlot, plus water supply and hydrant distance.');
+  h+=`<div class="grid g2"><div class="card kpi"><div class="k">${esc(D.water.label)}</div><div class="v">${esc(D.water.value)}</div><div class="s">${tag(D.water.tag)}</div><div class="small muted" style="margin-top:8px">${esc(D.water.note)}</div></div>
+  <div class="card kpi" id="layer-hydrant"><div class="k">${esc(D.hydrant.label)}</div><div class="v num">${esc(D.hydrant.value)}<small>${esc(D.hydrant.sub)}</small></div><div class="s">${tag(D.hydrant.tag)}</div><div class="small muted" style="margin-top:8px">${esc(D.hydrant.note)}</div></div></div>`;
+  h+=`<div class="card mt">`+D.layers.map(l=>{
+    let v;
+    if(l.id==='soils'&&Array.isArray(D.soils)){v=D.soils.map(s=>`<div><b>${esc(s.mapunit_symbol)}</b> ${esc(s.name)} <span class="muted">· ${esc(s.pct_of_gis_parcel??s.percent??'')}${s.pct_of_gis_parcel||s.percent?'%':''}</span></div>`).join('');}
+    else v=l.present?esc(l.value):`<span class="badge b-miss">${l.id==='odf_wildfire_risk'?'not assigned · map repealed':'no layer found'}</span><div class="why">${esc(l.missing_reason)}</div>`;
+    const det=(l.note||l.checked.length)?`<details style="margin-top:6px"><summary>${l.present?'Details':'Sources checked'}</summary><div class="body">${l.note?esc(l.note):''}${l.checked.length?`<ul style="margin:6px 0 0;padding-left:18px">${l.checked.map(c=>`<li>${esc(c)}</li>`).join('')}</ul>`:''}</div></details>`:'';
+    return `<div class="layer" id="layer-${l.id}"><div><div class="nm">${esc(l.label)}</div>${l.present?'<span class="badge b-ok" style="margin-top:6px">on record</span>':''}</div><div>${v}${det}</div><div class="src">${tag(l.tag)}${l.as_of?`<div class="tiny muted" style="margin-top:4px">as of ${esc(l.as_of)}</div>`:''}</div></div>`;
+  }).join('')+`</div>`;
+  document.getElementById('pg-layers').innerHTML=h;
+}
+function rImagery(){
+  let h=head('Section 4','Imagery','Nearmap Vertical survey, 2 Jul 2026. The nadir is georeferenced, so outlines are drawn from their coordinates.');
+  h+=mapTools('img',[['parcel','Parcel'],['house','House'],['full','Full frame']],[['parcel','#ffe066','Parcel (county taxlot)'],['ai','#b197fc','2026 roof (Nearmap AI)'],['trace','#5ce1e6','2026 nadir roof trace',false],['sbfo','#ff5c5c','2018 county footprint'],['drive','#69db7c','Driveway centreline',false]]);
+  h+=`<div class="mapbox" id="imgmap">${mapSVG({crop:'parcel',scale:true,layers:{parcel:true,ai:true,trace:false,sbfo:true,drive:false}})}</div>`;
+  h+=`<div class="small muted" style="margin-top:8px">The 2018 county footprint sits about 6–8 m west of the 2026 roof; the SE wing already shows in 2011 lidar, so the footprint is misplaced rather than out of date. Map scale ≈ 0.43 m per pixel.</div>`;
+  h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">Captured views</h3><div class="gal">`+D.gallery.map((g,i)=>`<div class="card tile" onclick="lbOpen(D.gallery,${i})"><div class="im" style="background-image:url(${URLS[g.img]})"></div><div class="cap"><b>${esc(g.label)}</b><div class="small muted">${esc(g.sub)} · 2 Jul 2026</div></div></div>`).join('')+`</div>`;
+  h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">QA images</h3><div class="grid g2">`+D.qa.map((g,i)=>`<div class="card tile" onclick="lbOpen(D.qa,${i})"><div class="im" style="background-image:url(${URLS[g.img]});background-size:contain;background-color:#fff"></div><div class="cap"><b>${esc(g.label)}</b><div class="small muted">${esc(g.sub)}</div></div></div>`).join('')+`</div>`;
+  const el=document.getElementById('pg-imagery');el.innerHTML=h;wireTools(el,el.querySelector('#imgmap'));
+}
+function rNearmap(){
+  const N=D.nearmap;
+  let h=head('Section 5','Nearmap AI','Two AI Feature API calls on the 2 Jul 2026 survey ('+esc(N.system)+'), plus the 3D mesh export.');
+  h+=`<div class="packs">`+N.packs.map(p=>`<div class="card pad pack" id="nm-${p.id==='wildfire_risk'?'wildfire_risk':p.id}"><div class="eyebrow">${esc(p.label)} pack</div><div class="n num">${p.count}<small class="muted" style="font-size:14px;font-weight:500"> features</small></div><div style="margin-top:4px">${p.count?'<span class="badge b-ok">present</span>':'<span class="badge b-grey">empty response</span> '+prov()}</div><div class="cls">${Object.entries(p.classes).map(([k,v])=>`<div><span>${esc(k)}</span><b class="num">${v}</b></div>`).join('')||`<div>${esc(p.note)}</div>`}</div></div>`).join('')+`</div>`;
+  h+=`<div class="small muted" style="margin-top:8px">Pack membership is inferred from class names (the API response does not label packs).</div>`;
+  h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">Peril scores <span class="muted small" style="font-weight:400">· roof feature, 5 = most resilient, 1 = most vulnerable</span></h3><div class="grid g3">`+N.perils.map(p=>`<div class="card pcard"><div class="eyebrow">${p.label}</div><div class="big num">${p.score}<small> / 5</small></div>
+   <dl><dt>Vulnerability probability</dt><dd class="num">${p.prob}</dd><dt>Rate factor</dt><dd class="num">${p.rate}</dd><dt>FEMA annual frequency</dt><dd class="num">${Number(p.fema).toPrecision(3)} / yr</dd>${p.risk_score!=null?`<dt>Risk score · rate factor</dt><dd class="num">${p.risk_score} · ${p.risk_rate}</dd>`:''}</dl></div>`).join('')+`</div>`;
+  h+=`<div class="callout amber mt"><b>Footprint cap.</b> The model’s footprint input is ln(1000), so it treats the house as 1,000 m². The roof is about 1,300–1,400 m² (mesh 1,304 m², nadir 1,412 m²), so read these scores as approximate. Staining and compromised-structure inputs sit at the floor value (none found). FEMA data v${esc(N.fema_version)}.</div>`;
+  h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Defensible space zones</h3><div class="small muted" style="margin-bottom:6px">Share of each ring around the Nearmap roof covered by medium/high woody vegetation.</div>`+N.zones.map(z=>`<div class="zone"><b>${esc(z.label)}</b><div><div class="bar"><i style="width:${z.risk*100}%;background:#d9822b"></i><i style="width:${z.clear*100}%;background:#cfe3d8"></i></div><div class="tiny muted" style="margin-top:3px">${fmt(z.risk_area,1)} m² vegetated of ${fmt(z.area_m2,1)} m²</div></div><div class="num" style="text-align:right"><b>${Math.round(z.risk*1000)/10}%</b> <span class="muted small">vegetated</span></div></div>`).join('')+`</div>
+   <div class="card" style="overflow:hidden"><div class="mapbox" style="border-radius:0">${mapSVG({crop:'house',layers:{zones:true,ai:true}})}</div><div class="small muted" style="padding:10px 14px">Zones 0–5 ft (red), 5–30 ft (orange), 30–100 ft (yellow) around the AI roof (violet).</div></div></div>`;
+  h+=`<div class="grid g3 mt2"><div class="card pad"><h3>AI roof & buildings</h3>
+   <div class="statrow"><span>Roof area</span><span class="num">${fmt(N.roof.area_m2,1)} m²</span></div><div class="statrow"><span>Roof material</span><span>${esc(N.roof.material)} (${Math.round(N.roof.material_share*100)}%)</span></div><div class="statrow"><span>Tree overhang on roof</span><span class="num">${N.roof.overhang_m2} m² (${(N.roof.overhang_share*100).toFixed(2)}%)</span></div>
+   ${N.buildings.map(b=>`<div class="statrow"><span>${esc(b.label[0].toUpperCase()+b.label.slice(1))}${b.side?' ('+esc(b.side)+')':''}</span><span class="num">${fmt(b.area_m2,1)} m² · conf ${b.confidence.toFixed(2)}</span></div>`).join('')}
+   <div class="statrow"><span>Tall vegetation patches</span><span class="num">${N.vegetation.tall.count} · ${fmt(N.vegetation.tall.area_m2)} m²</span></div><div class="statrow"><span>Hard surface patches</span><span class="num">${N.hard_surface.count} · ${fmt(N.hard_surface.area_m2)} m²</span></div></div>
+   <div class="card pad" id="nm-model_3d"><h3>3D model <span class="badge b-ok">present</span></h3>
+   <div class="statrow"><span>Format</span><span>${esc(N.model3d.format)}</span></div><div class="statrow"><span>Projection</span><span>${esc(N.model3d.crs)}</span></div><div class="statrow"><span>Mesh</span><span class="num">${fmt(N.model3d.vertices)} vertices · ${fmt(N.model3d.triangles)} triangles</span></div><div class="statrow"><span>Credits</span><span>${esc(N.model3d.credits)}</span></div>
+   <div class="small muted" style="margin-top:8px">${esc(N.model3d.capture)}. ${esc(N.model3d.coverage)}. ${esc(N.model3d.viewer)}.</div>
+   <div style="margin-top:12px"><a class="btnl" href="model3d.html">Open 3D model viewer ↗</a></div></div>
+   <div class="card pad" id="nm-dsm"><h3>DSM <span class="badge b-grey">not purchased</span></h3><div class="small" style="color:var(--ink2)">${esc(N.dsm.reason)}</div><h3 style="margin-top:16px">Public lidar <span class="badge b-blue">cross-check</span></h3><div class="small" style="color:var(--ink2)">${esc(N.lidar.source)}. Matches the mesh slope to 0.01% and roof heights closely.</div></div></div>`;
+  h+=`<div class="card pad mt" id="nm-ai_pack"><h3>Calls & credits</h3><table><thead><tr><th>Call</th><th>Requested</th><th>Area</th><th>Credits</th><th>When</th></tr></thead><tbody>
+   <tr><td>Four-pack call</td><td>${N.call1.packs.map(esc).join(', ')} + ${N.call1.include.join(', ')}</td><td class="num">${fmt(N.call1.area_m2)} m²<div class="tiny muted">roof + 30 m buffer</div></td><td class="num"><b>${N.call1.credits}</b></td><td>${esc(N.call1.retrieved)}</td></tr>
+   <tr><td>Scores call</td><td>building + ${N.call2.include.join(', ')}</td><td class="num">same area</td><td class="num"><b>${N.call2.credits}</b> <span class="muted tiny">est. ${N.call2.estimate}</span></td><td>${esc(N.call2.retrieved)}</td></tr></tbody></table>
+   <div class="small muted" style="margin-top:10px">Other Vertical surveys on file for this lot: ${N.other_surveys.map(esc).join(', ')}.</div></div>`;
+  document.getElementById('pg-nearmap').innerHTML=h;
+}
+function rMeas(){
+  let h=head('Section 6','Measurements','Mesh heights and the georeferenced nadir. The 3D mesh roof is the provisional primary reference; alternates are one click away.');
+  D.meas.forEach(g=>{
+    h+=`<div class="card mt"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+g.rows.map(r=>`<tr class="mrow" id="meas-${r.id}"><td><b style="font-weight:600">${esc(r.label)}</b>${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${r.alts.length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
+  });
+  h+=`<div class="grid g2 mt"><div class="card"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${D.trees.map(t=>`<tr><td>T${t.rank}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>
+   <div><div class="card tile" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div>
+   <div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${D.caveats.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div></div></div>`;
+  document.getElementById('pg-measurements').innerHTML=h;
+}
+const TYPECOL={house:'#ff922b',garage:'#ff922b',building:'#ff922b',chimney:'#ff922b','solar panels':'#ffd43b',patio:'#74c0fc',deck:'#74c0fc',walkway:'#74c0fc',pergola:'#74c0fc','fire pit':'#ff6b6b','parking area':'#adb5bd',driveway:'#adb5bd',track:'#adb5bd',court:'#4dabf7',fence:'#e599f7',wall:'#e599f7',hedge:'#8ce99a',pool:'#3bc9db',lawn:'#8ce99a',garden:'#8ce99a','tree cluster':'#51cf66',woodland:'#51cf66',vehicle:'#ced4da','cannot tell':'#fa5252'};
+/* Same class colours as the region editor (nearmap-review v1.7.18). */
+function classColor(name){const f={Building:'#e85d04','Building (Deprecated)':'#9d0208',Roof:'#dc2f02','Translucent Roofing':'#f48c06',Driveway:'#f72585',Asphalt:'#495057','Road (Driveable Surface)':'#343a40','Concrete Slab':'#adb5bd','Solar Panel':'#3a86ff','Swimming Pool':'#4cc9f0','Water Body':'#0077b6','Residential Chimney':'#7b2cbf',Skylight:'#ffd166','Woody Vegetation':'#2d6a4f','Medium and High Vegetation (>2m)':'#40916c','Medium and High Vegetation with Woody Vegetation':'#1b4332','Low Vegetation (0.5m-2m)':'#74c69d','Very Low Vegetation (<0.5m)':'#95d5b2','Lawn Grass':'#52b788','Natural (soft)':'#b7e4c7'};
+  if(f[name])return f[name];let h=0;for(let i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);return 'hsl('+(Math.abs(h)%360)+', 62%, 46%)';}
+const REG_GROUPS=[['Roof & buildings',c=>/roof|building|tile/i.test(c),true],['Hard surfaces',c=>/hard surface|asphalt|concrete|driveway/i.test(c),true],['Natural ground',c=>/natural|very low/i.test(c),false],['Vegetation',c=>/vegetation|overhang/i.test(c),false]];
+let ATYPE='all',REGS=null,REGSRC='';
+const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
+async function loadRegions(){
+  if(REGS)return REGS;
+  try{const raw=localStorage.getItem('h1-regions')||localStorage.getItem('nm-regions:h1');if(raw){const j=JSON.parse(raw);if(j&&j.features){REGS=j;REGSRC='browser edits';return j;}}}catch(e){}
+  if(H1Crypto.isLocal() && D.cam_ctx && D.cam_ctx.delivery){
+    const base='nearmap/'+D.cam_ctx.delivery+'/ai/';
+    for(const [f,lab] of [['edits/regions.json','working edits'],['original/regions.json','vendor original']]){
+      try{const r=await fetch(base+f+'?_='+Date.now(),{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&j.features){REGS=j;REGSRC=lab;return j;}}}catch(e){}
+    }
+  }
+  try{const j=JSON.parse(new TextDecoder().decode(await fetchDec('regions-original.bin')));if(j&&j.features){REGS=j;REGSRC='original';return j;}}catch(e){}
+  return null;
+}
+function regionPolysPx(fc){
+  const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;
+  const px=p=>[(p[0]-b.west)/(b.east-b.west)*W,(b.north-p[1])/(b.north-b.south)*H];
+  const out=[];(fc.features||[]).forEach(f=>{const g=f.geometry||{};const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
+    const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
+    polys.forEach(poly=>out.push({id:String(f.id),cls,d:poly.map(r=>'M'+r.map(p=>px(p).map(v=>v.toFixed(1)).join(',')).join('L')+'Z').join(' ')}));});
+  return out;
+}
+function rAssets(){
+  const A=D.assets;const types={};A.located.forEach(a=>types[a.type]=(types[a.type]||0)+1);
+  let h=head('Section 7','Assets','Inventory as seen in imagery and the county record, linked to the Nearmap AI regions it sits on. Presence, position and size only.');
+  h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">The full Nearmap AI data layer (${'<span id="regcount">…</span>'} regions) as editable polygons. Pick a region, paint to grow or add, right-drag to erase, then Save. The vendor original is never changed.</div></div><a class="btnl" href="${editorUrl()}">Open region editor ↗</a></div>`;
+  h+=`<div class="chips mt" id="achips"><button class="chip on" data-t="all">All<b>${A.located.length}</b></button>${Object.entries(types).map(([t,n])=>`<button class="chip" data-t="${esc(t)}">${esc(t)}<b>${n}</b></button>`).join('')}</div>`;
+  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Asset</th><th>AI region</th><th>Size</th></tr></thead><tbody>${A.located.map(a=>`<tr id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.type)}" data-regions="${esc((a.regions||[]).join(' '))}"><td class="aid">${a.id}</td><td><div style="display:flex;gap:8px;align-items:center"><span class="dot" style="color:${TYPECOL[a.type]||'#999'};width:9px;height:9px"></span><span class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em">${esc(a.type)}</span></div><div style="font-weight:550;margin-top:2px">${esc(a.name)}</div><details><summary>Observation</summary><div class="body">${esc(a.obs)}${a.conf_reason?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}:</b> ${esc(a.conf_reason)}</div>`:''}<div style="margin-top:6px">${a.src.split(' + ').map(tag).join(' ')}</div></div></details></td><td class="small">${(a.regions||[]).length?`<div class="tiny muted">${esc(a.region_label||'')}</div>`+(a.regions||[]).slice(0,4).map((r,i)=>`<a class="rchip${i?'':' p'}" href="${editorUrl(r,a.id)}" title="Open in the region editor">${esc(r)}</a>`).join(''):'<span class="muted">no AI region</span>'}</td><td class="small num">${a.size?esc(a.size):`<span class="muted">${esc(a.size_note||'—')}</span>`}</td></tr>`).join('')}</tbody></table></div>
+  <div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${['#dc2f02','#adb5bd','#b7e4c7','#2d6a4f'][i]}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div></div></div>`;
+  h+=`<div class="grid g2 mt2"><div class="card"><div class="tblhead"><h3>On record, not located</h3><span class="muted small">${A.on_record.length} items</span></div><table><tbody>${A.on_record.map(a=>`<tr id="asset-${a.id}"><td class="aid">${a.id}</td><td><div style="font-weight:550">${esc(a.name)}</div><div class="small muted">${esc(a.loc_note||'')}</div></td><td class="small">${esc(a.size||'')}</td><td style="text-align:right">${tag('County record')}</td></tr>`).join('')}</tbody></table></div>
+  <div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
+  const el=document.getElementById('pg-assets');el.innerHTML=h;
+  drawAssetMap();
+  loadRegions().then(fc=>{document.getElementById('regcount').textContent=fc?fc.features.length:'?';drawAssetMap();});
+  el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{ATYPE=c.dataset.t;el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x===c));el.querySelectorAll('.atbl tbody tr').forEach(r=>r.style.display=(ATYPE==='all'||r.dataset.t===ATYPE)?'':'none');});
+  el.querySelectorAll('#regleg input').forEach(c=>c.onchange=drawAssetMap);
+  el.querySelectorAll('.atbl tbody tr').forEach(r=>r.addEventListener('click',e=>{if(e.target.closest('summary,a'))return;selectAsset(r.dataset.id,false)}));
+}
+function drawAssetMap(){
+  const box=document.getElementById('amap');if(!box)return;const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
+  let svg=mapSVG({crop,scale:true,layers:{parcel:true}});
+  if(REGS){
+    const on=[...document.querySelectorAll('#regleg input')].filter(c=>c.checked).map(c=>REG_GROUPS[+c.dataset.rg][1]);
+    const polys=regionPolysPx(REGS).filter(p=>on.some(fn=>fn(p.cls)));
+    const sw=(D.map.crop[crop][2]/700);
+    const g='<g class="regs">'+polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity=".30" stroke="${classColor(p.cls)}" stroke-width="${1.3*sw}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('')+'</g>';
+    const k=svg.indexOf('<polygon class="ly-parcel"');svg=k>0?svg.slice(0,k)+g+svg.slice(k):svg;
+    document.getElementById('regnote').innerHTML=`Read-only preview of the ${esc(REGSRC)} file (${REGS.features.length} regions). Click a region to find the assets on it; edit shapes in the <a href="${editorUrl()}">region editor</a>.`;
+  } else document.getElementById('regnote').textContent='Regions file not reachable from this page. Open it through the local server.';
+  box.innerHTML=svg;
+  wireTools(document.getElementById('pg-assets'),box);
+  box.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',()=>{const rid=p.dataset.rid;box.querySelectorAll('.rgn').forEach(x=>x.classList.toggle('hl',x.dataset.rid===rid));
+    const rows=[...document.querySelectorAll('.atbl tbody tr')].filter(r=>(r.dataset.regions||'').split(' ').includes(rid));
+    document.querySelectorAll('.atbl tr').forEach(r=>r.classList.toggle('sel',rows.includes(r)));if(rows[0])rows[0].scrollIntoView({block:'center',behavior:'smooth'});}));
+}
+function selectAsset(id,scroll){
+  document.querySelectorAll('.atbl tr').forEach(r=>r.classList.toggle('sel',r.dataset.id===id));
+  const a=D.assets.located.find(x=>x.id===id);const rid=a&&a.regions&&a.regions[0];
+  document.querySelectorAll('#amap .rgn').forEach(x=>x.classList.toggle('hl',!!rid&&x.dataset.rid===rid));
+  if(scroll){const r=document.getElementById('asset-'+id);if(r)r.scrollIntoView({block:'center',behavior:'smooth'});}
+}
+/* ---------------- cameras ---------------- */
+let CAMPINS=null;
+async function openSealed(env){const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(env.iv)},KEY,b64(env.ct));return JSON.parse(new TextDecoder().decode(pt));}
+async function sealJson(obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,new TextEncoder().encode(JSON.stringify(obj)));
+  const t=u=>{let s='';u=new Uint8Array(u);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
+  return {enc:'AES-GCM',v:1,kdf:'PBKDF2-SHA256',iter:ITER,salt:SALT,iv:t(iv),ct:t(ct)};}
+async function loadCamPins(){
+  let f=null,l=null;
+  try{const r=await fetch('cameras/edits/pins.json?_='+Date.now(),{cache:'no-store'});if(r.ok)f=await openSealed(await r.json());}catch(e){}
+  try{const raw=localStorage.getItem('h1-camera-pins');if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
+  CAMPINS=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;return CAMPINS;
+}
+const CAMCOL={surveyed:'#2f9e44',placed:'#f59f00',confirmed:'#1c7ed6',unsure:'#ae3ec9',unplaced:'#868e96',cant_place:'#868e96'};
+function camState(dev){const c=D.cams.find(x=>x.device===dev);const p=CAMPINS&&CAMPINS.pins.find(x=>x.device===dev);
+  if(p){const st=p.lat==null?(p.status==='cant_place'?'cant_place':'unplaced'):(p.locked?'surveyed':p.status);return {st,hd:p.heading};}
+  return {st:c.placement==='surveyed'?'surveyed':'unplaced',hd:null};}
+const CAMLAB={surveyed:'surveyed · locked',placed:'placed · not confirmed',confirmed:'confirmed',unsure:'unsure',unplaced:'unplaced',cant_place:"can't place"};
+function rCams(){
+  const C=D.cams,M=D.cam_meta;
+  let h=head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Pins are placed on the camera pin page.');
+  h+=`<div class="card pad cta"><div><h3>Camera pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Pick a camera, click where it is mounted on the nadir, drag to adjust, set which way it faces, then Confirm or mark Unsure. Surveyed pins start locked.</div></div><a class="btnl" href="cameras.html">Open camera pin page ↗</a></div>`;
+  h+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">12 Nov 2026</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
+  h+=`<div class="cams mt" id="camgrid"></div>`;
+  const el=document.getElementById('pg-cameras');el.innerHTML=h;
+  window.CAMLB=C.map(c=>({img:c.img,label:c.name,sub:'still '+c.still_at+' CT'}));
+  const draw=()=>{let n=0;document.getElementById('camgrid').innerHTML=C.map((c,i)=>{const s=camState(c.device);if(s.st!=='unplaced'&&s.st!=='surveyed'&&s.st!=='cant_place')n++;
+    return `<div class="card cam" id="cam-${c.device}"><div class="im" style="background-image:url(${URLS[c.img]})" onclick="lbOpen(CAMLB,${i})"><span class="pinno" style="background:${CAMCOL[s.st]}">${i+1}</span></div><div class="b"><div class="nm">${esc(c.name)}</div><div class="meta"><span class="camstat"><i style="background:${CAMCOL[s.st]}"></i>${esc(CAMLAB[s.st]||s.st)}${s.hd!=null?' · faces '+Math.round(s.hd)+'°':''}</span><span class="tag">device ${esc(c.device)}</span></div>${c.note?`<div class="small muted" style="margin-top:7px">${esc(c.note)}</div>`:''}</div></div>`;}).join('');
+    document.getElementById('kplaced').textContent=n;};
+  draw();loadCamPins().then(draw);
+}
+/* ---------------- reviewer questions ---------------- */
+let QG='all',QOPEN=false,QTXT='',ANS={},ANSFILE=null,ansTimer=null;
+let QMODE='2d',QMAP=null,QSEL=null,Q3=null;
+const QGROUPS=()=>[...new Set(D.questions.map(q=>q.group))];
+async function loadAnswers(){
+  let f=null,l=null;
+  try{const r=await fetch('reviews/edits/answers.json?_='+Date.now(),{cache:'no-store'});if(r.ok)f=await openSealed(await r.json());}catch(e){}
+  try{const raw=localStorage.getItem('h1-review-answers');if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
+  ANSFILE=f;const pick=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;ANS=(pick&&pick.answers)||{};
+}
+function ansDoc(){return {type:'reviewer-answers',name:'h1-reviewer-answers',property:'highlands-1',questions_file:'questions-reviewer.json',saved:new Date().toISOString(),answers:ANS};}
+function qStatus(m,k){const e=document.getElementById('qstat');if(e){e.textContent=m;e.className='qstat'+(k?' '+k:'');}}
+async function saveAnswers(){
+  const env=await sealJson(ansDoc());
+  try{localStorage.setItem('h1-review-answers',JSON.stringify(env));}catch(e){}
+  let how='local';
+  if(H1Crypto.canPut()){try{const r=await fetch('reviews/edits/answers.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(env)});if(r.ok)how='file';}catch(e){}}
+  const n=Object.values(ANS).filter(a=>a.answer).length;
+  if(how==='file')qStatus('Saved '+n+' answers to reviews/edits/answers.json');
+  else qStatus('Saved '+n+' answers in this browser. Use Export my review to send a copy.');
+  return how;
+}
+function queueSave(){clearTimeout(ansTimer);qStatus('Saving…');ansTimer=setTimeout(saveAnswers,500);}
+function qHasLoc(q){const l=q&&q.link;return !!(l&&(l.kind==='asset'||l.kind==='region'||l.kind==='outline'));}
+function rQuestions(){
+  const Q=D.questions;const gs=QGROUPS();
+  let h=`<div class="qsplit"><div class="qmap" id="qmap">
+      <div class="qmap-tools">
+        <div class="seg" id="qmode"><button type="button" data-mode="2d" class="on">2D</button><button type="button" data-mode="3d">3D</button></div>
+        <label class="qlab"><input type="checkbox" id="qly-parcel" checked> Parcel</label>
+        <label class="qlab"><input type="checkbox" id="qly-regions" checked> AI regions</label>
+        <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
+        <span class="qmap-hint" id="qmaphint">Click a question to show it on the map</span>
+      </div>
+      <div class="qmap-stage" id="qstage">
+        <div id="q2d" class="qpane on"></div>
+        <div id="q3d" class="qpane"></div>
+        <div class="qnorth" id="qnorth" title="North"><i></i><b>N</b></div>
+        <div class="qmap-status" id="qmapstat"></div>
+      </div>
+    </div>
+    <div class="qside">
+      ${head('Section 9','Reviewer questions','Answer from what you can see: the nadir, the 3D model, the AI regions and the outlines. Camera stills stay on the Cameras tab, not on this map. The map stays on the left; click a question (or Show on map) to highlight it. Tap an answer; add a note if it helps. Answers save automatically.')}
+      <div class="qbar"><div class="chips" id="qchips"><button class="chip on" data-g="all">All<b>${Q.length}</b></button>${gs.map(g=>`<button class="chip" data-g="${esc(g)}">${esc(g)}<b>${Q.filter(q=>q.group===g).length}</b></button>`).join('')}</div><label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="qopen"> Unanswered only</label><input type="search" id="qtxt" placeholder="Search questions…" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;min-width:180px"></div>
+      <div class="qbar" style="top:auto;padding-top:0"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><span class="qstat" id="qstat"></span></div>
+      <div id="qlist"></div>
+    </div></div>`;
+  const el=document.getElementById('pg-questions');el.innerHTML=h;
+  el.querySelectorAll('#qchips .chip').forEach(c=>c.onclick=()=>{QG=c.dataset.g;el.querySelectorAll('#qchips .chip').forEach(x=>x.classList.toggle('on',x===c));drawQ()});
+  el.querySelector('#qopen').onchange=e=>{QOPEN=e.target.checked;drawQ()};el.querySelector('#qtxt').oninput=e=>{QTXT=e.target.value.toLowerCase();drawQ()};
+  el.querySelector('#qsave').onclick=()=>saveAnswers();const nm=el.querySelector('#qrevname');if(nm){nm.value=H1Crypto.reviewerName();nm.onchange=()=>H1Crypto.setReviewerName(nm.value);}el.querySelector('#qexport').onclick=async()=>{if(nm)H1Crypto.setReviewerName(nm.value);qStatus('Exporting…');try{await H1Crypto.exportReview();qStatus('Downloaded the review export.');}catch(e){qStatus('Export failed: '+e.message,'err');}};
+  el.querySelector('#qlist').addEventListener('click',e=>{
+    const b=e.target.closest('.qopt');
+    if(b){const id=b.dataset.q;const cur=ANS[id]||{};
+      cur.answer=cur.answer===b.dataset.v?null:b.dataset.v;cur.at=new Date().toISOString();ANS[id]=cur;
+      const card=document.getElementById('q-'+id);card.querySelectorAll('.qopt').forEach(x=>x.classList.toggle('on',x.dataset.v===cur.answer));card.classList.toggle('done',!!cur.answer);progress();queueSave();return;}
+    if(e.target.closest('textarea,a,button.linkchip:not(.showmap)'))return;
+    const card=e.target.closest('.q');if(!card)return;
+    showQ(card.id.slice(2));
+  });
+  el.querySelector('#qlist').addEventListener('change',e=>{const t=e.target.closest('textarea[data-q]');if(!t)return;const cur=ANS[t.dataset.q]||{};cur.note=t.value.slice(0,2000);cur.at=new Date().toISOString();ANS[t.dataset.q]=cur;queueSave();});
+  el.querySelector('#qmode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setQMode(b.dataset.mode);});
+  el.querySelector('#qly-parcel').onchange=()=>{drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();};
+  el.querySelector('#qly-regions').onchange=()=>drawQ2();
+  el.querySelector('#qreset').onclick=()=>resetQView();
+  drawQ();
+  initQMap();
+  loadAnswers().then(()=>drawQ());
+}
+function progress(){const n=D.questions.filter(q=>ANS[q.id]&&ANS[q.id].answer).length;const b=document.getElementById('qprogbar');if(!b)return;b.style.width=(100*n/D.questions.length)+'%';document.getElementById('qprogtxt').textContent=n+' of '+D.questions.length+' answered';}
+function linkBtn(l){if(!l)return '';
+  if(l.kind==='asset'){const a=D.assets.located.concat(D.assets.on_record).find(x=>x.id===l.id);const lab=l.id+(a?' · '+a.name.split('(')[0].trim():'');return `<button class="linkchip" onclick="go('assets','asset-${l.id}')">↗ ${esc(lab)}</button>`;}
+  if(l.kind==='region')return `<a class="linkchip" style="text-decoration:none" href="${editorUrl(l.id)}">↗ region ${esc(l.id)} in the editor</a>`;
+  if(l.kind==='camera'){const c=D.cams.find(x=>x.device===l.id);return `<button class="linkchip" onclick="go('cameras','cam-${l.id}')">↗ ${esc(c?c.name:l.id)}</button><a class="linkchip" style="text-decoration:none" href="cameras.html">↗ pin page</a>`;}
+  if(l.kind==='outline')return `<button class="linkchip" onclick="go('imagery')">↗ ${l.id==='parcel'?'parcel line':'roof outlines'} on Imagery</button>`;
+  if(l.kind==='nearmap')return `<button class="linkchip" onclick="go('nearmap','nm-${l.id}')">↗ Nearmap ${esc(l.id)} pack</button>`;
+  return '';}
+function drawQ(){
+  const Q=D.questions.filter(q=>(QG==='all'||q.group===QG)&&(!QOPEN||!(ANS[q.id]&&ANS[q.id].answer))&&(!QTXT||(q.id+' '+q.text).toLowerCase().includes(QTXT)));
+  let h='';
+  QGROUPS().forEach(g=>{const qs=Q.filter(q=>q.group===g);if(!qs.length)return;
+    h+=`<div class="qgroup"><h3>${esc(g)} <span class="badge b-grey">${qs.length}</span></h3>`+qs.map(q=>{const a=ANS[q.id]||{};
+      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${q.provisional?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}
+     ${q.provisional?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(q.provisional)}</div>`:''}
+     <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+     <textarea data-q="${esc(q.id)}" rows="1" placeholder="Note (optional)">${esc(a.note||'')}</textarea></div>`;}).join('')+`</div>`;});
+  const list=document.getElementById('qlist');if(!list)return;
+  list.innerHTML=h||'<div class="card empty">No questions match.</div>';
+  progress();
+}
+
+/* -------- questions map (2D nadir + 3D mesh) -------- */
+function toUTM10(lat,lon){
+  const a=6378137,f=1/298.257222101,k0=0.9996,lon0=-123*Math.PI/180,e0=500000;
+  const e=Math.sqrt(2*f-f*f),ep2=e*e/(1-e*e);
+  const latr=lat*Math.PI/180,lonr=lon*Math.PI/180,s=Math.sin(latr),c=Math.cos(latr);
+  const N=a/Math.sqrt(1-e*e*s*s),T=(s/c)*(s/c),C=ep2*c*c,A=(lonr-lon0)*c;
+  const e2=e*e,e4=e2*e2,e6=e4*e2;
+  const M=a*((1-e2/4-3*e4/64-5*e6/256)*latr-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*latr)+(15*e4/256+45*e6/1024)*Math.sin(4*latr)-(35*e6/3072)*Math.sin(6*latr));
+  return [k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*ep2)*A*A*A*A*A/120)+e0,
+          k0*(M+N*(s/c)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24+(61-58*T+T*T+600*C-330*ep2)*A*A*A*A*A*A/720))];
+}
+function pxOfLonLat(lon,lat){const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;return [(lon-b.west)/(b.east-b.west)*W,(b.north-lat)/(b.north-b.south)*H];}
+function regionFeat(id){if(!REGS)return null;return (REGS.features||[]).find(f=>String(f.id)===String(id))||null;}
+function ringsOf(feat){if(!feat||!feat.geometry)return [];const g=feat.geometry;if(g.type==='Polygon')return [g.coordinates];if(g.type==='MultiPolygon')return g.coordinates;return [];}
+function boundsOfPx(pts){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;pts.forEach(p=>{if(p[0]<x0)x0=p[0];if(p[1]<y0)y0=p[1];if(p[0]>x1)x1=p[0];if(p[1]>y1)y1=p[1];});return [x0,y0,x1,y1];}
+function linkTarget(link){
+  if(!link)return null;
+  if(link.kind==='asset'){
+    const a=D.assets.located.find(x=>x.id===link.id);if(!a)return {label:link.id};
+    let pts=a.px?[a.px]:[];
+    const rid=a.regions&&a.regions[0];
+    const feat=rid&&regionFeat(rid);
+    if(feat) ringsOf(feat).forEach(poly=>poly[0].forEach(p=>pts.push(pxOfLonLat(p[0],p[1]))));
+    if(!pts.length&&a.px)pts=[a.px];
+    return {label:a.id+' · '+(a.name||'').split('(')[0].trim(),pts,px:a.px,rid,ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null,ll:null};
+  }
+  if(link.kind==='region'){
+    const feat=regionFeat(link.id);
+    const pts=[];if(feat) ringsOf(feat).forEach(poly=>poly[0].forEach(p=>pts.push(pxOfLonLat(p[0],p[1]))));
+    return {label:'region '+link.id+(feat?' · '+((feat.properties&&(feat.properties['class']||feat.properties.description))||''):''),pts,rid:String(link.id),ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null};
+  }
+  if(link.kind==='outline'){
+    if(link.id==='parcel') return {label:'parcel line',pts:D.map.parcel,ringsLL:[D.cam_ctx.parcel]};
+    const pts=(D.map.ai_roof||[]).flat();
+    const rings=(D.cam_ctx.roof||[]).map(r=>r);
+    return {label:'roof outlines',pts,ringsLL:rings};
+  }
+  return null;
+}
+function qStat(t){const e=document.getElementById('qmapstat');if(e)e.textContent=t||'';}
+function showQ(id){
+  QSEL=id;
+  document.querySelectorAll('#qlist .q').forEach(c=>c.classList.toggle('sel',c.id==='q-'+id));
+  const q=D.questions.find(x=>x.id===id);if(!q)return;
+  const t=linkTarget(q.link);
+  if(!t||!(t.pts&&t.pts.length)){qStat(qHasLoc(q)?'No outline is available for this question':'This question is not tied to a place on the map');if(Q3&&Q3.ready)syncQ3Overlays();drawQ2();return;}
+  qStat('Showing '+t.label);
+  if(QMODE==='2d'){drawQ2();fitQ2Bounds(t.pts);}
+  else {drawQ2();if(Q3&&Q3.ready)focusQ3(t);}
+}
+function resetQView(){
+  if(QMODE==='2d')fitQ2('parcel');
+  else if(Q3&&Q3.ready)resetQ3();
+  QSEL=null;document.querySelectorAll('#qlist .q').forEach(c=>c.classList.remove('sel'));qStat('');drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();
+}
+function setQMode(m){
+  if(m!=='2d'&&m!=='3d')return;QMODE=m;
+  document.querySelectorAll('#qmode button').forEach(b=>b.classList.toggle('on',b.dataset.mode===m));
+  const a=document.getElementById('q2d'),b=document.getElementById('q3d');
+  if(a)a.classList.toggle('on',m==='2d');if(b)b.classList.toggle('on',m==='3d');
+  const n=document.getElementById('qnorth');if(n)n.style.transform='';
+  if(m==='3d')ensureQ3().then(()=>{if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();}});
+  else {applyQ2();if(QSEL)showQ(QSEL);}
+}
+function initQMap(){
+  const stage=document.getElementById('q2d');if(!stage)return;
+  const M=D.map;
+  stage.innerHTML=`<div class="q2inner" id="q2inner" style="width:${M.w}px;height:${M.h}px"><img id="q2img" alt="Nadir 2 Jul 2026" draggable="false"><svg id="q2svg" viewBox="0 0 ${M.w} ${M.h}" preserveAspectRatio="none"></svg></div>`;
+  const img=document.getElementById('q2img');
+  img.src=URLS.nadir||'';
+  QMAP={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h};
+  wireQ2();
+  drawQ2();
+  requestAnimationFrame(()=>fitQ2('parcel'));
+  loadRegions().then(()=>{drawQ2();if(QSEL)showQ(QSEL);});
+  const st=document.getElementById('qstage');
+  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d')applyQ2();if(Q3)Q3.resize();});st._ro.observe(st);}
+}
+function applyQ2(){const el=document.getElementById('q2inner');if(!el||!QMAP)return;el.style.transform=`translate(${QMAP.tx}px,${QMAP.ty}px) scale(${QMAP.s})`;}
+function fitQ2(which){
+  const st=document.getElementById('qstage');if(!st||!QMAP)return;
+  const M=D.map;let pts=which==='parcel'?M.parcel:null;
+  if(pts&&pts.length)fitQ2Bounds(pts);else{QMAP.s=Math.min(st.clientWidth/M.w,st.clientHeight/M.h);QMAP.tx=(st.clientWidth-M.w*QMAP.s)/2;QMAP.ty=(st.clientHeight-M.h*QMAP.s)/2;applyQ2();}
+}
+function fitQ2Bounds(pts){
+  const st=document.getElementById('qstage');if(!st||!QMAP||!pts||!pts.length)return;
+  const [x0,y0,x1,y1]=boundsOfPx(pts);const pad=Math.max(20,(x1-x0)*0.18,(y1-y0)*0.18);
+  const bx0=x0-pad,by0=y0-pad,bx1=x1+pad,by1=y1+pad;
+  const sw=Math.max(1,st.clientWidth),sh=Math.max(1,st.clientHeight);
+  QMAP.s=Math.min(24,Math.max(0.15,Math.min(sw/(bx1-bx0),sh/(by1-by0))));
+  QMAP.tx=(sw-(bx0+bx1)*QMAP.s)/2;QMAP.ty=(sh-(by0+by1)*QMAP.s)/2;applyQ2();
+}
+function wireQ2(){
+  const st=document.getElementById('qstage');if(!st||st._q2)return;st._q2=true;
+  st.addEventListener('wheel',e=>{
+    if(QMODE!=='2d'||!QMAP)return;e.preventDefault();
+    const r=st.getBoundingClientRect();zoomQ2(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);
+  },{passive:false});
+  st.addEventListener('pointerdown',e=>{
+    if(QMODE!=='2d'||!QMAP)return;if(e.button!==0)return;
+    QMAP.drag=true;QMAP.lx=e.clientX;QMAP.ly=e.clientY;st.setPointerCapture(e.pointerId);st.classList.add('drag');
+  });
+  st.addEventListener('pointermove',e=>{
+    if(QMODE!=='2d'||!QMAP||!QMAP.drag)return;
+    QMAP.tx+=e.clientX-QMAP.lx;QMAP.ty+=e.clientY-QMAP.ly;QMAP.lx=e.clientX;QMAP.ly=e.clientY;applyQ2();
+  });
+  const up=()=>{if(!QMAP)return;QMAP.drag=false;st.classList.remove('drag');};
+  st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
+}
+function zoomQ2(cx,cy,fac){
+  const s2=Math.min(24,Math.max(0.15,QMAP.s*fac));
+  const wx=(cx-QMAP.tx)/QMAP.s,wy=(cy-QMAP.ty)/QMAP.s;
+  QMAP.s=s2;QMAP.tx=cx-wx*s2;QMAP.ty=cy-wy*s2;applyQ2();
+}
+function drawQ2(){
+  const svg=document.getElementById('q2svg');if(!svg)return;
+  const M=D.map,showP=document.getElementById('qly-parcel')?.checked!==false,showR=document.getElementById('qly-regions')?.checked!==false;
+  const t=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
+  const hlRid=t&&t.rid;
+  let h='';
+  if(showR&&REGS){
+    regionPolysPx(REGS).forEach(p=>{
+      const on=hlRid&&String(p.id)===String(hlRid);
+      h+=`<path class="rgn${on?' hl':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${on?'.5':'.22'}" stroke="${on?'#fff':classColor(p.cls)}" stroke-width="${on?4:1.4}" fill-rule="evenodd"></path>`;
+    });
+  }
+  if(showP) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="2.8"/>`;
+  if(t&&t.pts&&t.pts.length&&!hlRid){
+    if(t.pts.length>2) h+=`<polygon points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="3.2"/>`;
+    else if(t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="#ffe066" stroke="#fff" stroke-width="2"/>`;
+  }
+  if(t&&t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="7" fill="#ffe066" stroke="#1c2321" stroke-width="2"/>`;
+  svg.innerHTML=h;
+}
+
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Could not load '+src));document.head.appendChild(s);});}
+function llToMesh(lat,lon){
+  const [e,n]=toUTM10(lat,lon);const ex=(Q3&&Q3.extras)||{};
+  const off=ex.offset_utm10n||[0,0,0],c=ex.center_local_xyz||[0,0,0];
+  return [e-off[0]-c[0],n-off[1]-c[1]];
+}
+function heightAt(x,y){
+  if(!Q3||!Q3.THREE||!Q3.root)return 8;
+  const THREE=Q3.THREE;
+  const ray=new THREE.Raycaster(new THREE.Vector3(x,y,80),new THREE.Vector3(0,0,-1));
+  const hits=ray.intersectObject(Q3.root,true);
+  return hits.length?hits[0].point.z:8;
+}
+async function ensureQ3(){
+  const host=document.getElementById('q3d');if(!host)return;
+  if(Q3&&Q3.ready){Q3.resize();return;}
+  if(Q3&&Q3.loading)return Q3.loading;
+  host.innerHTML='<div class="q3wait" id="q3wait">Loading the 3D model…</div>';
+  Q3={loading:true,ready:false};
+  Q3.loading=(async()=>{
+    try{
+      if(!window.H1Three) await loadScript('vendor/three-viewer.js');
+      const {THREE,OrbitControls,GLTFLoader}=window.H1Three;
+      const buf=await fetchDec('mesh.bin',{onProgress:(a,b)=>{const e=document.getElementById('qmapstat');if(e)e.textContent=H1Crypto.progressMsg(a,b);}});
+      const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'}));
+      const w=host.clientWidth||400,h=host.clientHeight||400;
+      const scene=new THREE.Scene();scene.background=new THREE.Color(0x1b1f1d);
+      const cam=new THREE.PerspectiveCamera(50,w/Math.max(1,h),0.4,4000);cam.up.set(0,0,1);
+      const renderer=new THREE.WebGLRenderer({antialias:true});
+      renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.setSize(w,Math.max(1,h));
+      renderer.outputColorSpace=THREE.SRGBColorSpace;
+      host.appendChild(renderer.domElement);
+      const controls=new OrbitControls(cam,renderer.domElement);
+      controls.enableDamping=true;controls.dampingFactor=0.08;controls.screenSpacePanning=true;
+      controls.maxPolarAngle=Math.PI*0.58;
+      scene.add(new THREE.AmbientLight(0xffffff,1));
+      const root=await new Promise((res,rej)=>new GLTFLoader().load(url,g=>res(g),undefined,rej));
+      URL.revokeObjectURL(url);
+      scene.add(root.scene);
+      const extras=(root.parser&&root.parser.json.meshes&&root.parser.json.meshes[0]&&root.parser.json.meshes[0].extras)||{};
+      Q3={THREE,scene,cam,renderer,controls,root:root.scene,extras,ready:true,loading:false,host,
+        resize(){const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setSize(w,h);},
+        marker:null,line:null,parcel:null};
+      const wait=document.getElementById('q3wait');if(wait)wait.remove();
+      resetQ3();syncQ3Overlays();
+      const loop=()=>{if(!Q3||!Q3.renderer)return;Q3.raf=requestAnimationFrame(loop);if(QMODE==='3d'){Q3.controls.update();Q3.renderer.render(Q3.scene,Q3.cam);updateNorth3();}};
+      loop();
+    }catch(err){
+      const w=document.getElementById('q3wait');
+      if(w)w.textContent='Could not load the 3D model. Try again, or open the page over the review link.';
+      Q3={ready:false,loading:false,error:String(err&&err.message||err)};
+    }
+  })();
+  return Q3.loading;
+}
+function updateNorth3(){
+  if(QMODE!=='3d'||!Q3||!Q3.ready){const n=document.getElementById('qnorth');if(n&&QMODE==='2d')n.style.transform='';return;}
+  const THREE=Q3.THREE,t=Q3.controls.target.clone(),n=t.clone().add(new THREE.Vector3(0,20,0));
+  t.project(Q3.cam);n.project(Q3.cam);
+  const ang=Math.atan2(n.x-t.x,n.y-t.y);
+  const el=document.getElementById('qnorth');if(el)el.style.transform=`rotate(${ang}rad)`;
+}
+function frameQ3(cx,cy,z,span){
+  if(!Q3||!Q3.ready)return;
+  const d=Math.max(80,span*1.35);
+  Q3.controls.target.set(cx,cy,z);
+  Q3.cam.position.set(cx,cy-d*0.55,z+d*0.95);
+  Q3.controls.minDistance=12;Q3.controls.maxDistance=Math.max(900,span*5);
+  Q3.cam.lookAt(cx,cy,z);Q3.controls.update();
+}
+function resetQ3(){
+  if(!Q3||!Q3.ready)return;
+  const ring=D.cam_ctx.parcel||[];const pts=ring.map(p=>llToMesh(p[1],p[0]));
+  if(!pts.length){frameQ3(0,0,10,200);return;}
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+  const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  frameQ3(cx,cy,heightAt(cx,cy),span);
+}
+function focusQ3(t){
+  if(!Q3||!Q3.ready||!t)return;
+  syncQ3Overlays();
+  let cx,cy,z,span=40;
+  if(t.ringsLL&&t.ringsLL[0]&&t.ringsLL[0].length){
+    const pts=t.ringsLL[0].map(p=>llToMesh(p[1],p[0]));
+    const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+    cx=(Math.min(...xs)+Math.max(...xs))/2;cy=(Math.min(...ys)+Math.max(...ys))/2;
+    span=Math.max(18,Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  }else if(t.px){
+    const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;
+    const lon=b.west+t.px[0]/W*(b.east-b.west),lat=b.north-t.px[1]/H*(b.north-b.south);
+    const m=llToMesh(lat,lon);cx=m[0];cy=m[1];
+  }else return;
+  z=heightAt(cx,cy);
+  frameQ3(cx,cy,z,Math.max(40,span*1.15));
+}
+function syncQ3Overlays(){
+  if(!Q3||!Q3.ready)return;
+  const THREE=Q3.THREE;
+  const drop=k=>{if(Q3[k]){Q3.scene.remove(Q3[k]);Q3[k].geometry&&Q3[k].geometry.dispose();Q3[k].material&&Q3[k].material.dispose();Q3[k]=null;}};
+  drop('parcel');drop('line');drop('marker');
+  const mkLine=(rings,color,width)=>{
+    const grp=new THREE.Group();
+    (rings||[]).forEach(ring=>{
+      if(!ring||ring.length<2)return;
+      const pts=ring.map(p=>{const m=llToMesh(p[1],p[0]);return new THREE.Vector3(m[0],m[1],heightAt(m[0],m[1])+0.7);});
+      if(!pts[0].equals(pts[pts.length-1]))pts.push(pts[0].clone());
+      const g=new THREE.BufferGeometry().setFromPoints(pts);
+      const mat=new THREE.LineBasicMaterial({color,linewidth:width||2});
+      grp.add(new THREE.Line(g,mat));
+    });
+    Q3.scene.add(grp);return grp;
+  };
+  if(document.getElementById('qly-parcel')?.checked!==false && D.cam_ctx.parcel) Q3.parcel=mkLine([D.cam_ctx.parcel],0xffe066,2);
+  const t=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
+  if(t&&t.ringsLL&&t.ringsLL.length) Q3.line=mkLine(t.ringsLL,0xffffff,2);
+  let mx,my;
+  if(t&&t.px){const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;const lon=b.west+t.px[0]/W*(b.east-b.west),lat=b.north-t.px[1]/H*(b.north-b.south);const m=llToMesh(lat,lon);mx=m[0];my=m[1];}
+  else if(t&&t.ringsLL&&t.ringsLL[0]){const pts=t.ringsLL[0].map(p=>llToMesh(p[1],p[0]));mx=pts.reduce((s,p)=>s+p[0],0)/pts.length;my=pts.reduce((s,p)=>s+p[1],0)/pts.length;}
+  if(mx!=null){
+    const z=heightAt(mx,my);
+    const g=new THREE.SphereGeometry(1.6,16,12);
+    const mat=new THREE.MeshBasicMaterial({color:0xffe066});
+    const m=new THREE.Mesh(g,mat);m.position.set(mx,my,z+1.6);
+    const stem=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(mx,my,z-2),new THREE.Vector3(mx,my,z+8)]);
+    const line=new THREE.Line(stem,new THREE.LineBasicMaterial({color:0xffe066}));
+    const grp=new THREE.Group();grp.add(m);grp.add(line);Q3.scene.add(grp);Q3.marker=grp;
+  }
+}
+</script>
+</body>
+</html>
