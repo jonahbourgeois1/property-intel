@@ -71,10 +71,9 @@
       return false;
     }
   }
-  async function fetchDec(name, opts) {
+  function sleep(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
+  async function fetchDecOnce(name, opts, init) {
     var onProgress = opts && opts.onProgress;
-    var init = {};
-    if (isLocal()) init.cache = 'no-store';
     var r = await fetch(dataUrl(name), init);
     if (!r.ok) throw new Error('load ' + name);
     var total = parseInt(r.headers.get('content-length') || '0', 10) || 0;
@@ -98,6 +97,20 @@
     }
     if (onProgress) onProgress(-1, total); // decrypting
     return dec(buf);
+  }
+  async function fetchDec(name, opts) {
+    var init = {};
+    if (isLocal()) init.cache = 'no-store';
+    var last, attempt;
+    for (attempt = 0; attempt < 3; attempt++) {
+      try { return await fetchDecOnce(name, opts, init); }
+      catch (e) {
+        last = e;
+        if (opts && opts.onProgress) opts.onProgress(0, 0);
+        if (attempt < 2) await sleep(800 * (attempt + 1));
+      }
+    }
+    throw last;
   }
   async function sealJson(obj) {
     var iv = crypto.getRandomValues(new Uint8Array(12));
