@@ -302,6 +302,7 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 <script>
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let KEY=null, D=null; const URLS={};
+const SALT=H1Crypto.SALT, ITER=H1Crypto.ITER, CHECK=H1Crypto.CHECK;
 async function dec(buf){return H1Crypto.dec(buf);}
 async function fetchDec(f,opts){return H1Crypto.fetchDec(f,opts);}
 async function afterUnlock(){
@@ -748,7 +749,7 @@ function initQMap(){
   requestAnimationFrame(()=>fitQ2('parcel'));
   loadRegions().then(()=>{drawQ2();if(QSEL)showQ(QSEL);});
   const st=document.getElementById('qstage');
-  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d')applyQ2();if(Q3)Q3.resize();});st._ro.observe(st);}
+  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){if(st.clientWidth>40){if(QMAP&&QMAP._user)applyQ2();else fitQ2('parcel');}}if(Q3)Q3.resize();});st._ro.observe(st);}
 }
 function applyQ2(){const el=document.getElementById('q2inner');if(!el||!QMAP)return;el.style.transform=`translate(${QMAP.tx}px,${QMAP.ty}px) scale(${QMAP.s})`;}
 function fitQ2(which){
@@ -768,7 +769,7 @@ function wireQ2(){
   const st=document.getElementById('qstage');if(!st||st._q2)return;st._q2=true;
   st.addEventListener('wheel',e=>{
     if(QMODE!=='2d'||!QMAP)return;e.preventDefault();
-    const r=st.getBoundingClientRect();zoomQ2(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);
+    const r=st.getBoundingClientRect();QMAP._user=true;zoomQ2(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);
   },{passive:false});
   st.addEventListener('pointerdown',e=>{
     if(QMODE!=='2d'||!QMAP)return;if(e.button!==0)return;
