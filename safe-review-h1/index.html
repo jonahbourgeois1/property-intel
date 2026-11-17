@@ -280,6 +280,15 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .qleg{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:11px;color:var(--ink2);margin-left:6px}
 .qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
 .qhyd-call{position:absolute;z-index:5;background:#1c2321;color:#fff;border:1px solid #ffe066;border-radius:6px;padding:5px 8px;font-size:11px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+
+.keyfact{background:#3a2410;border:1px solid #d48b2c;border-radius:12px;padding:14px 16px;margin:0 0 16px}
+.keyfact .kf-kicker{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#f0b35a;font-weight:700}
+.keyfact .kf-body{margin:6px 0 8px;font-size:15px;line-height:1.5}
+.keyfact .kf-src{font-size:12px;color:var(--ink2)}
+.keyfact a{color:#f0b35a}
+.mas-table{width:100%;border-collapse:collapse;font-size:13px}
+.mas-table th,.mas-table td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.mas-table th{color:var(--ink2);font-weight:600}
 </style>
 <script src="vendor/h1-crypto.js"></script>
 </head>
@@ -321,7 +330,7 @@ const esc=s=>s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const fmt=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const tag=s=>s?`<span class="tag" title="${esc(s)}">${esc(s)}</span>`:'';
 const prov=(t='provisional')=>`<span class="badge b-prov"><span class="dot"></span>${t}</span>`;
-const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Assets'],['cameras','Cameras'],['questions','Reviewer questions']];
+const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Assets'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
 
 /* ---------------- map ---------------- */
 const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
@@ -373,12 +382,12 @@ document.getElementById('lb').addEventListener('click',e=>{if(e.target.id==='lb'
 
 /* ---------------- render ---------------- */
 function render(){
-  const counts={parcel:D.facts.length,layers:D.layers.length,assets:D.assets.located.length,cameras:D.cams.length,questions:D.questions.length};
+  const counts={parcel:D.facts.length,layers:D.layers.length,assets:D.assets.located.length,cameras:D.cams.length,alarms:(D.mas&&D.mas.zones||[]).length,questions:D.questions.length};
   document.getElementById('nav').innerHTML=SECTIONS.map(([k,l],i)=>`<a href="#${k}" data-k="${k}"><span class="n">${i+1}</span>${l}${counts[k]?`<span class="c">${counts[k]}</span>`:''}</a>`).join('');
   document.getElementById('footsurvey').textContent='Imagery survey: '+D.overview.survey;
   const P=document.getElementById('pages');
   P.innerHTML=SECTIONS.map(([k])=>`<section class="page" id="pg-${k}"></section>`).join('');
-  rOverview();rParcel();rLayers();rImagery();rNearmap();rMeas();rAssets();rCams();rQuestions();
+  rOverview();rParcel();rLayers();rFire();rImagery();rNearmap();rMeas();rAssets();rCams();rAlarms();rQuestions();
   window.addEventListener('hashchange',route);route();
 }
 function route(){
@@ -396,11 +405,62 @@ function route(){
 function go(sec,id){location.hash=sec+(id?':'+id:'');}
 const head=(eb,t,lead,right='')=>`<div class="ph"><div><div class="eyebrow">${eb}</div><h2>${t}</h2>${lead?`<div class="lead">${lead}</div>`:''}</div>${right}</div>`;
 
+function waterBanner(extra){
+  const W=D.firefighting_water||{};
+  const obs=W.observation||(D.water&&D.water.insight)||'';
+  if(!obs) return '';
+  const link=extra||'';
+  return `<div class="keyfact"><div class="kf-kicker">Key firefighting-water fact</div><div class="kf-body">${esc(obs)}</div><div class="kf-src">Pass 1 observation · private well · nearest public hydrant 968.6 m straight-line · none within 800 m${link}</div></div>`;
+}
+function rFire(){
+  const M=D.mas||{};
+  const zones=M.zones||[];
+  const life=['smoke','co','waterflow','well_pump'];
+  const lifeRows=zones.filter(z=>life.includes(z.device_type));
+  const ev=M.events_summary||{};
+  const H=D.hydrant||{};
+  let h=head('Fire','Firefighting water & life safety','Pass 1 observations only. This is not a tactical recommendation and it does not rate hydrant flow or access.');
+  h+=waterBanner('');
+  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Water supply</h3><div class="kv"><div><div class="k">Kind</div><div class="v">Private well</div></div><div><div class="k">Source</div><div class="v">Confirmed by Jonah · 16 Nov 2026</div></div></div><p class="small muted" style="margin-top:10px">${esc((D.water&&D.water.note)||'The lot is not on a community water system.')}</p></div>`;
+  h+=`<div class="card pad"><h3>Nearest public hydrant</h3><div class="kv"><div><div class="k">Straight-line</div><div class="v num">${esc(H.value||'968.6 m')}</div></div><div><div class="k">Within 800 m</div><div class="v">No</div></div><div><div class="k">Road distance</div><div class="v">${esc((H.road_distance_m&& (H.road_distance_m.from_driveway_entrance+' m from the driveway entrance'))||'2,444.3 m from the driveway entrance')}</div></div><div><div class="k">In service</div><div class="v">${H.in_service===false?'No':'Yes'}</div></div></div><p class="small muted" style="margin-top:10px">${esc(H.note||'')}</p></div></div>`;
+  h+=`<div class="card pad mt"><h3>Monitored life-safety zones</h3><div class="small muted" style="margin-top:-4px;margin-bottom:8px">${lifeRows.length} smoke, CO, sprinkler-waterflow or well-pump zones in the MAS export. Details on the Alarm (MAS) page.</div>`;
+  if(lifeRows.length){
+    h+=`<table class="mas-table"><thead><tr><th>Zone</th><th>Type</th><th>Programming</th></tr></thead><tbody>`+lifeRows.map(z=>`<tr><td>${esc(z.label)}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td></tr>`).join('')+`</tbody></table>`;
+  }
+  const wellEv=(ev.counts_by_type&&ev.counts_by_type['ENVIRO / WELL TROUBLE W/ MULTI SIG PROC'])||0;
+  if(wellEv) h+=`<p class="small muted" style="margin-top:10px">${wellEv} well-pump trouble events were logged in the export window (${esc(ev.window_start||'')} to ${esc(ev.window_end||'')}). No burglary or fire alarm events were in that window.</p>`;
+  h+=`</div><div class="card pad mt cta"><div><h3>Confirm this on the questions page</h3><div class="small" style="color:var(--ink2);margin-top:4px">RQ-54 asks you to confirm or flag the private-well / no-local-hydrant record. It is a Pass 1 confirmation, not a visual-only item.</div></div><a class="btnl" href="#questions">Open reviewer questions</a></div>`;
+  document.getElementById('pg-fire').innerHTML=h;
+}
+function rAlarms(){
+  const M=D.mas||{}, systems=M.systems||[], zones=M.zones||[], ev=M.events_summary||{}, pins=M.pins||[];
+  const placed=pins.filter(p=>p.lat!=null).length, links=pins.filter(p=>p.camera_link).length;
+  let h=head('Alarm (MAS)','Monitoring accounts and zones','Sanitized from the 16 Nov 2026 central-station export. Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them on the zone pin page.');
+  h+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Systems</div><div class="v num">${systems.length}</div></div><div class="card kpi"><div class="k">Zones</div><div class="v num">${zones.length}</div></div><div class="card kpi"><div class="k">Draft pins</div><div class="v num">${placed}<small> estimated · ${pins.length-placed} unplaced</small></div><div class="s">${links} camera-link candidates</div></div></div>`;
+  h+=`<div class="card pad mt"><h3>Systems</h3><table class="mas-table"><thead><tr><th>System</th><th>Kind</th><th>Make</th><th>Status</th><th>Zones</th></tr></thead><tbody>`;
+  h+=systems.map(s=>{
+    const n=zones.filter(z=>z.system_ref===s.system_ref).length;
+    return `<tr><td>${esc(s.label||s.make)}</td><td>${esc(s.kind)}</td><td>${esc(s.make)}</td><td>${esc(s.status)}</td><td class="num">${n}</td></tr>`;
+  }).join('');
+  h+=`</tbody></table></div>`;
+  h+=`<div class="card pad mt"><h3>Zones</h3><div class="small muted" style="margin:-4px 0 8px">Every draft pin is marked estimated, with a rationale. Unplaced zones were left unplaced when the label was not enough. Never invented.</div><table class="mas-table"><thead><tr><th>Zone</th><th>System</th><th>Type</th><th>Programming</th><th>Draft pin</th><th>Camera link</th></tr></thead><tbody>`;
+  const sysLabel=r=> (systems.find(s=>s.system_ref===r)||{}).label||'';
+  const pinOf=z=>pins.find(p=>p.system_ref===z.system_ref&&String(p.zone_id)===String(z.zone_id));
+  h+=zones.map(z=>{
+    const p=pinOf(z)||{};
+    const cam=p.camera_link|| (z.linked_camera?{name:z.linked_camera}:null);
+    return `<tr><td>${esc(z.label)}</td><td>${esc(sysLabel(z.system_ref))}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td><td>${p.lat!=null?'Estimated':'Unplaced'}</td><td>${cam?'possibly same location as camera '+esc(cam.name||cam.device||''):'—'}</td></tr>`;
+  }).join('');
+  h+=`</tbody></table></div>`;
+  if(ev.window_start) h+=`<div class="card pad mt"><h3>Event window</h3><p class="small">${esc(ev.window_start)} to ${esc(ev.window_end)}. ${Object.entries(ev.counts_by_type||{}).map(([k,v])=>esc(k)+': '+v).join(' · ')}. No burglary or fire alarm events in this window; user fields were empty in the export.</p></div>`;
+  h+=`<div class="card pad mt cta"><div><h3>Zone pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Place each zone on the nadir, confirm or flag it, and add a note. Draft locations are estimates. Where a zone name resembles a camera, the editor shows “possibly same location as camera X”.</div></div><a class="btnl" href="zones.html">Open zone pin editor</a></div>`;
+  document.getElementById('pg-alarms').innerHTML=h;
+}
 function rOverview(){
   const O=D.overview, S=O.status, N=D.nearmap;
   const scoreBar=(v,col)=>`<div class="scorebar">${[1,2,3,4,5].map(i=>`<i style="${i<=v?'background:'+col:''}"></i>`).join('')}</div>`;
   const pcol=v=>v>=4?'#2f7a4a':v>=3?'#a08a1f':'#b5542b';
-  let h=`<div class="card hero"><div class="l"><div class="eyebrow">${esc(O.customer_type)}</div><h1>${esc(O.title)} <span>· ${esc(O.subtitle)}</span></h1><div class="addr">${esc(O.situs)}</div>
+  let h=waterBanner(' · <a href="#fire">Fire tab</a>');h+=`<div class="card hero"><div class="l"><div class="eyebrow">${esc(O.customer_type)}</div><h1>${esc(O.title)} <span>· ${esc(O.subtitle)}</span></h1><div class="addr">${esc(O.situs)}</div>
   <div class="kv"><div><div class="k">Taxlot</div><div class="v num">${esc(O.taxlot)}</div></div><div><div class="k">Account</div><div class="v num">${esc(O.account)}</div></div><div><div class="k">Lot size</div><div class="v">${esc(O.acres)} acres</div></div>
   <div><div class="k">Zoning</div><div class="v">${esc(O.zoning)}</div></div><div><div class="k">County</div><div class="v">${esc(O.county)}</div></div><div><div class="k">Imagery survey</div><div class="v">${esc(O.survey)}</div></div></div></div>
   <div class="r" onclick="go('imagery')">${mapSVG({crop:'parcel',layers:{parcel:true,ai:true}})}<span class="cap">Nadir 2 Jul 2026 · parcel and 2026 roof · open imagery →</span></div></div>`;
@@ -631,7 +691,7 @@ function rQuestions(){
       </div>
     </div>
     <div class="qside">
-      ${head('Section 9','Reviewer questions','Answer from what you can see: the nadir, the 3D model, the AI regions and the outlines. Camera stills stay on the Cameras tab, not on this map. The map stays on the left; click a question (or Show on map) to highlight it. Tap an answer; add a note if it helps. Answers save automatically.')}
+      ${waterBanner(' · <a href="#fire">Fire tab</a>')}${head('Section 9','Reviewer questions','Answer from what you can see: the nadir, the 3D model, the AI regions and the outlines. Camera stills stay on the Cameras tab, not on this map. The map stays on the left; click a question (or Show on map) to highlight it. Tap an answer; add a note if it helps. Answers save automatically.')}
       <div class="qbar"><div class="chips" id="qchips"><button class="chip on" data-g="all">All<b>${Q.length}</b></button>${gs.map(g=>`<button class="chip" data-g="${esc(g)}">${esc(g)}<b>${Q.filter(q=>q.group===g).length}</b></button>`).join('')}</div><label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="qopen"> Unanswered only</label><input type="search" id="qtxt" placeholder="Search questions…" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;min-width:180px"></div>
       <div class="qbar" style="top:auto;padding-top:0"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><span class="qstat" id="qstat"></span></div>
       <div id="qlist"></div>
