@@ -193,8 +193,28 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .atbl tr.sel td{background:#eef6f4;box-shadow:inset 3px 0 0 var(--accent)}
 #amap-status{min-height:1.35em;margin-top:6px}
 #amap-status.warn{color:#8a5a00}
-#amap .pt.hl .halo{fill-opacity:.35}
-#amap .pt.hl circle:not(.halo){stroke:#fff;stroke-width:3px}
+#amap .pt.hl .halo{fill-opacity:.22}
+#amap .pt.hl circle:not(.halo){stroke:#fff;stroke-width:1.5px}
+#amap .rgn.hl{stroke:inherit!important;stroke-width:inherit!important;fill-opacity:.20!important;paint-order:stroke fill}
+.regpanel{padding:0;overflow:hidden}
+.regcat{border-bottom:1px solid var(--line)}
+.regcat:last-child{border-bottom:0}
+.regcat>summary{display:flex;width:100%;box-sizing:border-box;align-items:center;padding:10px 14px;color:var(--ink);font-size:13px;font-weight:650;cursor:pointer;background:#f6f5f2}
+.regcat>summary:hover{background:#f0efeb}
+.regcat>summary .n{font-weight:600;color:var(--ink3);font-size:12px;margin-left:8px}
+.reglist{padding:0;margin:0}
+.regitem{padding:8px 14px 8px 16px;border-top:1px solid var(--line2);cursor:pointer}
+.regitem:hover{background:#fafcfb}
+.regitem.sel{background:#eef6f4;box-shadow:inset 3px 0 0 var(--accent)}
+.regmain{display:flex;gap:8px;align-items:flex-start}
+.regcopy{min-width:0}
+.regname{font-weight:550;line-height:1.3}
+.regmeta{font-size:12px;color:var(--ink3);margin-top:2px}
+.vendors{margin:2px 12px 8px 28px}
+.vendors>summary{color:var(--ink2);font-size:12.5px;font-weight:500;padding:4px 0}
+.vendors.sel>summary{color:var(--accent)}
+.vendorlist .regitem{padding:7px 10px;border-top:1px solid var(--line2)}
+.regfacts{margin-top:4px}
 .atbl tr.cathead{cursor:default}
 .atbl tr.cathead td{background:#f4f2ee;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--ink2);padding:10px 8px;border-top:1px solid var(--line)}
 .atbl tr.cathead:hover td{background:#f4f2ee}
@@ -226,7 +246,7 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .rchip.p{border-color:var(--accent);color:var(--accent);font-weight:600}
 .rchip:hover{background:var(--accent2)}
 .rgn{cursor:pointer}
-.rgn.hl{stroke:#fff!important;stroke-width:3px!important;fill-opacity:.55!important;paint-order:stroke fill}
+.rgn.hl{fill-opacity:.20;paint-order:stroke fill}
 .regleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;margin:8px 0}
 .regleg label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .regleg .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
@@ -442,7 +462,7 @@ function route(){
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
   if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
   if(target&&key==='assets'){if(target.startsWith('asset-')){const rid='asset-'+resolveAssetId(target.slice(6));target=rid;}if(ATYPE!=='all'){const all=document.querySelector('#achips .chip[data-t=all]');if(all)all.click();}}
-  if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){const d=el.closest('details');if(d)d.open=true;el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);}}
+  if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){let d=el.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);}}
   else window.scrollTo(0,0);
 }
 function go(sec,id){location.hash=sec+(id?':'+id:'');}
@@ -638,7 +658,8 @@ function classGroupIndex(cls){
   for(let i=0;i<REG_GROUPS.length-1;i++) if(REG_GROUPS[i][1](cls)) return i;
   return REG_GROUPS.length-1;
 }
-let ATYPE='all',REGS=null,REGSRC='',ASEL=null;
+let ATYPE='all',REGS=null,REGSRC='',ASEL=null,AVEND=Object.create(null);
+const AOPEN_DEFAULT='Buildings and roof';
 const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
 function allAssetEntries(){
   const A=D.assets||{};
@@ -697,54 +718,186 @@ function rAssets(){
   const CAT_ORDER=['Buildings and roof','Driveway and paving','Recreation and outdoor living','Lawn','Vegetation/trees','Vehicles','Devices'];
   const allItems=allAssetEntries();
   const cats={};allItems.forEach(a=>{const c=a.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
-  const nReg=allItems.filter(a=>a.kind==='region'||(!a.kind&&a.regions)).length;
-  const nDev=allItems.filter(a=>a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices').length;
-  let h=head('Section 7','Regions','Regions on this lot, plus cameras and alarm zones as points from the pin files. Grouped by category. Click a row to show it on the map. Items with no outline or pin are labelled rather than invented.');
-  h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">${nReg} regions and ${nDev} devices. Pipeline region-review features are merged in for display and are not written over your edits. The vendor original is never changed.</div></div><a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a></div>`;
-  const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
-  h+=`<div class="chips mt" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
+  const isDev=a=>!!(a&&(a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices'));
+  const assetArea=a=>{
+    if(!a) return 0;
+    if(a.area_sqm) return +a.area_sqm;
+    const s=String(a.size||'').replace(/,/g,'');
+    const m=s.match(/([\d.]+)\s*m/);
+    return m?parseFloat(m[1]):0;
+  };
+  const assetLabel=a=>(a&&(a.name||a.label||a.id))||'';
+  const assetClass=a=>(a&&(a.class||a.type||a.kind||''))||'';
+  const isVendor=a=>!a.origin||a.origin==='vendor'||a.src==='vendor';
+  const FOOTPRINT_RE=/^(roof|building|building \(deprecated\)|building lifecycle|tile|clay tile)$/i;
+  const similarArea=(a,b)=>{
+    const x=assetArea(a),y=assetArea(b);
+    if(!x||!y) return false;
+    return Math.min(x,y)/Math.max(x,y)>=0.8;
+  };
+  const genericVendorName=a=>{
+    const n=assetLabel(a).trim().toLowerCase();
+    const c=assetClass(a).trim().toLowerCase();
+    return !n||n===c||n===String(a.type||'').toLowerCase();
+  };
+  const organizeCategory=(items,cat)=>{
+    if(cat==='Devices'){
+      const order={camera:0,alarm_zone:1};
+      const rows=items.slice().sort((a,b)=>(order[a.kind]??9)-(order[b.kind]??9)||String(a.id).localeCompare(String(b.id)));
+      return rows.map(a=>({kind:'item',item:a,children:[]}));
+    }
+    const leftover=items.slice();
+    const tree=[];
+    const used=new Set();
+    const fps=leftover.filter(a=>FOOTPRINT_RE.test(assetClass(a)));
+    fps.sort((a,b)=>assetArea(b)-assetArea(a));
+    fps.forEach(seed=>{
+      if(used.has(seed.id)) return;
+      const cluster=fps.filter(o=>!used.has(o.id)&&similarArea(seed,o));
+      if(cluster.length>1){
+        const primary=cluster.find(o=>/^roof$/i.test(assetClass(o))&&/main residence/i.test(assetLabel(o)))
+          ||cluster.find(o=>/^roof$/i.test(assetClass(o)))
+          ||cluster.find(o=>((o.aliases||[]).length>=2))
+          ||cluster.find(o=>/main residence/i.test(assetLabel(o)))
+          ||cluster.find(o=>(o.aliases||[]).length)
+          ||cluster.find(o=>!genericVendorName(o))
+          ||seed;
+        const kids=cluster.filter(o=>o.id!==primary.id);
+        kids.forEach(o=>used.add(o.id));
+        used.add(primary.id);
+        tree.push({kind:'item',item:primary,children:kids,vkey:'v:'+primary.id});
+      }
+    });
+    const rest=leftover.filter(a=>!used.has(a.id));
+    const byCls={};
+    rest.forEach(a=>{
+      if(isVendor(a)&&genericVendorName(a)&&!isDev(a)){
+        const k=assetClass(a)||'Vendor';
+        (byCls[k]=byCls[k]||[]).push(a);
+      }
+    });
+    Object.keys(byCls).forEach(k=>{
+      if(byCls[k].length>=2){
+        byCls[k].forEach(a=>used.add(a.id));
+        byCls[k].sort((a,b)=>assetArea(b)-assetArea(a)||String(a.id).localeCompare(String(b.id)));
+        tree.push({kind:'group',item:null,children:byCls[k],vkey:'v:'+cat+':'+k,label:k,count:byCls[k].length});
+      }
+    });
+    leftover.filter(a=>!used.has(a.id)).forEach(a=>tree.push({kind:'item',item:a,children:[],vkey:null}));
+    const score=n=>{
+      if(n.kind==='group') return 50;
+      const a=n.item;
+      if(a.origin==='region-review') return 0;
+      if((a.aliases||[]).length||/main residence/i.test(assetLabel(a))) return 1;
+      if(n.children&&n.children.length) return 2;
+      if(!isVendor(a)) return 3;
+      if(!genericVendorName(a)) return 4;
+      return 10;
+    };
+    tree.sort((a,b)=>score(a)-score(b)||assetArea(b.item||{})-assetArea(a.item||{}));
+    return tree;
+  };
+  const sizeText=a=>{
+    if(a&&a.size) return a.size;
+    const area=assetArea(a);
+    if(area) return area.toLocaleString('en-US',{maximumFractionDigits:1})+' m²';
+    return (a&&(a.size_note||(!isDev(a)&&a.status)))||'';
+  };
+  const showClass=a=>{
+    const lab=assetLabel(a).trim().toLowerCase();
+    const cls=assetClass(a).trim().toLowerCase();
+    return cls&&lab!==cls;
+  };
   const factLine=a=>{
     const facts=a.facts||[];
-    if(!facts.length) return '';
+    if(!facts.length&&!a.obs&&!a.loc_note) return '';
     const bits=facts.slice(0,4).map(f=>{
       const v=typeof f.value==='object'?JSON.stringify(f.value):String(f.value??'');
       const short=v.length>120?v.slice(0,117)+'…':v;
       return `<div><b>${esc(f.kind||'fact')}${f.unit?' ('+esc(f.unit)+')':''}:</b> ${esc(short)}</div>`;
     }).join('');
-    return `<div class="small" style="margin-top:6px">${bits}${facts.length>4?'<div class="muted">+'+(facts.length-4)+' more</div>':''}</div>`;
+    return `<details class="regfacts"><summary>Facts</summary><div class="body">${a.obs?esc(a.obs):''}${a.conf?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}</b>${a.conf_reason?': '+esc(a.conf_reason):''}</div>`:''}${bits}${facts.length>4?'<div class="muted">+'+(facts.length-4)+' more</div>':''}${a.loc_note?`<div class="small muted" style="margin-top:6px">${esc(a.loc_note)}</div>`:''}</div></details>`;
   };
-  const row=a=>{
-    const rec=a.kind==='alarm_zone'&&a.status==='unplaced'||a.kind==='camera'&&!a.px;
-    const isDev=a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices';
-    const regionCell=isDev
-      ? `<span class="muted">${esc(a.kind==='camera'?'camera pin':(a.status||'alarm zone'))}</span>${a.regions&&a.regions[0]?`<div class="tiny muted">linked ${esc(a.regions[0])}</div>`:''}`
-      : ((a.regions||[a.id]).length?`<div class="tiny muted">${esc(a.region_label||a.region_class||a.class||'')}</div>`+(a.regions||[a.id]).slice(0,4).map((r,i)=>`<a class="rchip${i?'':' p'}" href="${editorUrl(r,a.id)}" target="_blank" rel="noopener" title="Open in the region editor">${esc(r)}</a>`).join(''):'<span class="muted">no region</span>');
-    const badges=(a.needs_trace?'<span class="tiny muted"> needs trace</span>':'')+(a.origin&&a.origin!=='vendor'?`<span class="tiny muted"> · ${esc(a.origin)}</span>`:'');
-    const obs=a.obs||(a.facts&&a.facts.length)||a.loc_note
-      ? `<details><summary>Facts / observation</summary><div class="body">${a.obs?esc(a.obs):''}${a.conf?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}</b>${a.conf_reason?': '+esc(a.conf_reason):''}</div>`:''}${factLine(a)}${a.loc_note?`<div class="small muted" style="margin-top:6px">${esc(a.loc_note)}</div>`:''}${a.src?`<div style="margin-top:6px">${String(a.src).split(' + ').map(tag).join(' ')}</div>`:''}</div></details>`
-      : '';
-    return `<tr id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.category||'')}" data-cat="${esc(a.category||'')}" data-kind="${esc(a.kind||'')}" data-regions="${esc((a.regions||(a.kind==='region'?[a.id]:[])).join(' '))}"><td class="aid">${a.id}</td><td><div style="display:flex;gap:8px;align-items:center"><span class="dot" style="color:${TYPECOL[a.type]||TYPECOL[a.class]||'#999'};width:9px;height:9px"></span><span class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em">${esc(a.class||a.type||a.kind||'')}${badges}</span></div><div style="font-weight:550;margin-top:2px">${esc(a.name||a.label||a.id)}</div>${obs}</td><td class="small">${regionCell}</td><td class="small num">${a.size?esc(a.size):`<span class="muted">${esc(a.size_note||a.status||'—')}</span>`}</td></tr>`;
+  const itemRow=a=>{
+    const lab=assetLabel(a);
+    const cls=assetClass(a);
+    const col=TYPECOL[a.type]||TYPECOL[a.class]||classColor(cls)||'#999';
+    const sz=sizeText(a);
+    const devNote=isDev(a)?(a.kind==='camera'?(a.px?'camera pin':(a.status||'camera pin')):(a.status||'alarm zone')):'';
+    const meta=[showClass(a)?esc(cls):'',sz?esc(sz):'',devNote?esc(devNote):'',a.needs_trace?'needs trace':'',(a.origin&&a.origin!=='vendor')?esc(a.origin):''].filter(Boolean).join(' · ');
+    const rids=(a.regions||(a.kind==='region'||(!a.kind&&!isDev(a))?[a.id]:[])).join(' ');
+    return `<div class="regitem" id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.category||'')}" data-cat="${esc(a.category||'')}" data-kind="${esc(a.kind||'')}" data-regions="${esc(rids)}"><div class="regmain"><span class="dot" style="color:${col}"></span><div class="regcopy"><div class="regname">${esc(lab)}</div>${meta?`<div class="regmeta">${meta}</div>`:''}${factLine(a)}</div></div></div>`;
   };
-  const groups=CAT_ORDER.filter(c=>cats[c]).map(c=>{
+  const vendorBlock=(key,label,children)=>{
+    const open=AVEND[key]?' open':'';
+    return `<details class="vendors" data-vkey="${esc(key)}"${open}><summary>${esc(label)}</summary><div class="vendorlist">${children.map(itemRow).join('')}</div></details>`;
+  };
+  let h=head('Section 7','Regions','Click a region to show it on the map.',`<a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a>`);
+  const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
+  h+=`<div class="chips" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
+  const blocks=CAT_ORDER.filter(c=>cats[c]).map(c=>{
     const rows=allItems.filter(a=>(a.category||'Uncategorised')===c);
-    const order={region:0,camera:1,alarm_zone:2};
-    rows.sort((x,y)=>(order[x.kind]??9)-(order[y.kind]??9)||String(x.id).localeCompare(String(y.id)));
-    return `<tr class="cathead" data-t="${esc(c)}" data-cat="${esc(c)}"><td colspan="4">${esc(c)} · ${rows.length}</td></tr>`+rows.map(row).join('');
+    const tree=organizeCategory(rows,c);
+    const body=tree.map(n=>{
+      if(n.kind==='group') return vendorBlock(n.vkey,`${n.label} (${n.count})`,n.children);
+      const kids=n.children||[];
+      return itemRow(n.item)+(kids.length?vendorBlock(n.vkey,`vendor layers (${kids.length})`,kids):'');
+    }).join('');
+    const open=c===AOPEN_DEFAULT?' open':'';
+    return `<details class="regcat" data-cat="${esc(c)}" data-t="${esc(c)}"${open}><summary>${esc(c)}<span class="n">${rows.length}</span></summary><div class="reglist">${body}</div></details>`;
   }).join('');
-  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Region</th><th>Class / pin</th><th>Size</th></tr></thead><tbody>${groups}</tbody></table></div>
-<div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on,col],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${col}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div><div id="amap-status" class="small"></div></div></div>`;
+  h+=`<div class="assetwrap mt"><div class="card regpanel">${blocks}</div>
+<div class="mapcol"><div class="maptools"><div class="seg" data-seg="as"><button data-crop="house" class="on">House</button><button data-crop="parcel">Parcel</button></div></div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote"></div><div id="amap-status" class="small"></div></div></div>`;
   h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
   const pfs=A.property_facts||D.property_facts||[];
   if(pfs.length){
     h+=`<div class="card pad mt2" id="property-facts"><h3>Property facts</h3><div class="small muted" style="margin-top:4px">Records with no geometry of their own — attached here rather than inventing a region. Click a fact to see that on the map panel.</div><ul class="clean small" style="margin-top:8px">${pfs.map(f=>`<li class="pfact" style="margin:6px 0;cursor:pointer"><b>${esc(f.kind||'fact')}</b> — ${esc(typeof f.value==='string'?f.value:JSON.stringify(f.value))}${f.source?`<div class="muted">${esc(f.source)}</div>`:''}</li>`).join('')}</ul></div>`;
   }
-
-    const el=document.getElementById('pg-assets');el.innerHTML=h;
+  const el=document.getElementById('pg-assets');el.innerHTML=h;
+  function applyChipFilter(){
+    el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x.dataset.t===ATYPE));
+    el.querySelectorAll('.regcat').forEach(d=>{
+      const show=ATYPE==='all'||d.dataset.cat===ATYPE;
+      d.style.display=show?'':'none';
+      if(ATYPE!=='all'&&show) d.open=true;
+    });
+  }
+  applyChipFilter();
   drawAssetMap();
-  loadRegions().then(fc=>{const rc=document.getElementById('regcount');if(rc)rc.textContent=fc?fc.features.length:'?';drawAssetMap();});
-  el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{ATYPE=c.dataset.t;el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x===c));el.querySelectorAll('.atbl tbody tr').forEach(r=>r.style.display=(ATYPE==='all'||r.dataset.cat===ATYPE||r.dataset.t===ATYPE)?'':'none');});
-  el.querySelectorAll('#regleg input').forEach(c=>c.onchange=drawAssetMap);
-  el.querySelectorAll('.atbl tbody tr').forEach(r=>r.addEventListener('click',e=>{if(!r.dataset.id||r.classList.contains('cathead'))return;if(e.target.closest('summary,a'))return;selectAsset(r.dataset.id,false)}));
+  loadRegions().then(()=>drawAssetMap());
+  el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{
+    ATYPE=c.dataset.t;
+    ASEL=null;
+    setAmapStatus('');
+    applyChipFilter();
+    drawAssetMap();
+  });
+  el.querySelectorAll('.regcat').forEach(d=>d.addEventListener('toggle',()=>{if(!ASEL) drawAssetMap();}));
+  el.querySelectorAll('details.vendors').forEach(d=>{
+    d.addEventListener('toggle',()=>{AVEND[d.dataset.vkey]=d.open;});
+    d.querySelector('summary').addEventListener('click',()=>{
+      const key=d.dataset.vkey, label=d.querySelector('summary').textContent.trim();
+      requestAnimationFrame(()=>{
+        if(d.open){
+          const ids=[];
+          d.querySelectorAll('.regitem[data-id]').forEach(it=>{
+            ids.push(it.dataset.id);
+            (it.dataset.regions||'').split(/\s+/).forEach(r=>{if(r)ids.push(r);});
+          });
+          ASEL={id:null,group:key,rids:[...new Set(ids)],fit:true,pts:null};
+          setAmapStatus('Showing '+label+'.');
+          drawAssetMap();
+        } else if(ASEL&&ASEL.group===key){
+          ASEL=null;setAmapStatus('');drawAssetMap();
+        }
+      });
+    });
+  });
+  el.querySelectorAll('.regitem[data-id]').forEach(r=>r.addEventListener('click',e=>{
+    if(e.target.closest('summary,a,details.regfacts')) return;
+    e.stopPropagation();
+    selectAsset(r.dataset.id,false);
+  }));
   el.querySelectorAll('#property-facts .pfact').forEach(li=>li.addEventListener('click',()=>selectAsset('property-facts',false)));
 }
 function setAmapStatus(msg,warn){
@@ -762,53 +915,110 @@ function fitMapToPts(box,pts){
   const w=Math.max(maxx-minx,24)+pad*2, h=Math.max(maxy-miny,24)+pad*2;
   const svg=box.querySelector('svg');if(svg) svg.setAttribute('viewBox',[minx-pad,miny-pad,w,h].join(' '));
 }
+function isDeviceAsset(a){
+  return !!(a&&(a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices'));
+}
+function showDevicePins(){
+  if(ATYPE==='Devices') return true;
+  return isDeviceAsset(ASEL&&findAsset(ASEL.id));
+}
 function devicePoints(){
+  if(!showDevicePins()) return [];
+  const selOnly=ATYPE!=='Devices'&&ASEL&&isDeviceAsset(findAsset(ASEL.id));
   const out=[];
   allAssetEntries().forEach(a=>{
-    const isDev=a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices';
-    if(!isDev||!a.px||a.px.length<2) return;
+    if(!isDeviceAsset(a)||!a.px||a.px.length<2) return;
+    if(selOnly&&a.id!==ASEL.id) return;
     out.push({id:a.id,tip:(a.name||a.label||a.id),px:a.px,color:TYPECOL[a.kind]||TYPECOL[a.type]||TYPECOL[a.class]||'#4dabf7'});
   });
   return out;
 }
+function visibleOutlineIds(){
+  if(ASEL&&ASEL.rids&&ASEL.rids.length) return {ids:ASEL.rids,filled:true};
+  const ids=[];
+  document.querySelectorAll('#pg-assets .regitem[data-id]').forEach(el=>{
+    const cat=el.closest('details.regcat');
+    if(cat&&!cat.open) return;
+    if(ATYPE!=='all'&&el.dataset.cat!==ATYPE) return;
+    const vend=el.closest('details.vendors');
+    if(vend&&!vend.open) return;
+    if(el.dataset.kind==='camera'||el.dataset.kind==='alarm_zone') return;
+    ids.push(el.dataset.id);
+    (el.dataset.regions||'').split(/\s+/).forEach(r=>{if(r)ids.push(r);});
+  });
+  return {ids:[...new Set(ids)],filled:false};
+}
+function restyleParcel(box){
+  const par=box.querySelector('.ly-parcel');if(!par)return;
+  const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
+  const sw=(D.map.crop[crop][2]/700);
+  par.setAttribute('stroke-width',String(1.05*sw));
+  par.setAttribute('stroke-opacity','0.4');
+  par.setAttribute('stroke','#efe39a');
+}
+function syncPinSize(box){
+  const svg=box.querySelector('svg');if(!svg)return;
+  const vb=svg.viewBox.baseVal;
+  const w=box.getBoundingClientRect().width||700;
+  const r=Math.max(vb.width,1)/Math.max(w,1)*5.5;
+  box.querySelectorAll('#amap .pt circle:not(.halo), .pt circle:not(.halo)').forEach(c=>{
+    if(c.closest&&!c.closest('#amap')&&box.id!=='amap') return;
+    c.setAttribute('r',r);
+    c.setAttribute('stroke-width',String(Math.max(r*0.22, vb.width/w*1)));
+  });
+  box.querySelectorAll('.pt .halo').forEach(c=>c.setAttribute('r',r*1.65));
+}
 function drawAssetMap(){
   const box=document.getElementById('amap');if(!box)return;
   const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
-  const force=new Set((ASEL&&ASEL.rids)||[]);
+  const vis=visibleOutlineIds();
+  const force=new Set(vis.ids||[]);
   const points=devicePoints();
-  let svg=mapSVG({crop,scale:true,layers:{parcel:true},points});
+  const sw=(D.map.crop[crop][2]/700);
+  let svg=mapSVG({crop,scale:true,layers:{parcel:true},points,pr:4});
   if(REGS){
-    const on=new Set([...document.querySelectorAll('#regleg input')].filter(c=>c.checked).map(c=>+c.dataset.rg));
     const all=regionPolysPx(REGS);
-    const polys=all.filter(p=>on.has(classGroupIndex(p.cls))||force.has(p.id));
-    const sw=(D.map.crop[crop][2]/700);
-    const g='<g class="regs">'+polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity=".30" stroke="${classColor(p.cls)}" stroke-width="${1.3*sw}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('')+'</g>';
+    const polys=force.size?all.filter(p=>force.has(p.id)):[];
+    const fillOp=vis.filled?'.20':'0';
+    const strokeW=(vis.filled?1.9:1.15)*sw;
+    const g='<g class="regs">'+polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${fillOp}" stroke="${classColor(p.cls)}" stroke-width="${strokeW}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('')+'</g>';
     const k=svg.indexOf('<polygon class="ly-parcel"');svg=k>0?svg.slice(0,k)+g+svg.slice(k):svg;
     const rn=document.getElementById('regnote');
-    if(rn) rn.innerHTML=`Read-only preview of the ${esc(REGSRC)} file (${REGS.features.length} regions). Click a row or a shape to show it here; edit outlines in the <a href="${editorUrl()}" target="_blank" rel="noopener">region editor</a>.`;
+    if(rn) rn.innerHTML='Preview of the '+esc(REGSRC)+' file. Edit outlines in the <a href="'+editorUrl()+'" target="_blank" rel="noopener">region editor</a>.';
   } else {
     const rn=document.getElementById('regnote');
     if(rn) rn.textContent='Regions file not reachable from this page. Open it through the local server.';
   }
   box.innerHTML=svg;
+  restyleParcel(box);
   wireTools(document.getElementById('pg-assets'),box);
   document.querySelectorAll('[data-seg=as] [data-crop]').forEach(b=>{
     const prev=b.onclick;
-    b.onclick=()=>{ASEL&&(ASEL.fit=false);if(prev)prev.call(b);};
+    b.onclick=()=>{ASEL&&(ASEL.fit=false);if(prev)prev.call(b);syncPinSize(box);restyleParcel(box);};
   });
   box.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',()=>{
     const rid=p.dataset.rid;
-    const rows=[...document.querySelectorAll('.atbl tbody tr[data-id]')].filter(r=>(r.dataset.regions||'').split(' ').includes(rid)||r.dataset.id===rid);
+    const rows=[...document.querySelectorAll('#pg-assets .regitem[data-id]')].filter(r=>(r.dataset.regions||'').split(/\s+/).includes(rid)||r.dataset.id===rid);
     if(rows[0]) selectAsset(rows[0].dataset.id,true);
-    else {ASEL={id:rid,rids:[rid],fit:true,pts:null};applyAssetSelection();}
+    else {ASEL={id:rid,rids:[rid],fit:true,pts:null};drawAssetMap();}
   }));
   wireMap(box,id=>selectAsset(id,true));
   applyAssetSelection();
+  syncPinSize(box);
+}
+function revealAssetRow(id){
+  const r=document.getElementById('asset-'+id);
+  if(!r) return null;
+  let d=r.closest('details');
+  while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}
+  return r;
 }
 function applyAssetSelection(){
   const box=document.getElementById('amap');
   const id=ASEL&&ASEL.id;
-  document.querySelectorAll('.atbl tr').forEach(r=>r.classList.toggle('sel',!!id&&r.dataset.id===id));
+  const group=ASEL&&ASEL.group;
+  document.querySelectorAll('#pg-assets .regitem').forEach(r=>r.classList.toggle('sel',!!id&&r.dataset.id===id));
+  document.querySelectorAll('#pg-assets details.vendors').forEach(d=>d.classList.toggle('sel',!!group&&d.dataset.vkey===group));
   const rids=new Set((ASEL&&ASEL.rids)||[]);
   if(box){
     box.querySelectorAll('.rgn').forEach(x=>x.classList.toggle('hl',rids.has(x.dataset.rid)));
@@ -817,11 +1027,12 @@ function applyAssetSelection(){
       let pts=ASEL.pts&&ASEL.pts.slice();
       if(!pts||!pts.length){
         pts=[];
-        box.querySelectorAll('.rgn.hl').forEach(el=>{
+        box.querySelectorAll('.rgn.hl, .rgn').forEach(el=>{
+          if(!el.classList.contains('hl')&&rids.size) return;
           const d=el.getAttribute('d')||'';
           (d.match(/-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?/g)||[]).forEach(pair=>{const [x,y]=pair.split(',').map(Number);if(isFinite(x)&&isFinite(y))pts.push([x,y]);});
         });
-        const pin=box.querySelector('.pt.hl');
+        const pin=box.querySelector('.pt.hl')||(rids.size?null:box.querySelector('.pt'));
         if(pin){const c=pin.querySelector('circle:not(.halo)')||pin.querySelector('circle');if(c)pts.push([+c.getAttribute('cx'),+c.getAttribute('cy')]);}
       }
       if(pts.length) fitMapToPts(box,pts);
@@ -831,7 +1042,7 @@ function applyAssetSelection(){
 function selectAsset(id,scroll){
   if(id==='property-facts'){
     ASEL=null;
-    document.querySelectorAll('.atbl tr').forEach(r=>r.classList.remove('sel'));
+    document.querySelectorAll('#pg-assets .regitem').forEach(r=>r.classList.remove('sel'));
     const box=document.getElementById('amap');
     if(box){box.querySelectorAll('.rgn,.pt').forEach(x=>x.classList.remove('hl'));}
     setAmapStatus('Property facts have no map geometry — they are records attached here rather than a drawn region.',true);
@@ -840,7 +1051,7 @@ function selectAsset(id,scroll){
   }
   const a=findAsset(id);
   const name=a?(a.name||a.label||a.id):id;
-  const isDev=a&&(a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices');
+  const isDev=isDeviceAsset(a);
   const rids=[].concat((a&&a.regions)||[], (a&&(a.kind==='region'||(!a.kind&&!isDev))?[a.id]:[])).filter(Boolean).map(String);
   const unique=[...new Set(rids)];
   let pts=null, hasPoly=false, hasPin=false, needs=!!(a&&a.needs_trace);
@@ -854,15 +1065,16 @@ function selectAsset(id,scroll){
     ASEL.fit=false;
     if(!a) setAmapStatus('That item has no outline or pin to show on the map.',true);
     else if(isDev) setAmapStatus((name)+' ('+a.id+') has no pin yet.',true);
-    else if(needs) setAmapStatus((name)+' ('+a.id+') is marked “needs a trace” and has no outline to show yet.',true);
-    else setAmapStatus((name)+' ('+a.id+') has no map geometry.',true);
+    else if(needs) setAmapStatus((name)+' is marked “needs a trace” and has no outline to show yet.',true);
+    else setAmapStatus((name)+' has no map geometry.',true);
   } else if(needs&&hasPoly){
-    setAmapStatus('Showing '+name+' ('+a.id+'). This outline is marked as needing a better trace.');
+    setAmapStatus('Showing '+name+'. This outline is marked as needing a better trace.');
   } else {
-    setAmapStatus('Showing '+name+(a?' ('+a.id+')':'')+'.');
+    setAmapStatus('Showing '+name+'.');
   }
+  revealAssetRow(a?a.id:id);
   drawAssetMap();
-  if(scroll){const r=document.getElementById('asset-'+(a?a.id:id));if(r)r.scrollIntoView({block:'center',behavior:'smooth'});}
+  if(scroll){const r=revealAssetRow(a?a.id:id);if(r)r.scrollIntoView({block:'center',behavior:'smooth'});}
 }
 /* ---------------- cameras ---------------- */
 let CAMPINS=null;
