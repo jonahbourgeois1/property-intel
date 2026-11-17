@@ -79,20 +79,20 @@
     try { sessionStorage.setItem(SS_KEY, o.k); } catch (e) {}
     return o.k;
   }
-  function isModel3dHref(href) {
+  function isNewTabUnlockHref(href) {
     if (!href) return false;
-    try { return /model3d\.html$/i.test(new URL(href, location.href).pathname); }
-    catch (e) { return /model3d\.html/i.test(String(href)); }
+    try { return /(model3d|cameras|zones)\.html$/i.test(new URL(href, location.href).pathname); }
+    catch (e) { return /(model3d|cameras|zones)\.html/i.test(String(href)); }
   }
-  function onModel3dNavigate(ev) {
+  function onNewTabUnlockNavigate(ev) {
     var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
-    if (a && isModel3dHref(a.getAttribute('href') || a.href)) writeHandoff();
+    if (a && isNewTabUnlockHref(a.getAttribute('href') || a.href)) writeHandoff();
   }
   function bindHandoff() {
-    document.addEventListener('mousedown', onModel3dNavigate, true);
-    document.addEventListener('pointerdown', onModel3dNavigate, true);
-    document.addEventListener('click', onModel3dNavigate, true);
-    document.addEventListener('auxclick', onModel3dNavigate, true);
+    document.addEventListener('mousedown', onNewTabUnlockNavigate, true);
+    document.addEventListener('pointerdown', onNewTabUnlockNavigate, true);
+    document.addEventListener('click', onNewTabUnlockNavigate, true);
+    document.addEventListener('auxclick', onNewTabUnlockNavigate, true);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindHandoff);
   else bindHandoff();
@@ -269,7 +269,7 @@
     derive: derive, dec: dec, verify: verify,
     unlockWithPassword: unlockWithPassword,
     unlockFromSession: unlockFromSession,
-    fetchDec: fetchDec, sealJson: sealJson, openSealed: openSealed,
+    fetchDec: fetchDec, sealJson: sealJson, openSealed: openSealed, maybeOpen: maybeOpen,
     reviewerName: reviewerName, setReviewerName: setReviewerName,
     exportReview: exportReview, wireUnlock: wireUnlock,
     progressMsg: progressMsg,
