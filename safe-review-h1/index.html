@@ -191,6 +191,9 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .atbl tr{cursor:pointer}
 .atbl tr:hover td{background:#fafcfb}
 .atbl tr.sel td{background:#eef6f4}
+.atbl tr.cathead{cursor:default}
+.atbl tr.cathead td{background:#f4f2ee;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--ink2);padding:10px 8px;border-top:1px solid var(--line)}
+.atbl tr.cathead:hover td{background:#f4f2ee}
 .aid{font-family:ui-monospace,"SF Mono",Consolas,monospace;font-size:12.5px;color:var(--ink2);white-space:nowrap}
 /* cameras */
 .cams{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
@@ -621,16 +624,25 @@ function classColor(name){const f={Building:'#e85d04','Building (Deprecated)':'#
 const REG_GROUPS=[['Roof & buildings',c=>/roof|building|tile/i.test(c),true],['Hard surfaces',c=>/hard surface|asphalt|concrete|driveway/i.test(c),true],['Natural ground',c=>/natural|very low/i.test(c),false],['Vegetation',c=>/vegetation|overhang/i.test(c),false]];
 let ATYPE='all',REGS=null,REGSRC='';
 const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
+function mergePipelineRegions(fc){
+  const pipe=window.H1_REVIEW_DATA&&H1_REVIEW_DATA.region_review;
+  if(!pipe||!pipe.features||!pipe.features.length) return fc;
+  const base=(fc&&fc.features)?fc:{type:'FeatureCollection',features:[]};
+  const have=new Set((base.features||[]).map(f=>String(f.id)));
+  const extra=pipe.features.filter(f=>!have.has(String(f.id)));
+  if(!extra.length) return base;
+  return Object.assign({},base,{features:(base.features||[]).concat(extra)});
+}
 async function loadRegions(){
   if(REGS)return REGS;
-  try{const raw=localStorage.getItem('h1-regions')||localStorage.getItem('nm-regions:h1');if(raw){const j=JSON.parse(raw);if(j&&j.features){REGS=j;REGSRC='browser edits';return j;}}}catch(e){}
+  try{const raw=localStorage.getItem('h1-regions')||localStorage.getItem('nm-regions:h1');if(raw){const j=JSON.parse(raw);if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC='browser edits + pipeline';return REGS;}}}catch(e){}
   if(H1Crypto.isLocal() && D.cam_ctx && D.cam_ctx.delivery){
     const base='nearmap/'+D.cam_ctx.delivery+'/ai/';
     for(const [f,lab] of [['edits/regions.json','working edits'],['original/regions.json','vendor original']]){
-      try{const r=await fetch(base+f+'?_='+Date.now(),{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&j.features){REGS=j;REGSRC=lab;return j;}}}catch(e){}
+      try{const r=await fetch(base+f+'?_='+Date.now(),{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC=lab+' + pipeline';return REGS;}}}catch(e){}
     }
   }
-  try{const j=JSON.parse(new TextDecoder().decode(await fetchDec('regions-original.bin')));if(j&&j.features){REGS=j;REGSRC='original';return j;}}catch(e){}
+  try{const j=JSON.parse(new TextDecoder().decode(await fetchDec('regions-original.bin')));if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC='original + pipeline';return REGS;}}catch(e){}
   return null;
 }
 function regionPolysPx(fc){
@@ -642,20 +654,34 @@ function regionPolysPx(fc){
   return out;
 }
 function rAssets(){
-  const A=D.assets;const types={};A.located.forEach(a=>types[a.type]=(types[a.type]||0)+1);
-  let h=head('Section 7','Assets','Inventory as seen in imagery and the county record, linked to the Nearmap AI regions it sits on. Presence, position and size only.');
-  h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">The full Nearmap AI data layer (${'<span id="regcount">…</span>'} regions) as editable polygons. Pick a region, paint to grow or add, right-drag to erase, then Save. The vendor original is never changed.</div></div><a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a></div>`;
-  h+=`<div class="chips mt" id="achips"><button class="chip on" data-t="all">All<b>${A.located.length}</b></button>${Object.entries(types).map(([t,n])=>`<button class="chip" data-t="${esc(t)}">${esc(t)}<b>${n}</b></button>`).join('')}</div>`;
-  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Asset</th><th>AI region</th><th>Size</th></tr></thead><tbody>${A.located.map(a=>`<tr id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.type)}" data-regions="${esc((a.regions||[]).join(' '))}"><td class="aid">${a.id}</td><td><div style="display:flex;gap:8px;align-items:center"><span class="dot" style="color:${TYPECOL[a.type]||'#999'};width:9px;height:9px"></span><span class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em">${esc(a.type)}</span></div><div style="font-weight:550;margin-top:2px">${esc(a.name)}</div><details><summary>Observation</summary><div class="body">${esc(a.obs)}${a.conf_reason?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}:</b> ${esc(a.conf_reason)}</div>`:''}<div style="margin-top:6px">${a.src.split(' + ').map(tag).join(' ')}</div></div></details></td><td class="small">${(a.regions||[]).length?`<div class="tiny muted">${esc(a.region_label||'')}</div>`+(a.regions||[]).slice(0,4).map((r,i)=>`<a class="rchip${i?'':' p'}" href="${editorUrl(r,a.id)}" target="_blank" rel="noopener" title="Open in the region editor">${esc(r)}</a>`).join(''):'<span class="muted">no AI region</span>'}</td><td class="small num">${a.size?esc(a.size):`<span class="muted">${esc(a.size_note||'—')}</span>`}</td></tr>`).join('')}</tbody></table></div>
-  <div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${['#dc2f02','#adb5bd','#b7e4c7','#2d6a4f'][i]}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div></div></div>`;
-  h+=`<div class="grid g2 mt2"><div class="card"><div class="tblhead"><h3>On record, not located</h3><span class="muted small">${A.on_record.length} items</span></div><table><tbody>${A.on_record.map(a=>`<tr id="asset-${a.id}"><td class="aid">${a.id}</td><td><div style="font-weight:550">${esc(a.name)}</div><div class="small muted">${esc(a.loc_note||'')}</div></td><td class="small">${esc(a.size||'')}</td><td style="text-align:right">${tag('County record')}</td></tr>`).join('')}</tbody></table></div>
-  <div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
+  const A=D.assets;
+  const CAT_ORDER=['Buildings and roof','Driveway and paving','Recreation and outdoor living','Lawn','Vegetation/trees','Vehicles','Records-only'];
+  const allItems=A.located.concat(A.on_record||[]);
+  const cats={};allItems.forEach(a=>{const c=a.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
+  let h=head('Section 7','Assets','Inventory as seen in imagery and the county record, linked to the Nearmap AI regions it sits on. Presence, position and size only. Grouped by category.');
+  h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">The full Nearmap AI data layer (${'<span id="regcount">…</span>'} regions) as editable polygons. Pick a region, paint to grow or add, right-drag to erase, then Save. The vendor original is never changed. Pipeline region-review features are merged in for display and are not written over your edits.</div></div><a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a></div>`;
+  const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
+  h+=`<div class="chips mt" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
+  const row=a=>{
+    const isRec=a.category==='Records-only'||!(a.px|| (a.regions&&a.regions.length) || A.located.includes(a));
+    const rec=!(A.located||[]).some(x=>x.id===a.id);
+    const regionCell=rec?'<span class="muted">on record only</span>':((a.regions||[]).length?`<div class="tiny muted">${esc(a.region_label||a.region_class||'')}</div>`+(a.regions||[]).slice(0,4).map((r,i)=>`<a class="rchip${i?'':' p'}" href="${editorUrl(r,a.id)}" target="_blank" rel="noopener" title="Open in the region editor">${esc(r)}</a>`).join(''):'<span class="muted">no AI region</span>');
+    const obs=a.obs?`<details><summary>Observation</summary><div class="body">${esc(a.obs)}${a.conf_reason?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}:</b> ${esc(a.conf_reason)}</div>`:''}${a.src?`<div style="margin-top:6px">${a.src.split(' + ').map(tag).join(' ')}</div>`:''}${rec?'<div style="margin-top:6px">'+tag('County record')+'</div>':''}</div></details>`:(rec?`<div class="small muted">${esc(a.loc_note||'')}</div><div style="margin-top:6px">${tag('County record')}</div>`:'');
+    return `<tr id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.category||'')}" data-cat="${esc(a.category||'')}" data-regions="${esc((a.regions||[]).join(' '))}"><td class="aid">${a.id}</td><td><div style="display:flex;gap:8px;align-items:center"><span class="dot" style="color:${TYPECOL[a.type]||'#999'};width:9px;height:9px"></span><span class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em">${esc(a.type)}</span></div><div style="font-weight:550;margin-top:2px">${esc(a.name)}</div>${obs}</td><td class="small">${regionCell}</td><td class="small num">${a.size?esc(a.size):`<span class="muted">${esc(a.size_note||'—')}</span>`}</td></tr>`;
+  };
+  const groups=CAT_ORDER.filter(c=>cats[c]).map(c=>{
+    const rows=allItems.filter(a=>(a.category||'Uncategorised')===c);
+    return `<tr class="cathead" data-t="${esc(c)}" data-cat="${esc(c)}"><td colspan="4">${esc(c)} · ${rows.length}</td></tr>`+rows.map(row).join('');
+  }).join('');
+  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Asset</th><th>AI region</th><th>Size</th></tr></thead><tbody>${groups}</tbody></table></div>
+<div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${['#dc2f02','#adb5bd','#b7e4c7','#2d6a4f'][i]}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div></div></div>`;
+  h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
   const el=document.getElementById('pg-assets');el.innerHTML=h;
   drawAssetMap();
   loadRegions().then(fc=>{document.getElementById('regcount').textContent=fc?fc.features.length:'?';drawAssetMap();});
-  el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{ATYPE=c.dataset.t;el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x===c));el.querySelectorAll('.atbl tbody tr').forEach(r=>r.style.display=(ATYPE==='all'||r.dataset.t===ATYPE)?'':'none');});
+  el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{ATYPE=c.dataset.t;el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x===c));el.querySelectorAll('.atbl tbody tr').forEach(r=>r.style.display=(ATYPE==='all'||r.dataset.cat===ATYPE||r.dataset.t===ATYPE)?'':'none');});
   el.querySelectorAll('#regleg input').forEach(c=>c.onchange=drawAssetMap);
-  el.querySelectorAll('.atbl tbody tr').forEach(r=>r.addEventListener('click',e=>{if(e.target.closest('summary,a'))return;selectAsset(r.dataset.id,false)}));
+  el.querySelectorAll('.atbl tbody tr').forEach(r=>r.addEventListener('click',e=>{if(!r.dataset.id||r.classList.contains('cathead'))return;if(e.target.closest('summary,a'))return;selectAsset(r.dataset.id,false)}));
 }
 function drawAssetMap(){
   const box=document.getElementById('amap');if(!box)return;const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
