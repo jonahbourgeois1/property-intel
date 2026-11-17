@@ -1118,6 +1118,28 @@
     renderLayers(aiPack);
   }
 
+
+  function mergePipelineRegions(fc) {
+    var D = window.H1_REVIEW_DATA;
+    var pipe = D && D.region_review;
+    if (!pipe || !pipe.features || !pipe.features.length) return fc;
+    var base = (fc && fc.features) ? fc : { type: 'FeatureCollection', features: [] };
+    var have = {};
+    (base.features || []).forEach(function (f) { have[String(f.id)] = true; });
+    var extra = pipe.features.filter(function (f) { return !have[String(f.id)]; });
+    if (!extra.length) return base;
+    var out = JSON.parse(JSON.stringify(base));
+    out.features = (out.features || []).concat(JSON.parse(JSON.stringify(extra)));
+    return out;
+  }
+  function mergePipelineIntoWorking() {
+    if (!aiPack) return;
+    var merged = mergePipelineRegions({ type: 'FeatureCollection', features: aiPack.features || [] });
+    if (merged && merged.features && merged.features.length !== (aiPack.features || []).length) {
+      applyWorkingFc(merged);
+    }
+  }
+
   function persistRegions() {
     if (!aiPack) return Promise.resolve();
     var doc = {
@@ -1135,10 +1157,14 @@
     var url = regionsEditsUrl();
     var localOnly = !url || !/^(localhost|127\.0\.0\.1)$/.test(location.hostname);
     if (localOnly) return Promise.resolve('local');
+    var putDoc = JSON.parse(JSON.stringify(doc));
+    putDoc.features = (putDoc.features || []).filter(function (f) {
+      return !f.properties || f.properties.origin !== 'region-review';
+    });
     return fetch(url, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(doc)
+      body: JSON.stringify(putDoc)
     }).then(function (r) {
       if (!r.ok) throw new Error('PUT ' + r.status);
       return 'file';
@@ -4785,7 +4811,7 @@
         }
       }
       if (!workingDoc || !workingDoc.features) throw new Error('no regions');
-      applyWorkingFc(workingDoc);
+      applyWorkingFc(mergePipelineRegions(workingDoc) || workingDoc);
       captureCheckpoint();
       if (FRESH_ON_OPEN && o.orig && !SHEET_MODE) {
         // Reset local edits/regions.json (and the browser backup) to the original
@@ -5225,14 +5251,20 @@
   var KEY = null;
   function render(D) {
     var list = document.getElementById('assetList');
-    var items = D.assets.located;
-    document.getElementById('assetCount').textContent = items.length + ' located';
-    list.innerHTML = items.map(function (a) {
-      var rg = (a.regions || []);
-      return '<li data-asset="' + esc(a.id) + '" data-region="' + esc(rg[0] || '') + '">' +
-        '<div><span class="aid">' + esc(a.id) + '</span> · ' + esc(a.name) + '</div>' +
-        (rg.length ? '<div class="rg">' + esc(a.region_label || '') + ' · ' + rg.map(esc).join(', ') + '</div>'
-                   : '<div class="nr">No AI region under this item</div>') + '</li>';
+    var CAT_ORDER = ['Buildings and roof','Driveway and paving','Recreation and outdoor living','Lawn','Vegetation/trees','Vehicles','Records-only'];
+    var items = (D.assets.located || []).concat(D.assets.on_record || []);
+    document.getElementById('assetCount').textContent = (D.assets.located || []).length + ' located · ' + items.length + ' total';
+    list.innerHTML = CAT_ORDER.map(function (cat) {
+      var rows = items.filter(function (a) { return (a.category || 'Uncategorised') === cat; });
+      if (!rows.length) return '';
+      return '<li class="cathead" style="cursor:default;list-style:none;opacity:.8;margin-top:8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase">' + esc(cat) + ' · ' + rows.length + '</li>' +
+        rows.map(function (a) {
+          var rg = (a.regions || []);
+          return '<li data-asset="' + esc(a.id) + '" data-region="' + esc(rg[0] || '') + '">' +
+            '<div><span class="aid">' + esc(a.id) + '</span> · ' + esc(a.name) + '</div>' +
+            (rg.length ? '<div class="rg">' + esc(a.region_label || a.region_class || '') + ' · ' + rg.map(esc).join(', ') + '</div>'
+                       : '<div class="nr">' + (a.category === 'Records-only' ? 'On record only' : 'No AI region under this item') + '</div>') + '</li>';
+        }).join('');
     }).join('');
     document.getElementById('assetLock').style.display = 'none';
     var want = new URLSearchParams(location.search).get('asset');
