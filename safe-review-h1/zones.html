@@ -35,11 +35,26 @@
   .scroll { flex:1 1 auto; min-height:0; overflow:auto; padding:8px 10px; overscroll-behavior:contain; }
   .legend { display:flex; flex-wrap:wrap; gap:6px 10px; padding:8px 12px; border-bottom:1px solid var(--line); font-size:11px; color:var(--ink-dim); }
   .legend i { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:4px; vertical-align:-1px; border:1.5px solid #fff; }
-  .cam { display:grid; grid-template-columns: 92px minmax(0,1fr); gap:9px; padding:7px; border-radius:6px; cursor:pointer; border:1px solid transparent; margin-bottom:4px; }
+  .cam { display:grid; grid-template-columns: 28px minmax(0,1fr); gap:9px; padding:7px; border-radius:6px; cursor:pointer; border:1px solid transparent; margin-bottom:4px; align-items:center; }
   .cam:hover { background:#2b333e; }
   .cam.on { background:rgba(79,209,197,.12); border-color:rgba(79,209,197,.5); }
-  .cam .th { width:92px; height:52px; border-radius:4px; background:#111 center/cover no-repeat; position:relative; }
-  .cam .th b { position:absolute; left:4px; top:4px; background:rgba(0,0,0,.65); font-size:10px; padding:0 5px; border-radius:3px; }
+  .cam .th { width:24px; height:24px; border-radius:50%; background:#334; display:flex; align-items:center; justify-content:center; position:relative; box-shadow:0 0 0 2px rgba(255,255,255,.2); }
+  .cam .th b { position:static; background:none; font-size:10px; padding:0; border-radius:0; color:#fff; }
+  .sys-filter { display:none; gap:6px; flex-wrap:wrap; padding:8px 12px; border-bottom:1px solid var(--line); }
+  .sys-filter.on { display:flex; }
+  .sys-filter button { background:#1b2027; color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:3px 8px; font-size:11px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; }
+  .sys-filter button.on { border-color:var(--hot,#4fd1c5); background:#243; }
+  .sys-filter i, .sys-leg i, .sgap i { display:inline-block; width:10px; height:10px; border-radius:50%; }
+  .sys-leg { display:none; flex-wrap:wrap; gap:6px 10px; padding:6px 12px 8px; border-bottom:1px solid var(--line); font-size:11px; color:var(--ink-dim); }
+  .sys-leg.on { display:flex; }
+  .sgap { border:1px solid var(--line); border-radius:6px; margin:0 8px 8px; overflow:hidden; }
+  .sgap>summary { list-style:none; display:flex; align-items:center; gap:8px; padding:8px 10px; cursor:pointer; font-size:12px; background:#222831; }
+  .sgap>summary::-webkit-details-marker { display:none; }
+  .sgap>summary:hover { background:#2b333e; }
+  .sgap .nm { font-weight:650; }
+  .sgap .meta { margin-left:auto; }
+  .sgap.empty>summary { color:var(--ink-dim); }
+  .sgap .sgap-body { padding:6px 4px 2px; }
   .cam .nm { font-weight:600; font-size:12px; line-height:1.25; }
   .cam .dv { color:var(--ink-dim); font-size:10px; font-family:ui-monospace, monospace; }
   .badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:1px 7px; border-radius:9px; margin-top:3px; border:1px solid var(--line); color:var(--ink-dim); }
@@ -95,6 +110,8 @@
   <aside class="panel l">
     <h2>Zones <span class="meta" id="rcount"></span></h2>
     <div class="legend"><span><i style="background:var(--sv)"></i>estimated (draft)</span><span><i style="background:var(--pl)"></i>placed</span><span><i style="background:var(--ok)"></i>confirmed</span><span><i style="background:var(--un)"></i>unsure</span><span><i style="background:#5c6670"></i>unplaced</span></div>
+    <div class="sys-filter" id="sysfilter"></div>
+    <div class="sys-leg" id="sysleg"></div>
     <div class="scroll" id="list"></div>
   </aside>
   <div id="stage">
@@ -486,7 +503,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function b64(s) { return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); }); }
   function tob64(u) { var s = ''; u = new Uint8Array(u); for (var i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
-  var KEY = null, D = null, URLS = {}, CAMS = [], ST = {}, sel = null, armed = false, map = null, lastSaved = null;
+  var KEY = null, D = null, URLS = {}, CAMS = [], SYSTEMS = [], SYS_FILTER = 'all', ST = {}, sel = null, armed = false, map = null, lastSaved = null;
   function setStatus(m, k) { var e = $('status'); e.textContent = m || ''; e.className = 'status' + (k ? ' ' + k : ''); }
   async function dec(buf) { return H1Crypto.dec(buf); }
   async function fetchDec(f, opts) { return H1Crypto.fetchDec(f, opts); }
@@ -518,6 +535,33 @@
     if (!placed(s)) return '#5c6670';
     if (s.locked) return getComputedStyle(document.body).getPropertyValue('--sv');
     return { confirmed: '#4dabf7', unsure: '#cc5de8' }[s.status] || '#f59f00';
+  }
+  var SYS_PALETTE = ['#4c6ef5', '#0ca678', '#f08c00', '#ae3ec9', '#1971c2', '#c92a2a'];
+  function systemsWithZones() {
+    return SYSTEMS.filter(function (s) { return CAMS.some(function (c) { return c.system_ref === s.system_ref; }); });
+  }
+  function multiSystems() { return systemsWithZones().length > 1; }
+  function sysKindLabel(s) {
+    var kind = ({ panel: 'panel', video_service: 'video service', radio: 'radio' })[s && s.kind] || (s && s.kind) || '';
+    var make = (s && s.make) || '';
+    return [make, kind].filter(Boolean).join(' · ');
+  }
+  function sysColor(ref) {
+    var list = systemsWithZones();
+    var i = -1;
+    list.forEach(function (s, n) { if (s.system_ref === ref) i = n; });
+    return i < 0 ? '#868e96' : SYS_PALETTE[i % SYS_PALETTE.length];
+  }
+  function pinColor(c, s) {
+    if (!placed(s)) return '#5c6670';
+    return multiSystems() ? sysColor(c.system_ref) : color(s);
+  }
+  function visibleCams() {
+    if (SYS_FILTER === 'all' || !multiSystems()) return CAMS;
+    return CAMS.filter(function (c) { return c.system_ref === SYS_FILTER; });
+  }
+  function systemOf(ref) {
+    return SYSTEMS.filter(function (s) { return s.system_ref === ref; })[0] || { label: '', make: '', kind: '' };
   }
   function statusLabel(s) {
     if (s.status === 'cant_place') return "can't place";
@@ -566,15 +610,60 @@
   function touch(s) { s.updated = new Date().toISOString(); backup(); renderList(); renderDetail(); map.redraw(); }
 
   // ---------- render ----------
-  function renderList() {
-    var nP = 0, nC = 0;
-    $('list').innerHTML = CAMS.map(function (c, i) {
-      var s = ST[c.device]; if (placed(s)) nP++; if (s.status === 'confirmed' || s.locked) nC++;
-      return '<div class="cam' + (sel === c.device ? ' on' : '') + '" data-dev="' + esc(c.device) + '"><div class="th"><b>' + (i + 1) + '</b></div>' +
-        '<div><div class="nm">' + esc(c.name) + '</div><div class="dv">' + esc(c.device_type || '') + ' · ' + esc(c.system_label || '') + ' · zone ' + esc(String(c.zone_id || '')) + '</div>' +
-        '<span class="badge"><i style="background:' + color(s) + '"></i>' + esc(statusLabel(s)) + '</span></div></div>';
+  function zoneRowHtml(c, i) {
+    var s = ST[c.device];
+    var col = pinColor(c, s);
+    return '<div class="cam' + (sel === c.device ? ' on' : '') + '" data-dev="' + esc(c.device) + '"><div class="th" style="background:' + col + '"><b>' + (i + 1) + '</b></div>' +
+      '<div><div class="nm">' + esc(c.name) + '</div><div class="dv">' + esc(c.device_type || '') + ' · zone ' + esc(String(c.zone_id || '')) + '</div>' +
+      '<span class="badge"><i style="background:' + color(s) + '"></i>' + esc(statusLabel(s)) + '</span></div></div>';
+  }
+  function renderSysChrome() {
+    var multi = multiSystems();
+    var filt = $('sysfilter'), leg = $('sysleg');
+    if (!filt || !leg) return;
+    filt.className = 'sys-filter' + (multi ? ' on' : '');
+    leg.className = 'sys-leg' + (multi ? ' on' : '');
+    if (!multi) { filt.innerHTML = ''; leg.innerHTML = ''; return; }
+    var opts = [{ ref: 'all', label: 'All systems', n: CAMS.length, color: null }].concat(systemsWithZones().map(function (s) {
+      var n = CAMS.filter(function (c) { return c.system_ref === s.system_ref; }).length;
+      return { ref: s.system_ref, label: s.label || s.make, n: n, color: sysColor(s.system_ref) };
+    }));
+    filt.innerHTML = opts.map(function (o) {
+      var sw = o.color ? '<i style="background:' + o.color + '"></i>' : '';
+      return '<button type="button" data-sys="' + esc(o.ref) + '" class="' + (SYS_FILTER === o.ref ? 'on' : '') + '">' + sw + esc(o.label) + ' · ' + o.n + '</button>';
     }).join('');
-    $('rcount').textContent = CAMS.length + ' zones · ' + nP + ' on the map';
+    leg.innerHTML = systemsWithZones().map(function (s) {
+      return '<span><i style="background:' + sysColor(s.system_ref) + '"></i>' + esc(s.label || s.make) + '</span>';
+    }).join('');
+  }
+  function renderList() {
+    var nP = CAMS.filter(function (c) { return placed(ST[c.device]); }).length;
+    var multi = multiSystems();
+    renderSysChrome();
+    if (!multi) {
+      $('list').innerHTML = CAMS.map(function (c, i) { return zoneRowHtml(c, i); }).join('');
+    } else {
+      var html = '';
+      var shown = systemsWithZones();
+      shown.forEach(function (s) {
+        if (SYS_FILTER !== 'all' && SYS_FILTER !== s.system_ref) return;
+        var rows = [];
+        CAMS.forEach(function (c, i) { if (c.system_ref === s.system_ref) rows.push(zoneRowHtml(c, i)); });
+        html += '<details class="sgap" open><summary><i style="background:' + sysColor(s.system_ref) + ';width:10px;height:10px;border-radius:50%;display:inline-block"></i><span class="nm">' +
+          esc(s.label || s.make) + '</span><span class="dv"> ' + esc(sysKindLabel(s)) + '</span><span class="meta">' + rows.length + ' zone' + (rows.length === 1 ? '' : 's') + '</span></summary><div class="sgap-body">' +
+          rows.join('') + '</div></details>';
+      });
+      SYSTEMS.forEach(function (s) {
+        if (CAMS.some(function (c) { return c.system_ref === s.system_ref; })) return;
+        if (SYS_FILTER !== 'all') return;
+        html += '<details class="sgap empty"><summary><i style="background:#adb5bd;width:10px;height:10px;border-radius:50%;display:inline-block"></i><span class="nm">' +
+          esc(s.label || s.make) + '</span><span class="dv"> ' + esc(sysKindLabel(s)) + '</span><span class="meta">no zones</span></summary></details>';
+      });
+      $('list').innerHTML = html;
+    }
+    var vis = visibleCams();
+    var nVis = vis.filter(function (c) { return placed(ST[c.device]); }).length;
+    $('rcount').textContent = (multi && SYS_FILTER !== 'all' ? vis.length + ' of ' + CAMS.length + ' zones' : CAMS.length + ' zones') + ' · ' + (multi && SYS_FILTER !== 'all' ? nVis : nP) + ' on the map';
   }
   function renderDetail() {
     var host = $('detail');
@@ -638,13 +727,14 @@
     if ($('tRoof').checked) { ctx.beginPath(); ctxd.roof.forEach(path); ctx.strokeStyle = '#ff922b'; ctx.lineWidth = 2; ctx.stroke(); }
     if ($('tParcel').checked) { ctx.beginPath(); path(ctxd.parcel); ctx.setLineDash([8, 5]); ctx.strokeStyle = '#ffe066'; ctx.lineWidth = 2; ctx.stroke(); ctx.setLineDash([]); }
     var labels = $('tLabels').checked;
-    var order = CAMS.map(function (c, i) { return [c, i]; });
+    var vis = visibleCams();
+    var order = vis.map(function (c) { return [c, CAMS.indexOf(c)]; });
     order.sort(function (A, B) { return (A[0].device === sel) - (B[0].device === sel); });
     var selHandle = null;
     order.forEach(function (ci) {
       var c = ci[0], i = ci[1];
       var s = ST[c.device]; if (!placed(s)) return;
-      var p = scr(s.lat, s.lng), col = color(s), isSel = sel === c.device;
+      var p = scr(s.lat, s.lng), col = pinColor(c, s), isSel = sel === c.device;
       if (s.heading != null) {
         var a = (s.heading - 90) * Math.PI / 180, w = FOV / 2 * Math.PI / 180, r = isSel ? 70 : 42;
         ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.arc(p.x, p.y, r, a - w, a + w); ctx.closePath();
@@ -658,7 +748,7 @@
       ctx.fillStyle = '#fff'; ctx.font = '700 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.fillText(s.locked ? '\u25A0' : String(i + 1), p.x, p.y + 0.5);
       if (labels || isSel) {
-        var t = (i + 1) + ' ' + c.name; ctx.font = '600 11px system-ui, sans-serif'; ctx.textAlign = 'left';
+        var t = (i + 1) + ' ' + c.name + (multiSystems() && c.system_label ? ' · ' + c.system_label : ''); ctx.font = '600 11px system-ui, sans-serif'; ctx.textAlign = 'left';
         var tw = ctx.measureText(t).width, hd0 = s.heading == null ? 0 : ((s.heading % 360) + 360) % 360;
         var lx = (isSel && hd0 > 20 && hd0 < 160) ? p.x - 21 - tw - 8 : p.x + 13 + (isSel ? 4 : 0);
         ctx.fillStyle = isSel ? 'rgba(20,24,30,.92)' : 'rgba(20,24,30,.78)'; ctx.fillRect(lx, p.y - 9, tw + 8, 18);
@@ -678,7 +768,7 @@
   function local(ev) { var r = $('map').getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
   function pinAt(pt) {
     var best = null, bd = 13;
-    CAMS.forEach(function (c) { var s = ST[c.device]; if (!placed(s)) return; var p = scr(s.lat, s.lng), d = Math.hypot(p.x - pt.x, p.y - pt.y); if (d < bd) { bd = d; best = c.device; } });
+    visibleCams().forEach(function (c) { var s = ST[c.device]; if (!placed(s)) return; var p = scr(s.lat, s.lng), d = Math.hypot(p.x - pt.x, p.y - pt.y); if (d < bd) { bd = d; best = c.device; } });
     return best;
   }
   function setPos(s, ll) {
@@ -779,9 +869,21 @@
   $('zout').onclick = function () { map.setZoom(map.getZoom() - 0.5); };
   $('fit').onclick = fitHouse;
   $('list').addEventListener('click', function (ev) { var c = ev.target.closest('.cam'); if (c) select(c.getAttribute('data-dev'), true); });
+  if ($('sysfilter')) $('sysfilter').addEventListener('click', function (ev) {
+    var b = ev.target.closest('button[data-sys]'); if (!b) return;
+    SYS_FILTER = b.getAttribute('data-sys');
+    if (sel) {
+      var cur = CAMS.filter(function (c) { return c.device === sel; })[0];
+      if (cur && SYS_FILTER !== 'all' && cur.system_ref !== SYS_FILTER) { sel = null; renderDetail(); }
+    }
+    renderList(); if (map) map.redraw();
+  });
 
   async function boot() {
     D = JSON.parse(new TextDecoder().decode(await fetchDec('data.bin')));
+    SYSTEMS = ((D.mas && D.mas.systems) || []).map(function (s) {
+      return { system_ref: s.system_ref, label: s.label || s.make, make: s.make, kind: s.kind, status: s.status };
+    });
     CAMS = ((D.mas && D.mas.pins) || []).map(function (p) {
       return {
         device: p.zone_key, name: p.name, zone_id: p.zone_id, system_label: p.system_label,
@@ -790,6 +892,7 @@
         placement: p.placement, status: p.status, source: p.source, lat: p.lat, lng: p.lng
       };
     });
+    SYS_FILTER = 'all';
     if (D.cam_ctx && D.cam_ctx.delivery) DELIVERY = D.cam_ctx.delivery;
     var b = bounds();
     var clat = (b.north + b.south) / 2, clng = (b.east + b.west) / 2;
