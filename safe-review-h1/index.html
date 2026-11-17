@@ -173,11 +173,23 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .statrow span:first-child{color:var(--ink2)}
 .statrow span:last-child{font-weight:550;text-align:right}
 /* measurements */
+.mrow{cursor:pointer}
+.mrow:hover td{background:#fafcfb}
+.mrow.sel td{background:#eef6f4;box-shadow:inset 3px 0 0 var(--accent)}
 .mrow td.v{white-space:nowrap;font-weight:650;font-size:16px}
 .mrow td.v small{font-weight:500;color:var(--ink3);font-size:13px;margin-left:3px}
 .alts{margin-top:8px;background:#fafbfa;border:1px solid var(--line2);border-radius:8px;padding:6px 10px}
 .alts div{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:3px 0;color:var(--ink2)}
 .alts div b{font-weight:600;color:var(--ink)}
+#mmap-status{min-height:1.35em;margin-top:6px}
+#mmap-status.warn{color:#8a5a00}
+#mmap .qnorth{pointer-events:none}
+#mmap .ly-parcel{pointer-events:none}
+#mmap .mln,#mmap .marea,#mmap .mpt{cursor:pointer}
+#mmap .marea{fill-opacity:.10}
+#mmap .marea.hl{fill-opacity:.28}
+#mmap .mlbl{font-family:Inter,Segoe UI,sans-serif;font-weight:650;paint-order:stroke fill;stroke:#111;stroke-linejoin:round;pointer-events:none}
+.amap-stage.qmap-stage,#amap.amap-stage,#mmap.amap-stage{height:min(64vh,560px);min-height:420px;border-radius:var(--r);flex:none}
 /* assets */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;cursor:pointer;color:var(--ink2)}
@@ -300,7 +312,7 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .qnorth{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;z-index:2;pointer-events:none}
 .qnorth i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:translateX(-50%)}
 .qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em}
-.amap-stage.qmap-stage,#amap.amap-stage{height:min(64vh,560px);min-height:420px;border-radius:var(--r);flex:none}
+
 .qmap-status{position:absolute;left:12px;bottom:12px;z-index:2;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:3px 9px;border-radius:999px;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q3wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c4d0cb;background:#1b1f1d;z-index:1;padding:24px;text-align:center}
 .qside{overflow:auto;padding:22px 26px 48px;background:var(--bg);min-width:0}
@@ -471,8 +483,9 @@ function route(){
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
   if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
   if(key==='assets') refreshNadirMap(AMAP);
+  if(key==='measurements') refreshNadirMap(MMAP);
   if(target&&key==='assets'){if(target.startsWith('asset-')){const rid='asset-'+resolveAssetId(target.slice(6));target=rid;}if(ATYPE!=='all'){const all=document.querySelector('#achips .chip[data-t=all]');if(all)all.click();}}
-  if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){let d=el.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);}}
+  if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){let d=el.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);if(key==='measurements'&&target.startsWith('meas-'))selectMeas(target.slice(5),false);}}
   else window.scrollTo(0,0);
 }
 function go(sec,id){location.hash=sec+(id?':'+id:'');}
@@ -643,15 +656,314 @@ function rNearmap(){
   document.getElementById('pg-nearmap').innerHTML=h;
 }
 function rMeas(){
+  const geoms=listMeasGeometry();
+  const has=id=>geoms.some(g=>g.id===id||(g.ids||[]).includes(id));
+  const nogeom='<div class="tiny muted" style="margin-top:4px">No geometry on file</div>';
   let h=head('Section 6','Measurements','Mesh heights and the georeferenced nadir. The 3D mesh roof is the provisional primary reference; alternates are one click away.');
-  D.meas.forEach(g=>{
-    h+=`<div class="card mt"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+g.rows.map(r=>`<tr class="mrow" id="meas-${r.id}"><td><b style="font-weight:600">${esc(r.label)}</b>${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${r.alts.length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
+  h+=`<div class="assetwrap mt"><div>`;
+  (D.meas||[]).forEach((g,i)=>{
+    h+=`<div class="card${i?' mt':''}"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+(g.rows||[]).map(r=>`<tr class="mrow" id="meas-${esc(r.id)}" data-mid="${esc(r.id)}"><td><b style="font-weight:600">${esc(r.label)}</b>${has(r.id)?'':nogeom}${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${(r.alts||[]).length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
   });
-  h+=`<div class="grid g2 mt"><div class="card"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${D.trees.map(t=>`<tr><td>T${t.rank}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>
-   <div><div class="card tile" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div>
-   <div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${D.caveats.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div></div></div>`;
-  document.getElementById('pg-measurements').innerHTML=h;
+  h+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
+  h+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  h+=`</div><div class="mapcol"><div class="maptools"><div class="seg" data-seg="ms"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div><div class="amap-zoom"><button type="button" id="mmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="mmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div></div><div class="qmap-stage amap-stage" id="mmap"><div id="m2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div></div><div id="mmap-status" class="small muted">Treetop heights with locations are shown. Other measurements have no geometry on file.</div></div></div>`;
+  h+=`<div class="grid g2 mt"><div class="card tile" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div></div>`;
+  const el=document.getElementById('pg-measurements'); el.innerHTML=h;
+  initMeasMap();
+  el.querySelectorAll('[data-seg=ms] [data-crop]').forEach(b=>b.onclick=()=>{
+    MCROP=b.dataset.crop;
+    b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    if(MSEL) MSEL.fit=false;
+    if(MMAP){MMAP._user=false;scheduleNadirFit(MMAP,MCROP);}
+  });
+  const zin=el.querySelector('#mmap-zin'), zout=el.querySelector('#mmap-zout');
+  if(zin) zin.onclick=()=>zoomNadirCenter(MMAP,1.2);
+  if(zout) zout.onclick=()=>zoomNadirCenter(MMAP,1/1.2);
+  el.querySelectorAll('.mrow[data-mid]').forEach(r=>r.addEventListener('click',e=>{
+    if(e.target.closest('details,a,summary')) return;
+    selectMeas(r.dataset.mid,false);
+  }));
 }
+let MSEL=null,MMAP=null,MCROP='house';
+function setMmapStatus(msg,warn){
+  const el=document.getElementById('mmap-status'); if(!el) return;
+  el.className='small'+(warn?' warn':'');
+  el.textContent=msg||'';
+}
+function looksLikePx(pt){
+  if(!pt||pt.length<2||!isFinite(pt[0])||!isFinite(pt[1])) return false;
+  const M=D.map||{};
+  return pt[0]>=-40&&pt[1]>=-40&&pt[0]<=(M.w||2000)+40&&pt[1]<=(M.h||2000)+40;
+}
+function looksLikeLonLat(pt){
+  return pt&&pt.length>=2&&Math.abs(pt[0])<=180&&Math.abs(pt[1])<=90&&(Math.abs(pt[0])>40||Math.abs(pt[1])>40);
+}
+function toMapPx(pt){
+  if(!pt||pt.length<2) return null;
+  if(looksLikePx(pt)) return [+pt[0],+pt[1]];
+  if(looksLikeLonLat(pt)&&typeof pxOfLonLat==='function'&&D.cam_ctx&&D.cam_ctx.bounds){
+    const px=pxOfLonLat(pt[0],pt[1]);
+    return looksLikePx(px)?px:null;
+  }
+  return null;
+}
+function asPointList(v){
+  if(!v) return null;
+  if(Array.isArray(v)&&v.length>=2&&typeof v[0]==='number'){
+    const p=toMapPx(v); return p?[p]:null;
+  }
+  if(Array.isArray(v)&&v.length&&Array.isArray(v[0])){
+    if(typeof v[0][0]==='number'){
+      const pts=v.map(toMapPx).filter(Boolean);
+      return pts.length?pts:null;
+    }
+    if(Array.isArray(v[0][0])) return asPointList(v[0]);
+  }
+  if(v.coordinates) return asPointList(v.coordinates);
+  return null;
+}
+function packedMeasGeom(r){
+  const out=[];
+  const pushLine=(a,b)=>{const p=toMapPx(a),q=toMapPx(b); if(p&&q) out.push({kind:'line',pts:[p,q]});};
+  if(r.from_px&&r.to_px) pushLine(r.from_px,r.to_px);
+  if(r.start&&r.end&&Array.isArray(r.start)) pushLine(r.start,r.end);
+  ['line','polyline','path','segment'].forEach(k=>{
+    const pts=asPointList(r[k]); if(pts&&pts.length>=2) out.push({kind:'line',pts});
+  });
+  ['poly','polygon','ring','area','outline'].forEach(k=>{
+    const pts=asPointList(r[k]); if(pts&&pts.length>=3) out.push({kind:'area',pts});
+  });
+  if(r.px&&typeof r.px[0]==='number'){const p=toMapPx(r.px); if(p) out.push({kind:'point',px:p});}
+  const g=r.geom||r.geometry;
+  if(g){
+    const typ=(g.type||'').toLowerCase();
+    const pts=asPointList(g);
+    if((typ==='linestring'||typ==='multilinestring'||!typ)&&pts&&pts.length>=2&&typ!=='polygon') out.push({kind:'line',pts});
+    else if(pts&&pts.length>=3) out.push({kind:'area',pts});
+    else if(pts&&pts.length===1) out.push({kind:'point',px:pts[0]});
+  }
+  return out;
+}
+function parseMeasNum(s){
+  if(s==null) return NaN;
+  const m=String(s).replace(/,/g,'').match(/-?\d+(?:\.\d+)?/);
+  return m?parseFloat(m[0]):NaN;
+}
+function methodMeters(row){
+  return [...String((row&&row.method)||'').matchAll(/(\d+(?:\.\d+)?)\s*m\b/g)].map(m=>+m[1]);
+}
+function pickTreeForRow(row){
+  const trees=D.trees||[];
+  if(!row||!trees.length) return null;
+  const h=parseMeasNum(row.value);
+  const meters=methodMeters(row);
+  let best=null,score=1e9;
+  trees.forEach(t=>{
+    if(!t.px) return;
+    let s=isFinite(h)?Math.abs(t.h-h):9;
+    meters.forEach(v=>{s=Math.min(s,Math.abs(t.h-v),Math.abs((t.d||0)-v));});
+    if(s<score){score=s;best=t;}
+  });
+  return score<=0.4?best:null;
+}
+function listMeasGeometry(){
+  const out=[];
+  const used=new Set();
+  (D.meas||[]).forEach(g=>(g.rows||[]).forEach(r=>{
+    packedMeasGeom(r).forEach(p=>out.push(Object.assign({id:r.id,ids:[r.id],label:r.label,value:r.value,unit:r.unit},p)));
+  }));
+  const link={};
+  const byId={};
+  (D.meas||[]).forEach(g=>(g.rows||[]).forEach(r=>{byId[r.id]=r;}));
+  ['vegetation_height_m','veg10','veg15'].forEach(id=>{
+    const t=pickTreeForRow(byId[id]);
+    if(t&&t.px&&!used.has(t.rank)){link[t.rank]=id;used.add(t.rank);}
+  });
+  (D.trees||[]).forEach(t=>{
+    if(!t.px||t.px.length<2||!looksLikePx(t.px)) return;
+    const mid=link[t.rank];
+    const ids=['tree-'+t.rank,'treetops'];
+    if(mid) ids.unshift(mid);
+    const label=`T${t.rank} ${Number(t.h).toFixed(1)} m`;
+    out.push({id:mid||('tree-'+t.rank),ids,kind:'point',px:t.px,label,title:`T${t.rank} · ${Number(t.h).toFixed(1)} m · ${Number(t.d).toFixed(1)} m from roof`});
+  });
+  return out;
+}
+function measHits(g,sel){
+  if(!sel) return false;
+  const id=sel.id||sel;
+  return g.id===id||(g.ids||[]).includes(id);
+}
+function measFitPts(id){
+  const pts=[];
+  listMeasGeometry().forEach(g=>{
+    if(!measHits(g,{id})) return;
+    if(g.kind==='point'&&g.px) pts.push(g.px);
+    (g.pts||[]).forEach(p=>pts.push(p));
+  });
+  return pts;
+}
+function fitMeasView(pts){
+  if(!MMAP) return;
+  MMAP._user=false;
+  if(pts&&pts.length){
+    const [x0,y0,x1,y1]=boundsOfPx(pts);
+    const minSpan=90;
+    if((x1-x0)<minSpan||(y1-y0)<minSpan){
+      const cx=(x0+x1)/2, cy=(y0+y1)/2;
+      const hx=Math.max(minSpan,x1-x0)/2, hy=Math.max(minSpan,y1-y0)/2;
+      pts=[[cx-hx,cy-hy],[cx+hx,cy+hy]];
+    }
+    MMAP._fit={pts}; fitNadirBounds(MMAP,pts);
+  } else {
+    MMAP._fit=MCROP; fitNadirMap(MMAP,MCROP);
+  }
+}
+function selectMeas(id,scroll){
+  const geoms=listMeasGeometry().filter(g=>measHits(g,{id}));
+  const row=document.getElementById('meas-'+id)||document.querySelector('#pg-measurements .mrow[data-mid="'+CSS.escape(id)+'"]');
+  MSEL={id,fit:true};
+  document.querySelectorAll('#pg-measurements .mrow').forEach(r=>r.classList.toggle('sel',r.dataset.mid===id||(id==='treetops'&&String(r.dataset.mid||'').startsWith('tree-'))));
+  if(scroll&&row) row.scrollIntoView({block:'center'});
+  drawMeasOverlays();
+  if(geoms.length){
+    const pts=measFitPts(id);
+    fitMeasView(pts);
+    const lab=(geoms[0].label||id)+(geoms.length>1?' · '+geoms.length+' marks':'');
+    setMmapStatus(lab);
+  } else {
+    setMmapStatus('No geometry on file for this measurement.',true);
+  }
+}
+function initMeasMap(){
+  const host=document.getElementById('m2d'), stage=document.getElementById('mmap');
+  if(!host||!stage) return;
+  if(!MMAP||!document.getElementById('m2inner')){
+    MMAP=createNadirMap({
+      hostId:'m2d', stageId:'mmap', prefix:'m2',
+      defaultFit:'house',
+      markUserOnPan:true,
+      onApply(){ syncMeasHighlight(); }
+    });
+    if(!window._m2rz){
+      window._m2rz=true;
+      window.addEventListener('resize',()=>{
+        const on=document.getElementById('pg-measurements');
+        if(on&&on.classList.contains('on')) refreshNadirMap(MMAP);
+      });
+    }
+  }
+  drawMeasOverlays();
+  if(MSEL&&MSEL.fit) fitMeasView(measFitPts(MSEL.id));
+  else scheduleNadirFit(MMAP, MCROP);
+}
+function syncMeasHighlight(){
+  if(!MMAP) return;
+  const s=Math.max(MMAP.s,0.05);
+  const svg=document.getElementById(MMAP.svgId); if(!svg) return;
+  svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  svg.querySelectorAll('.mln-halo.sel').forEach(el=>el.setAttribute('stroke-width',String(7/s)));
+  svg.querySelectorAll('.mln-halo:not(.sel)').forEach(el=>el.setAttribute('stroke-width',String(4/s)));
+  svg.querySelectorAll('.mln.hl').forEach(el=>el.setAttribute('stroke-width',String(3/s)));
+  svg.querySelectorAll('.mln:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(2/s)));
+  svg.querySelectorAll('.marea-halo.sel').forEach(el=>el.setAttribute('stroke-width',String(5/s)));
+  svg.querySelectorAll('.marea-halo:not(.sel)').forEach(el=>el.setAttribute('stroke-width',String(3.2/s)));
+  svg.querySelectorAll('.marea.hl').forEach(el=>el.setAttribute('stroke-width',String(3/s)));
+  svg.querySelectorAll('.marea:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(2/s)));
+  const r=5.5/s;
+  svg.querySelectorAll('.mpt circle:not(.halo)').forEach(c=>{
+    const hl=c.closest('.mpt')&&c.closest('.mpt').classList.contains('hl');
+    c.setAttribute('r',String(r*(hl?1.25:1)));
+    c.setAttribute('stroke-width',String((hl?1.6:1.2)/s));
+  });
+  svg.querySelectorAll('.mpt .halo').forEach(c=>{
+    const hl=c.closest('.mpt')&&c.closest('.mpt').classList.contains('hl');
+    c.setAttribute('r',String(r*(hl?2.2:1.7)));
+    c.setAttribute('stroke-width',String((hl?2:1.3)/s));
+  });
+  svg.querySelectorAll('.mlbl').forEach(el=>{
+    el.setAttribute('font-size',String(11/s));
+    el.setAttribute('stroke-width',String(3.2/s));
+    const dy=el.getAttribute('data-dy');
+    if(dy) el.setAttribute('y',String(+el.getAttribute('data-base-y')+((+dy)/s)));
+  });
+}
+function measPolyPts(pts){return pts.map(p=>p[0]+','+p[1]).join(' ');}
+function drawMeasOverlays(){
+  const svg=MMAP&&document.getElementById(MMAP.svgId); if(!svg) return;
+  const geoms=listMeasGeometry();
+  const sel=MSEL&&MSEL.id;
+  let h='';
+  const M=D.map;
+  if(M&&M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
+  const unsel=geoms.filter(g=>!measHits(g,{id:sel}));
+  const chosen=geoms.filter(g=>measHits(g,{id:sel}));
+  const drawLine=(g,hl)=>{
+    const col=hl?'#ffd43b':'#74c0fc';
+    const halo=hl?'#fff':'#111';
+    const d=g.pts.map(p=>p[0]+','+p[1]).join(' ');
+    h+=`<polyline class="mln-halo${hl?' sel':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${halo}" stroke-opacity="${hl?1:.8}" stroke-width="${hl?7:4}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`;
+    h+=`<polyline class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${col}" stroke-width="${hl?3:2}" stroke-linecap="round" stroke-linejoin="round"><title>${esc(g.label||g.id)}</title></polyline>`;
+    const a=g.pts[0], b=g.pts[g.pts.length-1];
+    h+=`<circle class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" cx="${a[0]}" cy="${a[1]}" r="4" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
+    h+=`<circle class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" cx="${b[0]}" cy="${b[1]}" r="4" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
+    if(g.label||g.value){
+      const mid=g.pts[Math.floor(g.pts.length/2)];
+      const lab=[g.label, g.value?`${g.value}${g.unit?' '+g.unit:''}`:''].filter(Boolean).join(' · ');
+      h+=`<text class="mlbl" data-mid="${esc(g.id)}" x="${mid[0]}" y="${mid[1]-8}" data-base-y="${mid[1]}" data-dy="-8" text-anchor="middle" fill="${hl?'#fff': '#f8f9fa'}">${esc(lab)}</text>`;
+    }
+  };
+  const drawArea=(g,hl)=>{
+    const col=hl?'#ffd43b':'#ff922b';
+    const halo=hl?'#fff':'#111';
+    const d=measPolyPts(g.pts);
+    h+=`<polygon class="marea-halo${hl?' sel':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${halo}" stroke-opacity="${hl?1:.8}" stroke-width="${hl?5:3.2}" stroke-linejoin="round" pointer-events="none"/>`;
+    h+=`<polygon class="marea${hl?' hl':''}" data-mid="${esc(g.id)}" points="${d}" fill="${col}" stroke="${col}" stroke-width="${hl?3:2}" stroke-linejoin="round"><title>${esc(g.label||g.id)}</title></polygon>`;
+    if(g.label||g.value){
+      const xs=g.pts.map(p=>p[0]), ys=g.pts.map(p=>p[1]);
+      const cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2;
+      const lab=[g.label, g.value?`${g.value}${g.unit?' '+g.unit:''}`:''].filter(Boolean).join(' · ');
+      h+=`<text class="mlbl" data-mid="${esc(g.id)}" x="${cx}" y="${cy}" data-base-y="${cy}" data-dy="0" text-anchor="middle" fill="#fff">${esc(lab)}</text>`;
+    }
+  };
+  const drawPt=(g,hl)=>{
+    const col=hl?'#ffd43b':'#fab005';
+    const [x,y]=g.px;
+    h+=`<g class="mpt${hl?' hl':''}" data-mid="${esc(g.id)}" data-tip="${esc(g.title||g.label||g.id)}">`;
+    h+=`<circle class="halo" cx="${x}" cy="${y}" r="9" fill="${col}" fill-opacity="0" stroke="${hl?'#fff':'#fff'}" stroke-width="1.3"/>`;
+    h+=`<circle cx="${x}" cy="${y}" r="5.5" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
+    if(g.label) h+=`<text class="mlbl" x="${x}" y="${y}" data-base-y="${y}" data-dy="-12" text-anchor="middle" fill="#fff">${esc(g.label)}</text>`;
+    h+=`</g>`;
+  };
+  unsel.forEach(g=>{
+    if(g.kind==='line') drawLine(g,false);
+    else if(g.kind==='area') drawArea(g,false);
+    else if(g.kind==='point') drawPt(g,false);
+  });
+  chosen.forEach(g=>{
+    if(g.kind==='line') drawLine(g,true);
+    else if(g.kind==='area') drawArea(g,true);
+    else if(g.kind==='point') drawPt(g,true);
+  });
+  svg.innerHTML=h;
+  syncMeasHighlight();
+  const ignoreDrag=()=>MMAP&&MMAP.moved>6;
+  svg.querySelectorAll('[data-mid]').forEach(el=>el.addEventListener('click',e=>{
+    e.stopPropagation();
+    if(ignoreDrag()) return;
+    selectMeas(el.dataset.mid,true);
+  }));
+  const box=document.getElementById('mmap');
+  if(box){
+    const tip=box.querySelector('.svgtip');
+    box.querySelectorAll('.mpt').forEach(g=>{
+      g.addEventListener('mouseenter',()=>{if(!tip)return;tip.textContent=g.dataset.tip;tip.style.display='block';});
+      g.addEventListener('mousemove',e=>{if(!tip)return;const r=box.getBoundingClientRect();tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';});
+      g.addEventListener('mouseleave',()=>{if(tip)tip.style.display='none';});
+    });
+  }
+}
+
 const TYPECOL={house:'#ff922b',garage:'#ff922b',building:'#ff922b',chimney:'#ff922b','solar panels':'#ffd43b',patio:'#74c0fc',deck:'#74c0fc',walkway:'#74c0fc',pergola:'#74c0fc','fire pit':'#ff6b6b','parking area':'#adb5bd',driveway:'#adb5bd',track:'#adb5bd',court:'#4dabf7',fence:'#e599f7',wall:'#e599f7',hedge:'#8ce99a',pool:'#3bc9db',lawn:'#8ce99a',garden:'#8ce99a','tree cluster':'#51cf66',woodland:'#51cf66',vehicle:'#ced4da','cannot tell':'#fa5252',camera:'#4dabf7','alarm zone':'#748ffc',Camera:'#4dabf7','Alarm zone':'#748ffc'};
 /* Same class colours as the region editor (nearmap-review v1.7.18). */
 const CLASS_REMAP={
@@ -670,6 +982,64 @@ function classColor(name){
   name=canonicalClass(name);
   const f={Building:'#e85d04','Building (Deprecated)':'#9d0208',Roof:'#dc2f02','Translucent Roofing':'#f48c06',Driveway:'#f72585',Asphalt:'#495057','Road (Driveable Surface)':'#343a40','Concrete Slab':'#adb5bd','Solar Panel':'#3a86ff','Swimming Pool':'#4cc9f0','Water Body':'#0077b6','Residential Chimney':'#7b2cbf',Skylight:'#ffd166','Woody Vegetation':'#2d6a4f','Medium and High Vegetation (>2m)':'#40916c','Medium and High Vegetation with Woody Vegetation':'#1b4332','Low Vegetation (0.5m-2m)':'#74c69d','Very Low Vegetation (<0.5m)':'#95d5b2','Lawn Grass':'#52b788','Natural (soft)':'#b7e4c7','Tennis Court':'#20c997','Wooden Decking':'#d9480f','Fire Pit':'#c92a2a',Car:'#1971c2',Boat:'#0c8599',Trailer:'#1864ab',Dumpster:'#5c5f66','Shipping Container':'#2b8a3e',Playground:'#f59f00',Trampoline:'#fd7e14','Unmaintained Swimming Pool':'#15aabf'};
   if(f[name])return f[name];let h=0;for(let i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);return 'hsl('+(Math.abs(h)%360)+', 62%, 46%)';}
+function parseRgb(c){
+  if(!c) return null;
+  c=String(c).trim();
+  if(c[0]==='#'){
+    let h=c.slice(1);
+    if(h.length===3)h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];
+    if(h.length!==6) return null;
+    return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];
+  }
+  let m=c.match(/rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if(m) return [+m[1],+m[2],+m[3]];
+  m=c.match(/hsl\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%/i);
+  if(!m) return null;
+  const H=((+m[1])%360+360)%360/360,S=Math.max(0,Math.min(1,+m[2]/100)),L=Math.max(0,Math.min(1,+m[3]/100));
+  const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+  const q=L<0.5?L*(1+S):L+S-L*S, p=2*L-q;
+  return [Math.round(hue2rgb(p,q,H+1/3)*255),Math.round(hue2rgb(p,q,H)*255),Math.round(hue2rgb(p,q,H-1/3)*255)];
+}
+function hslLightness(rgb){
+  const r=rgb[0]/255,g=rgb[1]/255,b=rgb[2]/255;
+  return (Math.max(r,g,b)+Math.min(r,g,b))/2;
+}
+function rgbToHex(rgb){
+  return '#'+rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+}
+function lightenForOutline(color){
+  const rgb=parseRgb(color); if(!rgb) return color;
+  const r=rgb[0]/255,g=rgb[1]/255,b=rgb[2]/255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b),L=(max+min)/2;
+  if(L>=0.62) return rgbToHex(rgb);
+  let S=0;
+  if(max!==min) S=L>0.5?(max-min)/(2-max-min):(max-min)/(max+min);
+  let H=0;
+  if(max!==min){
+    if(max===r) H=((g-b)/(max-min)+(g<b?6:0))/6;
+    else if(max===g) H=((b-r)/(max-min)+2)/6;
+    else H=((r-g)/(max-min)+4)/6;
+  }
+  const l2=Math.max(0.64,Math.min(0.74,L+0.30));
+  const s2=Math.min(S,0.78); // keep the class hue; do not invent colour on greys
+  const hue2rgb=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<1/2)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+  const q=l2<0.5?l2*(1+s2):l2+s2-l2*s2, p=2*l2-q;
+  return rgbToHex([hue2rgb(p,q,H+1/3)*255,hue2rgb(p,q,H)*255,hue2rgb(p,q,H-1/3)*255]);
+}
+function needsLightOutline(name,color){
+  const cls=canonicalClass(name||'');
+  // Buildings keep the current dark-halo treatment even if a class colour is dark.
+  if(/roof|building|tile|solar/i.test(cls)) return false;
+  if(/vegetation|tree|overhang|woody|canopy/i.test(cls)) return true;
+  const rgb=parseRgb(color);
+  return !!(rgb&&hslLightness(rgb)<0.42);
+}
+function unselectedOutlineStyle(name){
+  const col=classColor(name);
+  if(needsLightOutline(name,col)) return {stroke:lightenForOutline(col),halo:'#fff',haloOp:'.92'};
+  return {stroke:col,halo:'#111',haloOp:'.8'};
+}
+
 const REG_GROUPS=[
   ['Roof & buildings',c=>/roof|building|tile|solar/i.test(c),true,'#dc2f02'],
   ['Hard surfaces',c=>/hard surface|asphalt|concrete|driveway|gravel|paving/i.test(c),true,'#adb5bd'],
@@ -1064,9 +1434,9 @@ function drawAssetOverlays(){
   const unsel=polys.filter(p=>!sel.has(p.id));
   const chosen=polys.filter(p=>sel.has(p.id));
   unsel.forEach(p=>{
-    const col=classColor(p.cls);
-    h+=`<path class="rgn-halo unsel" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="#111" stroke-opacity=".8" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd"></path>`;
-    h+=`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
+    const st=unselectedOutlineStyle(p.cls);
+    h+=`<path class="rgn-halo unsel" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${st.halo}" stroke-opacity="${st.haloOp}" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd"></path>`;
+    h+=`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${st.stroke}" stroke-width="2" stroke-linejoin="round" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
   });
   const M=D.map;
   if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
