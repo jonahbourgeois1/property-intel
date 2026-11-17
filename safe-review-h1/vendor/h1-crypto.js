@@ -13,6 +13,7 @@
   var NAME_KEY = 'h1-reviewer-name';
   var ANS_KEY = 'h1-review-answers';
   var PINS_KEY = 'h1-camera-pins';
+  var ZONES_KEY = 'h1-zone-pins';
   var REG_KEYS = ['h1-regions', 'nm-regions:h1'];
   var DATA_LIVE = 'https://d1h1on7f1v1lpy.cloudfront.net/review/d9f759d7351db3886c79dd689c41e3c0/h1/';
   var KEY = null;
@@ -194,6 +195,7 @@
   async function exportReview() {
     var answers = await maybeOpen((function () { try { return localStorage.getItem(ANS_KEY); } catch (e) { return null; } })());
     var pins = await maybeOpen((function () { try { return localStorage.getItem(PINS_KEY); } catch (e) { return null; } })());
+    var zones = await maybeOpen((function () { try { return localStorage.getItem(ZONES_KEY); } catch (e) { return null; } })());
     var regions = await maybeOpen(regionsRaw());
     var doc = {
       kind: 'h1-review-export',
@@ -202,6 +204,7 @@
       reviewer: reviewerName(),
       answers: answers,
       pins: pins,
+      zones: zones,
       regions: regions
     };
     var blob = new Blob([JSON.stringify(doc, null, 2)], { type: 'application/json' });
@@ -271,6 +274,6 @@
     exportReview: exportReview, wireUnlock: wireUnlock,
     progressMsg: progressMsg,
     writeHandoff: writeHandoff, consumeHandoff: consumeHandoff,
-    ANS_KEY: ANS_KEY, PINS_KEY: PINS_KEY, REG_KEYS: REG_KEYS
+    ANS_KEY: ANS_KEY, PINS_KEY: PINS_KEY, ZONES_KEY: ZONES_KEY, REG_KEYS: REG_KEYS
   };
 })(window);
