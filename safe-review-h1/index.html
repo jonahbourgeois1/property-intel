@@ -331,9 +331,14 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .qleg{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:11px;color:var(--ink2);margin-left:6px}
 .qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
 .qly-btn{padding:5px 10px}
-.qly-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-#qly-panel{position:absolute;top:10px;left:10px;width:280px;max-height:calc(100% - 20px);overflow:auto;z-index:6;background:rgba(20,24,22,.96);border:1px solid #3a4440;border-radius:10px;padding:8px 10px 12px;color:#d7e0dc;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
-#qly-panel[hidden]{display:none !important}
+.qmap-tools .btnl.ghost{background:#1c2321;color:#d7e0dc!important;border-color:#3a4440}
+.qmap-tools .btnl.ghost:hover{border-color:#6abf69;color:#fff!important}
+.qmap-tools .seg button.on{background:var(--accent);color:#fff!important}
+.qly-btn.on,.qmap-tools .btnl.ghost.on{background:var(--accent);color:#fff!important;border-color:var(--accent)}
+.qly-btn:disabled,.qmap-tools .btnl.ghost:disabled{opacity:.45;cursor:not-allowed}
+#qly-3dnote{color:#c4d0cb;font-size:12px}
+#qly-panel{position:absolute;top:10px;left:10px;width:280px;max-height:calc(100% - 20px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;z-index:6;background:rgba(20,24,22,.96);border:1px solid #3a4440;border-radius:10px;padding:8px 10px 12px;color:#d7e0dc;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#qly-panel[hidden],#qly-legend[hidden],#qly-3dnote[hidden],#qly-toggle[hidden]{display:none !important}
 #qly-panel .qly-head{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-weight:650;font-size:12.5px}
 #qly-panel .qly-head span{flex:1}
 #qly-panel .qly-mini{padding:2px 7px;font-size:11px;background:#1c2321;border:1px solid #3a4440;color:#c4d0cb;border-radius:6px;cursor:pointer}
@@ -360,6 +365,26 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .keyfact .kf-body{margin:6px 0 8px;font-size:15px;line-height:1.5}
 .keyfact .kf-src{font-size:12px;color:var(--ink2)}
 .keyfact a{color:#f0b35a}
+.keyfact.compact{display:flex;align-items:baseline;gap:8px;flex-wrap:nowrap;padding:6px 10px;margin:0 0 10px;border-radius:9px;overflow:hidden}
+.keyfact.compact .kf-kicker{flex:none;font-size:10px}
+.keyfact.compact .kf-body{margin:0;font-size:12.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;color:#f6e7cf}
+.keyfact.compact .kf-link{flex:none;font-size:12px;white-space:nowrap}
+.qside{padding:14px 18px 32px}
+.qside .ph{margin-bottom:8px}
+.qside .ph h2{margin:2px 0 4px;font-size:22px}
+.qside .lead{font-size:13px;margin:0}
+.qside .qbar{padding:6px 0;gap:8px}
+.qside .qgroup h3{margin:12px 0 6px;font-size:14px}
+.q{padding:10px 12px;margin-bottom:6px}
+.q .top{margin-bottom:4px;gap:8px}
+.q .txt{font-size:14px}
+.qopts{margin-top:6px;gap:5px}
+.qopt{padding:4px 9px;font-size:12.5px}
+.q textarea{margin-top:6px;padding:5px 8px;min-height:30px}
+.q .look{margin-top:2px}
+#qchips.chips{gap:4px}
+#qchips .chip{padding:2px 8px;font-size:11.5px}
+#qchips .chip b{margin-left:3px;font-size:11px}
 .mas-table{width:100%;border-collapse:collapse;font-size:13px}
 .mas-table th,.mas-table td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .mas-table th{color:var(--ink2);font-weight:600}
@@ -494,12 +519,14 @@ function route(){
 function go(sec,id){location.hash=sec+(id?':'+id:'');}
 const head=(eb,t,lead,right='')=>`<div class="ph"><div><div class="eyebrow">${eb}</div><h2>${t}</h2>${lead?`<div class="lead">${lead}</div>`:''}</div>${right}</div>`;
 
-function waterBanner(extra){
+function waterBanner(extra, compact){
   const W=D.firefighting_water||{};
   const obs=W.observation||(D.water&&D.water.insight)||'';
   if(!obs) return '';
   const link=extra||'';
-  return `<div class="keyfact"><div class="kf-kicker">Key firefighting-water fact</div><div class="kf-body">${esc(obs)}</div><div class="kf-src">Pass 1 observation · private well · nearest public hydrant 968.6 m straight-line · none within 800 m${link}</div></div>`;
+  const src='Private well · nearest public hydrant 968.6 m straight-line · none within 800 m';
+  if(compact) return `<div class="keyfact compact" title="${esc(obs)}"><span class="kf-kicker">Key firefighting-water fact</span><span class="kf-body">${esc(src)}</span>${link?`<span class="kf-link">${link}</span>`:''}</div>`;
+  return `<div class="keyfact"><div class="kf-kicker">Key firefighting-water fact</div><div class="kf-body">${esc(obs)}</div><div class="kf-src">Pass 1 observation · ${esc(src)}${link}</div></div>`;
 }
 function rFire(){
   const M=D.mas||{};
@@ -1675,13 +1702,14 @@ function rQuestions(){
   let h=`<div class="qsplit"><div class="qmap" id="qmap">
       <div class="qmap-tools">
         <div class="seg" id="qmode"><button type="button" data-mode="2d" class="on">2D</button><button type="button" data-mode="3d">3D</button></div>
-        <button type="button" class="btnl ghost qly-btn on" id="qly-toggle" aria-expanded="true" aria-controls="qly-panel">Layers</button>
-        <span id="qly-legend" class="qleg" title="Defensible-space distance bands around the Nearmap roof"></span>
+        <button type="button" class="btnl ghost qly-btn" id="qly-toggle" aria-expanded="false" aria-controls="qly-panel">Layers</button>
+        <span id="qly-3dnote" hidden>Layers are 2D only.</span>
+        <span id="qly-legend" class="qleg" title="Defensible-space distance bands around the Nearmap roof" hidden></span>
         <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" target="_blank" rel="noopener" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
         <span class="qmap-hint" id="qmaphint">Click a question to show it on the map</span>
       </div>
       <div class="qmap-stage" id="qstage">
-        <div id="qly-panel" role="region" aria-label="Map layers"></div>
+        <div id="qly-panel" role="region" aria-label="Map layers" hidden></div>
         <div id="q2d" class="qpane on"></div>
         <div id="q3d" class="qpane"></div>
         <div class="qnorth" id="qnorth" title="North"><i></i><b>N</b></div>
@@ -1689,7 +1717,7 @@ function rQuestions(){
       </div>
     </div>
     <div class="qside">
-      ${waterBanner(' · <a href="#fire">Fire tab</a>')}${head('Section 9','Reviewer questions','Answer from what you can see: the nadir, the 3D model, the AI regions and the outlines. Camera stills stay on the Cameras tab, not on this map. The map stays on the left; click a question (or Show on map) to highlight it. Tap an answer; add a note if it helps. Answers save automatically.')}
+      ${waterBanner(' · <a href="#fire">Fire tab</a>', true)}${head('Section 9','Reviewer questions','Click a question to show it on the map. Answer from the nadir, 3D model and outlines. Answers save automatically.')}
       <div class="qbar"><div class="chips" id="qchips"><button class="chip on" data-g="all">All<b>${Q.length}</b></button>${gs.map(g=>`<button class="chip" data-g="${esc(g)}">${esc(g)}<b>${Q.filter(q=>q.group===g).length}</b></button>`).join('')}</div><label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="qopen"> Unanswered only</label><input type="search" id="qtxt" placeholder="Search questions…" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;min-width:180px"></div>
       <div class="qbar" style="top:auto;padding-top:0"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><span class="qstat" id="qstat"></span></div>
       <div id="qlist"></div>
@@ -1805,8 +1833,20 @@ function setQMode(m){
   const a=document.getElementById('q2d'),b=document.getElementById('q3d');
   if(a)a.classList.toggle('on',m==='2d');if(b)b.classList.toggle('on',m==='3d');
   const n=document.getElementById('qnorth');if(n)n.style.transform='';
-  if(m==='3d')ensureQ3().then(()=>{if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();}});
-  else {if(QSEL)showQ(QSEL);else scheduleFitQ2();}
+  applyQ3LayerMode();
+  if(m==='3d')ensureQ3().then(()=>{applyQ3LayerMode();if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();}});
+  else {if(QSEL)showQ(QSEL);else{scheduleFitQ2();drawQ2();}}
+}
+function applyQ3LayerMode(){
+  const is3d=QMODE==='3d';
+  const btn=document.getElementById('qly-toggle');
+  const panel=document.getElementById('qly-panel');
+  const legend=document.getElementById('qly-legend');
+  const note=document.getElementById('qly-3dnote');
+  if(btn){btn.disabled=is3d;btn.hidden=is3d;if(!is3d){btn.classList.toggle('on',!!QLY_OPEN);btn.setAttribute('aria-expanded',QLY_OPEN?'true':'false');}}
+  if(panel) panel.hidden=is3d||!QLY_OPEN;
+  if(legend) legend.hidden=is3d||!qlyOn('zones');
+  if(note) note.hidden=!is3d;
 }
 function nadirCropPts(which){
   const M=D.map;
@@ -1892,6 +1932,7 @@ function wireNadirMap(map){
   st._nadirWired=true;
   st.addEventListener('wheel',e=>{
     if(!nadirActive(map)) return;
+    if(e.target.closest('#qly-panel')) return;
     e.preventDefault();
     map._user=true;
     const r=st.getBoundingClientRect();
@@ -1990,7 +2031,7 @@ function fitQ2(which){return fitNadirMap(QMAP, which||'parcel');}
 function fitQ2Bounds(pts){return fitNadirBounds(QMAP, pts);}
 function wireQ2(){if(QMAP) wireNadirMap(QMAP);}
 function zoomQ2(cx,cy,fac){zoomNadir(QMAP,cx,cy,fac);}
-let QLY=null, QLY_OPEN=true, QCAM_PINS=null, QZONE_PINS=null;
+let QLY=null, QLY_OPEN=false, QCAM_PINS=null, QZONE_PINS=null;
 const QSYS_PALETTE=['#4c6ef5','#0ca678','#f08c00','#ae3ec9','#1971c2','#c92a2a'];
 function qSysColor(ref){
   const list=((D.mas&&D.mas.systems)||[]);
@@ -2000,16 +2041,16 @@ function qSysColor(ref){
 function initQly(){
   if(QLY) return QLY;
   const ai={};
-  (D.nearmap.packs||[]).forEach(p=>Object.keys(p.classes||{}).forEach(c=>{ai[c]=true;}));
-  if(ai.Driveway===undefined) ai.Driveway=true;
+  (D.nearmap.packs||[]).forEach(p=>Object.keys(p.classes||{}).forEach(c=>{ai[c]=false;}));
+  if(ai.Driveway===undefined) ai.Driveway=false;
   const zone_sys={};
-  ((D.mas&&D.mas.systems)||[]).forEach(s=>{zone_sys[s.system_ref]=true;});
+  ((D.mas&&D.mas.systems)||[]).forEach(s=>{zone_sys[s.system_ref]=false;});
   QLY={
-    labels:true,
-    parcel:true, road:true, drive:true,
-    roof_trace:true, roof_ai:true, roof_sbfo:true,
-    zones:true, hydrant:!!(D.hydrant&&D.hydrant.px),
-    assets:true, cameras:true, zonepins:true,
+    labels:false,
+    parcel:false, road:false, drive:false,
+    roof_trace:false, roof_ai:false, roof_sbfo:false,
+    zones:false, hydrant:false,
+    assets:false, cameras:false, zonepins:false,
     zone_sys, ai
   };
   return QLY;
@@ -2019,7 +2060,7 @@ function qMergeRegionClasses(){
   if(!REGS||!REGS.features) return;
   REGS.features.forEach(f=>{
     const cls=canonicalClass((f.properties&&(f.properties['class']||f.properties.description))||'Unknown');
-    if(QLY.ai[cls]===undefined) QLY.ai[cls]=true;
+    if(QLY.ai[cls]===undefined) QLY.ai[cls]=false;
   });
   if(QLY.ai.Driveway===undefined) QLY.ai.Driveway=true;
 }
@@ -2051,8 +2092,8 @@ function qPackMembership(){
   return {packs,other,counts};
 }
 function qlyOn(k){initQly();return !!QLY[k];}
-function qAiOn(cls){initQly();return QLY.ai[cls]!==false;}
-function qZoneSysOn(ref){initQly();return QLY.zone_sys[ref]!==false;}
+function qAiOn(cls){initQly();return !!QLY.ai[cls];}
+function qZoneSysOn(ref){initQly();return !!QLY.zone_sys[ref];}
 function qSetAll(on){
   initQly();
   ['labels','parcel','road','drive','roof_trace','roof_ai','roof_sbfo','zones','assets','cameras','zonepins'].forEach(k=>{QLY[k]=on;});
@@ -2094,18 +2135,18 @@ function buildQlyPanel(){
   if(D.hydrant&&D.hydrant.px) h+=qRow('hydrant','Hydrant',{checked:QLY.hydrant,sw:'#c1121f',round:true});
   h+=`<details open><summary>Nearmap AI</summary>`;
   packs.forEach(p=>{
-    const ons=p.names.filter(n=>QLY.ai[n]!==false);
+    const ons=p.names.filter(n=>!!QLY.ai[n]);
     const mixed=p.names.length&&ons.length&&ons.length<p.names.length;
     const allOn=!p.names.length?false:ons.length===p.names.length;
     h+=`<label class="qly-row"><input type="checkbox" data-qly-pack="${esc(p.id)}"${allOn?' checked':''}${mixed?' data-mixed="1"':''}><span class="qly-pack">${esc(p.label)} <span class="n">${p.names.length?p.names.reduce((s,n)=>s+(counts[n]||0),0):0}</span></span></label>`;
     if(!p.names.length) h+=`<div class="qly-note sub">No classes in this pack.</div>`;
     p.names.forEach(n=>{
-      h+=qRow('ai:'+n,n,{checked:QLY.ai[n]!==false,sw:classColor(n),n:counts[n]||0,sub:true});
+      h+=qRow('ai:'+n,n,{checked:!!QLY.ai[n],sw:classColor(n),n:counts[n]||0,sub:true});
     });
   });
   h+=`<div class="qly-note" style="font-weight:650;color:#e8eeeb;padding-top:6px">Other AI classes</div>`;
   other.forEach(n=>{
-    h+=qRow('ai:'+n,n,{checked:QLY.ai[n]!==false,sw:classColor(n),n:counts[n]||0,sub:true});
+    h+=qRow('ai:'+n,n,{checked:!!QLY.ai[n],sw:classColor(n),n:counts[n]||0,sub:true});
   });
   h+=`</details>`;
   h+=qRow('assets','Regions',{checked:QLY.assets,sw:'#be4bdb',n:nAssets,round:true});
@@ -2115,7 +2156,7 @@ function buildQlyPanel(){
   if(systems.length>1){
     systems.forEach(s=>{
       const nz=((D.mas&&D.mas.pins)||[]).filter(p=>p.system_ref===s.system_ref&&p.lat!=null&&p.lng!=null).length;
-      h+=qRow('zsys:'+s.system_ref,s.label||s.make||'System',{checked:QLY.zone_sys[s.system_ref]!==false,sw:qSysColor(s.system_ref),n:nz,sub:true,round:true});
+      h+=qRow('zsys:'+s.system_ref,s.label||s.make||'System',{checked:!!QLY.zone_sys[s.system_ref],sw:qSysColor(s.system_ref),n:nz,sub:true,round:true});
     });
   }else if(systems.length===1){
     h+=`<div class="qly-note">This lot has one system; the list above is the full set.</div>`;
@@ -2139,6 +2180,10 @@ function wireQlyPanel(){
     };
   }
   panel.hidden=!QLY_OPEN;
+  const stop=e=>e.stopPropagation();
+  panel.addEventListener('wheel',stop,{passive:true});
+  panel.addEventListener('touchstart',stop,{passive:true});
+  panel.addEventListener('touchmove',stop,{passive:true});
   panel.addEventListener('click',e=>{
     const all=e.target.closest('[data-qly-all]');
     if(!all) return;
@@ -2179,8 +2224,8 @@ function qRings(x){
   if(typeof x[0][0]==='number') return [x];
   return x;
 }
-function qLabel(x,y,text,anchor){
-  if(!qlyOn('labels')||!text) return '';
+function qLabel(x,y,text,anchor,force){
+  if((!force&&!qlyOn('labels'))||!text) return '';
   const ax=anchor==='end'?'end':'start';
   const dx=anchor==='end'?-12:12;
   return `<text x="${x+dx}" y="${y-10}" text-anchor="${ax}" fill="#fff" stroke="#1c2321" stroke-width="3" paint-order="stroke" font-size="18" font-weight="650">${esc(text)}</text>`;
@@ -2218,7 +2263,6 @@ function drawQ2(){
   initQly();
   const M=D.map;
   const t=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
-  const hlRid=t&&t.rid;
   let h='';
   if(REGS){
     const assetRids=new Set();
@@ -2227,12 +2271,11 @@ function drawQ2(){
       const aiOn=qAiOn(p.cls);
       const assetOn=qlyOn('assets')&&assetRids.has(String(p.id));
       if(!aiOn&&!assetOn) return;
-      const on=hlRid&&String(p.id)===String(hlRid);
       const fill=aiOn?classColor(p.cls):'#be4bdb';
-      const op=on?'.5':(aiOn?'.22':'.12');
-      const stroke=on?'#fff':(assetOn&&!aiOn?'#be4bdb':classColor(p.cls));
-      const sw=on?4:(assetOn?2.4:1.4);
-      h+=`<path class="rgn${on?' hl':''}${assetOn?' asset':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" fill-rule="evenodd"></path>`;
+      const op=aiOn?'.22':'.12';
+      const stroke=(assetOn&&!aiOn)?'#be4bdb':classColor(p.cls);
+      const sw=assetOn?2.4:1.4;
+      h+=`<path class="rgn${assetOn?' asset':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" fill-rule="evenodd"></path>`;
     });
   }
   if(qlyOn('zones')&&M.zones){const meta=M.zone_meta||[];M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones" points="${pts(r)}" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});}
@@ -2241,7 +2284,10 @@ function drawQ2(){
   if(qlyOn('roof_sbfo')&&M.sbfo) qRings(M.sbfo).forEach(r=>{h+=`<polygon class="ly-sbfo" points="${pts(r)}" fill="none" stroke="#fab005" stroke-width="2.2" stroke-dasharray="6 4"/>`;});
   if(qlyOn('roof_ai')&&M.ai_roof) qRings(M.ai_roof).forEach(r=>{h+=`<polygon class="ly-airoof" points="${pts(r)}" fill="none" stroke="#dc2f02" stroke-width="2.4"/>`;});
   if(qlyOn('roof_trace')&&M.trace&&M.trace.length) qRings(M.trace).forEach(r=>{h+=`<polygon class="ly-trace" points="${pts(r)}" fill="none" stroke="#ff922b" stroke-width="2.6"/>`;});
-  if(qlyOn('parcel')&&M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="2.8"/>`;
+  if(M.parcel){
+    if(qlyOn('parcel')) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="2.8" vector-effect="non-scaling-stroke"/>`;
+    else h+=`<polygon class="ly-parcel faint" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity=".5" stroke-width="1.6" vector-effect="non-scaling-stroke"/>`;
+  }
   if(qlyOn('hydrant')&&D.hydrant&&D.hydrant.px){const [hx,hy]=D.hydrant.px;h+=`<g class="ly-hydrant"><circle cx="${hx}" cy="${hy}" r="14" fill="#c1121f" fill-opacity=".25" stroke="#c1121f" stroke-width="3"/><circle cx="${hx}" cy="${hy}" r="5" fill="#c1121f" stroke="#fff" stroke-width="2"/>${qLabel(hx,hy,'Hydrant '+(D.hydrant.value||''))}</g>`;}
   if(qlyOn('assets')){
     ((D.assets&&D.assets.located)||[]).forEach(a=>{
@@ -2268,13 +2314,32 @@ function drawQ2(){
       h+=`<g class="ly-zpin"><circle cx="${px[0]}" cy="${px[1]}" r="${r}" fill="${col}" stroke="${stroke}" stroke-width="2.2"${dash}/>${qLabel(px[0],px[1],p.name||('Zone '+(p.zone_id||i+1)))}</g>`;
     });
   }
-  if(t&&t.pts&&t.pts.length&&!hlRid){
-    if(t.pts.length>2) h+=`<polygon points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="3.2"/>`;
-    else if(t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="#ffe066" stroke="#fff" stroke-width="2"/>`;
-  }
-  if(t&&t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="7" fill="#ffe066" stroke="#1c2321" stroke-width="2"/>`;
+  h+=qSelMarkup(t);
   svg.innerHTML=h;
+  const lg=document.getElementById('qly-legend');
+  if(lg) lg.hidden=QMODE==='3d'||!qlyOn('zones');
   drawHydrantCallout();
+}
+function qSelMarkup(t){
+  if(!t) return '';
+  let h='';
+  const gold='#ffe066';
+  if(t.rid&&REGS){
+    regionPolysPx(REGS).forEach(p=>{
+      if(String(p.id)!==String(t.rid)) return;
+      h+=`<path class="rgn-halo qsel" d="${p.d}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path>`;
+      h+=`<path class="rgn hl qsel" d="${p.d}" fill="${gold}" fill-opacity=".22" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd" vector-effect="non-scaling-stroke" pointer-events="none"></path>`;
+    });
+  }else if(t.pts&&t.pts.length>2){
+    const poly=pts(t.pts);
+    h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  }else if(t.pts&&t.pts.length===2){
+    h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+  }
+  if(t.px) h+=`<circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="8" fill="${gold}" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+  return h;
 }
 function drawHydrantCallout(){
   const st=document.getElementById('qstage');
@@ -2398,6 +2463,7 @@ function syncQ3Overlays(){
   const THREE=Q3.THREE;
   const drop=k=>{if(Q3[k]){Q3.scene.remove(Q3[k]);Q3[k].geometry&&Q3[k].geometry.dispose();Q3[k].material&&Q3[k].material.dispose();Q3[k]=null;}};
   drop('parcel');drop('line');drop('marker');drop('zones');drop('hydrant');
+  if(QMODE==='3d') return;
   const mkLine=(rings,color,width)=>{
     const grp=new THREE.Group();
     (rings||[]).forEach(ring=>{
