@@ -1696,7 +1696,32 @@ async function saveAnswers(){
   return how;
 }
 function queueSave(){clearTimeout(ansTimer);qStatus('Saving…');ansTimer=setTimeout(saveAnswers,500);}
-function qHasLoc(q){const l=q&&q.link;return !!(l&&(l.kind==='asset'||l.kind==='region'||l.kind==='outline'));}
+function measRow(id){for(const g of (D.meas||[])) for(const r of (g.rows||[])) if(r&&r.id===id) return r;return null;}
+function measPts(row){
+  if(!row) return {pts:[],px:null,shape:null};
+  if(row.ring&&row.ring.length) return {pts:row.ring,px:null,shape:'poly'};
+  if(row.line&&row.line.length>=2) return {pts:row.line,px:null,shape:'line'};
+  if(row.from_px&&row.to_px) return {pts:[row.from_px,row.to_px],px:null,shape:'line'};
+  if(row.points&&row.points.length) return {pts:row.points,px:row.points[0],shape:'points'};
+  if(row.px) return {pts:[row.px],px:row.px,shape:'point'};
+  return {pts:[],px:null,shape:null};
+}
+function featPtsPx(feat){
+  if(!feat||!feat.geometry) return [];
+  const g=feat.geometry, out=[];
+  const push=ll=>{if(ll&&ll.length>=2){const p=pxOfLonLat(ll[0],ll[1]);if(p) out.push(p);}};
+  if(g.type==='Polygon'||g.type==='MultiPolygon') ringsOf(feat).forEach(poly=>(poly[0]||[]).forEach(push));
+  else if(g.type==='LineString') (g.coordinates||[]).forEach(push);
+  else if(g.type==='MultiLineString') (g.coordinates||[]).forEach(line=>(line||[]).forEach(push));
+  else if(g.type==='Point') push(g.coordinates);
+  return out;
+}
+function qHasLoc(q){
+  const l=q&&q.link; if(!l) return false;
+  if(l.kind==='asset'||l.kind==='region'||l.kind==='outline'||l.kind==='camera'||l.kind==='hydrant'||l.kind==='zone_pins') return true;
+  if(l.kind==='measurement'){const m=measPts(measRow(l.id));return !!(m.pts&&m.pts.length);}
+  return false;
+}
 function rQuestions(){
   const Q=D.questions;const gs=QGROUPS();
   let h=`<div class="qsplit"><div class="qmap" id="qmap">
@@ -1753,6 +1778,9 @@ function linkBtn(l){if(!l)return '';
   if(l.kind==='camera'){const c=D.cams.find(x=>x.device===l.id);return `<button class="linkchip" onclick="go('cameras','cam-${l.id}')">↗ ${esc(c?c.name:l.id)}</button><a class="linkchip" style="text-decoration:none" href="cameras.html" target="_blank" rel="noopener">↗ pin page</a>`;}
   if(l.kind==='outline')return `<button class="linkchip" onclick="go('imagery')">↗ ${l.id==='parcel'?'parcel line':'roof outlines'} on Imagery</button>`;
   if(l.kind==='nearmap')return `<button class="linkchip" onclick="go('nearmap','nm-${l.id}')">↗ Nearmap ${esc(l.id)} pack</button>`;
+  if(l.kind==='measurement'){const row=measRow(l.id);return `<button class="linkchip" onclick="go('measurements','meas-${esc(l.id)}')">↗ ${(row&&row.label)||l.id} on Measurements</button>`;}
+  if(l.kind==='hydrant')return `<button class="linkchip" onclick="go('fire')">↗ water-supply fact on Fire</button>`;
+  if(l.kind==='zone_pins')return `<a class="linkchip" style="text-decoration:none" href="zones.html" target="_blank" rel="noopener">↗ zone pin editor</a>`;
   return '';}
 function drawQ(){
   const Q=D.questions.filter(q=>(QG==='all'||q.group===QG)&&(!QOPEN||!(ANS[q.id]&&ANS[q.id].answer))&&(!QTXT||(q.id+' '+q.text).toLowerCase().includes(QTXT)));
@@ -1800,14 +1828,36 @@ function linkTarget(link){
   }
   if(link.kind==='region'){
     const feat=regionFeat(link.id);
-    const pts=[];if(feat) ringsOf(feat).forEach(poly=>poly[0].forEach(p=>pts.push(pxOfLonLat(p[0],p[1]))));
-    return {label:'region '+link.id+(feat?' · '+canonicalClass((feat.properties&&(feat.properties['class']||feat.properties.description))||''):''),pts,rid:String(link.id),ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null};
+    const pts=feat?featPtsPx(feat):[];
+    const g=feat&&feat.geometry&&feat.geometry.type;
+    const shape=g==='LineString'||g==='MultiLineString'?'line':g==='Point'?'point':'poly';
+    return {label:'region '+link.id+(feat?' · '+canonicalClass((feat.properties&&(feat.properties['class']||feat.properties.description))||''):''),pts,rid:String(link.id),ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null,px:shape==='point'&&pts[0]?pts[0]:null,shape};
   }
   if(link.kind==='outline'){
-    if(link.id==='parcel') return {label:'parcel line',pts:D.map.parcel,ringsLL:[D.cam_ctx.parcel]};
+    if(link.id==='parcel') return {label:'parcel line',pts:D.map.parcel,ringsLL:[D.cam_ctx.parcel],shape:'poly'};
     const pts=(D.map.ai_roof||[]).flat();
     const rings=(D.cam_ctx.roof||[]).map(r=>r);
-    return {label:'roof outlines',pts,ringsLL:rings};
+    return {label:'roof outlines',pts,ringsLL:rings,shape:'poly'};
+  }
+  if(link.kind==='measurement'){
+    const row=measRow(link.id); if(!row) return {label:link.id};
+    const m=measPts(row);
+    return {label:row.label||link.id,pts:m.pts,px:m.px,shape:m.shape};
+  }
+  if(link.kind==='camera'){
+    const c=(D.cams||[]).find(x=>x.device===link.id||x.pin===link.id); if(!c) return {label:link.id};
+    const px=typeof camPinPx==='function'?camPinPx(c):(c.px||null);
+    return {label:c.name||c.device||link.id,pts:px?[px]:[],px:px||null,shape:px?'point':null};
+  }
+  if(link.kind==='hydrant'){
+    const px=D.hydrant&&D.hydrant.px;
+    return {label:'nearest hydrant',pts:px?[px]:[],px:px||null,shape:px?'point':null};
+  }
+  if(link.kind==='zone_pins'){
+    const pins=((D.mas&&D.mas.pins)||[]).filter(p=>p&&p.placement==='estimated'&&p.lat!=null&&p.lng!=null);
+    const pts=[];
+    pins.forEach(p=>{const px=typeof qPxLL==='function'?qPxLL(p.lat,p.lng):null; if(px) pts.push(px);});
+    return {label:'estimated zone pins',pts,px:pts[0]||null,shape:pts.length?'points':null};
   }
   return null;
 }
@@ -2324,21 +2374,39 @@ function qSelMarkup(t){
   if(!t) return '';
   let h='';
   const gold='#ffe066';
+  let drew=false;
   if(t.rid&&REGS){
     regionPolysPx(REGS).forEach(p=>{
       if(String(p.id)!==String(t.rid)) return;
       h+=`<path class="rgn-halo qsel" d="${p.d}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path>`;
       h+=`<path class="rgn hl qsel" d="${p.d}" fill="${gold}" fill-opacity=".22" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd" vector-effect="non-scaling-stroke" pointer-events="none"></path>`;
+      drew=true;
     });
-  }else if(t.pts&&t.pts.length>2){
+  }
+  if(!drew && t.shape==='line' && t.pts&&t.pts.length>=2){
+    h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    drew=true;
+  }else if(!drew && t.shape==='poly' && t.pts&&t.pts.length>2){
     const poly=pts(t.pts);
     h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
     h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-  }else if(t.pts&&t.pts.length===2){
+    drew=true;
+  }else if(!drew && t.pts&&t.pts.length>2 && t.shape!=='points' && t.shape!=='line'){
+    const poly=pts(t.pts);
+    h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    drew=true;
+  }else if(!drew && t.pts&&t.pts.length===2 && t.shape!=='points'){
     h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
     h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    drew=true;
   }
-  if(t.px) h+=`<circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="8" fill="${gold}" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+  if(t.shape==='points' && t.pts){
+    t.pts.forEach(p=>{h+=`<circle class="qsel" cx="${p[0]}" cy="${p[1]}" r="8" fill="${gold}" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;});
+  }else if(t.px){
+    h+=`<circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="8" fill="${gold}" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+  }
   return h;
 }
 function drawHydrantCallout(){
