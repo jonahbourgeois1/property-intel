@@ -173,6 +173,7 @@
   .layer-row .hint { flex: 1 0 100%; font-size: 10px; color: var(--ink-dim); padding-left: 28px; margin-top: -2px; }
   .layer-group { margin: 6px 0 10px; }
   .layer-group > h3 { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 10px 0 4px; font-weight: 700; }
+  .layer-group > .layer-sub { font-size: 11px; color: #c4d0cb; margin: 8px 0 2px; font-weight: 650; letter-spacing: 0; text-transform: none; }
   .layer-btns { display: flex; gap: 6px; margin: 6px 0 8px; }
   #closePoly { display: none; }
   #closePoly.show { display: inline-block; }
@@ -766,11 +767,38 @@
     'Heavy Machinery', 'Nonwooden Construction Material',
     'Trampoline', 'Solar Panel', 'Residential Chimney'
   ];
-  var SITE_FEATURES = [
-    'Driveway', 'Motor court', 'Patio', 'Deck', 'Pergola', 'Fire feature',
-    'Walkway', 'Lawn', 'Garden bed', 'Retaining wall', 'Hedge', 'Fence',
-    'Solar array', 'Vehicle'
+  var SITE_FEATURE_GROUPS = [
+    { title: 'Water', names: ['Pool', 'Hot tub', 'Pond'] },
+    { title: 'Courts & play', names: ['Tennis court', 'Sport court', 'Playground', 'Trampoline'] },
+    { title: 'Ground surfaces', names: ['Driveway', 'Parking area', 'Walkway', 'Patio', 'Gravel / bare dirt', 'Lawn', 'Garden bed'] },
+    { title: 'Structures', names: ['Deck', 'Pergola / gazebo', 'Shed / small outbuilding', 'Carport', 'Solar panels'] },
+    { title: 'Edges', names: ['Fence', 'Wall', 'Hedge'] },
+    { title: 'Objects', names: ['Vehicle', 'Trailer / boat / RV', 'Dumpster', 'Shipping container', 'Fire pit', 'Woodpile'] }
   ];
+  var SITE_FEATURES = SITE_FEATURE_GROUPS.reduce(function (acc, g) { return acc.concat(g.names); }, []);
+  // Reviewer-drawn classes from the previous site-feature list.
+  var LEGACY_SITE_CLASS = {
+    'Motor court': 'Driveway',
+    'Solar array': 'Solar panels',
+    'Pergola': 'Pergola / gazebo',
+    'Retaining wall': 'Wall',
+    'Fire feature': 'Fire pit'
+  };
+  function canonicalSiteClass(name) {
+    return LEGACY_SITE_CLASS[name] || name;
+  }
+  function normalizeSiteClasses(features) {
+    (features || []).forEach(function (f) {
+      if (!f.properties) f.properties = {};
+      var cur = f.properties['class'] || f.properties.description || '';
+      var next = canonicalSiteClass(cur);
+      if (next !== cur) {
+        f.properties['class'] = next;
+        if (!f.properties.name || f.properties.name === cur) f.properties.name = next;
+      }
+    });
+    return features || [];
+  }
   var LAYER_COLOR = {
     Building: '#e85d04',
     'Building (Deprecated)': '#9d0208',
@@ -781,19 +809,39 @@
     'Translucent Roofing': '#f48c06',
     'Tree Overhang': '#2b8a3e',
     Driveway: '#f72585',
-    'Motor court': '#c9184a',
+    'Parking area': '#c9184a',
     Patio: '#c9a227',
     Deck: '#b5651d',
-    Pergola: '#d4a373',
-    'Fire feature': '#e03131',
+    'Pergola / gazebo': '#d4a373',
+    'Fire pit': '#e03131',
     Walkway: '#fab005',
     Lawn: '#52b788',
     'Garden bed': '#94d82d',
-    'Retaining wall': '#868e96',
+    Wall: '#868e96',
     Hedge: '#2f9e44',
     Fence: '#5c5f66',
-    'Solar array': '#228be6',
+    'Solar panels': '#228be6',
     Vehicle: '#1c7ed6',
+    Pool: '#22b8cf',
+    'Hot tub': '#15aabf',
+    Pond: '#1c7ed6',
+    'Tennis court': '#0ca678',
+    'Sport court': '#12b886',
+    Playground: '#f59f00',
+    Trampoline: '#fd7e14',
+    'Gravel / bare dirt': '#c2b280',
+    'Shed / small outbuilding': '#ae3ec9',
+    Carport: '#845ef7',
+    'Trailer / boat / RV': '#0c8599',
+    Dumpster: '#495057',
+    'Shipping container': '#2b8a3e',
+    Woodpile: '#8d6e1a',
+    // Legacy names keep a colour if an unmigrated edit is shown as-is.
+    'Motor court': '#f72585',
+    'Solar array': '#228be6',
+    Pergola: '#d4a373',
+    'Retaining wall': '#868e96',
+    'Fire feature': '#e03131',
     Asphalt: '#495057',
     'Road (Driveable Surface)': '#343a40',
     'Concrete Slab': '#adb5bd',
@@ -1035,7 +1083,7 @@
 
   function applyWorkingFc(fc) {
     if (!aiPack) aiPack = { counts: {}, hints: [], features: [] };
-    aiPack.features = ensureFeatureIds((fc && fc.features) || []);
+    aiPack.features = normalizeSiteClasses(ensureFeatureIds((fc && fc.features) || []));
     refreshLayerCounts();
   }
 
@@ -1340,6 +1388,8 @@
   }
   function layerGroupOf(name, count) {
     if (count > 0) return 'present';
+    // Nearmap, not detected stays exactly the entitled-but-absent set.
+    if (NEARMAP_ABSENT.indexOf(name) !== -1) return 'absent';
     if (SITE_FEATURES.indexOf(name) !== -1) return 'site';
     return 'absent';
   }
@@ -1383,7 +1433,8 @@
     Object.keys(counts).forEach(function (name) {
       groups[layerGroupOf(name, counts[name] || 0)].push(name);
     });
-    ['present', 'absent', 'site'].forEach(function (g) { groups[g].sort(); });
+    groups.present.sort();
+    groups.absent.sort();
     function addGroup(title, names, emptyNote) {
       if (!names.length) return;
       var wrap = document.createElement('div');
@@ -1416,7 +1467,35 @@
     }
     addGroup('Present', groups.present);
     addGroup('Nearmap, not detected', groups.absent);
-    addGroup('Site features', groups.site);
+    (function addSiteFeatures() {
+      var wrap = document.createElement('div');
+      wrap.className = 'layer-group';
+      var h = document.createElement('h3');
+      h.textContent = 'Site features';
+      wrap.appendChild(h);
+      SITE_FEATURE_GROUPS.forEach(function (g) {
+        var sub = document.createElement('h4');
+        sub.className = 'layer-sub';
+        sub.textContent = g.title;
+        wrap.appendChild(sub);
+        g.names.forEach(function (name) {
+          if (layerOn[name] === undefined) {
+            layerOn[name] = MODE === 'pins' ? !skipAutoPinClass(name) : false;
+          }
+          var n = counts[name] || 0;
+          var row = document.createElement('label');
+          row.className = 'layer-row' + (activeClass === name ? ' is-active' : '') + (n === 0 ? ' is-absent' : '');
+          row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
+            (layerOn[name] ? 'checked' : '') + '>' +
+            '<span class="swatch" style="background:' + colorForClass(name) + '"></span>' +
+            '<span class="name">' + escapeHtml(name) + '</span>' +
+            '<span class="n">' + n + '</span>' +
+            (n === 0 ? '<span class="hint">not present — draw to add</span>' : '');
+          wrap.appendChild(row);
+        });
+      });
+      host.appendChild(wrap);
+    })();
     updateBrushLabel();
   }
 
