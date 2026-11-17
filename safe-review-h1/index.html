@@ -276,6 +276,10 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
   .qmap{border-right:0;border-bottom:1px solid var(--line)}
   .qmap-hint{margin-left:0}
 }
+
+.qleg{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:11px;color:var(--ink2);margin-left:6px}
+.qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
+.qhyd-call{position:absolute;z-index:5;background:#1c2321;color:#fff;border:1px solid #ffe066;border-radius:6px;padding:5px 8px;font-size:11px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 </style>
 <script src="vendor/h1-crypto.js"></script>
 </head>
@@ -409,7 +413,7 @@ function rOverview(){
    <div><div class="v num">${S.cameras}</div><div class="k">cameras · 4 surveyed</div></div>
    <div><div class="v num">${S.questions}</div><div class="k">open questions · ${S.prov_questions} provisional</div></div></div>`;
   h+=`<div class="grid g2 mt"><div class="card pad"><h3>Provisional calls <span class="badge b-prov" style="margin-left:6px"><span class="dot"></span>to decide later</span></h3><ul class="clean">${O.provisional.map(p=>`<li class="prov-item"><b>${esc(p.k)}</b><span>${esc(p.v)}</span></li>`).join('')}</ul></div>
-  <div class="card pad"><h3>Not available in the data</h3><ul class="clean">${O.missing.map(m=>`<li><span class="badge b-miss">missing</span> &nbsp;${esc(m)}</li>`).join('')}<li><span class="badge b-grey">not purchased</span> &nbsp;Nearmap DSM (heights come from the 3D mesh)</li><li><span class="badge b-grey">pending</span> &nbsp;9 of 13 camera placements await review</li></ul></div></div>`;
+  <div class="card pad"><h3>Not available in the data</h3><ul class="clean">${O.missing.map(m=>`<li><span class="badge b-miss">missing</span> &nbsp;${esc(m)}</li>`).join('')}<li><span class="badge b-grey">pending</span> &nbsp;9 of 13 camera placements await review</li></ul></div></div>`;
   h+=`<div class="card pad mt"><h3>Pass 1 stations run</h3><div class="small muted" style="margin:-4px 0 10px">Pass 1 lint status: pending reviewer gate.</div><div class="chips">${S.stations.map(s=>`<span class="badge b-grey">${esc(s)}</span>`).join('')}</div><div class="small muted" style="margin-top:12px">${esc(S.audit_detail)}. This page shows Pass 1 data only: no hazard, value or concealment judgments and no recommendations.</div></div>`;
   document.getElementById('pg-overview').innerHTML=h;
 }
@@ -432,7 +436,7 @@ function rParcel(){
 function rLayers(){
   let h=head('Section 3','Map layers','Public GIS layers intersected with the taxlot, plus water supply and hydrant distance.');
   h+=`<div class="grid g2"><div class="card kpi"><div class="k">${esc(D.water.label)}</div><div class="v">${esc(D.water.value)}</div><div class="s">${tag(D.water.tag)}</div><div class="small muted" style="margin-top:8px">${esc(D.water.note)}</div></div>
-  <div class="card kpi" id="layer-hydrant"><div class="k">${esc(D.hydrant.label)}</div><div class="v num">${esc(D.hydrant.value)}<small>${esc(D.hydrant.sub)}</small></div><div class="s">${tag(D.hydrant.tag)}</div><div class="small muted" style="margin-top:8px">${esc(D.hydrant.note)}</div></div></div>`;
+  <div class="card kpi" id="layer-hydrant"><div class="k">${esc(D.hydrant.label)}</div><div class="v num">${esc(D.hydrant.value)}<small>${esc(D.hydrant.sub)}</small></div><div class="s">${tag(D.hydrant.tag)}</div><div class="small muted" style="margin-top:8px">${esc(D.hydrant.note)}</div>${D.hydrant.source_id?`<div class="tiny muted" style="margin-top:8px">Source ${esc(D.hydrant.source)} · id ${esc(D.hydrant.source_id)}${D.hydrant.county_source_id?` · also ${esc(D.hydrant.county_source_id)}`:''}${D.hydrant.location?` · ${esc(D.hydrant.location)}`:''}${D.hydrant.road_distance_m?` · road ${esc(D.hydrant.road_distance_m.from_driveway_entrance)} m from the driveway entrance`:''}</div>`:''}</div></div>`;
   h+=`<div class="card mt">`+D.layers.map(l=>{
     let v;
     if(l.id==='soils'&&Array.isArray(D.soils)){v=D.soils.map(s=>`<div><b>${esc(s.mapunit_symbol)}</b> ${esc(s.name)} <span class="muted">· ${esc(s.pct_of_gis_parcel??s.percent??'')}${s.pct_of_gis_parcel||s.percent?'%':''}</span></div>`).join('');}
@@ -469,7 +473,7 @@ function rNearmap(){
    <div class="statrow"><span>Format</span><span>${esc(N.model3d.format)}</span></div><div class="statrow"><span>Projection</span><span>${esc(N.model3d.crs)}</span></div><div class="statrow"><span>Mesh</span><span class="num">${fmt(N.model3d.vertices)} vertices · ${fmt(N.model3d.triangles)} triangles</span></div><div class="statrow"><span>Credits</span><span>${esc(N.model3d.credits)}</span></div>
    <div class="small muted" style="margin-top:8px">${esc(N.model3d.capture)}. ${esc(N.model3d.coverage)}. ${esc(N.model3d.viewer)}.</div>
    <div style="margin-top:12px"><a class="btnl" href="model3d.html" target="_blank" rel="noopener">Open 3D model viewer ↗</a></div></div>
-   <div class="card pad" id="nm-dsm"><h3>DSM <span class="badge b-grey">not purchased</span></h3><div class="small" style="color:var(--ink2)">${esc(N.dsm.reason)}</div><h3 style="margin-top:16px">Public lidar <span class="badge b-blue">cross-check</span></h3><div class="small" style="color:var(--ink2)">${esc(N.lidar.source)}. Matches the mesh slope to 0.01% and roof heights closely.</div></div></div>`;
+   <div class="card pad" id="nm-dsm"><h3>DSM <span class="badge b-grey">${esc(N.dsm.status)}</span></h3><div class="small" style="color:var(--ink2)">${esc(N.dsm.reason)}</div><h3 style="margin-top:16px">Public lidar <span class="badge b-blue">cross-check</span></h3><div class="small" style="color:var(--ink2)">${esc(N.lidar.source)}. Matches the mesh slope to 0.01% and roof heights closely.</div></div></div>`;
   h+=`<div class="card pad mt" id="nm-ai_pack"><h3>Calls & credits</h3><table><thead><tr><th>Call</th><th>Requested</th><th>Area</th><th>Credits</th><th>When</th></tr></thead><tbody>
    <tr><td>Four-pack call</td><td>${N.call1.packs.map(esc).join(', ')} + ${N.call1.include.join(', ')}</td><td class="num">${fmt(N.call1.area_m2)} m²<div class="tiny muted">roof + 30 m buffer</div></td><td class="num"><b>${N.call1.credits}</b></td><td>${esc(N.call1.retrieved)}</td></tr>
    <tr><td>Scores call</td><td>building + ${N.call2.include.join(', ')}</td><td class="num">same area</td><td class="num"><b>${N.call2.credits}</b> <span class="muted tiny">est. ${N.call2.estimate}</span></td><td>${esc(N.call2.retrieved)}</td></tr></tbody></table>
@@ -613,6 +617,9 @@ function rQuestions(){
         <div class="seg" id="qmode"><button type="button" data-mode="2d" class="on">2D</button><button type="button" data-mode="3d">3D</button></div>
         <label class="qlab"><input type="checkbox" id="qly-parcel" checked> Parcel</label>
         <label class="qlab"><input type="checkbox" id="qly-regions" checked> AI regions</label>
+        <label class="qlab"><input type="checkbox" id="qly-zones" checked> Defensible space</label>
+        <label class="qlab"><input type="checkbox" id="qly-hydrant" checked> Hydrant</label>
+        <span id="qly-legend" class="qleg" title="Defensible-space distance bands around the Nearmap roof"></span>
         <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" target="_blank" rel="noopener" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
         <span class="qmap-hint" id="qmaphint">Click a question to show it on the map</span>
       </div>
@@ -644,7 +651,8 @@ function rQuestions(){
   });
   el.querySelector('#qlist').addEventListener('change',e=>{const t=e.target.closest('textarea[data-q]');if(!t)return;const cur=ANS[t.dataset.q]||{};cur.note=t.value.slice(0,2000);cur.at=new Date().toISOString();ANS[t.dataset.q]=cur;queueSave();});
   el.querySelector('#qmode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setQMode(b.dataset.mode);});
-  el.querySelector('#qly-parcel').onchange=()=>{drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();};
+  ['qly-parcel','qly-regions','qly-zones','qly-hydrant'].forEach(id=>{const b=el.querySelector('#'+id);if(b)b.onchange=()=>{drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();};});
+  const lg=el.querySelector('#qly-legend');if(lg){const meta=(D.map.zone_meta&&D.map.zone_meta.length)?D.map.zone_meta:(D.nearmap.zones||[]).map((z,i)=>({label:z.label,color:['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b'}));lg.innerHTML=meta.map(z=>`<span><i style="background:${z.color}"></i>${esc(z.label)}</span>`).join('')+(D.hydrant&&D.hydrant.px?`<span><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>`:'');};const ht=el.querySelector('#qly-hydrant');if(ht&&!(D.hydrant&&D.hydrant.px)){const lab=ht.closest('label');if(lab)lab.style.display='none';}
   el.querySelector('#qly-regions').onchange=()=>drawQ2();
   el.querySelector('#qreset').onclick=()=>resetQView();
   drawQ();
@@ -693,8 +701,12 @@ function linkTarget(link){
   if(link.kind==='asset'){
     const a=D.assets.located.find(x=>x.id===link.id);if(!a)return {label:link.id};
     let pts=a.px?[a.px]:[];
-    const rid=a.regions&&a.regions[0];
-    const feat=rid&&regionFeat(rid);
+    let rid=a.regions&&a.regions[0];
+    let feat=rid&&regionFeat(rid);
+    if((!feat||!rid)&&a.region_class&&typeof REGS!=='undefined'&&REGS){
+      const hit=(regionPolysPx(REGS)||[]).filter(p=>p.cls===a.region_class);
+      if(hit.length){rid=String(hit[0].id);feat=regionFeat(rid);}
+    }
     if(feat) ringsOf(feat).forEach(poly=>poly[0].forEach(p=>pts.push(pxOfLonLat(p[0],p[1]))));
     if(!pts.length&&a.px)pts=[a.px];
     return {label:a.id+' · '+(a.name||'').split('(')[0].trim(),pts,px:a.px,rid,ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null,ll:null};
@@ -778,7 +790,7 @@ function initQMap(){
   if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){const {w,h}=stageSize();if(w>=80&&h>=80){if(QMAP&&QMAP._user)applyQ2();else scheduleFitQ2();}}if(Q3)Q3.resize();});st._ro.observe(st);}
   if(!window._q2rz){window._q2rz=true;window.addEventListener('resize',()=>{if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();});}
 }
-function applyQ2(){const el=document.getElementById('q2inner');if(!el||!QMAP)return;el.style.transform=`translate(${QMAP.tx}px,${QMAP.ty}px) scale(${QMAP.s})`;}
+function applyQ2(){const el=document.getElementById('q2inner');if(!el||!QMAP)return;el.style.transform=`translate(${QMAP.tx}px,${QMAP.ty}px) scale(${QMAP.s})`;if(typeof drawHydrantCallout==='function')drawHydrantCallout();}
 function fitQ2(which){
   const {w,h,st}=stageSize();if(!st||!QMAP)return false;
   if(w<80||h<80){scheduleFitQ2(which||'parcel');return false;}
@@ -818,7 +830,7 @@ function zoomQ2(cx,cy,fac){
 }
 function drawQ2(){
   const svg=document.getElementById('q2svg');if(!svg)return;
-  const M=D.map,showP=document.getElementById('qly-parcel')?.checked!==false,showR=document.getElementById('qly-regions')?.checked!==false;
+  const M=D.map,showP=document.getElementById('qly-parcel')?.checked!==false,showR=document.getElementById('qly-regions')?.checked!==false,showZ=document.getElementById('qly-zones')?.checked!==false,showH=document.getElementById('qly-hydrant')?.checked!==false;
   const t=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
   const hlRid=t&&t.rid;
   let h='';
@@ -828,15 +840,38 @@ function drawQ2(){
       h+=`<path class="rgn${on?' hl':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${on?'.5':'.22'}" stroke="${on?'#fff':classColor(p.cls)}" stroke-width="${on?4:1.4}" fill-rule="evenodd"></path>`;
     });
   }
+  if(showZ&&M.zones){const meta=M.zone_meta||[];M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones" points="${pts(r)}" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});}
   if(showP) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="2.8"/>`;
+  if(showH&&D.hydrant&&D.hydrant.px){const [hx,hy]=D.hydrant.px;h+=`<g class="ly-hydrant"><circle cx="${hx}" cy="${hy}" r="14" fill="#c1121f" fill-opacity=".25" stroke="#c1121f" stroke-width="3"/><circle cx="${hx}" cy="${hy}" r="5" fill="#c1121f" stroke="#fff" stroke-width="2"/><text x="${hx+18}" y="${hy-12}" fill="#fff" stroke="#1c2321" stroke-width="3" paint-order="stroke" font-size="22" font-weight="650">Hydrant ${esc(D.hydrant.value)}</text></g>`;}
   if(t&&t.pts&&t.pts.length&&!hlRid){
     if(t.pts.length>2) h+=`<polygon points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="3.2"/>`;
     else if(t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="#ffe066" stroke="#fff" stroke-width="2"/>`;
   }
   if(t&&t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="7" fill="#ffe066" stroke="#1c2321" stroke-width="2"/>`;
   svg.innerHTML=h;
+  drawHydrantCallout();
 }
-
+function drawHydrantCallout(){
+  const st=document.getElementById('qstage');
+  let el=document.getElementById('qhyd-call');
+  if(el) el.remove();
+  if(!st||document.getElementById('qly-hydrant')?.checked===false||!D.hydrant||!D.hydrant.px||!QMAP) return;
+  const inner=document.getElementById('q2inner'); if(!inner) return;
+  const [hx,hy]=D.hydrant.px;
+  const sr=st.getBoundingClientRect();
+  const sx=QMAP.tx+hx*QMAP.s, sy=QMAP.ty+hy*QMAP.s;
+  const on=(sx>=-20&&sy>=-20&&sx<=sr.width+20&&sy<=sr.height+20);
+  if(on) return;
+  const pad=12;
+  const cx=Math.max(pad, Math.min(sr.width-pad, sx));
+  const cy=Math.max(pad, Math.min(sr.height-pad, sy));
+  el=document.createElement('div'); el.id='qhyd-call'; el.className='qhyd-call';
+  el.textContent='Hydrant '+(D.hydrant.value||'')+' (off this nadir)';
+  el.style.left=Math.max(8, Math.min(sr.width-180, cx))+'px';
+  el.style.top=Math.max(8, Math.min(sr.height-36, cy))+'px';
+  if(!st.style.position) st.style.position='relative';
+  st.appendChild(el);
+}
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Could not load '+src));document.head.appendChild(s);});}
 function llToMesh(lat,lon){
   const [e,n]=toUTM10(lat,lon);const ex=(Q3&&Q3.extras)||{};
@@ -937,7 +972,7 @@ function syncQ3Overlays(){
   if(!Q3||!Q3.ready)return;
   const THREE=Q3.THREE;
   const drop=k=>{if(Q3[k]){Q3.scene.remove(Q3[k]);Q3[k].geometry&&Q3[k].geometry.dispose();Q3[k].material&&Q3[k].material.dispose();Q3[k]=null;}};
-  drop('parcel');drop('line');drop('marker');
+  drop('parcel');drop('line');drop('marker');drop('zones');drop('hydrant');
   const mkLine=(rings,color,width)=>{
     const grp=new THREE.Group();
     (rings||[]).forEach(ring=>{
@@ -951,6 +986,22 @@ function syncQ3Overlays(){
     Q3.scene.add(grp);return grp;
   };
   if(document.getElementById('qly-parcel')?.checked!==false && D.cam_ctx.parcel) Q3.parcel=mkLine([D.cam_ctx.parcel],0xffe066,2);
+  if(document.getElementById('qly-zones')?.checked!==false && D.map.zones && D.cam_ctx && D.cam_ctx.bounds){
+    const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;
+    const toLL=(x,y)=>[b.west+x/W*(b.east-b.west), b.north-y/H*(b.north-b.south)];
+    const meta=D.map.zone_meta||[];
+    const grp=new THREE.Group();
+    D.map.zones.forEach((rings,i)=>{
+      const col=parseInt(((meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b').slice(1),16);
+      (rings||[]).forEach(r=>{
+        if(!r||r.length<2)return;
+        const pts=r.map(p=>{const ll=toLL(p[0],p[1]);const m=llToMesh(ll[1],ll[0]);return new THREE.Vector3(m[0],m[1],heightAt(m[0],m[1])+0.6);});
+        if(!pts[0].equals(pts[pts.length-1]))pts.push(pts[0].clone());
+        grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({color:col,linewidth:2})));
+      });
+    });
+    Q3.scene.add(grp);Q3.zones=grp;
+  }
   const t=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
   if(t&&t.ringsLL&&t.ringsLL.length) Q3.line=mkLine(t.ringsLL,0xffffff,2);
   let mx,my;
