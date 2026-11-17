@@ -164,11 +164,18 @@
   }
   .meta { color: var(--ink-dim); font-size: 11px; margin: 0 0 8px; }
   .swatch { width: 12px; height: 12px; border-radius: 2px; flex: 0 0 12px; border: 1px solid rgba(255,255,255,0.45); }
-  .layer-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 12px; }
+  .layer-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 3px 0; font-size: 12px; padding: 1px 2px; }
   .layer-row.is-active { background: rgba(79,209,197,0.12); border-radius: 3px; }
   .layer-row span.name { flex: 1; min-width: 0; }
-  .layer-row span.n { color: var(--ink-dim); }
+  .layer-row span.n { color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+  .layer-row.is-absent .name { color: var(--ink-dim); }
+  .layer-row.is-absent .swatch { box-shadow: 0 0 0 1px rgba(255,255,255,.35); outline: 1px dashed rgba(255,255,255,.45); outline-offset: 1px; }
+  .layer-row .hint { flex: 1 0 100%; font-size: 10px; color: var(--ink-dim); padding-left: 28px; margin-top: -2px; }
+  .layer-group { margin: 6px 0 10px; }
+  .layer-group > h3 { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 10px 0 4px; font-weight: 700; }
   .layer-btns { display: flex; gap: 6px; margin: 6px 0 8px; }
+  #closePoly { display: none; }
+  #closePoly.show { display: inline-block; }
   #pinList { margin: 8px 0 0; padding: 0; list-style: none; }
   #pinList li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--line); }
   #pinList li span.grow { flex: 1; min-width: 0; }
@@ -252,6 +259,8 @@
         <span id="modeChip" class="mode-chip"></span>
         <button type="button" class="btn tool on" data-tool="pan" id="toolPan">Pan</button>
         <button type="button" class="btn tool regions-only" data-tool="draw" id="toolDraw">Draw</button>
+        <button type="button" class="btn tool regions-only" data-tool="polygon" id="toolPolygon">Polygon</button>
+        <button type="button" class="btn regions-only" id="closePoly" title="Close the polygon and fill it with the armed class">Close shape</button>
         <button type="button" class="btn tool pins-only" data-tool="place" id="toolPlace">Place pin</button>
         <button type="button" class="btn tool pins-only" data-tool="delete" id="toolDelete">Delete pin</button>
         <button type="button" class="btn pins-only" id="seedPins" title="Pin each region except cover/veg skips; name is the region class">Auto Generate Pins</button>
@@ -274,11 +283,9 @@
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
       <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> in this browser (use Export my review to send a copy). <strong>Revert changes</strong> discards paint since the last Save (or since you opened). <strong>Revert to original</strong> puts the vendor file back.</p>
-      <p class="meta regions-only how"><b>Draw</b>: tick a layer, click a region to pick it, left-drag to grow or paint, right-drag to erase. Click a layer name (ticked) to arm that class for new paint. Ctrl+Z / Ctrl+Y undo and redo.</p>
+      <p class="meta regions-only how"><b>Draw</b>: click a class (present or not present) to arm it, then Draw — the brush takes that class colour. Left-drag to paint or fill a new region; right-drag to erase. <b>Polygon</b>: with a class armed, click vertices and Close shape (or double-click) to fill. New regions save to <code>ai/edits/regions.json</code> with origin <code>reviewer</code>; the vendor original never changes. Ctrl+Z / Ctrl+Y undo and redo.</p>
       <label class="toggle"><input type="checkbox" id="parcelToggle" checked> Parcel line</label>
-      <label class="toggle"><input type="checkbox" id="zonesToggle" checked> Defensible space</label>
       <label class="toggle"><input type="checkbox" id="hydrantToggle" checked> Hydrant</label>
-      <span id="ctxLegend" class="qleg" style="margin-left:8px"></span>
       <p class="meta pins-only" id="pinsNote">Pins editor. Regions are read-only (finish them in the Regions editor). <strong>Auto Generate Pins</strong> places one pin per region at its interior point, named after the region class in regions.json (Lawn Grass stays Lawn Grass — not a catalog entry). Cover/veg classes are skipped (asphalt, building deprecated, concrete slab, driveway, vegetation, natural, roof, translucent roofing, water body, woody). No cap. <strong>Place pin</strong>: turn on a layer, then click a painted region that has no pin — the pin is placed at that region's interior point, not at the click. <strong>Delete pin</strong>: click a painted region that has a pin, or the pin itself — the region stays. Bare map clicks do nothing. Save writes the Nearmap sheet.</p>
       <label class="toggle regions-only"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
@@ -742,6 +749,105 @@
     { id: 148, name: 'Tree cluster', classes: ['Woody Vegetation', 'Medium and High Vegetation (>2m)', 'Medium and High Vegetation with Woody Vegetation'] }
   ];
 
+  // Catalogue of paintable classes. Present classes come from the working
+  // FeatureCollection; the lists below keep absent Nearmap and site-feature
+  // classes visible at count 0 so a reviewer can arm them and paint.
+  var NEARMAP_ABSENT = [
+    'Vegetation Debris', 'Junk and Wreckage', 'Tyres',
+    'Wooden Decking', 'Fire Pit', 'Yard Debris', 'Wooden Pallet',
+    'Roof Debris', 'Wood Shake', 'Metal', 'Shingle', 'Slate', 'Built Up',
+    'Mod-Bit', 'PVC/TPO', 'EPDM', 'Roof Coating',
+    'Leaf-off Tree Overhang', 'Low Vegetation (0.5m-2m) Overhang',
+    'Very Low Vegetation (<0.5m) Overhang', 'Power Line Overhang',
+    'Leaf-off Vegetation', 'Pole',
+    'Swimming Pool', 'Unmaintained Swimming Pool',
+    'Tennis Court', 'Car', 'Boat', 'Trailer', 'Dumpster',
+    'Shipping Container', 'Playground', 'Patio Furniture',
+    'Heavy Machinery', 'Nonwooden Construction Material',
+    'Trampoline', 'Solar Panel', 'Residential Chimney'
+  ];
+  var SITE_FEATURES = [
+    'Driveway', 'Motor court', 'Patio', 'Deck', 'Pergola', 'Fire feature',
+    'Walkway', 'Lawn', 'Garden bed', 'Retaining wall', 'Hedge', 'Fence',
+    'Solar array', 'Vehicle'
+  ];
+  var LAYER_COLOR = {
+    Building: '#e85d04',
+    'Building (Deprecated)': '#9d0208',
+    'Building lifecycle': '#c2410c',
+    Roof: '#dc2f02',
+    Tile: '#d9480f',
+    'Clay Tile': '#e8590c',
+    'Translucent Roofing': '#f48c06',
+    'Tree Overhang': '#2b8a3e',
+    Driveway: '#f72585',
+    'Motor court': '#c9184a',
+    Patio: '#c9a227',
+    Deck: '#b5651d',
+    Pergola: '#d4a373',
+    'Fire feature': '#e03131',
+    Walkway: '#fab005',
+    Lawn: '#52b788',
+    'Garden bed': '#94d82d',
+    'Retaining wall': '#868e96',
+    Hedge: '#2f9e44',
+    Fence: '#5c5f66',
+    'Solar array': '#228be6',
+    Vehicle: '#1c7ed6',
+    Asphalt: '#495057',
+    'Road (Driveable Surface)': '#343a40',
+    'Concrete Slab': '#adb5bd',
+    'Hard Surface': '#6c757d',
+    'Natural Pervious Surface': '#b7e4c7',
+    'Solar Panel': '#3a86ff',
+    'Swimming Pool': '#4cc9f0',
+    'Unmaintained Swimming Pool': '#15aabf',
+    'Water Body': '#0077b6',
+    'Residential Chimney': '#7b2cbf',
+    Skylight: '#ffd166',
+    'Woody Vegetation': '#2d6a4f',
+    'Medium and High Vegetation (>2m)': '#40916c',
+    'Medium and High Vegetation with Woody Vegetation': '#1b4332',
+    'Low Vegetation (0.5m-2m)': '#74c69d',
+    'Very Low Vegetation (<0.5m)': '#95d5b2',
+    'Lawn Grass': '#52b788',
+    'Natural (soft)': '#b7e4c7',
+    'Vegetation Debris': '#8d6e1a',
+    'Junk and Wreckage': '#6f4a1a',
+    Tyres: '#212529',
+    'Wooden Decking': '#d9480f',
+    'Fire Pit': '#c92a2a',
+    'Yard Debris': '#ae3ec9',
+    'Wooden Pallet': '#d68c45',
+    'Roof Debris': '#862e9c',
+    'Wood Shake': '#d9480f',
+    Metal: '#adb5bd',
+    Shingle: '#495057',
+    Slate: '#3b5bdb',
+    'Built Up': '#7048e8',
+    'Mod-Bit': '#5f3dc4',
+    'PVC/TPO': '#845ef7',
+    EPDM: '#364fc7',
+    'Roof Coating': '#91a7ff',
+    'Leaf-off Tree Overhang': '#5c940d',
+    'Low Vegetation (0.5m-2m) Overhang': '#82c91e',
+    'Very Low Vegetation (<0.5m) Overhang': '#a9e34b',
+    'Power Line Overhang': '#e8590c',
+    'Leaf-off Vegetation': '#66a80f',
+    Pole: '#343a40',
+    'Tennis Court': '#20c997',
+    Car: '#1971c2',
+    Boat: '#0c8599',
+    Trailer: '#1864ab',
+    Dumpster: '#5c5f66',
+    'Shipping Container': '#2b8a3e',
+    Playground: '#f59f00',
+    'Patio Furniture': '#e67700',
+    'Heavy Machinery': '#c2255c',
+    'Nonwooden Construction Material': '#868e96',
+    Trampoline: '#fd7e14'
+  };
+
   function qp(name) {
     var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
     return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : null;
@@ -974,6 +1080,7 @@
       saved: new Date().toISOString(),
       saved_by: 'nearmap-review (H1 local)',
       counts: recountFeatures(aiPack.features),
+      catalog: catalogNames(),
       features: aiPack.features
     };
     try { localStorage.setItem(regionsStorageKey(), JSON.stringify(doc)); } catch (e) {}
@@ -1213,32 +1320,40 @@
   }
 
   function colorForClass(name) {
-    var fixed = {
-      Building: '#e85d04',
-      'Building (Deprecated)': '#9d0208',
-      Roof: '#dc2f02',
-      'Translucent Roofing': '#f48c06',
-      Driveway: '#f72585',
-      Asphalt: '#495057',
-      'Road (Driveable Surface)': '#343a40',
-      'Concrete Slab': '#adb5bd',
-      'Solar Panel': '#3a86ff',
-      'Swimming Pool': '#4cc9f0',
-      'Water Body': '#0077b6',
-      'Residential Chimney': '#7b2cbf',
-      Skylight: '#ffd166',
-      'Woody Vegetation': '#2d6a4f',
-      'Medium and High Vegetation (>2m)': '#40916c',
-      'Medium and High Vegetation with Woody Vegetation': '#1b4332',
-      'Low Vegetation (0.5m-2m)': '#74c69d',
-      'Very Low Vegetation (<0.5m)': '#95d5b2',
-      'Lawn Grass': '#52b788',
-      'Natural (soft)': '#b7e4c7'
-    };
-    if (fixed[name]) return fixed[name];
+    if (LAYER_COLOR[name]) return LAYER_COLOR[name];
     var h = 0;
     for (var i = 0; i < name.length; i++) h = ((h << 5) - h) + name.charCodeAt(i);
+    // Stable across sessions: derived only from the class name.
     return 'hsl(' + (Math.abs(h) % 360) + ', 62%, 46%)';
+  }
+  function catalogNames() {
+    var seen = {};
+    var out = [];
+    function add(name) {
+      if (!name || seen[name]) return;
+      seen[name] = true;
+      out.push(name);
+    }
+    SITE_FEATURES.forEach(add);
+    NEARMAP_ABSENT.forEach(add);
+    return out;
+  }
+  function layerGroupOf(name, count) {
+    if (count > 0) return 'present';
+    if (SITE_FEATURES.indexOf(name) !== -1) return 'site';
+    return 'absent';
+  }
+  function selectClass(name) {
+    if (!name) return;
+    layerOn[name] = true;
+    activeClass = name;
+    armClassBrush(name);
+    renderLayers(aiPack);
+    if (isEditTool()) {
+      restoreBrushCursor();
+      updateBrushLabel();
+    }
+    redrawAi();
   }
 
   function featureClass(f) {
@@ -1257,32 +1372,51 @@
     var host = document.getElementById('aiLayers');
     host.innerHTML = '';
     var counts = (ai && ai.counts) || {};
-    var names = Object.keys(counts);
-    if (!names.length && ai && ai.features) {
-      ai.features.forEach(function (f) {
-        var c = featureClass(f);
-        counts[c] = (counts[c] || 0) + 1;
-      });
-      names = Object.keys(counts);
+    if (!Object.keys(counts).length && ai && ai.features) {
+      counts = recountFeatures(ai.features);
     }
-    // Driveway is in CLASS_MAP but is not a Nearmap class on this account.
-    // Keep it in the list at count 0 so reviewers can paint and erase it.
-    if (counts['Driveway'] === undefined) counts['Driveway'] = 0;
-    names = Object.keys(counts);
-    names.sort();
-    names.forEach(function (name) {
-      if (layerOn[name] === undefined) {
-        layerOn[name] = MODE === 'pins' ? !skipAutoPinClass(name) : false;
-      }
-      var row = document.createElement('label');
-      row.className = 'layer-row' + (activeClass === name ? ' is-active' : '');
-      row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
-        (layerOn[name] ? 'checked' : '') + '>' +
-        '<span class="swatch" style="background:' + colorForClass(name) + '"></span>' +
-        '<span class="name">' + escapeHtml(name) + '</span>' +
-        '<span class="n">' + counts[name] + '</span>';
-      host.appendChild(row);
+    catalogNames().forEach(function (name) {
+      if (counts[name] === undefined) counts[name] = 0;
     });
+    // Any unexpected class already in the working set still appears under Present.
+    var groups = { present: [], absent: [], site: [] };
+    Object.keys(counts).forEach(function (name) {
+      groups[layerGroupOf(name, counts[name] || 0)].push(name);
+    });
+    ['present', 'absent', 'site'].forEach(function (g) { groups[g].sort(); });
+    function addGroup(title, names, emptyNote) {
+      if (!names.length) return;
+      var wrap = document.createElement('div');
+      wrap.className = 'layer-group';
+      var h = document.createElement('h3');
+      h.textContent = title;
+      wrap.appendChild(h);
+      if (emptyNote) {
+        var note = document.createElement('p');
+        note.className = 'meta';
+        note.textContent = emptyNote;
+        wrap.appendChild(note);
+      }
+      names.forEach(function (name) {
+        if (layerOn[name] === undefined) {
+          layerOn[name] = MODE === 'pins' ? !skipAutoPinClass(name) : false;
+        }
+        var n = counts[name] || 0;
+        var row = document.createElement('label');
+        row.className = 'layer-row' + (activeClass === name ? ' is-active' : '') + (n === 0 ? ' is-absent' : '');
+        row.innerHTML = '<input type="checkbox" data-layer="' + escapeHtml(name) + '" ' +
+          (layerOn[name] ? 'checked' : '') + '>' +
+          '<span class="swatch" style="background:' + colorForClass(name) + '"></span>' +
+          '<span class="name">' + escapeHtml(name) + '</span>' +
+          '<span class="n">' + n + '</span>' +
+          (n === 0 ? '<span class="hint">not present — draw to add</span>' : '');
+        wrap.appendChild(row);
+      });
+      host.appendChild(wrap);
+    }
+    addGroup('Present', groups.present);
+    addGroup('Nearmap, not detected', groups.absent);
+    addGroup('Site features', groups.site);
     updateBrushLabel();
   }
 
@@ -1377,20 +1511,25 @@
   }
 
   function isEditTool() {
-    return toolMode === 'draw';
+    return toolMode === 'draw' || toolMode === 'polygon';
+  }
+  function isPolyTool() {
+    return toolMode === 'polygon';
   }
 
   function updateBrushLabel() {
     var el = document.getElementById('brushClass');
+    if (!el) return;
     if (!brushTarget) {
-      el.textContent = isEditTool() ? '+ click a region' : '';
+      el.textContent = isPolyTool() ? '+ pick a class, then click vertices' : (isEditTool() ? '+ click a class or a region' : '');
       el.style.color = '';
       return;
     }
-    var n = working.ids.length;
     var name = brushTarget.label || brushTarget.className;
-    el.textContent = name + ' — left add · right remove';
-    el.style.color = brushTarget.color || '';
+    el.textContent = isPolyTool()
+      ? (name + ' — click vertices, then Close shape')
+      : (name + ' — left add · right remove');
+    el.style.color = brushTarget.color || colorForClass(name) || '';
   }
 
   function setAllLayers(on) {
@@ -3550,7 +3689,7 @@
         type: 'Feature',
         id: freshId,
         geometry: freshGeom,
-        properties: { 'class': cls, name: cls, origin: 'drawn' }
+        properties: { 'class': cls, name: cls, origin: 'reviewer' }
       };
       mergeLockedHoles(freshFeat, extraFeats);
       aiPack.features.push(freshFeat);
@@ -3635,7 +3774,7 @@
         type: 'Feature',
         id: newId,
         geometry: newGeom,
-        properties: { 'class': cls, name: cls, origin: 'drawn' }
+        properties: { 'class': cls, name: cls, origin: 'reviewer' }
       };
       mergeLockedHoles(newFeat, extraFeats);
       aiPack.features.push(newFeat);
@@ -3880,6 +4019,8 @@
   }
 
   function updateFinishDraw() {
+    var close = document.getElementById('closePoly');
+    if (close) close.classList.toggle('show', isPolyTool() && drawVerts.length >= 3);
   }
 
   function clearDrawPreview() {
@@ -3894,9 +4035,10 @@
       updateFinishDraw();
       return;
     }
+    var col = (brushTarget && brushTarget.color) || colorForClass(activeClass || '') || '#4fd1c5';
     var opts = {
       map: map,
-      strokeColor: '#4fd1c5',
+      strokeColor: col,
       strokeOpacity: 1,
       strokeWeight: 2,
       clickable: false,
@@ -3905,7 +4047,7 @@
     if (drawVerts.length >= 3) {
       drawPreview = new google.maps.Polygon({
         paths: drawVerts,
-        fillColor: '#4fd1c5',
+        fillColor: col,
         fillOpacity: 0.28,
         strokeColor: opts.strokeColor,
         strokeOpacity: 1,
@@ -3939,33 +4081,35 @@
       setStatus('Draw a closed polygon (3+ clicks)', 'err');
       return;
     }
-    if (!canAddPin()) return;
+    var cls = (brushTarget && brushTarget.className) || activeClass;
+    if (!cls) {
+      setStatus('Pick a class first, then close the shape', 'err');
+      return;
+    }
     var ring = drawVerts.map(function (p) { return [p.lng, p.lat]; });
-    ring.push(ring[0]);
-    var c = ringCentroidLonLat(ring);
-    if (!c) { setStatus('Could not place a centroid', 'err'); return; }
-    openPicker('Drawn shape as…', [144, 186, 206, 61, 130, 69], function (catalogId) {
-      var name = (catalogById[catalogId] && catalogById[catalogId].name) || ('#' + catalogId);
-      var rid = nextRegionId('d');
-      var drawnId = addDrawnFeature(ring, catalogId, { source: 'drawn' });
-      var pin = addPinAt(c, catalogId, { source: 'drawn', drawn_id: drawnId, region_id: rid });
-      if (!pin) {
-        ensureDrawn().features = ensureDrawn().features.filter(function (f) { return f.id !== drawnId; });
-        return;
-      }
-      if (!aiPack.features) aiPack.features = [];
-      aiPack.features.push({
-        type: 'Feature',
-        id: rid,
-        geometry: { type: 'Polygon', coordinates: [ring] },
-        properties: { class: name, catalog_id: catalogId, name: name, origin: 'drawn' }
-      });
-      clearDrawPreview();
-      persistLocal();
-      persistRegions().then(function (how) {
-        redrawAi();
-        setStatus('Drew ' + name + (how === 'file' ? ' — wrote edits/regions.json' : ' — saved in this browser; use Export my review to send a copy'));
-      });
+    if (ring[0][0] !== ring[ring.length - 1][0] || ring[0][1] !== ring[ring.length - 1][1]) ring.push(ring[0]);
+    if (!aiPack.features) aiPack.features = [];
+    pushPaintHistory();
+    var rid = nextRegionId('d');
+    aiPack.features.push({
+      type: 'Feature',
+      id: rid,
+      geometry: { type: 'Polygon', coordinates: [ring] },
+      properties: { 'class': cls, name: cls, origin: 'reviewer' }
+    });
+    if (layerOn[cls] === false) layerOn[cls] = true;
+    armClassBrush(cls);
+    if (brushTarget) brushTarget.regionId = rid;
+    working = { ids: [String(rid)], stamps: [] };
+    clearDrawPreview();
+    refreshLayerCounts();
+    persistLocal();
+    persistRegions().then(function (how) {
+      redrawAi();
+      updateBrushLabel();
+      syncBrushChrome();
+      setStatus('New ' + cls + ' region' +
+        (how === 'file' ? ' — wrote edits/regions.json' : ' — saved in this browser; use Export my review to send a copy'));
     });
   }
 
@@ -4087,9 +4231,9 @@
   function styleBrushCursor() {
     var el = document.getElementById('brushCursor');
     var hit = document.getElementById('brushHit');
-    if (!isEditTool()) {
+    if (!isEditTool() || isPolyTool()) {
       el.className = '';
-      if (hit) hit.style.cursor = '';
+      if (hit) hit.style.cursor = isPolyTool() ? 'crosshair' : '';
       return;
     }
     if (brushTarget) {
@@ -4125,24 +4269,29 @@
       });
     }
     var sizeRow = document.getElementById('brushSizeRow');
-    if (sizeRow) sizeRow.hidden = !edit;
+    if (sizeRow) sizeRow.hidden = !(edit && toolMode === 'draw');
     var histRow = document.getElementById('brushHistRow');
     if (histRow) histRow.hidden = !edit;
     syncPaintHistoryButtons();
-    if (!edit) hideBrushCursor();
+    if (!edit || isPolyTool()) hideBrushCursor();
     else restoreBrushCursor();
+    var close = document.getElementById('closePoly');
+    if (close) close.classList.toggle('show', isPolyTool() && drawVerts.length >= 3);
   }
 
   function setTool(mode) {
-    var leavingEdit = isEditTool() && mode !== 'draw';
-    var enteringDraw = mode === 'draw' && toolMode !== 'draw';
+    var wasDraw = toolMode === 'draw';
+    var wasPoly = toolMode === 'polygon';
+    var wasEdit = wasDraw || wasPoly;
+    var nowEdit = mode === 'draw' || mode === 'polygon';
+    var armed = (brushTarget && brushTarget.className) || activeClass || '';
     toolMode = mode;
     var btns = document.querySelectorAll('#tools .tool');
     for (var i = 0; i < btns.length; i++) {
       btns[i].classList.toggle('on', btns[i].getAttribute('data-tool') === mode);
     }
-    if (mode !== 'draw') clearDrawPreview();
-    if (leavingEdit || enteringDraw) {
+    if (mode !== 'polygon') clearDrawPreview();
+    if (wasDraw || mode === 'draw') {
       working.stamps = [];
       brushing = false;
       brushPainting = false;
@@ -4151,12 +4300,14 @@
       press = null;
       clearBrushStroke();
     }
-    if (enteringDraw || leavingEdit) {
-      // Leaving Draw drops the pick too, so the picked region stops being
-      // force-drawn once its layer is off or the tool is Pan/Accept.
+    if (wasEdit && !nowEdit) {
+      // Leaving Draw/Polygon drops a picked region so it is not force-drawn
+      // once its layer is off, but the armed class stays so Draw can resume it.
       brushTarget = null;
       working = { ids: [], stamps: [] };
+      activeClass = armed || activeClass;
     }
+    if (nowEdit && armed) armClassBrush(armed);
     if (!isEditTool()) hideBrushCursor();
     syncBrushChrome();
     updateBrushLabel();
@@ -4165,11 +4316,19 @@
     } else {
       redrawAi();
     }
-    if (map) map.setOptions({ draggableCursor: (mode === 'place' || mode === 'delete') ? 'crosshair' : (isEditTool() ? 'crosshair' : null) });
+    if (map) map.setOptions({ draggableCursor: (mode === 'place' || mode === 'delete' || isPolyTool()) ? 'crosshair' : (isEditTool() ? 'crosshair' : null) });
     if (mode === 'accept') setStatus('Click a visible AI polygon');
     else if (mode === 'draw') {
       updateBrushLabel();
-      setStatus('Draw: check a class and drag to paint. Click a region to grow it. Pan tool to move the map. Scroll to zoom.');
+      setStatus(armed
+        ? ('Draw: brush is ' + armed + '. Left-drag to paint or fill; right-drag to erase. Click a painted region to grow it.')
+        : 'Draw: click a class to arm it (the brush takes that colour), then left-drag to paint or fill. Right-drag erases.');
+    }
+    else if (mode === 'polygon') {
+      updateBrushLabel();
+      setStatus(armed
+        ? ('Polygon: click vertices to draw a ' + armed + ' region, then Close shape or double-click.')
+        : 'Polygon: click a class first, then click vertices and Close shape (or double-click) to fill.');
     }
     else if (mode === 'place') setStatus('Place pin: turn on a layer, then click a painted region with no pin.');
     else if (mode === 'delete') setStatus('Delete pin: click a painted region that has a pin, or the pin.');
@@ -4261,6 +4420,22 @@
     }
     document.getElementById('stage').addEventListener('wheel', zoomByWheel, { passive: false, capture: true });
     hit.addEventListener('contextmenu', function (ev) { ev.preventDefault(); });
+    hit.addEventListener('dblclick', function (ev) {
+      if (!isPolyTool()) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      if (drawVerts.length >= 3) finishDraw();
+    });
+    document.addEventListener('keydown', function (ev) {
+      if (!isPolyTool()) return;
+      if (ev.key === 'Escape') {
+        clearDrawPreview();
+        setStatus('Polygon cancelled');
+      } else if (ev.key === 'Enter' && drawVerts.length >= 3) {
+        ev.preventDefault();
+        finishDraw();
+      }
+    });
     document.getElementById('stage').addEventListener('contextmenu', function (ev) {
       if (isEditTool()) ev.preventDefault();
     });
@@ -4276,7 +4451,7 @@
       lastPtr.y = ev.clientY;
       moveBrushCursor(ev.clientX, ev.clientY);
       press = { x: ev.clientX, y: ev.clientY, ll: ll, erase: erase };
-      if (erase) {
+      if (erase && !isPolyTool()) {
         if (!brushTarget && activeClass) armClassBrush(activeClass);
         if (!brushTarget || !ll) return;
         startPaintStroke(ll, true);
@@ -4318,7 +4493,7 @@
       lastPtr.x = ev.clientX;
       lastPtr.y = ev.clientY;
       lastPtr.on = true;
-      if (press && buttonsPainting(ev) && !brushing) {
+      if (press && buttonsPainting(ev) && !brushing && !isPolyTool()) {
         var dx = ev.clientX - press.x;
         var dy = ev.clientY - press.y;
         if ((dx * dx + dy * dy) > 64) beginStrokeFromPress();
@@ -4368,11 +4543,29 @@
           var clickLl = press.ll;
           var wasErase = press.erase;
           press = null;
+          if (isPolyTool()) {
+            if (wasErase) {
+              if (drawVerts.length) {
+                drawVerts.pop();
+                refreshDrawPreview();
+                setStatus(drawVerts.length ? ('Polygon: ' + drawVerts.length + ' point' + (drawVerts.length === 1 ? '' : 's')) : 'Polygon: click vertices, then Close shape');
+              }
+            } else if (clickLl) {
+              if (!((brushTarget && brushTarget.className) || activeClass)) {
+                setStatus('Pick a class first, then click vertices', 'err');
+              } else {
+                if (!brushTarget && activeClass) armClassBrush(activeClass);
+                addDrawVertex(clickLl);
+              }
+            }
+            restoreBrushCursor();
+            return;
+          }
           if (!wasErase) {
             var idx = clickLl ? pickRegionIndexAt(clickLl) : -1;
             if (idx >= 0) selectBrushRegion(idx);
             else if (activeClass) armClassBrush(activeClass);
-            else setStatus('Check a class and drag to paint, or click a painted region');
+            else setStatus('Click a class to arm it, then drag to paint, or click a painted region');
           }
           restoreBrushCursor();
           return;
@@ -4553,45 +4746,15 @@
   }
 
 
-  var zoneShapes = [];
   var hydrantShape = null;
   function pxToLlCtx(x, y, b, W, H) {
     return { lng: b.west + x / W * (b.east - b.west), lat: b.north - y / H * (b.north - b.south) };
   }
   function drawH1ContextOverlays() {
-    zoneShapes.forEach(function (s) { s.setMap(null); });
-    zoneShapes = [];
     if (hydrantShape) { hydrantShape.setMap(null); hydrantShape = null; }
     var D = window.H1_REVIEW_DATA;
     if (!map || !D) return;
-    var meta = (D.map && D.map.zone_meta && D.map.zone_meta.length) ? D.map.zone_meta
-      : ((D.nearmap && D.nearmap.zones) || []).map(function (z, i) {
-          return { label: z.label, color: ['#ff6b6b', '#ffa94d', '#ffd43b'][i] || '#ffd43b' };
-        });
-    var lg = document.getElementById('ctxLegend');
-    if (lg) {
-      lg.innerHTML = meta.map(function (z) {
-        return '<span><i style="background:' + z.color + '"></i>' + (z.label || '') + '</span>';
-      }).join('') + (D.hydrant && (D.hydrant.ll || D.hydrant.px) ? '<span><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>' : '');
-    }
-    var showZ = !document.getElementById('zonesToggle') || document.getElementById('zonesToggle').checked;
     var showH = !document.getElementById('hydrantToggle') || document.getElementById('hydrantToggle').checked;
-    if (showZ && D.map && D.map.zones && D.cam_ctx && D.cam_ctx.bounds) {
-      var b = D.cam_ctx.bounds, W = D.cam_ctx.img.w, H = D.cam_ctx.img.h;
-      D.map.zones.forEach(function (rings, i) {
-        var col = (meta[i] && meta[i].color) || '#ffd43b';
-        (rings || []).forEach(function (ring) {
-          if (!ring || !ring.length) return;
-          var path = ring.map(function (p) { return pxToLlCtx(p[0], p[1], b, W, H); });
-          var poly = new google.maps.Polygon({
-            paths: path, strokeColor: col, strokeOpacity: 0.95, strokeWeight: 2,
-            fillColor: col, fillOpacity: 0.12, clickable: false, zIndex: 8, dashed: [5, 3]
-          });
-          poly.setMap(map);
-          zoneShapes.push(poly);
-        });
-      });
-    }
     if (showH && D.hydrant) {
       var ll = null;
       if (D.hydrant.ll) ll = { lat: D.hydrant.ll[0], lng: D.hydrant.ll[1] };
@@ -4637,17 +4800,15 @@
   // Clicking the name or swatch of an already-checked layer makes it the active
   // class (highlighted borders) without unchecking it. Unchecked rows still toggle.
   document.getElementById('aiLayers').addEventListener('click', function (ev) {
-    var hit = ev.target.closest('.name, .swatch');
+    var hit = ev.target.closest('.name, .swatch, .hint');
     if (!hit) return;
     var row = hit.closest('.layer-row');
     var box = row && row.querySelector('input[type=checkbox]');
-    if (!box || !box.checked) return;
+    if (!box) return;
     ev.preventDefault();
     var name = box.getAttribute('data-layer');
-    if (!name || activeClass === name) return;
-    activeClass = name;
-    renderLayers(aiPack);
-    redrawAi();
+    if (!name) return;
+    selectClass(name);
   });
   document.getElementById('aiAll').addEventListener('click', function () { setAllLayers(true); });
   document.getElementById('aiNone').addEventListener('click', function () { setAllLayers(false); });
@@ -4925,6 +5086,14 @@
   // ── H1: small API for the asset list and for automated checks ──────────────
   document.getElementById('parcelToggle').addEventListener('change', function (ev) {
     if (parcelShape) parcelShape.setMap(ev.target.checked ? map : null);
+  });
+  var hydrantToggle = document.getElementById('hydrantToggle');
+  if (hydrantToggle) hydrantToggle.addEventListener('change', function () { drawH1ContextOverlays(); });
+  var closePolyBtn = document.getElementById('closePoly');
+  if (closePolyBtn) closePolyBtn.addEventListener('click', function (ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
+    if (isPolyTool()) finishDraw();
   });
   window.nmApi = {
     pickRegion: function (rid) {
