@@ -8,6 +8,8 @@
   var ITER = 600000;
   var CHECK = '4Lj1EQdTVKf8yTbYoE5iTE1CWT898C4PXJzqmlVo6oDk83ZSEd0=';
   var SS_KEY = 'safe-h1-aes-v1';
+  var HANDOFF_KEY = 'safe-h1-aes-handoff-v1';
+  var HANDOFF_MS = 60000;
   var NAME_KEY = 'h1-reviewer-name';
   var ANS_KEY = 'h1-review-answers';
   var PINS_KEY = 'h1-camera-pins';
@@ -57,8 +59,46 @@
     await remember(key);
     return KEY;
   }
+  function writeHandoff() {
+    var raw;
+    try { raw = sessionStorage.getItem(SS_KEY); } catch (e) { raw = null; }
+    if (!raw) return false;
+    try {
+      localStorage.setItem(HANDOFF_KEY, JSON.stringify({ k: raw, exp: Date.now() + HANDOFF_MS }));
+      return true;
+    } catch (e) { return false; }
+  }
+  function consumeHandoff() {
+    var raw, o;
+    try { raw = localStorage.getItem(HANDOFF_KEY); } catch (e) { raw = null; }
+    if (!raw) return null;
+    try { localStorage.removeItem(HANDOFF_KEY); } catch (e) {}
+    try { o = JSON.parse(raw); } catch (e) { return null; }
+    if (!o || !o.k || typeof o.exp !== 'number' || Date.now() > o.exp) return null;
+    try { sessionStorage.setItem(SS_KEY, o.k); } catch (e) {}
+    return o.k;
+  }
+  function isModel3dHref(href) {
+    if (!href) return false;
+    try { return /model3d\.html$/i.test(new URL(href, location.href).pathname); }
+    catch (e) { return /model3d\.html/i.test(String(href)); }
+  }
+  function onModel3dNavigate(ev) {
+    var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
+    if (a && isModel3dHref(a.getAttribute('href') || a.href)) writeHandoff();
+  }
+  function bindHandoff() {
+    document.addEventListener('mousedown', onModel3dNavigate, true);
+    document.addEventListener('pointerdown', onModel3dNavigate, true);
+    document.addEventListener('click', onModel3dNavigate, true);
+    document.addEventListener('auxclick', onModel3dNavigate, true);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindHandoff);
+  else bindHandoff();
+
   async function unlockFromSession() {
     var raw;
+    consumeHandoff();
     try { raw = sessionStorage.getItem(SS_KEY); } catch (e) { return false; }
     if (!raw) return false;
     try {
@@ -230,6 +270,7 @@
     reviewerName: reviewerName, setReviewerName: setReviewerName,
     exportReview: exportReview, wireUnlock: wireUnlock,
     progressMsg: progressMsg,
+    writeHandoff: writeHandoff, consumeHandoff: consumeHandoff,
     ANS_KEY: ANS_KEY, PINS_KEY: PINS_KEY, REG_KEYS: REG_KEYS
   };
 })(window);
