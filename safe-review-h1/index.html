@@ -455,7 +455,6 @@ function rFire(){
   const ev=M.events_summary||{};
   const H=D.hydrant||{};
   let h=head('Fire','Firefighting water & life safety','Pass 1 observations only. This is not a tactical recommendation and it does not rate hydrant flow or access.');
-  h+=waterBanner('');
   h+=`<div class="grid g2 mt"><div class="card pad"><h3>Water supply</h3><div class="kv"><div><div class="k">Kind</div><div class="v">Private well</div></div><div><div class="k">Source</div><div class="v">Confirmed by Jonah · 16 Nov 2026</div></div></div><p class="small muted" style="margin-top:10px">${esc((D.water&&D.water.note)||'The lot is not on a community water system.')}</p></div>`;
   h+=`<div class="card pad"><h3>Nearest public hydrant</h3><div class="kv"><div><div class="k">Straight-line</div><div class="v num">${esc(H.value||'968.6 m')}</div></div><div><div class="k">Within 800 m</div><div class="v">No</div></div><div><div class="k">Road distance</div><div class="v">${esc((H.road_distance_m&& (H.road_distance_m.from_driveway_entrance+' m from the driveway entrance'))||'2,444.3 m from the driveway entrance')}</div></div><div><div class="k">In service</div><div class="v">${H.in_service===false?'No':'Yes'}</div></div></div><p class="small muted" style="margin-top:10px">${esc(H.note||'')}</p></div></div>`;
   h+=`<div class="card pad mt"><h3>Monitored life-safety zones</h3><div class="small muted" style="margin-top:-4px;margin-bottom:8px">${lifeRows.length} smoke, CO, sprinkler-waterflow or well-pump zones in the MAS export. Details on the Alarm (MAS) page.</div>`;
