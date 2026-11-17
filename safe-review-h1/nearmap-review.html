@@ -743,7 +743,7 @@
     { id: 130, name: 'Pool', classes: ['Swimming Pool'] },
     { id: 114, name: 'Lawn', classes: ['Lawn Grass'] },
     { id: 52, name: 'Patio', classes: ['Concrete Slab'] },
-    { id: 144, name: 'Tennis court', classes: [] },
+    { id: 144, name: 'Tennis court', classes: ['Tennis Court'] },
     { id: 113, name: 'Landscaping', classes: ['Low Vegetation (0.5m-2m)', 'Very Low Vegetation (<0.5m)', 'Natural (soft)'] },
     { id: 135, name: 'Scattered Vegetation', classes: ['Low Vegetation (0.5m-2m)', 'Very Low Vegetation (<0.5m)', 'Natural (soft)'] },
     { id: 150, name: 'Trees', classes: ['Woody Vegetation', 'Medium and High Vegetation (>2m)', 'Medium and High Vegetation with Woody Vegetation'] },
@@ -768,24 +768,41 @@
     'Trampoline', 'Solar Panel', 'Residential Chimney'
   ];
   var SITE_FEATURE_GROUPS = [
-    { title: 'Water', names: ['Pool', 'Hot tub', 'Pond'] },
-    { title: 'Courts & play', names: ['Tennis court', 'Sport court', 'Playground', 'Trampoline'] },
+    { title: 'Water', names: ['Hot tub', 'Pond'] },
+    { title: 'Courts & play', names: ['Sport court'] },
     { title: 'Ground surfaces', names: ['Driveway', 'Parking area', 'Walkway', 'Patio', 'Gravel / bare dirt', 'Lawn', 'Garden bed'] },
-    { title: 'Structures', names: ['Deck', 'Pergola / gazebo', 'Shed / small outbuilding', 'Carport', 'Solar panels'] },
+    { title: 'Structures', names: ['Pergola / gazebo', 'Shed / small outbuilding', 'Carport'] },
     { title: 'Edges', names: ['Fence', 'Wall', 'Hedge'] },
-    { title: 'Objects', names: ['Vehicle', 'Trailer / boat / RV', 'Dumpster', 'Shipping container', 'Fire pit', 'Woodpile'] }
+    { title: 'Objects', names: ['Woodpile'] }
   ];
   var SITE_FEATURES = SITE_FEATURE_GROUPS.reduce(function (acc, g) { return acc.concat(g.names); }, []);
-  // Reviewer-drawn classes from the previous site-feature list.
+  // Legacy and site-feature names that now use the Nearmap class.
+  // Trailer / boat / RV is dropped (Nearmap has Boat and Trailer separately, no RV class)
+  // and is not remapped to a single class, so an old feature keeps its label.
   var LEGACY_SITE_CLASS = {
     'Motor court': 'Driveway',
-    'Solar array': 'Solar panels',
+    'Solar array': 'Solar Panel',
     'Pergola': 'Pergola / gazebo',
     'Retaining wall': 'Wall',
-    'Fire feature': 'Fire pit'
+    'Fire feature': 'Fire Pit',
+    'Pool': 'Swimming Pool',
+    'pool': 'Swimming Pool',
+    'Solar panels': 'Solar Panel',
+    'Tennis court': 'Tennis Court',
+    'Deck': 'Wooden Decking',
+    'Fire pit': 'Fire Pit',
+    'Vehicle': 'Car',
+    'Shipping container': 'Shipping Container'
   };
+  var LEGACY_SITE_CLASS_LC = {};
+  Object.keys(LEGACY_SITE_CLASS).forEach(function (k) {
+    LEGACY_SITE_CLASS_LC[k.toLowerCase()] = LEGACY_SITE_CLASS[k];
+  });
   function canonicalSiteClass(name) {
-    return LEGACY_SITE_CLASS[name] || name;
+    if (!name) return name;
+    if (LEGACY_SITE_CLASS[name]) return LEGACY_SITE_CLASS[name];
+    var hit = LEGACY_SITE_CLASS_LC[String(name).toLowerCase()];
+    return hit || name;
   }
   function normalizeSiteClasses(features) {
     (features || []).forEach(function (f) {
@@ -1433,7 +1450,8 @@
   }
 
   function featureClass(f) {
-    return (f && f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown';
+    var raw = (f && f.properties && (f.properties['class'] || f.properties.description)) || 'Unknown';
+    return canonicalSiteClass(raw);
   }
 
   function suggestIds(cls) {
