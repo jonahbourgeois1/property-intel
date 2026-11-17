@@ -253,7 +253,7 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .qlab{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#c4d0cb;user-select:none;cursor:pointer}
 .qlab input{margin:0;accent-color:var(--accent)}
 .qmap-hint{font-size:12px;color:#8fa29b;margin-left:auto}
-.qmap-stage{position:relative;flex:1;min-height:0;overflow:hidden;background:#1b1f1d;cursor:grab;touch-action:none}
+.qmap-stage{position:relative;flex:1 1 auto;min-height:240px;height:100%;overflow:hidden;background:#1b1f1d;cursor:grab;touch-action:none}
 .qmap-stage.drag{cursor:grabbing}
 .qpane{position:absolute;inset:0;display:none}
 .qpane.on{display:block}
@@ -294,7 +294,7 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
   <aside><div class="inner">
     <div class="brand"><div class="t">Highlands 1</div><div class="s">Reference lot · Pass 1 review</div></div>
     <nav id="nav"></nav>
-    <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" style="color:#9fd4c8">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8">Camera pins ↗</a></div></div>
+    <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" target="_blank" rel="noopener">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8">Camera pins ↗</a></div></div>
   </div></aside>
   <main><div class="wrap" id="pages"></div></main>
 </div>
@@ -384,7 +384,7 @@ function route(){
   document.body.classList.toggle('qmode',key==='questions');
   document.querySelectorAll('section.page').forEach(s=>s.classList.toggle('on',s.id==='pg-'+key));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
-  if(key==='questions') requestAnimationFrame(()=>{if(QMODE==='2d')applyQ2();else if(Q3&&Q3.resize)Q3.resize();});
+  if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
   if(target&&key==='assets'&&ATYPE!=='all'){document.querySelector('#achips .chip[data-t=all]').click();}
   if(target){const el=document.getElementById(target);if(el){const d=el.closest('details');if(d)d.open=true;el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets')selectAsset(target.replace('asset-',''),false);}}
   else window.scrollTo(0,0);
@@ -468,7 +468,7 @@ function rNearmap(){
    <div class="card pad" id="nm-model_3d"><h3>3D model <span class="badge b-ok">present</span></h3>
    <div class="statrow"><span>Format</span><span>${esc(N.model3d.format)}</span></div><div class="statrow"><span>Projection</span><span>${esc(N.model3d.crs)}</span></div><div class="statrow"><span>Mesh</span><span class="num">${fmt(N.model3d.vertices)} vertices · ${fmt(N.model3d.triangles)} triangles</span></div><div class="statrow"><span>Credits</span><span>${esc(N.model3d.credits)}</span></div>
    <div class="small muted" style="margin-top:8px">${esc(N.model3d.capture)}. ${esc(N.model3d.coverage)}. ${esc(N.model3d.viewer)}.</div>
-   <div style="margin-top:12px"><a class="btnl" href="model3d.html">Open 3D model viewer ↗</a></div></div>
+   <div style="margin-top:12px"><a class="btnl" href="model3d.html" target="_blank" rel="noopener">Open 3D model viewer ↗</a></div></div>
    <div class="card pad" id="nm-dsm"><h3>DSM <span class="badge b-grey">not purchased</span></h3><div class="small" style="color:var(--ink2)">${esc(N.dsm.reason)}</div><h3 style="margin-top:16px">Public lidar <span class="badge b-blue">cross-check</span></h3><div class="small" style="color:var(--ink2)">${esc(N.lidar.source)}. Matches the mesh slope to 0.01% and roof heights closely.</div></div></div>`;
   h+=`<div class="card pad mt" id="nm-ai_pack"><h3>Calls & credits</h3><table><thead><tr><th>Call</th><th>Requested</th><th>Area</th><th>Credits</th><th>When</th></tr></thead><tbody>
    <tr><td>Four-pack call</td><td>${N.call1.packs.map(esc).join(', ')} + ${N.call1.include.join(', ')}</td><td class="num">${fmt(N.call1.area_m2)} m²<div class="tiny muted">roof + 30 m buffer</div></td><td class="num"><b>${N.call1.credits}</b></td><td>${esc(N.call1.retrieved)}</td></tr>
@@ -613,7 +613,7 @@ function rQuestions(){
         <div class="seg" id="qmode"><button type="button" data-mode="2d" class="on">2D</button><button type="button" data-mode="3d">3D</button></div>
         <label class="qlab"><input type="checkbox" id="qly-parcel" checked> Parcel</label>
         <label class="qlab"><input type="checkbox" id="qly-regions" checked> AI regions</label>
-        <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
+        <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" target="_blank" rel="noopener" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
         <span class="qmap-hint" id="qmaphint">Click a question to show it on the map</span>
       </div>
       <div class="qmap-stage" id="qstage">
@@ -724,7 +724,7 @@ function showQ(id){
   else {drawQ2();if(Q3&&Q3.ready)focusQ3(t);}
 }
 function resetQView(){
-  if(QMODE==='2d')fitQ2('parcel');
+  if(QMODE==='2d'){if(QMAP)QMAP._user=false;scheduleFitQ2('parcel');}
   else if(Q3&&Q3.ready)resetQ3();
   QSEL=null;document.querySelectorAll('#qlist .q').forEach(c=>c.classList.remove('sel'));qStat('');drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();
 }
@@ -735,8 +735,34 @@ function setQMode(m){
   if(a)a.classList.toggle('on',m==='2d');if(b)b.classList.toggle('on',m==='3d');
   const n=document.getElementById('qnorth');if(n)n.style.transform='';
   if(m==='3d')ensureQ3().then(()=>{if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();}});
-  else {applyQ2();if(QSEL)showQ(QSEL);}
+  else {if(QSEL)showQ(QSEL);else scheduleFitQ2();}
 }
+function stageSize(){
+  const st=document.getElementById('qstage');
+  if(!st)return {w:0,h:0,st:null};
+  const r=st.getBoundingClientRect();
+  return {w:st.clientWidth||r.width||0,h:st.clientHeight||r.height||0,st:st};
+}
+function scheduleFitQ2(which){
+  if(which) QFIT=which;
+  if(!QMAP) return;
+  if(QMAP._user && !which) return;
+  let tries=0;
+  const run=()=>{
+    if(!QMAP) return;
+    if(QMAP._user && QFIT==='parcel') return;
+    const {w,h}=stageSize();
+    if(w<80||h<80){
+      if(++tries<60) requestAnimationFrame(run);
+      return;
+    }
+    if(QFIT && QFIT.pts) fitQ2Bounds(QFIT.pts);
+    else fitQ2(typeof QFIT==='string'?QFIT:'parcel');
+  };
+  requestAnimationFrame(()=>requestAnimationFrame(run));
+  setTimeout(run,50);setTimeout(run,200);setTimeout(run,500);
+}
+let QFIT='parcel';
 function initQMap(){
   const stage=document.getElementById('q2d');if(!stage)return;
   const M=D.map;
@@ -746,24 +772,27 @@ function initQMap(){
   QMAP={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h};
   wireQ2();
   drawQ2();
-  requestAnimationFrame(()=>fitQ2('parcel'));
-  loadRegions().then(()=>{drawQ2();if(QSEL)showQ(QSEL);});
+  scheduleFitQ2('parcel');
+  loadRegions().then(()=>{drawQ2();if(QSEL)showQ(QSEL);else scheduleFitQ2('parcel');});
   const st=document.getElementById('qstage');
-  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){if(st.clientWidth>40){if(QMAP&&QMAP._user)applyQ2();else fitQ2('parcel');}}if(Q3)Q3.resize();});st._ro.observe(st);}
+  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){const {w,h}=stageSize();if(w>=80&&h>=80){if(QMAP&&QMAP._user)applyQ2();else scheduleFitQ2();}}if(Q3)Q3.resize();});st._ro.observe(st);}
+  if(!window._q2rz){window._q2rz=true;window.addEventListener('resize',()=>{if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();});}
 }
 function applyQ2(){const el=document.getElementById('q2inner');if(!el||!QMAP)return;el.style.transform=`translate(${QMAP.tx}px,${QMAP.ty}px) scale(${QMAP.s})`;}
 function fitQ2(which){
-  const st=document.getElementById('qstage');if(!st||!QMAP)return;
+  const {w,h,st}=stageSize();if(!st||!QMAP)return false;
+  if(w<80||h<80){scheduleFitQ2(which||'parcel');return false;}
   const M=D.map;let pts=which==='parcel'?M.parcel:null;
-  if(pts&&pts.length)fitQ2Bounds(pts);else{QMAP.s=Math.min(st.clientWidth/M.w,st.clientHeight/M.h);QMAP.tx=(st.clientWidth-M.w*QMAP.s)/2;QMAP.ty=(st.clientHeight-M.h*QMAP.s)/2;applyQ2();}
+  if(pts&&pts.length)return fitQ2Bounds(pts);
+  QMAP.s=Math.min(w/M.w,h/M.h);QMAP.tx=(w-M.w*QMAP.s)/2;QMAP.ty=(h-M.h*QMAP.s)/2;applyQ2();return true;
 }
 function fitQ2Bounds(pts){
-  const st=document.getElementById('qstage');if(!st||!QMAP||!pts||!pts.length)return;
+  const {w,h,st}=stageSize();if(!st||!QMAP||!pts||!pts.length)return false;
+  if(w<80||h<80){scheduleFitQ2({pts:pts});return false;}
   const [x0,y0,x1,y1]=boundsOfPx(pts);const pad=Math.max(20,(x1-x0)*0.18,(y1-y0)*0.18);
   const bx0=x0-pad,by0=y0-pad,bx1=x1+pad,by1=y1+pad;
-  const sw=Math.max(1,st.clientWidth),sh=Math.max(1,st.clientHeight);
-  QMAP.s=Math.min(24,Math.max(0.15,Math.min(sw/(bx1-bx0),sh/(by1-by0))));
-  QMAP.tx=(sw-(bx0+bx1)*QMAP.s)/2;QMAP.ty=(sh-(by0+by1)*QMAP.s)/2;applyQ2();
+  QMAP.s=Math.min(24,Math.max(0.15,Math.min(w/(bx1-bx0),h/(by1-by0))));
+  QMAP.tx=(w-(bx0+bx1)*QMAP.s)/2;QMAP.ty=(h-(by0+by1)*QMAP.s)/2;applyQ2();return true;
 }
 function wireQ2(){
   const st=document.getElementById('qstage');if(!st||st._q2)return;st._q2=true;
