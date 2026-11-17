@@ -279,6 +279,29 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 
 .qleg{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:11px;color:var(--ink2);margin-left:6px}
 .qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
+.qly-btn{padding:5px 10px}
+.qly-btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+#qly-panel{position:absolute;top:10px;left:10px;width:280px;max-height:calc(100% - 20px);overflow:auto;z-index:6;background:rgba(20,24,22,.96);border:1px solid #3a4440;border-radius:10px;padding:8px 10px 12px;color:#d7e0dc;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#qly-panel[hidden]{display:none !important}
+#qly-panel .qly-head{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-weight:650;font-size:12.5px}
+#qly-panel .qly-head span{flex:1}
+#qly-panel .qly-mini{padding:2px 7px;font-size:11px;background:#1c2321;border:1px solid #3a4440;color:#c4d0cb;border-radius:6px;cursor:pointer}
+#qly-panel .qly-mini:hover{border-color:#6abf69;color:#fff}
+#qly-panel details{border-top:1px solid #2a3230;padding:6px 0 2px;margin:0}
+#qly-panel details:first-of-type{border-top:0}
+#qly-panel summary{cursor:pointer;font-weight:650;font-size:11.5px;color:#e8eeeb;list-style:none;display:flex;align-items:center;gap:6px}
+#qly-panel summary::-webkit-details-marker{display:none}
+#qly-panel summary:before{content:'▸';font-size:10px;color:#8fa29b}
+#qly-panel details[open] summary:before{content:'▾'}
+#qly-panel .qly-row{display:flex;align-items:center;gap:6px;padding:3px 0 3px 2px;cursor:pointer;user-select:none;color:#c4d0cb}
+#qly-panel .qly-row.sub{padding-left:18px}
+#qly-panel .qly-row input{margin:0;accent-color:var(--accent);flex:none}
+#qly-panel .qly-row .sw{display:inline-block;width:10px;height:10px;border-radius:2px;flex:none;border:1px solid rgba(255,255,255,.25)}
+#qly-panel .qly-row .nm{flex:1;min-width:0;line-height:1.3}
+#qly-panel .qly-row .n{color:#8fa29b;font-variant-numeric:tabular-nums;font-size:11px}
+#qly-panel .qly-note{font-size:10.5px;color:#8fa29b;line-height:1.35;padding:2px 0 4px 2px}
+#qly-panel .qly-pack{display:flex;align-items:center;gap:6px;width:100%;font-weight:650}
+
 .qhyd-call{position:absolute;z-index:5;background:#1c2321;color:#fff;border:1px solid #ffe066;border-radius:6px;padding:5px 8px;font-size:11px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 
 .keyfact{background:#3a2410;border:1px solid #d48b2c;border-radius:12px;padding:14px 16px;margin:0 0 16px}
@@ -319,7 +342,7 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
   <aside><div class="inner">
     <div class="brand"><div class="t">Highlands 1</div><div class="s">Reference lot · Pass 1 review</div></div>
     <nav id="nav"></nav>
-    <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" target="_blank" rel="noopener">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8">Camera pins ↗</a></div></div>
+    <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" target="_blank" rel="noopener">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8" target="_blank" rel="noopener">Camera pins ↗</a></div></div>
   </div></aside>
   <main><div class="wrap" id="pages"></div></main>
 </div>
@@ -494,7 +517,7 @@ function rAlarms(){
   });
   h+=`</div>`;
   if(ev.window_start) h+=`<div class="card pad mt"><h3>Event window</h3><p class="small">${esc(ev.window_start)} to ${esc(ev.window_end)}. ${Object.entries(ev.counts_by_type||{}).map(([k,v])=>esc(k)+': '+v).join(' · ')}. No burglary or fire alarm events in this window; user fields were empty in the export.</p></div>`;
-  h+=`<div class="card pad mt cta"><div><h3>Zone pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Place each zone on the nadir, confirm or flag it, and add a note. Draft locations are estimates. Where a zone name resembles a camera, the editor shows “possibly same location as camera X”. Systems are grouped the same way on that page.</div></div><a class="btnl" href="zones.html">Open zone pin editor</a></div>`;
+  h+=`<div class="card pad mt cta"><div><h3>Zone pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Place each zone on the nadir, confirm or flag it, and add a note. Draft locations are estimates. Where a zone name resembles a camera, the editor shows “possibly same location as camera X”. Systems are grouped the same way on that page.</div></div><a class="btnl" href="zones.html" target="_blank" rel="noopener">Open zone pin editor</a></div>`;
   document.getElementById('pg-alarms').innerHTML=h;
 }
 function rOverview(){
@@ -678,7 +701,7 @@ const CAMLAB={surveyed:'surveyed · locked',placed:'placed · not confirmed',con
 function rCams(){
   const C=D.cams,M=D.cam_meta;
   let h=head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Pins are placed on the camera pin page.');
-  h+=`<div class="card pad cta"><div><h3>Camera pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Pick a camera, click where it is mounted on the nadir, drag to adjust, set which way it faces, then Confirm or mark Unsure. Surveyed pins start locked.</div></div><a class="btnl" href="cameras.html">Open camera pin page ↗</a></div>`;
+  h+=`<div class="card pad cta"><div><h3>Camera pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Pick a camera, click where it is mounted on the nadir, drag to adjust, set which way it faces, then Confirm or mark Unsure. Surveyed pins start locked.</div></div><a class="btnl" href="cameras.html" target="_blank" rel="noopener">Open camera pin page ↗</a></div>`;
   h+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">12 Nov 2026</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
   h+=`<div class="cams mt" id="camgrid"></div>`;
   const el=document.getElementById('pg-cameras');el.innerHTML=h;
@@ -717,15 +740,13 @@ function rQuestions(){
   let h=`<div class="qsplit"><div class="qmap" id="qmap">
       <div class="qmap-tools">
         <div class="seg" id="qmode"><button type="button" data-mode="2d" class="on">2D</button><button type="button" data-mode="3d">3D</button></div>
-        <label class="qlab"><input type="checkbox" id="qly-parcel" checked> Parcel</label>
-        <label class="qlab"><input type="checkbox" id="qly-regions" checked> AI regions</label>
-        <label class="qlab"><input type="checkbox" id="qly-zones" checked> Defensible space</label>
-        <label class="qlab"><input type="checkbox" id="qly-hydrant" checked> Hydrant</label>
+        <button type="button" class="btnl ghost qly-btn on" id="qly-toggle" aria-expanded="true" aria-controls="qly-panel">Layers</button>
         <span id="qly-legend" class="qleg" title="Defensible-space distance bands around the Nearmap roof"></span>
         <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" target="_blank" rel="noopener" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
         <span class="qmap-hint" id="qmaphint">Click a question to show it on the map</span>
       </div>
       <div class="qmap-stage" id="qstage">
+        <div id="qly-panel" role="region" aria-label="Map layers"></div>
         <div id="q2d" class="qpane on"></div>
         <div id="q3d" class="qpane"></div>
         <div class="qnorth" id="qnorth" title="North"><i></i><b>N</b></div>
@@ -753,9 +774,10 @@ function rQuestions(){
   });
   el.querySelector('#qlist').addEventListener('change',e=>{const t=e.target.closest('textarea[data-q]');if(!t)return;const cur=ANS[t.dataset.q]||{};cur.note=t.value.slice(0,2000);cur.at=new Date().toISOString();ANS[t.dataset.q]=cur;queueSave();});
   el.querySelector('#qmode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setQMode(b.dataset.mode);});
-  ['qly-parcel','qly-regions','qly-zones','qly-hydrant'].forEach(id=>{const b=el.querySelector('#'+id);if(b)b.onchange=()=>{drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();};});
-  const lg=el.querySelector('#qly-legend');if(lg){const meta=(D.map.zone_meta&&D.map.zone_meta.length)?D.map.zone_meta:(D.nearmap.zones||[]).map((z,i)=>({label:z.label,color:['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b'}));lg.innerHTML=meta.map(z=>`<span><i style="background:${z.color}"></i>${esc(z.label)}</span>`).join('')+(D.hydrant&&D.hydrant.px?`<span><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>`:'');};const ht=el.querySelector('#qly-hydrant');if(ht&&!(D.hydrant&&D.hydrant.px)){const lab=ht.closest('label');if(lab)lab.style.display='none';}
-  el.querySelector('#qly-regions').onchange=()=>drawQ2();
+  const lg=el.querySelector('#qly-legend');if(lg){const meta=(D.map.zone_meta&&D.map.zone_meta.length)?D.map.zone_meta:(D.nearmap.zones||[]).map((z,i)=>({label:z.label,color:['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b'}));lg.innerHTML=meta.map(z=>`<span><i style="background:${z.color}"></i>${esc(z.label)}</span>`).join('')+(D.hydrant&&D.hydrant.px?`<span><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>`:'');}
+  initQly();
+  buildQlyPanel();
+  wireQlyPanel();
   el.querySelector('#qreset').onclick=()=>resetQView();
   drawQ();
   initQMap();
@@ -765,7 +787,7 @@ function progress(){const n=D.questions.filter(q=>ANS[q.id]&&ANS[q.id].answer).l
 function linkBtn(l){if(!l)return '';
   if(l.kind==='asset'){const a=D.assets.located.concat(D.assets.on_record).find(x=>x.id===l.id);const lab=l.id+(a?' · '+a.name.split('(')[0].trim():'');return `<button class="linkchip" onclick="go('assets','asset-${l.id}')">↗ ${esc(lab)}</button>`;}
   if(l.kind==='region')return `<a class="linkchip" style="text-decoration:none" href="${editorUrl(l.id)}">↗ region ${esc(l.id)} in the editor</a>`;
-  if(l.kind==='camera'){const c=D.cams.find(x=>x.device===l.id);return `<button class="linkchip" onclick="go('cameras','cam-${l.id}')">↗ ${esc(c?c.name:l.id)}</button><a class="linkchip" style="text-decoration:none" href="cameras.html">↗ pin page</a>`;}
+  if(l.kind==='camera'){const c=D.cams.find(x=>x.device===l.id);return `<button class="linkchip" onclick="go('cameras','cam-${l.id}')">↗ ${esc(c?c.name:l.id)}</button><a class="linkchip" style="text-decoration:none" href="cameras.html" target="_blank" rel="noopener">↗ pin page</a>`;}
   if(l.kind==='outline')return `<button class="linkchip" onclick="go('imagery')">↗ ${l.id==='parcel'?'parcel line':'roof outlines'} on Imagery</button>`;
   if(l.kind==='nearmap')return `<button class="linkchip" onclick="go('nearmap','nm-${l.id}')">↗ Nearmap ${esc(l.id)} pack</button>`;
   return '';}
@@ -887,7 +909,8 @@ function initQMap(){
   wireQ2();
   drawQ2();
   scheduleFitQ2('parcel');
-  loadRegions().then(()=>{drawQ2();if(QSEL)showQ(QSEL);else scheduleFitQ2('parcel');});
+  loadRegions().then(()=>{qMergeRegionClasses();buildQlyPanel();drawQ2();if(QSEL)showQ(QSEL);else scheduleFitQ2('parcel');});
+  loadQPins().then(()=>{buildQlyPanel();drawQ2();});
   const st=document.getElementById('qstage');
   if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){const {w,h}=stageSize();if(w>=80&&h>=80){if(QMAP&&QMAP._user)applyQ2();else scheduleFitQ2();}}if(Q3)Q3.resize();});st._ro.observe(st);}
   if(!window._q2rz){window._q2rz=true;window.addEventListener('resize',()=>{if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();});}
@@ -930,21 +953,284 @@ function zoomQ2(cx,cy,fac){
   const wx=(cx-QMAP.tx)/QMAP.s,wy=(cy-QMAP.ty)/QMAP.s;
   QMAP.s=s2;QMAP.tx=cx-wx*s2;QMAP.ty=cy-wy*s2;applyQ2();
 }
+let QLY=null, QLY_OPEN=true, QCAM_PINS=null, QZONE_PINS=null;
+const QSYS_PALETTE=['#4c6ef5','#0ca678','#f08c00','#ae3ec9','#1971c2','#c92a2a'];
+function qSysColor(ref){
+  const list=((D.mas&&D.mas.systems)||[]);
+  const i=list.findIndex(s=>s.system_ref===ref);
+  return QSYS_PALETTE[(i>=0?i:0)%QSYS_PALETTE.length];
+}
+function initQly(){
+  if(QLY) return QLY;
+  const ai={};
+  (D.nearmap.packs||[]).forEach(p=>Object.keys(p.classes||{}).forEach(c=>{ai[c]=true;}));
+  if(ai.Driveway===undefined) ai.Driveway=true;
+  const zone_sys={};
+  ((D.mas&&D.mas.systems)||[]).forEach(s=>{zone_sys[s.system_ref]=true;});
+  QLY={
+    labels:true,
+    parcel:true, road:true, drive:true,
+    roof_trace:true, roof_ai:true, roof_sbfo:true,
+    zones:true, hydrant:!!(D.hydrant&&D.hydrant.px),
+    assets:true, cameras:true, zonepins:true,
+    zone_sys, ai
+  };
+  return QLY;
+}
+function qMergeRegionClasses(){
+  initQly();
+  if(!REGS||!REGS.features) return;
+  REGS.features.forEach(f=>{
+    const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
+    if(QLY.ai[cls]===undefined) QLY.ai[cls]=true;
+  });
+  if(QLY.ai.Driveway===undefined) QLY.ai.Driveway=true;
+}
+function qClassCounts(){
+  const counts={};
+  (D.nearmap.packs||[]).forEach(p=>{
+    Object.keys(p.classes||{}).forEach(k=>{counts[k]=(counts[k]||0)+(p.classes[k]||0);});
+  });
+  if(REGS&&REGS.features){
+    const live={};
+    REGS.features.forEach(f=>{
+      const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
+      live[cls]=(live[cls]||0)+1;
+    });
+    Object.keys(live).forEach(k=>{counts[k]=live[k];});
+  }
+  if(counts.Driveway===undefined) counts.Driveway=0;
+  return counts;
+}
+function qPackMembership(){
+  const owned=new Set();
+  const packs=(D.nearmap.packs||[]).map(p=>{
+    const names=Object.keys(p.classes||{}).sort();
+    names.forEach(n=>owned.add(n));
+    return {id:p.id,label:p.label||p.id,names,status:p.status,count:p.count};
+  });
+  const counts=qClassCounts();
+  const other=Object.keys(counts).filter(n=>!owned.has(n)).sort();
+  return {packs,other,counts};
+}
+function qlyOn(k){initQly();return !!QLY[k];}
+function qAiOn(cls){initQly();return QLY.ai[cls]!==false;}
+function qZoneSysOn(ref){initQly();return QLY.zone_sys[ref]!==false;}
+function qSetAll(on){
+  initQly();
+  ['labels','parcel','road','drive','roof_trace','roof_ai','roof_sbfo','zones','assets','cameras','zonepins'].forEach(k=>{QLY[k]=on;});
+  if(D.hydrant&&D.hydrant.px) QLY.hydrant=on;
+  Object.keys(QLY.ai).forEach(k=>{QLY.ai[k]=on;});
+  Object.keys(QLY.zone_sys).forEach(k=>{QLY.zone_sys[k]=on;});
+}
+function qRow(key,label,opts){
+  opts=opts||{};
+  const checked=opts.checked?' checked':'';
+  const sub=opts.sub?' sub':'';
+  const sw=opts.sw?`<span class="sw" style="background:${opts.sw}${opts.round?';border-radius:50%':''}"></span>`:'';
+  const n=opts.n!=null?`<span class="n">${opts.n}</span>`:'';
+  return `<label class="qly-row${sub}"><input type="checkbox" data-qly="${esc(key)}"${checked}>${sw}<span class="nm">${esc(label)}</span>${n}</label>`;
+}
+function buildQlyPanel(){
+  initQly();
+  qMergeRegionClasses();
+  const host=document.getElementById('qly-panel');
+  if(!host) return;
+  const {packs,other,counts}=qPackMembership();
+  const systems=(D.mas&&D.mas.systems)||[];
+  const nAssets=((D.assets&&D.assets.located)||[]).length;
+  const nCam=(QCAM_PINS||((D.cams||[]).filter(c=>c.px||(c.lat!=null&&c.lng!=null)))).length;
+  const nZ=((QZONE_PINS||((D.mas&&D.mas.pins)||[])).filter(p=>p.lat!=null&&p.lng!=null)).length;
+  let h=`<div class="qly-head"><span>Layers</span><button type="button" class="qly-mini" data-qly-all="1">All on</button><button type="button" class="qly-mini" data-qly-all="0">All off</button></div>`;
+  h+=qRow('labels','Labels',{checked:QLY.labels});
+  h+=`<details open><summary>Taxlot / GIS</summary>`;
+  h+=qRow('parcel','Parcel / taxlot line',{checked:QLY.parcel,sw:'#ffe066'});
+  h+=qRow('road','Road line',{checked:QLY.road,sw:'#74c0fc'});
+  h+=qRow('drive','Driveway line',{checked:QLY.drive,sw:'#f72585'});
+  h+=`<div class="qly-note">Zoning, soils, WUI and other GIS facts in the record have no overlay geometry on this map — only the taxlot and site lines above.</div></details>`;
+  h+=`<details open><summary>Roof outlines</summary>`;
+  h+=qRow('roof_trace','Roof trace',{checked:QLY.roof_trace,sw:'#ff922b'});
+  h+=qRow('roof_ai','AI roof',{checked:QLY.roof_ai,sw:'#dc2f02'});
+  h+=qRow('roof_sbfo','Building footprint',{checked:QLY.roof_sbfo,sw:'#fab005'});
+  h+=`</details>`;
+  h+=qRow('zones','Defensible space',{checked:QLY.zones,sw:'#ffa94d'});
+  if(D.hydrant&&D.hydrant.px) h+=qRow('hydrant','Hydrant',{checked:QLY.hydrant,sw:'#c1121f',round:true});
+  h+=`<details open><summary>Nearmap AI</summary>`;
+  packs.forEach(p=>{
+    const ons=p.names.filter(n=>QLY.ai[n]!==false);
+    const mixed=p.names.length&&ons.length&&ons.length<p.names.length;
+    const allOn=!p.names.length?false:ons.length===p.names.length;
+    h+=`<label class="qly-row"><input type="checkbox" data-qly-pack="${esc(p.id)}"${allOn?' checked':''}${mixed?' data-mixed="1"':''}><span class="qly-pack">${esc(p.label)} <span class="n">${p.names.length?p.names.reduce((s,n)=>s+(counts[n]||0),0):0}</span></span></label>`;
+    if(!p.names.length) h+=`<div class="qly-note sub">No classes in this pack.</div>`;
+    p.names.forEach(n=>{
+      h+=qRow('ai:'+n,n,{checked:QLY.ai[n]!==false,sw:classColor(n),n:counts[n]||0,sub:true});
+    });
+  });
+  h+=`<div class="qly-note" style="font-weight:650;color:#e8eeeb;padding-top:6px">Other AI classes</div>`;
+  other.forEach(n=>{
+    h+=qRow('ai:'+n,n,{checked:QLY.ai[n]!==false,sw:classColor(n),n:counts[n]||0,sub:true});
+  });
+  h+=`</details>`;
+  h+=qRow('assets','Asset regions',{checked:QLY.assets,sw:'#be4bdb',n:nAssets,round:true});
+  h+=qRow('cameras','Camera pins',{checked:QLY.cameras,sw:'#228be6',n:nCam,round:true});
+  h+=`<details open><summary>Zone pins</summary>`;
+  h+=qRow('zonepins','All zone pins',{checked:QLY.zonepins,sw:'#f08c00',n:nZ,round:true});
+  if(systems.length>1){
+    systems.forEach(s=>{
+      const nz=((D.mas&&D.mas.pins)||[]).filter(p=>p.system_ref===s.system_ref&&p.lat!=null&&p.lng!=null).length;
+      h+=qRow('zsys:'+s.system_ref,s.label||s.make||'System',{checked:QLY.zone_sys[s.system_ref]!==false,sw:qSysColor(s.system_ref),n:nz,sub:true,round:true});
+    });
+  }else if(systems.length===1){
+    h+=`<div class="qly-note">This lot has one system; the list above is the full set.</div>`;
+  }
+  h+=`</details>`;
+  host.innerHTML=h;
+  host.querySelectorAll('input[data-mixed="1"]').forEach(el=>{el.indeterminate=true;});
+}
+function wireQlyPanel(){
+  const panel=document.getElementById('qly-panel');
+  const btn=document.getElementById('qly-toggle');
+  if(!panel||panel._wired) return;
+  panel._wired=true;
+  if(btn){
+    btn.classList.toggle('on',QLY_OPEN);
+    btn.onclick=()=>{
+      QLY_OPEN=!QLY_OPEN;
+      panel.hidden=!QLY_OPEN;
+      btn.classList.toggle('on',QLY_OPEN);
+      btn.setAttribute('aria-expanded',QLY_OPEN?'true':'false');
+    };
+  }
+  panel.hidden=!QLY_OPEN;
+  panel.addEventListener('click',e=>{
+    const all=e.target.closest('[data-qly-all]');
+    if(!all) return;
+    qSetAll(all.getAttribute('data-qly-all')==='1');
+    buildQlyPanel();
+    drawQ2();
+    if(Q3&&Q3.ready) syncQ3Overlays();
+  });
+  panel.addEventListener('change',e=>{
+    const el=e.target;
+    if(el.matches('[data-qly-pack]')){
+      const id=el.getAttribute('data-qly-pack');
+      const pack=(D.nearmap.packs||[]).find(p=>p.id===id);
+      const names=Object.keys((pack&&pack.classes)||{});
+      names.forEach(n=>{QLY.ai[n]=el.checked;});
+      buildQlyPanel();
+      drawQ2();
+      if(Q3&&Q3.ready) syncQ3Overlays();
+      return;
+    }
+    const key=el.getAttribute('data-qly');
+    if(!key) return;
+    if(key.indexOf('ai:')===0) QLY.ai[key.slice(3)]=el.checked;
+    else if(key.indexOf('zsys:')===0) QLY.zone_sys[key.slice(5)]=el.checked;
+    else QLY[key]=el.checked;
+    if(key.indexOf('ai:')===0||key==='zonepins'||key.indexOf('zsys:')===0) buildQlyPanel();
+    drawQ2();
+    if(Q3&&Q3.ready) syncQ3Overlays();
+  });
+}
+function qPxLL(lat,lng){
+  const b=D.cam_ctx&&D.cam_ctx.bounds, img=D.cam_ctx&&D.cam_ctx.img;
+  if(!b||!img||lat==null||lng==null) return null;
+  return [(lng-b.west)/(b.east-b.west)*img.w, (b.north-lat)/(b.north-b.south)*img.h];
+}
+function qRings(x){
+  if(!x||!x.length) return [];
+  if(typeof x[0][0]==='number') return [x];
+  return x;
+}
+function qLabel(x,y,text,anchor){
+  if(!qlyOn('labels')||!text) return '';
+  const ax=anchor==='end'?'end':'start';
+  const dx=anchor==='end'?-12:12;
+  return `<text x="${x+dx}" y="${y-10}" text-anchor="${ax}" fill="#fff" stroke="#1c2321" stroke-width="3" paint-order="stroke" font-size="18" font-weight="650">${esc(text)}</text>`;
+}
+async function loadQPins(){
+  const crypto=window.H1Crypto;
+  const take=async (storageKey)=>{
+    if(!crypto||!crypto.maybeOpen) return null;
+    try{return await crypto.maybeOpen(localStorage.getItem(storageKey));}catch(e){return null;}
+  };
+  const pinList=(doc,fallback)=>{
+    if(!doc) return fallback;
+    const arr=Array.isArray(doc)?doc:(doc.pins||[]);
+    return arr.length?arr:fallback;
+  };
+  const cams=await take(crypto&&crypto.PINS_KEY);
+  const zones=await take(crypto&&crypto.ZONES_KEY);
+  const camFb=(D.cams||[]).filter(c=>c.px||(c.lat!=null&&c.lng!=null));
+  const zoneFb=((D.mas&&D.mas.pins)||[]).filter(p=>p.lat!=null&&p.lng!=null);
+  QCAM_PINS=pinList(cams,camFb).filter(c=>c&&(c.px||(c.lat!=null&&c.lng!=null)||(c.x!=null&&c.y!=null)));
+  QZONE_PINS=pinList(zones,zoneFb).filter(p=>p&&(p.lat!=null&&p.lng!=null));
+}
+function camPinPx(c){
+  if(c.px&&c.px.length===2) return c.px;
+  if(c.lat!=null&&c.lng!=null) return qPxLL(c.lat,c.lng);
+  if(c.x!=null&&c.y!=null&&D.map){
+    const x=c.x>0&&c.x<=1?c.x*D.map.w:(c.x<=100?c.x/100*D.map.w:c.x);
+    const y=c.y>0&&c.y<=1?c.y*D.map.h:(c.y<=100?c.y/100*D.map.h:c.y);
+    return [x,y];
+  }
+  return null;
+}
 function drawQ2(){
   const svg=document.getElementById('q2svg');if(!svg)return;
-  const M=D.map,showP=document.getElementById('qly-parcel')?.checked!==false,showR=document.getElementById('qly-regions')?.checked!==false,showZ=document.getElementById('qly-zones')?.checked!==false,showH=document.getElementById('qly-hydrant')?.checked!==false;
+  initQly();
+  const M=D.map;
   const t=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
   const hlRid=t&&t.rid;
   let h='';
-  if(showR&&REGS){
+  if(REGS){
+    const assetRids=new Set();
+    if(qlyOn('assets')) ((D.assets&&D.assets.located)||[]).forEach(a=>((a.regions)||[]).forEach(id=>assetRids.add(String(id))));
     regionPolysPx(REGS).forEach(p=>{
+      const aiOn=qAiOn(p.cls);
+      const assetOn=qlyOn('assets')&&assetRids.has(String(p.id));
+      if(!aiOn&&!assetOn) return;
       const on=hlRid&&String(p.id)===String(hlRid);
-      h+=`<path class="rgn${on?' hl':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${on?'.5':'.22'}" stroke="${on?'#fff':classColor(p.cls)}" stroke-width="${on?4:1.4}" fill-rule="evenodd"></path>`;
+      const fill=aiOn?classColor(p.cls):'#be4bdb';
+      const op=on?'.5':(aiOn?'.22':'.12');
+      const stroke=on?'#fff':(assetOn&&!aiOn?'#be4bdb':classColor(p.cls));
+      const sw=on?4:(assetOn?2.4:1.4);
+      h+=`<path class="rgn${on?' hl':''}${assetOn?' asset':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" fill-rule="evenodd"></path>`;
     });
   }
-  if(showZ&&M.zones){const meta=M.zone_meta||[];M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones" points="${pts(r)}" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});}
-  if(showP) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="2.8"/>`;
-  if(showH&&D.hydrant&&D.hydrant.px){const [hx,hy]=D.hydrant.px;h+=`<g class="ly-hydrant"><circle cx="${hx}" cy="${hy}" r="14" fill="#c1121f" fill-opacity=".25" stroke="#c1121f" stroke-width="3"/><circle cx="${hx}" cy="${hy}" r="5" fill="#c1121f" stroke="#fff" stroke-width="2"/><text x="${hx+18}" y="${hy-12}" fill="#fff" stroke="#1c2321" stroke-width="3" paint-order="stroke" font-size="22" font-weight="650">Hydrant ${esc(D.hydrant.value)}</text></g>`;}
+  if(qlyOn('zones')&&M.zones){const meta=M.zone_meta||[];M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones" points="${pts(r)}" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});}
+  if(qlyOn('road')&&M.road&&M.road.length) qRings(M.road).forEach(r=>{h+=`<polyline class="ly-road" points="${pts(r)}" fill="none" stroke="#74c0fc" stroke-width="2.4" stroke-dasharray="8 5"/>`;});
+  if(qlyOn('drive')&&M.drive&&M.drive.length) qRings(M.drive).forEach(r=>{h+=`<polyline class="ly-drive" points="${pts(r)}" fill="none" stroke="#f72585" stroke-width="2.6"/>`;});
+  if(qlyOn('roof_sbfo')&&M.sbfo) qRings(M.sbfo).forEach(r=>{h+=`<polygon class="ly-sbfo" points="${pts(r)}" fill="none" stroke="#fab005" stroke-width="2.2" stroke-dasharray="6 4"/>`;});
+  if(qlyOn('roof_ai')&&M.ai_roof) qRings(M.ai_roof).forEach(r=>{h+=`<polygon class="ly-airoof" points="${pts(r)}" fill="none" stroke="#dc2f02" stroke-width="2.4"/>`;});
+  if(qlyOn('roof_trace')&&M.trace&&M.trace.length) qRings(M.trace).forEach(r=>{h+=`<polygon class="ly-trace" points="${pts(r)}" fill="none" stroke="#ff922b" stroke-width="2.6"/>`;});
+  if(qlyOn('parcel')&&M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#ffe066" stroke-width="2.8"/>`;
+  if(qlyOn('hydrant')&&D.hydrant&&D.hydrant.px){const [hx,hy]=D.hydrant.px;h+=`<g class="ly-hydrant"><circle cx="${hx}" cy="${hy}" r="14" fill="#c1121f" fill-opacity=".25" stroke="#c1121f" stroke-width="3"/><circle cx="${hx}" cy="${hy}" r="5" fill="#c1121f" stroke="#fff" stroke-width="2"/>${qLabel(hx,hy,'Hydrant '+(D.hydrant.value||''))}</g>`;}
+  if(qlyOn('assets')){
+    ((D.assets&&D.assets.located)||[]).forEach(a=>{
+      const px=a.px; if(!px||px.length<2) return;
+      h+=`<g class="ly-asset"><circle cx="${px[0]}" cy="${px[1]}" r="6" fill="#be4bdb" fill-opacity=".9" stroke="#fff" stroke-width="1.6"/>${qLabel(px[0],px[1],a.name||a.type||a.id)}</g>`;
+    });
+  }
+  if(qlyOn('cameras')){
+    (QCAM_PINS||((D.cams||[]).filter(c=>c.px||(c.lat!=null&&c.lng!=null)))).forEach((c,i)=>{
+      const px=camPinPx(c); if(!px) return;
+      h+=`<g class="ly-campin"><circle cx="${px[0]}" cy="${px[1]}" r="8" fill="#228be6" stroke="#fff" stroke-width="2"/><text x="${px[0]}" y="${px[1]+4}" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">${i+1}</text>${qLabel(px[0],px[1],c.name||c.device||('Camera '+(i+1)))}</g>`;
+    });
+  }
+  if(qlyOn('zonepins')){
+    const pins=QZONE_PINS||((D.mas&&D.mas.pins)||[]).filter(p=>p.lat!=null&&p.lng!=null);
+    pins.forEach((p,i)=>{
+      if(!qZoneSysOn(p.system_ref)) return;
+      const px=qPxLL(p.lat,p.lng); if(!px) return;
+      const conf=p.confidence||'';
+      const r=conf==='high'?11:conf==='medium'?9:8;
+      const stroke=conf==='high'?'#2f9e44':conf==='medium'?'#f59f00':conf==='low'?'#adb5bd':'#fff';
+      const dash=conf==='low'?' stroke-dasharray="3 2"':'';
+      const col=qSysColor(p.system_ref);
+      h+=`<g class="ly-zpin"><circle cx="${px[0]}" cy="${px[1]}" r="${r}" fill="${col}" stroke="${stroke}" stroke-width="2.2"${dash}/>${qLabel(px[0],px[1],p.name||('Zone '+(p.zone_id||i+1)))}</g>`;
+    });
+  }
   if(t&&t.pts&&t.pts.length&&!hlRid){
     if(t.pts.length>2) h+=`<polygon points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="3.2"/>`;
     else if(t.px) h+=`<circle cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="#ffe066" stroke="#fff" stroke-width="2"/>`;
@@ -957,7 +1243,7 @@ function drawHydrantCallout(){
   const st=document.getElementById('qstage');
   let el=document.getElementById('qhyd-call');
   if(el) el.remove();
-  if(!st||document.getElementById('qly-hydrant')?.checked===false||!D.hydrant||!D.hydrant.px||!QMAP) return;
+  if(!st||(typeof qlyOn==='function'? !qlyOn('hydrant') : false)||!D.hydrant||!D.hydrant.px||!QMAP) return;
   const inner=document.getElementById('q2inner'); if(!inner) return;
   const [hx,hy]=D.hydrant.px;
   const sr=st.getBoundingClientRect();
@@ -1087,8 +1373,8 @@ function syncQ3Overlays(){
     });
     Q3.scene.add(grp);return grp;
   };
-  if(document.getElementById('qly-parcel')?.checked!==false && D.cam_ctx.parcel) Q3.parcel=mkLine([D.cam_ctx.parcel],0xffe066,2);
-  if(document.getElementById('qly-zones')?.checked!==false && D.map.zones && D.cam_ctx && D.cam_ctx.bounds){
+  if((typeof qlyOn==='function'? qlyOn('parcel') : true) && D.cam_ctx.parcel) Q3.parcel=mkLine([D.cam_ctx.parcel],0xffe066,2);
+  if((typeof qlyOn==='function'? qlyOn('zones') : true) && D.map.zones && D.cam_ctx && D.cam_ctx.bounds){
     const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;
     const toLL=(x,y)=>[b.west+x/W*(b.east-b.west), b.north-y/H*(b.north-b.south)];
     const meta=D.map.zone_meta||[];
