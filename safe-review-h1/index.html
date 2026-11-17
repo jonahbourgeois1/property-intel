@@ -190,7 +190,11 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .atbl .tag{white-space:normal;text-align:right;display:inline-block;margin:2px 0}
 .atbl tr{cursor:pointer}
 .atbl tr:hover td{background:#fafcfb}
-.atbl tr.sel td{background:#eef6f4}
+.atbl tr.sel td{background:#eef6f4;box-shadow:inset 3px 0 0 var(--accent)}
+#amap-status{min-height:1.35em;margin-top:6px}
+#amap-status.warn{color:#8a5a00}
+#amap .pt.hl .halo{fill-opacity:.35}
+#amap .pt.hl circle:not(.halo){stroke:#fff;stroke-width:3px}
 .atbl tr.cathead{cursor:default}
 .atbl tr.cathead td{background:#f4f2ee;font-size:11px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;color:var(--ink2);padding:10px 8px;border-top:1px solid var(--line)}
 .atbl tr.cathead:hover td{background:#f4f2ee}
@@ -222,7 +226,7 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .rchip.p{border-color:var(--accent);color:var(--accent);font-weight:600}
 .rchip:hover{background:var(--accent2)}
 .rgn{cursor:pointer}
-.rgn.hl{stroke:#fff!important;stroke-width:3px!important;fill-opacity:.55!important}
+.rgn.hl{stroke:#fff!important;stroke-width:3px!important;fill-opacity:.55!important;paint-order:stroke fill}
 .regleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;margin:8px 0}
 .regleg label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .regleg .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
@@ -368,7 +372,7 @@ const esc=s=>s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const fmt=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const tag=s=>s?`<span class="tag" title="${esc(s)}">${esc(s)}</span>`:'';
 const prov=(t='provisional')=>`<span class="badge b-prov"><span class="dot"></span>${t}</span>`;
-const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Assets'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
+const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
 
 /* ---------------- map ---------------- */
 const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
@@ -429,7 +433,8 @@ function render(){
   window.addEventListener('hashchange',route);route();
 }
 function route(){
-  let h=(location.hash||'#overview').slice(1);const [k,target]=h.split(':');
+  let h=(location.hash||'#overview').slice(1);let [k,target]=h.split(':');
+  if(k==='regions') k='assets';
   const key=SECTIONS.some(s=>s[0]===k)?k:'overview';
   document.documentElement.classList.toggle('qmode',key==='questions');
   document.body.classList.toggle('qmode',key==='questions');
@@ -621,8 +626,19 @@ const TYPECOL={house:'#ff922b',garage:'#ff922b',building:'#ff922b',chimney:'#ff9
 /* Same class colours as the region editor (nearmap-review v1.7.18). */
 function classColor(name){const f={Building:'#e85d04','Building (Deprecated)':'#9d0208',Roof:'#dc2f02','Translucent Roofing':'#f48c06',Driveway:'#f72585',Asphalt:'#495057','Road (Driveable Surface)':'#343a40','Concrete Slab':'#adb5bd','Solar Panel':'#3a86ff','Swimming Pool':'#4cc9f0','Water Body':'#0077b6','Residential Chimney':'#7b2cbf',Skylight:'#ffd166','Woody Vegetation':'#2d6a4f','Medium and High Vegetation (>2m)':'#40916c','Medium and High Vegetation with Woody Vegetation':'#1b4332','Low Vegetation (0.5m-2m)':'#74c69d','Very Low Vegetation (<0.5m)':'#95d5b2','Lawn Grass':'#52b788','Natural (soft)':'#b7e4c7'};
   if(f[name])return f[name];let h=0;for(let i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);return 'hsl('+(Math.abs(h)%360)+', 62%, 46%)';}
-const REG_GROUPS=[['Roof & buildings',c=>/roof|building|tile/i.test(c),true],['Hard surfaces',c=>/hard surface|asphalt|concrete|driveway/i.test(c),true],['Natural ground',c=>/natural|very low/i.test(c),false],['Vegetation',c=>/vegetation|overhang/i.test(c),false]];
-let ATYPE='all',REGS=null,REGSRC='';
+const REG_GROUPS=[
+  ['Roof & buildings',c=>/roof|building|tile|solar/i.test(c),true,'#dc2f02'],
+  ['Hard surfaces',c=>/hard surface|asphalt|concrete|driveway|gravel|paving/i.test(c),true,'#adb5bd'],
+  ['Outdoor living',c=>/pool|patio|walkway|court|lawn|deck|pergola/i.test(c),true,'#4dabf7'],
+  ['Natural ground',c=>/natural|very low|dirt|bare/i.test(c),false,'#b7e4c7'],
+  ['Vegetation',c=>/vegetation|overhang/i.test(c),false,'#2d6a4f'],
+  ['Other',null,true,'#be4bdb']
+];
+function classGroupIndex(cls){
+  for(let i=0;i<REG_GROUPS.length-1;i++) if(REG_GROUPS[i][1](cls)) return i;
+  return REG_GROUPS.length-1;
+}
+let ATYPE='all',REGS=null,REGSRC='',ASEL=null;
 const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
 function allAssetEntries(){
   const A=D.assets||{};
@@ -642,8 +658,9 @@ function findAsset(id){
   return allAssetEntries().find(a=>a.id===rid||a.id===id||(a.aliases||[]).map(String).includes(String(id)));
 }
 function mergePipelineRegions(fc){
-
-  const pipe=window.H1_REVIEW_DATA&&H1_REVIEW_DATA.region_review;
+  const pipe=(window.H1_REVIEW_DATA&&H1_REVIEW_DATA.region_review)
+    || (typeof D!=='undefined'&&D&&D.region_review)
+    || null;
   if(!pipe||!pipe.features||!pipe.features.length) return fc;
   const base=(fc&&fc.features)?fc:{type:'FeatureCollection',features:[]};
   const have=new Set((base.features||[]).map(f=>String(f.id)));
@@ -668,7 +685,11 @@ function regionPolysPx(fc){
   const px=p=>[(p[0]-b.west)/(b.east-b.west)*W,(b.north-p[1])/(b.north-b.south)*H];
   const out=[];(fc.features||[]).forEach(f=>{const g=f.geometry||{};const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
     const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
-    polys.forEach(poly=>out.push({id:String(f.id),cls,d:poly.map(r=>'M'+r.map(p=>px(p).map(v=>v.toFixed(1)).join(',')).join('L')+'Z').join(' ')}));});
+    polys.forEach(poly=>{
+      const rings=poly.map(r=>(r||[]).map(p=>px(p)));
+      const pts=rings.reduce((a,r)=>a.concat(r),[]);
+      out.push({id:String(f.id),cls,pts,d:rings.map(r=>'M'+r.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join('L')+'Z').join(' ')});
+    });});
   return out;
 }
 function rAssets(){
@@ -678,7 +699,7 @@ function rAssets(){
   const cats={};allItems.forEach(a=>{const c=a.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
   const nReg=allItems.filter(a=>a.kind==='region'||(!a.kind&&a.regions)).length;
   const nDev=allItems.filter(a=>a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices').length;
-  let h=head('Section 7','Assets','Each region is the asset record, with cameras and alarm zones as point assets from the pin files. Grouped by category. Asset and region links open the same region.');
+  let h=head('Section 7','Regions','Regions on this lot, plus cameras and alarm zones as points from the pin files. Grouped by category. Click a row to show it on the map. Items with no outline or pin are labelled rather than invented.');
   h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">${nReg} regions and ${nDev} devices. Pipeline region-review features are merged in for display and are not written over your edits. The vendor original is never changed.</div></div><a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a></div>`;
   const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
   h+=`<div class="chips mt" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
@@ -710,43 +731,138 @@ function rAssets(){
     rows.sort((x,y)=>(order[x.kind]??9)-(order[y.kind]??9)||String(x.id).localeCompare(String(y.id)));
     return `<tr class="cathead" data-t="${esc(c)}" data-cat="${esc(c)}"><td colspan="4">${esc(c)} · ${rows.length}</td></tr>`+rows.map(row).join('');
   }).join('');
-  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Asset / region</th><th>Region</th><th>Size</th></tr></thead><tbody>${groups}</tbody></table></div>
-<div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${['#dc2f02','#adb5bd','#b7e4c7','#2d6a4f'][i]}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div></div></div>`;
+  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Region</th><th>Class / pin</th><th>Size</th></tr></thead><tbody>${groups}</tbody></table></div>
+<div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on,col],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${col}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div><div id="amap-status" class="small"></div></div></div>`;
   h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
   const pfs=A.property_facts||D.property_facts||[];
   if(pfs.length){
-    h+=`<div class="card pad mt2" id="property-facts"><h3>Property facts</h3><div class="small muted" style="margin-top:4px">Records with no geometry of their own — attached here rather than inventing a region.</div><ul class="clean small" style="margin-top:8px">${pfs.map(f=>`<li style="margin:6px 0"><b>${esc(f.kind||'fact')}</b> — ${esc(typeof f.value==='string'?f.value:JSON.stringify(f.value))}${f.source?`<div class="muted">${esc(f.source)}</div>`:''}</li>`).join('')}</ul></div>`;
+    h+=`<div class="card pad mt2" id="property-facts"><h3>Property facts</h3><div class="small muted" style="margin-top:4px">Records with no geometry of their own — attached here rather than inventing a region. Click a fact to see that on the map panel.</div><ul class="clean small" style="margin-top:8px">${pfs.map(f=>`<li class="pfact" style="margin:6px 0;cursor:pointer"><b>${esc(f.kind||'fact')}</b> — ${esc(typeof f.value==='string'?f.value:JSON.stringify(f.value))}${f.source?`<div class="muted">${esc(f.source)}</div>`:''}</li>`).join('')}</ul></div>`;
   }
 
     const el=document.getElementById('pg-assets');el.innerHTML=h;
   drawAssetMap();
-  loadRegions().then(fc=>{document.getElementById('regcount').textContent=fc?fc.features.length:'?';drawAssetMap();});
+  loadRegions().then(fc=>{const rc=document.getElementById('regcount');if(rc)rc.textContent=fc?fc.features.length:'?';drawAssetMap();});
   el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{ATYPE=c.dataset.t;el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x===c));el.querySelectorAll('.atbl tbody tr').forEach(r=>r.style.display=(ATYPE==='all'||r.dataset.cat===ATYPE||r.dataset.t===ATYPE)?'':'none');});
   el.querySelectorAll('#regleg input').forEach(c=>c.onchange=drawAssetMap);
   el.querySelectorAll('.atbl tbody tr').forEach(r=>r.addEventListener('click',e=>{if(!r.dataset.id||r.classList.contains('cathead'))return;if(e.target.closest('summary,a'))return;selectAsset(r.dataset.id,false)}));
+  el.querySelectorAll('#property-facts .pfact').forEach(li=>li.addEventListener('click',()=>selectAsset('property-facts',false)));
+}
+function setAmapStatus(msg,warn){
+  const el=document.getElementById('amap-status');if(!el)return;
+  el.className='small'+(warn?' warn':'');
+  el.textContent=msg||'';
+}
+function fitMapToPts(box,pts){
+  if(!box||!pts||!pts.length) return;
+  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
+  pts.forEach(p=>{const x=p[0],y=p[1];if(!isFinite(x)||!isFinite(y))return;minx=Math.min(minx,x);miny=Math.min(miny,y);maxx=Math.max(maxx,x);maxy=Math.max(maxy,y);});
+  if(!isFinite(minx)) return;
+  const span=Math.max(maxx-minx,maxy-miny,24);
+  const pad=Math.max(span*0.35,28);
+  const w=Math.max(maxx-minx,24)+pad*2, h=Math.max(maxy-miny,24)+pad*2;
+  const svg=box.querySelector('svg');if(svg) svg.setAttribute('viewBox',[minx-pad,miny-pad,w,h].join(' '));
+}
+function devicePoints(){
+  const out=[];
+  allAssetEntries().forEach(a=>{
+    const isDev=a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices';
+    if(!isDev||!a.px||a.px.length<2) return;
+    out.push({id:a.id,tip:(a.name||a.label||a.id),px:a.px,color:TYPECOL[a.kind]||TYPECOL[a.type]||TYPECOL[a.class]||'#4dabf7'});
+  });
+  return out;
 }
 function drawAssetMap(){
-  const box=document.getElementById('amap');if(!box)return;const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
-  let svg=mapSVG({crop,scale:true,layers:{parcel:true}});
+  const box=document.getElementById('amap');if(!box)return;
+  const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
+  const force=new Set((ASEL&&ASEL.rids)||[]);
+  const points=devicePoints();
+  let svg=mapSVG({crop,scale:true,layers:{parcel:true},points});
   if(REGS){
-    const on=[...document.querySelectorAll('#regleg input')].filter(c=>c.checked).map(c=>REG_GROUPS[+c.dataset.rg][1]);
-    const polys=regionPolysPx(REGS).filter(p=>on.some(fn=>fn(p.cls)));
+    const on=new Set([...document.querySelectorAll('#regleg input')].filter(c=>c.checked).map(c=>+c.dataset.rg));
+    const all=regionPolysPx(REGS);
+    const polys=all.filter(p=>on.has(classGroupIndex(p.cls))||force.has(p.id));
     const sw=(D.map.crop[crop][2]/700);
     const g='<g class="regs">'+polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity=".30" stroke="${classColor(p.cls)}" stroke-width="${1.3*sw}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('')+'</g>';
     const k=svg.indexOf('<polygon class="ly-parcel"');svg=k>0?svg.slice(0,k)+g+svg.slice(k):svg;
-    document.getElementById('regnote').innerHTML=`Read-only preview of the ${esc(REGSRC)} file (${REGS.features.length} regions). Click a region to find the assets on it; edit shapes in the <a href="${editorUrl()}" target="_blank" rel="noopener">region editor</a>.`;
-  } else document.getElementById('regnote').textContent='Regions file not reachable from this page. Open it through the local server.';
+    const rn=document.getElementById('regnote');
+    if(rn) rn.innerHTML=`Read-only preview of the ${esc(REGSRC)} file (${REGS.features.length} regions). Click a row or a shape to show it here; edit outlines in the <a href="${editorUrl()}" target="_blank" rel="noopener">region editor</a>.`;
+  } else {
+    const rn=document.getElementById('regnote');
+    if(rn) rn.textContent='Regions file not reachable from this page. Open it through the local server.';
+  }
   box.innerHTML=svg;
   wireTools(document.getElementById('pg-assets'),box);
-  box.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',()=>{const rid=p.dataset.rid;box.querySelectorAll('.rgn').forEach(x=>x.classList.toggle('hl',x.dataset.rid===rid));
-    const rows=[...document.querySelectorAll('.atbl tbody tr')].filter(r=>(r.dataset.regions||'').split(' ').includes(rid));
-    document.querySelectorAll('.atbl tr').forEach(r=>r.classList.toggle('sel',rows.includes(r)));if(rows[0])rows[0].scrollIntoView({block:'center',behavior:'smooth'});}));
+  document.querySelectorAll('[data-seg=as] [data-crop]').forEach(b=>{
+    const prev=b.onclick;
+    b.onclick=()=>{ASEL&&(ASEL.fit=false);if(prev)prev.call(b);};
+  });
+  box.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',()=>{
+    const rid=p.dataset.rid;
+    const rows=[...document.querySelectorAll('.atbl tbody tr[data-id]')].filter(r=>(r.dataset.regions||'').split(' ').includes(rid)||r.dataset.id===rid);
+    if(rows[0]) selectAsset(rows[0].dataset.id,true);
+    else {ASEL={id:rid,rids:[rid],fit:true,pts:null};applyAssetSelection();}
+  }));
+  wireMap(box,id=>selectAsset(id,true));
+  applyAssetSelection();
+}
+function applyAssetSelection(){
+  const box=document.getElementById('amap');
+  const id=ASEL&&ASEL.id;
+  document.querySelectorAll('.atbl tr').forEach(r=>r.classList.toggle('sel',!!id&&r.dataset.id===id));
+  const rids=new Set((ASEL&&ASEL.rids)||[]);
+  if(box){
+    box.querySelectorAll('.rgn').forEach(x=>x.classList.toggle('hl',rids.has(x.dataset.rid)));
+    box.querySelectorAll('.pt').forEach(x=>x.classList.toggle('hl',!!id&&x.dataset.id===id));
+    if(ASEL&&ASEL.fit){
+      let pts=ASEL.pts&&ASEL.pts.slice();
+      if(!pts||!pts.length){
+        pts=[];
+        box.querySelectorAll('.rgn.hl').forEach(el=>{
+          const d=el.getAttribute('d')||'';
+          (d.match(/-?\d+(?:\.\d+)?,-?\d+(?:\.\d+)?/g)||[]).forEach(pair=>{const [x,y]=pair.split(',').map(Number);if(isFinite(x)&&isFinite(y))pts.push([x,y]);});
+        });
+        const pin=box.querySelector('.pt.hl');
+        if(pin){const c=pin.querySelector('circle:not(.halo)')||pin.querySelector('circle');if(c)pts.push([+c.getAttribute('cx'),+c.getAttribute('cy')]);}
+      }
+      if(pts.length) fitMapToPts(box,pts);
+    }
+  }
 }
 function selectAsset(id,scroll){
-  document.querySelectorAll('.atbl tr').forEach(r=>r.classList.toggle('sel',r.dataset.id===id));
-  const a=D.assets.located.find(x=>x.id===id);const rid=a&&a.regions&&a.regions[0];
-  document.querySelectorAll('#amap .rgn').forEach(x=>x.classList.toggle('hl',!!rid&&x.dataset.rid===rid));
-  if(scroll){const r=document.getElementById('asset-'+id);if(r)r.scrollIntoView({block:'center',behavior:'smooth'});}
+  if(id==='property-facts'){
+    ASEL=null;
+    document.querySelectorAll('.atbl tr').forEach(r=>r.classList.remove('sel'));
+    const box=document.getElementById('amap');
+    if(box){box.querySelectorAll('.rgn,.pt').forEach(x=>x.classList.remove('hl'));}
+    setAmapStatus('Property facts have no map geometry — they are records attached here rather than a drawn region.',true);
+    const pf=document.getElementById('property-facts');if(pf&&scroll!==false)pf.scrollIntoView({block:'center',behavior:'smooth'});
+    return;
+  }
+  const a=findAsset(id);
+  const name=a?(a.name||a.label||a.id):id;
+  const isDev=a&&(a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices');
+  const rids=[].concat((a&&a.regions)||[], (a&&(a.kind==='region'||(!a.kind&&!isDev))?[a.id]:[])).filter(Boolean).map(String);
+  const unique=[...new Set(rids)];
+  let pts=null, hasPoly=false, hasPin=false, needs=!!(a&&a.needs_trace);
+  if(REGS&&unique.length){
+    const hit=regionPolysPx(REGS).filter(p=>unique.includes(p.id));
+    if(hit.length){hasPoly=true;pts=hit.reduce((s,p)=>s.concat(p.pts||[]),[]);}
+  }
+  if(a&&a.px&&a.px.length>=2){hasPin=true;if(!pts||!pts.length) pts=[a.px]; else pts=pts.concat([a.px]);}
+  ASEL={id:a?a.id:id,rids:unique,fit:true,pts:pts&&pts.length?pts:null};
+  if(!hasPoly&&!hasPin){
+    ASEL.fit=false;
+    if(!a) setAmapStatus('That item has no outline or pin to show on the map.',true);
+    else if(isDev) setAmapStatus((name)+' ('+a.id+') has no pin yet.',true);
+    else if(needs) setAmapStatus((name)+' ('+a.id+') is marked “needs a trace” and has no outline to show yet.',true);
+    else setAmapStatus((name)+' ('+a.id+') has no map geometry.',true);
+  } else if(needs&&hasPoly){
+    setAmapStatus('Showing '+name+' ('+a.id+'). This outline is marked as needing a better trace.');
+  } else {
+    setAmapStatus('Showing '+name+(a?' ('+a.id+')':'')+'.');
+  }
+  drawAssetMap();
+  if(scroll){const r=document.getElementById('asset-'+(a?a.id:id));if(r)r.scrollIntoView({block:'center',behavior:'smooth'});}
 }
 /* ---------------- cameras ---------------- */
 let CAMPINS=null;
@@ -1138,7 +1254,7 @@ function buildQlyPanel(){
     h+=qRow('ai:'+n,n,{checked:QLY.ai[n]!==false,sw:classColor(n),n:counts[n]||0,sub:true});
   });
   h+=`</details>`;
-  h+=qRow('assets','Asset regions',{checked:QLY.assets,sw:'#be4bdb',n:nAssets,round:true});
+  h+=qRow('assets','Regions',{checked:QLY.assets,sw:'#be4bdb',n:nAssets,round:true});
   h+=qRow('cameras','Camera pins',{checked:QLY.cameras,sw:'#228be6',n:nCam,round:true});
   h+=`<details open><summary>Zone pins</summary>`;
   h+=qRow('zonepins','All zone pins',{checked:QLY.zonepins,sw:'#f08c00',n:nZ,round:true});
