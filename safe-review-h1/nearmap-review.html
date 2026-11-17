@@ -4198,6 +4198,22 @@
       if (working.stamps.length) showBrushStroke();
     });
     map.fitBounds(record.aoi || b);
+    (function refitNm() {
+      var tries = 0;
+      function run() {
+        if (!map) return;
+        var el = document.getElementById('map');
+        if (!el || el.clientWidth < 80 || el.clientHeight < 80) {
+          if (++tries < 60) requestAnimationFrame(run);
+          return;
+        }
+        if (map._dirtyNow) map._dirtyNow(true);
+        map.fitBounds(record.aoi || b);
+      }
+      requestAnimationFrame(function () { requestAnimationFrame(run); });
+      setTimeout(run, 50);
+      setTimeout(run, 250);
+    })();
     // H1: parcel line as read-only context (taxlot clipping stays on the viewer).
     var ctxRing = record.context && record.context.parcel;
     if (ctxRing && ctxRing.length) {
