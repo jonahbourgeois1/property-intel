@@ -666,7 +666,7 @@ function rMeas(){
   });
   h+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
   h+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
-  h+=`</div><div class="mapcol"><div class="maptools"><div class="seg" data-seg="ms"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div><div class="amap-zoom"><button type="button" id="mmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="mmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div></div><div class="qmap-stage amap-stage" id="mmap"><div id="m2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div></div><div id="mmap-status" class="small muted">Treetop heights with locations are shown. Other measurements have no geometry on file.</div></div></div>`;
+  h+=`</div><div class="mapcol"><div class="maptools"><div class="seg" data-seg="ms"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div><div class="amap-zoom"><button type="button" id="mmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="mmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div></div><div class="qmap-stage amap-stage" id="mmap"><div id="m2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div></div><div id="mmap-status" class="small muted">Distance lines, area outlines and height points are shown when their geometry is on file.</div></div></div>`;
   h+=`<div class="grid g2 mt"><div class="card tile" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div></div>`;
   const el=document.getElementById('pg-measurements'); el.innerHTML=h;
   initMeasMap();
@@ -733,7 +733,14 @@ function packedMeasGeom(r){
   ['poly','polygon','ring','area','outline'].forEach(k=>{
     const pts=asPointList(r[k]); if(pts&&pts.length>=3) out.push({kind:'area',pts});
   });
-  if(r.px&&typeof r.px[0]==='number'){const p=toMapPx(r.px); if(p) out.push({kind:'point',px:p});}
+  if(r.px&&typeof r.px[0]==='number'){const p=toMapPx(r.px); if(p) out.push({kind:'point',px:p,label:r.point_label||null});}
+  if(Array.isArray(r.points)){
+    r.points.forEach(it=>{
+      const src=Array.isArray(it)?it:(it&&(it.px||it.point));
+      const p=toMapPx(src); if(!p) return;
+      out.push({kind:'point',px:p,label:(it&&it.label)||null});
+    });
+  }
   const g=r.geom||r.geometry;
   if(g){
     const typ=(g.type||'').toLowerCase();
@@ -785,9 +792,31 @@ function listMeasGeometry(){
     const ids=['tree-'+t.rank,'treetops'];
     if(mid) ids.unshift(mid);
     const label=`T${t.rank} ${Number(t.h).toFixed(1)} m`;
+    const hit=out.find(g=>g.kind==='point'&&g.px&&Math.hypot(g.px[0]-t.px[0],g.px[1]-t.px[1])<1.2);
+    if(hit){
+      hit.ids=[...new Set((hit.ids||[hit.id]).concat(ids))];
+      if(!hit.label) hit.label=label;
+      if(!hit.title) hit.title=`T${t.rank} · ${Number(t.h).toFixed(1)} m · ${Number(t.d).toFixed(1)} m from roof`;
+      return;
+    }
     out.push({id:mid||('tree-'+t.rank),ids,kind:'point',px:t.px,label,title:`T${t.rank} · ${Number(t.h).toFixed(1)} m · ${Number(t.d).toFixed(1)} m from roof`});
   });
-  return out;
+  // Dedupe packed points that land on the same pixel (e.g. a height row and its tree).
+  const pts=out.filter(g=>g.kind==='point'&&g.px);
+  const kept=new Set();
+  pts.forEach((g,i)=>{
+    if(kept.has(g)) return;
+    pts.slice(i+1).forEach(o=>{
+      if(kept.has(o)) return;
+      if(Math.hypot(g.px[0]-o.px[0],g.px[1]-o.px[1])<1.2){
+        g.ids=[...new Set((g.ids||[g.id]).concat(o.ids||[o.id]))];
+        if(!g.label) g.label=o.label;
+        if(!g.title) g.title=o.title;
+        kept.add(o);
+      }
+    });
+  });
+  return out.filter(g=>!kept.has(g));
 }
 function measHits(g,sel){
   if(!sel) return false;
