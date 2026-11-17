@@ -217,6 +217,9 @@
   #assetList .rg { color: var(--hot); font-size: 10px; }
   #assetList .nr { color: var(--ink-dim); font-size: 10px; }
   .nm-canvas { cursor: grab; }
+
+.qleg{display:inline-flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;color:var(--muted,#6b7280)}
+.qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
 </style>
 <script src="vendor/h1-crypto.js"></script>
 </head>
@@ -273,6 +276,9 @@
       <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> in this browser (use Export my review to send a copy). <strong>Revert changes</strong> discards paint since the last Save (or since you opened). <strong>Revert to original</strong> puts the vendor file back.</p>
       <p class="meta regions-only how"><b>Draw</b>: tick a layer, click a region to pick it, left-drag to grow or paint, right-drag to erase. Click a layer name (ticked) to arm that class for new paint. Ctrl+Z / Ctrl+Y undo and redo.</p>
       <label class="toggle"><input type="checkbox" id="parcelToggle" checked> Parcel line</label>
+      <label class="toggle"><input type="checkbox" id="zonesToggle" checked> Defensible space</label>
+      <label class="toggle"><input type="checkbox" id="hydrantToggle" checked> Hydrant</label>
+      <span id="ctxLegend" class="qleg" style="margin-left:8px"></span>
       <p class="meta pins-only" id="pinsNote">Pins editor. Regions are read-only (finish them in the Regions editor). <strong>Auto Generate Pins</strong> places one pin per region at its interior point, named after the region class in regions.json (Lawn Grass stays Lawn Grass — not a catalog entry). Cover/veg classes are skipped (asphalt, building deprecated, concrete slab, driveway, vegetation, natural, roof, translucent roofing, water body, woody). No cap. <strong>Place pin</strong>: turn on a layer, then click a painted region that has no pin — the pin is placed at that region's interior point, not at the click. <strong>Delete pin</strong>: click a painted region that has a pin, or the pin itself — the region stays. Bare map clicks do nothing. Save writes the Nearmap sheet.</p>
       <label class="toggle regions-only"><input type="checkbox" id="hintToggle" checked> Hint centroids</label>
       <div class="layer-btns">
@@ -1259,6 +1265,10 @@
       });
       names = Object.keys(counts);
     }
+    // Driveway is in CLASS_MAP but is not a Nearmap class on this account.
+    // Keep it in the list at count 0 so reviewers can paint and erase it.
+    if (counts['Driveway'] === undefined) counts['Driveway'] = 0;
+    names = Object.keys(counts);
     names.sort();
     names.forEach(function (name) {
       if (layerOn[name] === undefined) {
@@ -4221,6 +4231,7 @@
         strokeWeight: 2, fillOpacity: 0, clickable: false, zIndex: 9, dashed: [8, 5] });
       if (document.getElementById('parcelToggle').checked) parcelShape.setMap(map);
     }
+    drawH1ContextOverlays();
     map.addListener('idle', function () {
       if (MODE === 'pins') drawPins();
     });
@@ -4539,6 +4550,63 @@
     }
     // H1 local: the map shim is inlined above; nothing to load.
     fail('Map shim missing');
+  }
+
+
+  var zoneShapes = [];
+  var hydrantShape = null;
+  function pxToLlCtx(x, y, b, W, H) {
+    return { lng: b.west + x / W * (b.east - b.west), lat: b.north - y / H * (b.north - b.south) };
+  }
+  function drawH1ContextOverlays() {
+    zoneShapes.forEach(function (s) { s.setMap(null); });
+    zoneShapes = [];
+    if (hydrantShape) { hydrantShape.setMap(null); hydrantShape = null; }
+    var D = window.H1_REVIEW_DATA;
+    if (!map || !D) return;
+    var meta = (D.map && D.map.zone_meta && D.map.zone_meta.length) ? D.map.zone_meta
+      : ((D.nearmap && D.nearmap.zones) || []).map(function (z, i) {
+          return { label: z.label, color: ['#ff6b6b', '#ffa94d', '#ffd43b'][i] || '#ffd43b' };
+        });
+    var lg = document.getElementById('ctxLegend');
+    if (lg) {
+      lg.innerHTML = meta.map(function (z) {
+        return '<span><i style="background:' + z.color + '"></i>' + (z.label || '') + '</span>';
+      }).join('') + (D.hydrant && (D.hydrant.ll || D.hydrant.px) ? '<span><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>' : '');
+    }
+    var showZ = !document.getElementById('zonesToggle') || document.getElementById('zonesToggle').checked;
+    var showH = !document.getElementById('hydrantToggle') || document.getElementById('hydrantToggle').checked;
+    if (showZ && D.map && D.map.zones && D.cam_ctx && D.cam_ctx.bounds) {
+      var b = D.cam_ctx.bounds, W = D.cam_ctx.img.w, H = D.cam_ctx.img.h;
+      D.map.zones.forEach(function (rings, i) {
+        var col = (meta[i] && meta[i].color) || '#ffd43b';
+        (rings || []).forEach(function (ring) {
+          if (!ring || !ring.length) return;
+          var path = ring.map(function (p) { return pxToLlCtx(p[0], p[1], b, W, H); });
+          var poly = new google.maps.Polygon({
+            paths: path, strokeColor: col, strokeOpacity: 0.95, strokeWeight: 2,
+            fillColor: col, fillOpacity: 0.12, clickable: false, zIndex: 8, dashed: [5, 3]
+          });
+          poly.setMap(map);
+          zoneShapes.push(poly);
+        });
+      });
+    }
+    if (showH && D.hydrant) {
+      var ll = null;
+      if (D.hydrant.ll) ll = { lat: D.hydrant.ll[0], lng: D.hydrant.ll[1] };
+      else if (D.hydrant.px && D.cam_ctx && D.cam_ctx.bounds) {
+        var b2 = D.cam_ctx.bounds;
+        ll = pxToLlCtx(D.hydrant.px[0], D.hydrant.px[1], b2, D.cam_ctx.img.w, D.cam_ctx.img.h);
+      }
+      if (ll) {
+        hydrantShape = new google.maps.Marker({
+          position: ll, map: map, title: (D.hydrant.label || 'Hydrant') + ' ' + (D.hydrant.value || ''),
+          label: { text: 'H', color: '#fff', fontSize: '10px', fontWeight: '700' },
+          icon: { path: (google.maps.SymbolPath && google.maps.SymbolPath.CIRCLE) || google.maps.SymbolPath && 0 || 'M-1,0a1,1 0 1,0 2,0a1,1 0 1,0 -2,0', scale: 8, fillColor: '#c1121f', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 2 }
+        });
+      }
+    }
   }
 
   window.nmMapsReady = function () { tryInitMap(); };
@@ -4932,6 +5000,8 @@
   async function afterUnlock() {
     KEY = H1Crypto.getKey();
     var D = JSON.parse(new TextDecoder().decode(await H1Crypto.fetchDec('data.bin')));
+    window.H1_REVIEW_DATA = D;
+    if (typeof window.drawH1ContextOverlays === 'function') window.drawH1ContextOverlays();
     render(D);
     if (typeof window.__h1StartNmEncrypted === 'function') await window.__h1StartNmEncrypted();
   }
