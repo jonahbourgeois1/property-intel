@@ -89,7 +89,7 @@
 </form></div>
 <header>
   <h1>H1 cameras · pin placement</h1><span id="build"></span><span class="sp"></span>
-  <nav class="hnav"><a href="index.html#cameras">Reviewer</a><a href="nearmap-review.html">Region editor</a><a href="model3d.html">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
+  <nav class="hnav"><a href="index.html#cameras">Reviewer</a><a href="nearmap-review.html">Region editor</a><a href="model3d.html" target="_blank" rel="noopener">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
 </header>
 <main>
   <aside class="panel l">
@@ -792,6 +792,16 @@
     new google.maps.GroundOverlay(vertUrl, b, { opacity: 1 }).setMap(map);
     map.addDrawHook(draw);
     fitHouse();
+    function refitWhenSized() {
+      var el = $('map');
+      if (!el || !map) return;
+      if (el.clientWidth < 80 || el.clientHeight < 80) { requestAnimationFrame(refitWhenSized); return; }
+      if (map._dirtyNow) map._dirtyNow(true);
+      fitHouse();
+    }
+    requestAnimationFrame(function () { requestAnimationFrame(refitWhenSized); });
+    setTimeout(refitWhenSized, 50);
+    setTimeout(refitWhenSized, 250);
     wireMap();
     await loadSaved();
     renderList(); renderDetail();
