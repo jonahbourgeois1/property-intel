@@ -441,6 +441,16 @@ const esc=s=>s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;',
 const fmt=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const tag=s=>s?`<span class="tag" title="${esc(s)}">${esc(s)}</span>`:'';
 const prov=(t='provisional')=>`<span class="badge b-prov"><span class="dot"></span>${t}</span>`;
+const Q_PROV_TEXT={
+  'RQ-02':'For now distances use the 3D mesh roof, which sits within about 1 m of the AI roof.',
+  'RQ-09':'An empty debris result is counted as none detected for now.'
+};
+function qIsProv(q){const p=q&&q.provisional;return !!(p&&p!==false&&p!=='false'&&p!==0&&p!=='0');}
+function qProvText(q){
+  const p=q&&q.provisional;
+  if(typeof p==='string'){const s=p.trim();if(s&&!/^(true|false|1|0)$/i.test(s)) return s;}
+  return (q&&Q_PROV_TEXT[q.id])||'';
+}
 const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
 
 /* ---------------- map ---------------- */
@@ -865,18 +875,8 @@ function measFitPts(id){
 function fitMeasView(pts){
   if(!MMAP) return;
   MMAP._user=false;
-  if(pts&&pts.length){
-    const [x0,y0,x1,y1]=boundsOfPx(pts);
-    const minSpan=90;
-    if((x1-x0)<minSpan||(y1-y0)<minSpan){
-      const cx=(x0+x1)/2, cy=(y0+y1)/2;
-      const hx=Math.max(minSpan,x1-x0)/2, hy=Math.max(minSpan,y1-y0)/2;
-      pts=[[cx-hx,cy-hy],[cx+hx,cy+hy]];
-    }
-    MMAP._fit={pts}; fitNadirBounds(MMAP,pts);
-  } else {
-    MMAP._fit=MCROP; fitNadirMap(MMAP,MCROP);
-  }
+  if(pts&&pts.length){ MMAP._fit={pts}; fitNadirBounds(MMAP,pts); }
+  else { MMAP._fit=MCROP; fitNadirMap(MMAP,MCROP); }
 }
 function clearMeas(){
   MSEL=null;
@@ -951,16 +951,23 @@ function syncMeasHighlight(){
   svg.querySelectorAll('.marea-halo:not(.sel)').forEach(el=>el.setAttribute('stroke-width',String(3.2/s)));
   svg.querySelectorAll('.marea.hl').forEach(el=>el.setAttribute('stroke-width',String(3/s)));
   svg.querySelectorAll('.marea:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(2/s)));
-  const r=5.5/s;
+  const r=6.5/s;
   svg.querySelectorAll('.mpt circle:not(.halo)').forEach(c=>{
     const hl=c.closest('.mpt')&&c.closest('.mpt').classList.contains('hl');
-    c.setAttribute('r',String(r*(hl?1.25:1)));
-    c.setAttribute('stroke-width',String((hl?1.6:1.2)/s));
+    c.setAttribute('r',String(hl?r:6/s));
+    c.setAttribute('stroke-width',String((hl?2:1.5)/s));
   });
   svg.querySelectorAll('.mpt .halo').forEach(c=>{
     const hl=c.closest('.mpt')&&c.closest('.mpt').classList.contains('hl');
-    c.setAttribute('r',String(r*(hl?2.2:1.7)));
-    c.setAttribute('stroke-width',String((hl?2:1.3)/s));
+    c.setAttribute('r',String(r*(hl?1.55:1.35)));
+    c.setAttribute('fill-opacity',hl?'.28':'0');
+    c.setAttribute('stroke','#fff');
+    c.setAttribute('stroke-width',String((hl?2:1.4)/s));
+  });
+  svg.querySelectorAll('circle.mln').forEach(c=>{
+    const hl=c.classList.contains('hl');
+    c.setAttribute('r',String(hl?r:5.5/s));
+    c.setAttribute('stroke-width',String((hl?2:1.5)/s));
   });
   svg.querySelectorAll('.mlbl').forEach(el=>{
     el.setAttribute('font-size',String(11/s));
@@ -1396,16 +1403,7 @@ function setAmapStatus(msg,warn){
 function fitAssetView(pts){
   if(!AMAP) return;
   AMAP._user=false;
-  if(pts&&pts.length){
-    const [x0,y0,x1,y1]=boundsOfPx(pts);
-    const minSpan=90;
-    if((x1-x0)<minSpan||(y1-y0)<minSpan){
-      const cx=(x0+x1)/2, cy=(y0+y1)/2;
-      const hx=Math.max(minSpan,x1-x0)/2, hy=Math.max(minSpan,y1-y0)/2;
-      pts=[[cx-hx,cy-hy],[cx+hx,cy+hy]];
-    }
-    AMAP._fit={pts};fitNadirBounds(AMAP,pts);
-  }
+  if(pts&&pts.length){ AMAP._fit={pts}; fitNadirBounds(AMAP,pts); }
   else {AMAP._fit=ACROP;fitNadirMap(AMAP,ACROP);}
 }
 function isDeviceAsset(a){
@@ -1456,17 +1454,18 @@ function syncAssetHighlight(){
     svg.querySelectorAll('.rgn:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(2/s)));
     svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
   }
-  const r=5.5/s;
+  const r=6.5/s;
   box.querySelectorAll('.pt circle:not(.halo)').forEach(c=>{
     const hl=c.closest('.pt')&&c.closest('.pt').classList.contains('hl');
-    const rr=hl?r*1.2:r;
-    c.setAttribute('r',rr);
-    c.setAttribute('stroke-width',String((hl?1.6:1.2)/s));
+    c.setAttribute('r',String(hl?r:6/s));
+    c.setAttribute('stroke-width',String((hl?2:1.5)/s));
   });
   box.querySelectorAll('.pt .halo').forEach(c=>{
     const hl=c.closest('.pt')&&c.closest('.pt').classList.contains('hl');
-    c.setAttribute('r',r*(hl?2.15:1.65));
-    if(hl){c.setAttribute('fill-opacity','.35');c.setAttribute('stroke','#fff');c.setAttribute('stroke-width',String(2/s));}
+    c.setAttribute('r',String(r*(hl?1.55:1.35)));
+    c.setAttribute('fill-opacity',hl?'.28':'0');
+    c.setAttribute('stroke','#fff');
+    c.setAttribute('stroke-width',String((hl?2:1.4)/s));
   });
 }
 function syncAssetPins(){ syncAssetHighlight(); }
@@ -1787,8 +1786,8 @@ function drawQ(){
   let h='';
   QGROUPS().forEach(g=>{const qs=Q.filter(q=>q.group===g);if(!qs.length)return;
     h+=`<div class="qgroup"><h3>${esc(g)} <span class="badge b-grey">${qs.length}</span></h3>`+qs.map(q=>{const a=ANS[q.id]||{};
-      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${q.provisional?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}
-     ${q.provisional?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(q.provisional)}</div>`:''}
+      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${qIsProv(q)?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}
+     ${qProvText(q)?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(qProvText(q))}</div>`:''}
      <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
      <textarea data-q="${esc(q.id)}" rows="1" placeholder="Note (optional)">${esc(a.note||'')}</textarea></div>`;}).join('')+`</div>`;});
   const list=document.getElementById('qlist');if(!list)return;
@@ -1861,6 +1860,33 @@ function linkTarget(link){
   }
   return null;
 }
+function regionGroup(t){
+  const pts=[], ids=new Set();
+  if(!t) return {pts,ids};
+  (t.pts||[]).forEach(p=>pts.push(p));
+  if(t.rid) ids.add(String(t.rid));
+  if(!(t.rid&&typeof REGS!=='undefined'&&REGS)) return {pts,ids};
+  const polys=typeof regionPolysPx==='function'?regionPolysPx(REGS):[];
+  const main=polys.filter(p=>String(p.id)===String(t.rid));
+  const cls=t.cls||(main[0]&&main[0].cls);
+  main.forEach(p=>{(p.pts||[]).forEach(pt=>pts.push(pt));});
+  if(!cls||!main.length) return {pts,ids};
+  const seed=main.reduce((a,p)=>a.concat(p.pts||[]),[]);
+  if(!seed.length) return {pts,ids};
+  const [x0,y0,x1,y1]=boundsOfPx(seed);
+  const cx=(x0+x1)/2, cy=(y0+y1)/2;
+  const near=(40/(typeof nadirMPerPx==='function'?nadirMPerPx():0.43));
+  polys.forEach(p=>{
+    if(p.cls!==cls||ids.has(String(p.id))) return;
+    const pb=boundsOfPx(p.pts||[]); if(!isFinite(pb[0])) return;
+    const pcx=(pb[0]+pb[2])/2, pcy=(pb[1]+pb[3])/2;
+    if(Math.hypot(pcx-cx,pcy-cy)<=near){
+      ids.add(String(p.id));
+      (p.pts||[]).forEach(pt=>pts.push(pt));
+    }
+  });
+  return {pts,ids,cls};
+}
 function qStat(t){const e=document.getElementById('qmapstat');if(e)e.textContent=t||'';}
 function showQ(id){
   QSEL=id;
@@ -1869,7 +1895,8 @@ function showQ(id){
   const t=linkTarget(q.link);
   if(!t||!(t.pts&&t.pts.length)){qStat(qHasLoc(q)?'No outline is available for this question':'This question is not tied to a place on the map');if(Q3&&Q3.ready)syncQ3Overlays();drawQ2();return;}
   qStat('Showing '+t.label);
-  if(QMODE==='2d'){drawQ2();fitQ2Bounds(t.pts);}
+  const fitPts=regionGroup(t).pts;
+  if(QMODE==='2d'){if(QMAP)QMAP._user=false;drawQ2();fitQ2Bounds(fitPts.length?fitPts:t.pts);}
   else {drawQ2();if(Q3&&Q3.ready)focusQ3(t);}
 }
 function resetQView(){
@@ -1923,6 +1950,20 @@ function nadirStageSize(map){
   const r=st.getBoundingClientRect();
   return {w:st.clientWidth||r.width||0,h:st.clientHeight||r.height||0,st};
 }
+function nadirMPerPx(){
+  const m=D.map&&D.map.m_per_px;
+  if(m&&isFinite(m)&&m>0) return m;
+  const b=D.cam_ctx&&D.cam_ctx.bounds, img=(D.cam_ctx&&D.cam_ctx.img)||D.map;
+  if(b&&img&&img.w&&img.h){
+    const mid=((b.north+b.south)/2)*Math.PI/180;
+    const mx=((b.east-b.west)*Math.cos(mid)*111320)/img.w;
+    const my=((b.north-b.south)*111320)/img.h;
+    if(isFinite(mx)&&isFinite(my)) return (Math.abs(mx)+Math.abs(my))/2;
+  }
+  return 0.43;
+}
+const NADIR_MAX_SCALE=1, NADIR_MIN_SCALE=0.15, NADIR_MIN_EXTENT_M=90, NADIR_PAD_FRAC=0.25, NADIR_PAD_M=12;
+function nadirClampScale(s){return Math.min(NADIR_MAX_SCALE,Math.max(NADIR_MIN_SCALE,s));}
 function applyNadirMap(map){
   if(!map) return;
   const el=document.getElementById(map.innerId); if(!el) return;
@@ -1935,16 +1976,23 @@ function fitNadirMap(map,which){
   const pts=typeof which==='string'?nadirCropPts(which):null;
   if(pts&&pts.length) return fitNadirBounds(map,pts);
   const M=D.map;
-  map.s=Math.min(w/M.w,h/M.h); map.tx=(w-M.w*map.s)/2; map.ty=(h-M.h*map.s)/2;
+  map.s=nadirClampScale(Math.min(w/M.w,h/M.h)); map.tx=(w-M.w*map.s)/2; map.ty=(h-M.h*map.s)/2;
   applyNadirMap(map); return true;
 }
 function fitNadirBounds(map,pts){
   const {w,h,st}=nadirStageSize(map); if(!st||!map||!pts||!pts.length) return false;
   if(w<80||h<80){scheduleNadirFit(map,{pts:pts});return false;}
   const [x0,y0,x1,y1]=boundsOfPx(pts);
-  const pad=Math.max(20,(x1-x0)*0.18,(y1-y0)*0.18);
-  const bx0=x0-pad,by0=y0-pad,bx1=x1+pad,by1=y1+pad;
-  map.s=Math.min(24,Math.max(0.15,Math.min(w/(bx1-bx0),h/(by1-by0))));
+  const mpp=nadirMPerPx();
+  const minPx=NADIR_MIN_EXTENT_M/mpp;
+  const pad=Math.max(NADIR_PAD_M/mpp,(x1-x0)*NADIR_PAD_FRAC,(y1-y0)*NADIR_PAD_FRAC,24);
+  let bw=(x1-x0)+pad*2, bh=(y1-y0)+pad*2;
+  if(bw<minPx) bw=minPx;
+  if(bh<minPx) bh=minPx;
+  const cx=(x0+x1)/2, cy=(y0+y1)/2;
+  const bx0=cx-bw/2, by0=cy-bh/2, bx1=cx+bw/2, by1=cy+bh/2;
+  map._fit={pts};
+  map.s=nadirClampScale(Math.min(w/Math.max(1,bx1-bx0),h/Math.max(1,by1-by0)));
   map.tx=(w-(bx0+bx1)*map.s)/2; map.ty=(h-(by0+by1)*map.s)/2;
   applyNadirMap(map); return true;
 }
@@ -1967,7 +2015,7 @@ function scheduleNadirFit(map,which){
 }
 function zoomNadir(map,cx,cy,fac){
   if(!map) return;
-  const s2=Math.min(24,Math.max(0.15,map.s*fac));
+  const s2=nadirClampScale(map.s*fac);
   const wx=(cx-map.tx)/map.s, wy=(cy-map.ty)/map.s;
   map.s=s2; map.tx=cx-wx*s2; map.ty=cy-wy*s2;
   applyNadirMap(map);
@@ -2066,7 +2114,7 @@ function initQMap(){
     defaultFit:'parcel',
     observe:false,
     active:()=>QMODE==='2d',
-    onApply(){ if(typeof drawHydrantCallout==='function') drawHydrantCallout(); }
+    onApply(){ if(typeof syncQHighlight==='function') syncQHighlight(); if(typeof drawHydrantCallout==='function') drawHydrantCallout(); }
   });
   drawQ2();
   scheduleFitQ2('parcel');
@@ -2348,7 +2396,7 @@ function drawQ2(){
   if(qlyOn('cameras')){
     (QCAM_PINS||((D.cams||[]).filter(c=>c.px||(c.lat!=null&&c.lng!=null)))).forEach((c,i)=>{
       const px=camPinPx(c); if(!px) return;
-      h+=`<g class="ly-campin"><circle cx="${px[0]}" cy="${px[1]}" r="8" fill="#228be6" stroke="#fff" stroke-width="2"/><text x="${px[0]}" y="${px[1]+4}" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">${i+1}</text>${qLabel(px[0],px[1],c.name||c.device||('Camera '+(i+1)))}</g>`;
+      h+=`<g class="ly-campin"><circle cx="${px[0]}" cy="${px[1]}" r="6" fill="#228be6" stroke="#fff" stroke-width="1.5"/><text x="${px[0]}" y="${px[1]+3}" data-cy="${px[1]}" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">${i+1}</text>${qLabel(px[0],px[1],c.name||c.device||('Camera '+(i+1)))}</g>`;
     });
   }
   if(qlyOn('zonepins')){
@@ -2368,44 +2416,77 @@ function drawQ2(){
   svg.innerHTML=h;
   const lg=document.getElementById('qly-legend');
   if(lg) lg.hidden=QMODE==='3d'||!qlyOn('zones');
+  syncQHighlight();
   drawHydrantCallout();
+}
+function syncQHighlight(){
+  if(!QMAP) return;
+  const s=Math.max(QMAP.s,0.05);
+  const svg=document.getElementById('q2svg'); if(!svg) return;
+  svg.querySelectorAll('.qsel-halo, .rgn-halo.qsel').forEach(el=>el.setAttribute('stroke-width',String(5.4/s)));
+  svg.querySelectorAll('path.qsel, polygon.qsel, polyline.qsel, .rgn.hl.qsel').forEach(el=>el.setAttribute('stroke-width',String(3.2/s)));
+  const pin=6.5/s;
+  svg.querySelectorAll('.qpin circle:not(.halo), circle.qsel:not(.halo)').forEach(c=>{
+    c.setAttribute('r',String(pin));
+    c.setAttribute('stroke-width',String(2/s));
+  });
+  svg.querySelectorAll('.qpin circle.halo').forEach(c=>{
+    c.setAttribute('r',String(pin*1.55));
+    c.setAttribute('stroke-width',String(2/s));
+  });
+  svg.querySelectorAll('.ly-asset circle, .ly-campin circle, .ly-zpin circle').forEach(c=>{
+    c.setAttribute('r',String(6/s));
+    c.setAttribute('stroke-width',String(1.5/s));
+  });
+  svg.querySelectorAll('.ly-campin text').forEach(el=>{
+    el.setAttribute('font-size',String(8/s));
+    el.setAttribute('y',String((+el.getAttribute('data-cy')||(+el.getAttribute('cy')||0))+(3/s)));
+  });
+  const hyd=svg.querySelectorAll('.ly-hydrant circle');
+  if(hyd.length>=2){
+    hyd[0].setAttribute('r',String(12/s));
+    hyd[0].setAttribute('stroke-width',String(2/s));
+    hyd[1].setAttribute('r',String(6/s));
+    hyd[1].setAttribute('stroke-width',String(2/s));
+  }
 }
 function qSelMarkup(t){
   if(!t) return '';
   let h='';
   const gold='#ffe066';
   let drew=false;
+  const grp=typeof regionGroup==='function'?regionGroup(t):{ids:t.rid?new Set([String(t.rid)]):new Set()};
   if(t.rid&&REGS){
     regionPolysPx(REGS).forEach(p=>{
-      if(String(p.id)!==String(t.rid)) return;
-      h+=`<path class="rgn-halo qsel" d="${p.d}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke" pointer-events="none"></path>`;
-      h+=`<path class="rgn hl qsel" d="${p.d}" fill="${gold}" fill-opacity=".22" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd" vector-effect="non-scaling-stroke" pointer-events="none"></path>`;
+      if(!(grp.ids&&grp.ids.has(String(p.id)))&&String(p.id)!==String(t.rid)) return;
+      h+=`<path class="rgn-halo qsel" d="${p.d}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" pointer-events="none"></path>`;
+      h+=`<path class="rgn hl qsel" d="${p.d}" fill="${gold}" fill-opacity=".22" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd" pointer-events="none"></path>`;
       drew=true;
     });
   }
   if(!drew && t.shape==='line' && t.pts&&t.pts.length>=2){
-    h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-    h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>`;
+    h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>`;
     drew=true;
   }else if(!drew && t.shape==='poly' && t.pts&&t.pts.length>2){
     const poly=pts(t.pts);
-    h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-    h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round"/>`;
+    h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round"/>`;
     drew=true;
   }else if(!drew && t.pts&&t.pts.length>2 && t.shape!=='points' && t.shape!=='line'){
     const poly=pts(t.pts);
-    h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-    h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polygon class="qsel-halo" points="${poly}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linejoin="round"/>`;
+    h+=`<polygon class="qsel" points="${poly}" fill="${gold}" fill-opacity=".18" stroke="${gold}" stroke-width="3.2" stroke-linejoin="round"/>`;
     drew=true;
   }else if(!drew && t.pts&&t.pts.length===2 && t.shape!=='points'){
-    h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
-    h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>`;
+    h+=`<polyline class="qsel-halo" points="${pts(t.pts)}" fill="none" stroke="#fff" stroke-width="5.4" stroke-linecap="round"/>`;
+    h+=`<polyline class="qsel" points="${pts(t.pts)}" fill="none" stroke="${gold}" stroke-width="3.2" stroke-linecap="round"/>`;
     drew=true;
   }
   if(t.shape==='points' && t.pts){
-    t.pts.forEach(p=>{h+=`<circle class="qsel" cx="${p[0]}" cy="${p[1]}" r="8" fill="${gold}" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;});
-  }else if(t.px){
-    h+=`<circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="8" fill="${gold}" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"/>`;
+    t.pts.forEach(p=>{h+=`<g class="qpin qsel"><circle class="halo" cx="${p[0]}" cy="${p[1]}" r="10" fill="${gold}" fill-opacity=".28" stroke="#fff" stroke-width="2"/><circle class="qsel" cx="${p[0]}" cy="${p[1]}" r="6.5" fill="${gold}" stroke="#fff" stroke-width="2"/></g>`;});
+  }else if(t.px && !drew){
+    h+=`<g class="qpin qsel"><circle class="halo" cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="${gold}" fill-opacity=".28" stroke="#fff" stroke-width="2"/><circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="6.5" fill="${gold}" stroke="#fff" stroke-width="2"/></g>`;
   }
   return h;
 }
