@@ -59,6 +59,14 @@
   .cam .dv { color:var(--ink-dim); font-size:10px; font-family:ui-monospace, monospace; }
   .badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:1px 7px; border-radius:9px; margin-top:3px; border:1px solid var(--line); color:var(--ink-dim); }
   .badge i { width:7px; height:7px; border-radius:50%; display:inline-block; }
+  .badge.conf-high { border-color:#2f9e44; color:#2f9e44; }
+  .badge.conf-medium { border-color:#f59f00; color:#c08000; }
+  .badge.conf-low { border-color:#adb5bd; color:#868e96; }
+  .legend i.conf { border-radius:50%; }
+  .legend i.conf-high { background:#2f9e44; }
+  .legend i.conf-medium { background:#f59f00; }
+  .legend i.conf-low { background:#adb5bd; border-style:dashed; }
+
   #stage { position:relative; min-width:0; min-height:0; overflow:hidden; }
   #map { position:absolute; inset:0; }
   #tools { position:absolute; top:10px; left:10px; z-index:5; background:rgba(27,32,39,.92); border:1px solid var(--line); border-radius:6px; padding:6px 8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; max-width:calc(100% - 20px); }
@@ -104,12 +112,12 @@
 </form></div>
 <header>
   <h1>H1 alarm zones · pin placement</h1><span id="build"></span><span class="sp"></span>
-  <nav class="hnav"><a href="index.html#alarms">Reviewer</a><a href="cameras.html">Camera pins</a><a href="nearmap-review.html">Region editor</a><a href="model3d.html" target="_blank" rel="noopener">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
+  <nav class="hnav"><a href="index.html#alarms">Reviewer</a><a href="cameras.html" target="_blank" rel="noopener">Camera pins</a><a href="nearmap-review.html">Region editor</a><a href="model3d.html" target="_blank" rel="noopener">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
 </header>
 <main>
   <aside class="panel l">
     <h2>Zones <span class="meta" id="rcount"></span></h2>
-    <div class="legend"><span><i style="background:var(--sv)"></i>estimated (draft)</span><span><i style="background:var(--pl)"></i>placed</span><span><i style="background:var(--ok)"></i>confirmed</span><span><i style="background:var(--un)"></i>unsure</span><span><i style="background:#5c6670"></i>unplaced</span></div>
+    <div class="legend"><span><i style="background:var(--sv)"></i>estimated (draft)</span><span><i style="background:var(--pl)"></i>placed</span><span><i style="background:var(--ok)"></i>confirmed</span><span><i style="background:var(--un)"></i>unsure</span><span><i style="background:#5c6670"></i>unplaced</span><span><i class="conf conf-high"></i>high confidence</span><span><i class="conf conf-medium"></i>medium</span><span><i class="conf conf-low"></i>low</span></div>
     <div class="sys-filter" id="sysfilter"></div>
     <div class="sys-leg" id="sysleg"></div>
     <div class="scroll" id="list"></div>
@@ -569,6 +577,23 @@
     if (s.locked) return 'surveyed · locked';
     return { surveyed: 'surveyed · unlocked', estimated: 'estimated · draft', placed: 'placed · not confirmed', confirmed: 'confirmed', unsure: 'flagged / unsure' }[s.status] || s.status;
   }
+  function confOf(c, s) {
+    return (s && s.confidence) || (c && c.confidence) || '';
+  }
+  function confLabel(conf) {
+    return { high: 'high confidence', medium: 'medium confidence', low: 'low confidence' }[conf] || '';
+  }
+  function confBadge(conf) {
+    if (!conf) return '';
+    return '<span class="badge conf-' + conf + '">' + esc(confLabel(conf) || conf) + '</span>';
+  }
+  function pinRadiusFor(conf, isSel) {
+    var r = conf === 'high' ? 11 : conf === 'medium' ? 9 : 8;
+    return isSel ? Math.max(r, 11) : r;
+  }
+  function confStroke(conf) {
+    return { high: '#2f9e44', medium: '#f59f00', low: '#adb5bd' }[conf] || '#fff';
+  }
 
   // ---------- state ----------
   function defaults() {
@@ -576,7 +601,8 @@
     CAMS.forEach(function (c) {
       var s = { device: c.device, name: c.name, status: 'unplaced', locked: false, lat: null, lng: null, x: null, y: null,
                 heading: null, source: null, survey_pin: null, note: c.rationale || '', rationale: c.rationale || '', updated: null,
-                camera_link: c.camera_link || null, device_type: c.device_type, system_label: c.system_label, zone_id: c.zone_id };
+                camera_link: c.camera_link || null, device_type: c.device_type, system_label: c.system_label, zone_id: c.zone_id,
+                confidence: c.confidence || '' };
       if (finite(c.lat, c.lng)) {
         var p = toPct(c.lat, c.lng);
         s.status = 'estimated'; s.locked = false; s.lat = c.lat; s.lng = c.lng; s.x = p.x; s.y = p.y; s.source = c.source || 'draft';
@@ -592,7 +618,7 @@
     (doc && doc.pins || []).forEach(function (p) {
       if (!base[p.device]) return;   // never add cameras that are not on the roster
       var s = base[p.device];
-      ['status', 'locked', 'heading', 'source', 'note', 'updated'].forEach(function (k) { if (k in p) s[k] = p[k]; });
+      ['status', 'locked', 'heading', 'source', 'note', 'updated', 'confidence'].forEach(function (k) { if (k in p) s[k] = p[k]; });
       if (finite(p.lat, p.lng)) { s.lat = p.lat; s.lng = p.lng; var q = toPct(p.lat, p.lng); s.x = q.x; s.y = q.y; }
       else if (p.status !== 'cant_place') { s.lat = s.lng = s.x = s.y = null; if (s.status !== 'surveyed') s.status = 'unplaced'; }
     });
@@ -615,7 +641,7 @@
     var col = pinColor(c, s);
     return '<div class="cam' + (sel === c.device ? ' on' : '') + '" data-dev="' + esc(c.device) + '"><div class="th" style="background:' + col + '"><b>' + (i + 1) + '</b></div>' +
       '<div><div class="nm">' + esc(c.name) + '</div><div class="dv">' + esc(c.device_type || '') + ' · zone ' + esc(String(c.zone_id || '')) + '</div>' +
-      '<span class="badge"><i style="background:' + color(s) + '"></i>' + esc(statusLabel(s)) + '</span></div></div>';
+      '<span class="badge"><i style="background:' + color(s) + '"></i>' + esc(statusLabel(s)) + '</span>' + (placed(s) ? confBadge(confOf(c, s)) : '') + '</div></div>';
   }
   function renderSysChrome() {
     var multi = multiSystems();
@@ -675,7 +701,8 @@
     if (s.status === 'estimated') h += '<div class="callout">Draft estimate — confirm, flag, or drag to adjust. This is not a surveyed GPS fix.</div>';
     h += '<div class="kv"><span>Status</span><span><span class="badge" style="margin:0"><i style="background:' + color(s) + '"></i>' + esc(statusLabel(s)) + '</span></span>' +
       '<span>Position</span><span class="num">' + (placed(s) ? s.lat.toFixed(7) + ', ' + s.lng.toFixed(7) : '—') + '</span>' +
-      '<span>On vert.jpg</span><span class="num">' + (placed(s) ? 'x ' + s.x.toFixed(2) + '% · y ' + s.y.toFixed(2) + '%' : '—') + '</span></div>';
+      '<span>On vert.jpg</span><span class="num">' + (placed(s) ? 'x ' + s.x.toFixed(2) + '% · y ' + s.y.toFixed(2) + '%' : '—') + '</span>' +
+      (placed(s) && confOf(c, s) ? '<span>Confidence</span><span>' + confBadge(confOf(c, s)) + '</span>' : '') + '</div>';
     h += '<div class="row">';
     if (!s.locked) h += '<button class="btn pl" id="bPlace">' + (placed(s) ? 'Re-place on map' : 'Place on map') + '</button>';
     if (s.locked) h += '<button class="btn" id="bUnlock">Unlock to move</button>';
@@ -767,7 +794,7 @@
   }
   function local(ev) { var r = $('map').getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
   function pinAt(pt) {
-    var best = null, bd = 13;
+    var best = null, bd = 16;
     visibleCams().forEach(function (c) { var s = ST[c.device]; if (!placed(s)) return; var p = scr(s.lat, s.lng), d = Math.hypot(p.x - pt.x, p.y - pt.y); if (d < bd) { bd = d; best = c.device; } });
     return best;
   }
@@ -889,7 +916,7 @@
         device: p.zone_key, name: p.name, zone_id: p.zone_id, system_label: p.system_label,
         system_ref: p.system_ref, device_type: p.device_type, programming: p.programming,
         rationale: p.rationale, camera_link: p.camera_link, location_key: p.location_key,
-        placement: p.placement, status: p.status, source: p.source, lat: p.lat, lng: p.lng
+        placement: p.placement, status: p.status, source: p.source, lat: p.lat, lng: p.lng, confidence: p.confidence || ''
       };
     });
     SYS_FILTER = 'all';
