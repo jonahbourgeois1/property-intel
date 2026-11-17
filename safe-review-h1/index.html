@@ -200,7 +200,10 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 #amap-status.warn{color:#8a5a00}
 #amap .pt.hl .halo{fill-opacity:.22}
 #amap .pt.hl circle:not(.halo){stroke:#fff;stroke-width:1.5px}
-#amap .rgn.hl{stroke:inherit!important;stroke-width:inherit!important;fill-opacity:.20!important;paint-order:stroke fill}
+#amap .rgn{cursor:pointer}
+#amap .rgn.hl{paint-order:stroke fill}
+#amap .rgn-halo{pointer-events:none}
+#amap .pt.hl .halo{fill:#ffd43b;fill-opacity:.35;stroke:#fff;stroke-width:2px}
 .regpanel{padding:0;overflow:hidden}
 .regcat{border-bottom:1px solid var(--line)}
 .regcat:last-child{border-bottom:0}
@@ -251,7 +254,7 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .rchip.p{border-color:var(--accent);color:var(--accent);font-weight:600}
 .rchip:hover{background:var(--accent2)}
 .rgn{cursor:pointer}
-.rgn.hl{fill-opacity:.20;paint-order:stroke fill}
+.rgn.hl{paint-order:stroke fill}
 .regleg{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;margin:8px 0}
 .regleg label{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
 .regleg .sw{width:11px;height:11px;border-radius:3px;display:inline-block}
@@ -923,7 +926,16 @@ function setAmapStatus(msg,warn){
 function fitAssetView(pts){
   if(!AMAP) return;
   AMAP._user=false;
-  if(pts&&pts.length){AMAP._fit={pts};fitNadirBounds(AMAP,pts);}
+  if(pts&&pts.length){
+    const [x0,y0,x1,y1]=boundsOfPx(pts);
+    const minSpan=90;
+    if((x1-x0)<minSpan||(y1-y0)<minSpan){
+      const cx=(x0+x1)/2, cy=(y0+y1)/2;
+      const hx=Math.max(minSpan,x1-x0)/2, hy=Math.max(minSpan,y1-y0)/2;
+      pts=[[cx-hx,cy-hy],[cx+hx,cy+hy]];
+    }
+    AMAP._fit={pts};fitNadirBounds(AMAP,pts);
+  }
   else {AMAP._fit=ACROP;fitNadirMap(AMAP,ACROP);}
 }
 function isDeviceAsset(a){
@@ -959,16 +971,31 @@ function visibleOutlineIds(){
   });
   return {ids:[...new Set(ids)],filled:false};
 }
-function syncAssetPins(){
+function syncAssetHighlight(){
   if(!AMAP) return;
   const box=document.getElementById(AMAP.stageId); if(!box) return;
-  const r=5.5/Math.max(AMAP.s,0.05);
+  const s=Math.max(AMAP.s,0.05);
+  const svg=document.getElementById(AMAP.svgId);
+  if(svg){
+    svg.querySelectorAll('.rgn-halo').forEach(el=>el.setAttribute('stroke-width',String(5/s)));
+    svg.querySelectorAll('.rgn.hl').forEach(el=>el.setAttribute('stroke-width',String(3/s)));
+    svg.querySelectorAll('.rgn:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(1.5/s)));
+    svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  }
+  const r=5.5/s;
   box.querySelectorAll('.pt circle:not(.halo)').forEach(c=>{
-    c.setAttribute('r',r);
-    c.setAttribute('stroke-width',String(Math.max(r*0.22,1/Math.max(AMAP.s,0.05))));
+    const hl=c.closest('.pt')&&c.closest('.pt').classList.contains('hl');
+    const rr=hl?r*1.2:r;
+    c.setAttribute('r',rr);
+    c.setAttribute('stroke-width',String((hl?1.6:1.2)/s));
   });
-  box.querySelectorAll('.pt .halo').forEach(c=>c.setAttribute('r',r*1.65));
+  box.querySelectorAll('.pt .halo').forEach(c=>{
+    const hl=c.closest('.pt')&&c.closest('.pt').classList.contains('hl');
+    c.setAttribute('r',r*(hl?2.15:1.65));
+    if(hl){c.setAttribute('fill-opacity','.35');c.setAttribute('stroke','#fff');c.setAttribute('stroke-width',String(2/s));}
+  });
 }
+function syncAssetPins(){ syncAssetHighlight(); }
 function initAssetMap(){
   const host=document.getElementById('a2d'), stage=document.getElementById('amap');
   if(!host||!stage) return;
@@ -977,7 +1004,7 @@ function initAssetMap(){
       hostId:'a2d', stageId:'amap', prefix:'a2',
       defaultFit:'house',
       markUserOnPan:true,
-      onApply(){ syncAssetPins(); }
+      onApply(){ syncAssetHighlight(); }
     });
     if(!window._a2rz){
       window._a2rz=true;
@@ -1015,26 +1042,31 @@ function drawAssetOverlays(){
   const vis=visibleOutlineIds();
   const force=new Set(vis.ids||[]);
   const points=devicePoints();
-  const sw=2;
   let h='';
-  if(REGS){
-    const all=regionPolysPx(REGS);
-    const polys=force.size?all.filter(p=>force.has(p.id)):[];
-    const fillOp=vis.filled?'.20':'0';
-    const strokeW=vis.filled?3.2:2;
-    h+=polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${fillOp}" stroke="${classColor(p.cls)}" stroke-width="${strokeW}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('');
-    const rn=document.getElementById('regnote');
-    if(rn) rn.innerHTML='Preview of the '+esc(REGSRC)+' file. Edit outlines in the <a href="'+editorUrl()+'" target="_blank" rel="noopener">region editor</a>.';
-  } else {
-    const rn=document.getElementById('regnote');
-    if(rn) rn.textContent='Regions file not reachable from this page. Open it through the local server.';
-  }
+  const sel=new Set((ASEL&&ASEL.rids)||[]);
+  const all=REGS?regionPolysPx(REGS):[];
+  const polys=force.size?all.filter(p=>force.has(p.id)):[];
+  const unsel=polys.filter(p=>!sel.has(p.id));
+  const chosen=polys.filter(p=>sel.has(p.id));
+  unsel.forEach(p=>{
+    h+=`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${classColor(p.cls)}" stroke-width="1.5" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
+  });
   const M=D.map;
-  if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.4" stroke-width="2.2"/>`;
+  if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
   points.forEach(p=>{
-    h+=`<g class="pt" data-id="${esc(p.id)}" data-tip="${esc(p.tip)}" style="cursor:pointer"><circle cx="${p.px[0]}" cy="${p.px[1]}" r="8" fill="${p.color}" fill-opacity="0" class="halo"/><circle cx="${p.px[0]}" cy="${p.px[1]}" r="5.5" fill="${p.color}" stroke="#fff" stroke-width="1.4"/></g>`;
+    const on=ASEL&&ASEL.id===p.id?' hl':'';
+    h+=`<g class="pt${on}" data-id="${esc(p.id)}" data-tip="${esc(p.tip)}" style="cursor:pointer"><circle cx="${p.px[0]}" cy="${p.px[1]}" r="8" fill="${p.color}" fill-opacity="0" class="halo"/><circle cx="${p.px[0]}" cy="${p.px[1]}" r="5.5" fill="${p.color}" stroke="#fff" stroke-width="1.4"/></g>`;
+  });
+  // Selected regions last, so the highlight sits above the parcel and other outlines.
+  chosen.forEach(p=>{
+    const col=classColor(p.cls);
+    h+=`<path class="rgn-halo" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" fill-rule="evenodd"></path>`;
+    h+=`<path class="rgn hl" data-rid="${esc(p.id)}" d="${p.d}" fill="${col}" fill-opacity=".32" stroke="#ffd43b" stroke-width="3" stroke-linejoin="round" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
   });
   svg.innerHTML=h;
+  const rn=document.getElementById('regnote');
+  if(REGS){ if(rn) rn.innerHTML='Preview of the '+esc(REGSRC)+' file. Edit outlines in the <a href="'+editorUrl()+'" target="_blank" rel="noopener">region editor</a>.'; }
+  else { if(rn) rn.textContent='Regions file not reachable from this page. Open it through the local server.'; }
   const box=document.getElementById('amap');
   const ignoreDrag=()=>AMAP&&AMAP.moved>6;
   svg.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',e=>{
@@ -1066,6 +1098,7 @@ function applyAssetSelection(){
   if(box){
     box.querySelectorAll('.rgn').forEach(x=>x.classList.toggle('hl',rids.has(x.dataset.rid)));
     box.querySelectorAll('.pt').forEach(x=>x.classList.toggle('hl',!!id&&x.dataset.id===id));
+    syncAssetHighlight();
     if(ASEL&&ASEL.fit){
       let pts=ASEL.pts&&ASEL.pts.slice();
       if(!pts||!pts.length){
