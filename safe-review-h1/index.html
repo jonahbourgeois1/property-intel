@@ -289,6 +289,18 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .mas-table{width:100%;border-collapse:collapse;font-size:13px}
 .mas-table th,.mas-table td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .mas-table th{color:var(--ink2);font-weight:600}
+
+.sys-group{border:1px solid var(--line);border-radius:10px;margin:0 0 10px;background:var(--card,#fff);overflow:hidden}
+.sys-group>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:14px}
+.sys-group>summary::-webkit-details-marker{display:none}
+.sys-group>summary:hover{background:rgba(0,0,0,.03)}
+.sys-group .sys-dot{width:10px;height:10px;border-radius:50%;flex:0 0 auto;box-shadow:0 0 0 1px #fff,0 0 0 2px rgba(0,0,0,.15)}
+.sys-group .sys-title{font-weight:650}
+.sys-group .sys-meta{color:var(--ink2);font-size:12px}
+.sys-group .sys-count{margin-left:auto;font-size:12px;color:var(--ink2)}
+.sys-group.empty>summary{color:var(--ink2)}
+.sys-group .sys-body{padding:0 8px 8px}
+.sys-plain{margin:0 0 8px;font-size:13px;color:var(--ink2)}
 </style>
 <script src="vendor/h1-crypto.js"></script>
 </head>
@@ -432,39 +444,69 @@ function rFire(){
   h+=`</div><div class="card pad mt cta"><div><h3>Confirm this on the questions page</h3><div class="small" style="color:var(--ink2);margin-top:4px">RQ-54 asks you to confirm or flag the private-well / no-local-hydrant record. It is a Pass 1 confirmation, not a visual-only item.</div></div><a class="btnl" href="#questions">Open reviewer questions</a></div>`;
   document.getElementById('pg-fire').innerHTML=h;
 }
+function sysKindLabel(s){
+  const kind=({panel:'panel',video_service:'video service',radio:'radio'})[s&&s.kind]||(s&&s.kind)||'';
+  const make=(s&&s.make)||'';
+  return [make,kind].filter(Boolean).join(' · ');
+}
+function sysColor(ref, systems){
+  const palette=['#4c6ef5','#0ca678','#f08c00','#ae3ec9','#1971c2','#c92a2a'];
+  const withZones=(systems||[]).filter(s=>(s._n||0)>0);
+  const i=withZones.findIndex(s=>s.system_ref===ref);
+  return i<0?'#868e96':palette[i%palette.length];
+}
+function zoneRow(z, pinOf){
+  const p=pinOf(z)||{};
+  const cam=p.camera_link||(z.linked_camera?{name:z.linked_camera}:null);
+  return `<tr><td>${esc(z.label)}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td><td>${p.lat!=null?'Estimated':'Unplaced'}</td><td>${cam?'possibly same location as camera '+esc(cam.name||cam.device||''):'—'}</td></tr>`;
+}
+function zoneTable(rows, pinOf){
+  return `<table class="mas-table"><thead><tr><th>Zone</th><th>Type</th><th>Programming</th><th>Draft pin</th><th>Camera link</th></tr></thead><tbody>`+
+    rows.map(z=>zoneRow(z,pinOf)).join('')+`</tbody></table>`;
+}
 function rAlarms(){
-  const M=D.mas||{}, systems=M.systems||[], zones=M.zones||[], ev=M.events_summary||{}, pins=M.pins||[];
+  const M=D.mas||{}, systems=(M.systems||[]).map(s=>Object.assign({},s)), zones=M.zones||[], ev=M.events_summary||{}, pins=M.pins||[];
+  systems.forEach(s=>{s._n=zones.filter(z=>z.system_ref===s.system_ref).length;});
+  const withZones=systems.filter(s=>s._n>0), empty=systems.filter(s=>s._n===0);
   const placed=pins.filter(p=>p.lat!=null).length, links=pins.filter(p=>p.camera_link).length;
-  let h=head('Alarm (MAS)','Monitoring accounts and zones','Sanitized from the 16 Nov 2026 central-station export. Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them on the zone pin page.');
-  h+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Systems</div><div class="v num">${systems.length}</div></div><div class="card kpi"><div class="k">Zones</div><div class="v num">${zones.length}</div></div><div class="card kpi"><div class="k">Draft pins</div><div class="v num">${placed}<small> estimated · ${pins.length-placed} unplaced</small></div><div class="s">${links} camera-link candidates</div></div></div>`;
-  h+=`<div class="card pad mt"><h3>Systems</h3><table class="mas-table"><thead><tr><th>System</th><th>Kind</th><th>Make</th><th>Status</th><th>Zones</th></tr></thead><tbody>`;
-  h+=systems.map(s=>{
-    const n=zones.filter(z=>z.system_ref===s.system_ref).length;
-    return `<tr><td>${esc(s.label||s.make)}</td><td>${esc(s.kind)}</td><td>${esc(s.make)}</td><td>${esc(s.status)}</td><td class="num">${n}</td></tr>`;
-  }).join('');
-  h+=`</tbody></table></div>`;
-  h+=`<div class="card pad mt"><h3>Zones</h3><div class="small muted" style="margin:-4px 0 8px">Every draft pin is marked estimated, with a rationale. Unplaced zones were left unplaced when the label was not enough. Never invented.</div><table class="mas-table"><thead><tr><th>Zone</th><th>System</th><th>Type</th><th>Programming</th><th>Draft pin</th><th>Camera link</th></tr></thead><tbody>`;
-  const sysLabel=r=> (systems.find(s=>s.system_ref===r)||{}).label||'';
   const pinOf=z=>pins.find(p=>p.system_ref===z.system_ref&&String(p.zone_id)===String(z.zone_id));
-  h+=zones.map(z=>{
-    const p=pinOf(z)||{};
-    const cam=p.camera_link|| (z.linked_camera?{name:z.linked_camera}:null);
-    return `<tr><td>${esc(z.label)}</td><td>${esc(sysLabel(z.system_ref))}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td><td>${p.lat!=null?'Estimated':'Unplaced'}</td><td>${cam?'possibly same location as camera '+esc(cam.name||cam.device||''):'—'}</td></tr>`;
-  }).join('');
-  h+=`</tbody></table></div>`;
+  const multi=withZones.length>1;
+  let h=head('Alarm (MAS)','Monitoring accounts and zones','Sanitized from the 16 Nov 2026 central-station export. Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them on the zone pin page. Zones are listed by system; a single-system customer is shown as a plain list.');
+  h+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Systems</div><div class="v num">${systems.length}</div></div><div class="card kpi"><div class="k">Zones</div><div class="v num">${zones.length}</div></div><div class="card kpi"><div class="k">Draft pins</div><div class="v num">${placed}<small> estimated · ${pins.length-placed} unplaced</small></div><div class="s">${links} camera-link candidates</div></div></div>`;
+  if(systems.length){
+    h+=`<div class="card pad mt"><h3>Systems</h3><table class="mas-table"><thead><tr><th>System</th><th>Type</th><th>Status</th><th>Zones</th></tr></thead><tbody>`;
+    h+=systems.map(s=>`<tr><td>${esc(s.label||s.make)}</td><td>${esc(sysKindLabel(s))}</td><td>${esc(s.status)}</td><td class="num">${s._n}</td></tr>`).join('');
+    h+=`</tbody></table></div>`;
+  }
+  h+=`<div class="card pad mt"><h3>Zones</h3><div class="small muted" style="margin:-4px 0 8px">Every draft pin is marked estimated, with a rationale. Unplaced zones were left unplaced when the label was not enough. Never invented.</div>`;
+  if(!multi){
+    const s=withZones[0];
+    if(s) h+=`<div class="sys-plain">${esc(s.label||s.make)} · ${esc(sysKindLabel(s))} · ${s._n} zone${s._n===1?'':'s'}</div>`+zoneTable(zones.filter(z=>z.system_ref===s.system_ref), pinOf);
+    else h+=`<p class="small muted">No zones in the export.</p>`;
+  } else {
+    withZones.forEach(s=>{
+      const rows=zones.filter(z=>z.system_ref===s.system_ref);
+      h+=`<details class="sys-group" open><summary><i class="sys-dot" style="background:${sysColor(s.system_ref,systems)}"></i><span class="sys-title">${esc(s.label||s.make)}</span><span class="sys-meta">${esc(sysKindLabel(s))}</span><span class="sys-count">${s._n} zone${s._n===1?'':'s'}</span></summary><div class="sys-body">`+zoneTable(rows, pinOf)+`</div></details>`;
+    });
+  }
+  empty.forEach(s=>{
+    h+=`<details class="sys-group empty"><summary><i class="sys-dot" style="background:#adb5bd"></i><span class="sys-title">${esc(s.label||s.make)}</span><span class="sys-meta">${esc(sysKindLabel(s))}</span><span class="sys-count">no zones</span></summary><div class="sys-body"><p class="small muted" style="margin:4px 8px 8px">This system has no zones in the export.</p></div></details>`;
+  });
+  h+=`</div>`;
   if(ev.window_start) h+=`<div class="card pad mt"><h3>Event window</h3><p class="small">${esc(ev.window_start)} to ${esc(ev.window_end)}. ${Object.entries(ev.counts_by_type||{}).map(([k,v])=>esc(k)+': '+v).join(' · ')}. No burglary or fire alarm events in this window; user fields were empty in the export.</p></div>`;
-  h+=`<div class="card pad mt cta"><div><h3>Zone pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Place each zone on the nadir, confirm or flag it, and add a note. Draft locations are estimates. Where a zone name resembles a camera, the editor shows “possibly same location as camera X”.</div></div><a class="btnl" href="zones.html">Open zone pin editor</a></div>`;
+  h+=`<div class="card pad mt cta"><div><h3>Zone pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Place each zone on the nadir, confirm or flag it, and add a note. Draft locations are estimates. Where a zone name resembles a camera, the editor shows “possibly same location as camera X”. Systems are grouped the same way on that page.</div></div><a class="btnl" href="zones.html">Open zone pin editor</a></div>`;
   document.getElementById('pg-alarms').innerHTML=h;
 }
 function rOverview(){
   const O=D.overview, S=O.status, N=D.nearmap;
   const scoreBar=(v,col)=>`<div class="scorebar">${[1,2,3,4,5].map(i=>`<i style="${i<=v?'background:'+col:''}"></i>`).join('')}</div>`;
   const pcol=v=>v>=4?'#2f7a4a':v>=3?'#a08a1f':'#b5542b';
-  let h=waterBanner(' · <a href="#fire">Fire tab</a>');h+=`<div class="card hero"><div class="l"><div class="eyebrow">${esc(O.customer_type)}</div><h1>${esc(O.title)} <span>· ${esc(O.subtitle)}</span></h1><div class="addr">${esc(O.situs)}</div>
+  let h=`<div class="card hero"><div class="l"><div class="eyebrow">${esc(O.customer_type)}</div><h1>${esc(O.title)} <span>· ${esc(O.subtitle)}</span></h1><div class="addr">${esc(O.situs)}</div>
   <div class="kv"><div><div class="k">Taxlot</div><div class="v num">${esc(O.taxlot)}</div></div><div><div class="k">Account</div><div class="v num">${esc(O.account)}</div></div><div><div class="k">Lot size</div><div class="v">${esc(O.acres)} acres</div></div>
   <div><div class="k">Zoning</div><div class="v">${esc(O.zoning)}</div></div><div><div class="k">County</div><div class="v">${esc(O.county)}</div></div><div><div class="k">Imagery survey</div><div class="v">${esc(O.survey)}</div></div></div></div>
   <div class="r" onclick="go('imagery')">${mapSVG({crop:'parcel',layers:{parcel:true,ai:true}})}<span class="cap">Nadir 2 Jul 2026 · parcel and 2026 roof · open imagery →</span></div></div>`;
-  h+=`<div class="grid g3 mt">`+O.kpis.map(k=>`<div class="card kpi"><div class="k">${esc(k.label)}</div><div class="v num">${esc(k.value)}<small>${esc(k.unit)}</small></div><div class="s">${tag(k.src)}${k.provisional?prov():''}</div></div>`).join('')+`</div>`;
+  const waterCard=`<div class="card kpi"><div class="k">${esc((D.water&&D.water.label)||'Water supply')}</div><div class="v">${esc((D.water&&D.water.value)||'')}</div><div class="s">${tag((D.water&&D.water.tag)||'')}</div></div>`;
+  h+=`<div class="grid g3 mt">`+waterCard+O.kpis.map(k=>`<div class="card kpi"><div class="k">${esc(k.label)}</div><div class="v num">${esc(k.value)}<small>${esc(k.unit)}</small></div><div class="s">${tag(k.src)}${k.provisional?prov():''}</div></div>`).join('')+`</div>`;
   h+=`<div class="grid g3 mt">`+N.perils.map(p=>`<div class="card kpi"><div class="k">Nearmap ${p.label.toLowerCase()} score</div><div class="peril"><div class="v num">${p.score}<small>/ 5</small></div><div>${scoreBar(p.score,pcol(p.score))}<div class="tiny muted" style="margin-top:4px">5 = most resilient</div></div></div><div class="s">${tag('Nearmap AI · 2 Jul 2026')}<span class="tag">footprint capped at 1,000 m²</span></div></div>`).join('')+`</div>`;
   h+=`<div class="card status mt"><div class="first"><div class="v">✓ ${esc(S.audit)}</div><div class="k">Pass 1 completeness check</div></div>
    <div><div class="v num">${S.facts}</div><div class="k">assessor facts · ${S.facts_missing} missing</div></div>
