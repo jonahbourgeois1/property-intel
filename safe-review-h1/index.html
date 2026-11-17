@@ -175,7 +175,8 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 /* measurements */
 .mrow{cursor:pointer}
 .mrow:hover td{background:#fafcfb}
-.mrow.sel td{background:#eef6f4;box-shadow:inset 3px 0 0 var(--accent)}
+.mrow.sel td{background:#eef6f4;box-shadow:none;border-left:0;border-right:0;border-top-color:transparent;border-bottom-color:transparent;}
+.mrow.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent);}
 .mrow td.v{white-space:nowrap;font-weight:650;font-size:16px}
 .mrow td.v small{font-weight:500;color:var(--ink3);font-size:13px;margin-left:3px}
 .alts{margin-top:8px;background:#fafbfa;border:1px solid var(--line2);border-radius:8px;padding:6px 10px}
@@ -188,7 +189,8 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 #mmap .mln,#mmap .marea,#mmap .mpt{cursor:pointer}
 #mmap .marea{fill-opacity:.10}
 #mmap .marea.hl{fill-opacity:.28}
-#mmap .mlbl{font-family:Inter,Segoe UI,sans-serif;font-weight:650;paint-order:stroke fill;stroke:#111;stroke-linejoin:round;pointer-events:none}
+#mmap .mlbl{font-family:Inter,Segoe UI,sans-serif;font-weight:650;paint-order:stroke fill;stroke:#111;stroke-linejoin:round;pointer-events:none;opacity:0}
+#mmap .mfeat:hover .mlbl,#mmap .mfeat.hl .mlbl,#mmap .mpt:hover .mlbl,#mmap .mpt.hl .mlbl{opacity:1}
 .amap-stage.qmap-stage,#amap.amap-stage,#mmap.amap-stage{height:min(64vh,560px);min-height:420px;border-radius:var(--r);flex:none}
 /* assets */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
@@ -207,7 +209,8 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .atbl .tag{white-space:normal;text-align:right;display:inline-block;margin:2px 0}
 .atbl tr{cursor:pointer}
 .atbl tr:hover td{background:#fafcfb}
-.atbl tr.sel td{background:#eef6f4;box-shadow:inset 3px 0 0 var(--accent)}
+.atbl tr.sel td{background:#eef6f4;box-shadow:none;border-left:0;border-right:0;border-top-color:transparent;border-bottom-color:transparent;}
+.atbl tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent);}
 #amap-status{min-height:1.35em;margin-top:6px}
 #amap-status.warn{color:#8a5a00}
 #amap .pt.hl .halo{fill-opacity:.22}
@@ -848,7 +851,20 @@ function fitMeasView(pts){
     MMAP._fit=MCROP; fitNadirMap(MMAP,MCROP);
   }
 }
+function clearMeas(){
+  MSEL=null;
+  document.querySelectorAll('#pg-measurements .mrow').forEach(r=>r.classList.remove('sel'));
+  setMmapStatus('Distance lines, area outlines and height points are shown when their geometry is on file.');
+  drawMeasOverlays();
+  if(MMAP){MMAP._user=false;scheduleNadirFit(MMAP,MCROP);}
+}
+function measSame(id){
+  if(!MSEL||!id) return false;
+  if(MSEL.id===id) return true;
+  return listMeasGeometry().some(g=>measHits(g,{id:MSEL.id})&&measHits(g,{id}));
+}
 function selectMeas(id,scroll){
+  if(measSame(id)){clearMeas();return;}
   const geoms=listMeasGeometry().filter(g=>measHits(g,{id}));
   const row=document.getElementById('meas-'+id)||document.querySelector('#pg-measurements .mrow[data-mid="'+CSS.escape(id)+'"]');
   MSEL={id,fit:true};
@@ -881,6 +897,14 @@ function initMeasMap(){
         if(on&&on.classList.contains('on')) refreshNadirMap(MMAP);
       });
     }
+    if(stage&&!stage._measDeselect){
+      stage._measDeselect=true;
+      stage.addEventListener('click',e=>{
+        if(!MMAP||MMAP.moved>6) return;
+        if(e.target.closest('button,a,.mfeat,.mpt,[data-mid]')) return;
+        if(MSEL) clearMeas();
+      });
+    }
   }
   drawMeasOverlays();
   if(MSEL&&MSEL.fit) fitMeasView(measFitPts(MSEL.id));
@@ -891,6 +915,7 @@ function syncMeasHighlight(){
   const s=Math.max(MMAP.s,0.05);
   const svg=document.getElementById(MMAP.svgId); if(!svg) return;
   svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  svg.querySelectorAll('.mln-hit').forEach(el=>el.setAttribute('stroke-width',String(12/s)));
   svg.querySelectorAll('.mln-halo.sel').forEach(el=>el.setAttribute('stroke-width',String(7/s)));
   svg.querySelectorAll('.mln-halo:not(.sel)').forEach(el=>el.setAttribute('stroke-width',String(4/s)));
   svg.querySelectorAll('.mln.hl').forEach(el=>el.setAttribute('stroke-width',String(3/s)));
@@ -925,14 +950,16 @@ function drawMeasOverlays(){
   let h='';
   const M=D.map;
   if(M&&M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
-  const unsel=geoms.filter(g=>!measHits(g,{id:sel}));
   const chosen=geoms.filter(g=>measHits(g,{id:sel}));
+  const unsel=sel?[]:geoms;
   const drawLine=(g,hl)=>{
     const col=hl?'#ffd43b':'#74c0fc';
     const halo=hl?'#fff':'#111';
     const d=g.pts.map(p=>p[0]+','+p[1]).join(' ');
+    h+=`<g class="mfeat${hl?' hl':''}" data-mid="${esc(g.id)}">`;
+    h+=`<polyline class="mln-hit" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="transparent" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>`;
     h+=`<polyline class="mln-halo${hl?' sel':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${halo}" stroke-opacity="${hl?1:.8}" stroke-width="${hl?7:4}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>`;
-    h+=`<polyline class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${col}" stroke-width="${hl?3:2}" stroke-linecap="round" stroke-linejoin="round"><title>${esc(g.label||g.id)}</title></polyline>`;
+    h+=`<polyline class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${col}" stroke-width="${hl?3:2}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"><title>${esc(g.label||g.id)}</title></polyline>`;
     const a=g.pts[0], b=g.pts[g.pts.length-1];
     h+=`<circle class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" cx="${a[0]}" cy="${a[1]}" r="4" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
     h+=`<circle class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" cx="${b[0]}" cy="${b[1]}" r="4" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
@@ -941,11 +968,13 @@ function drawMeasOverlays(){
       const lab=[g.label, g.value?`${g.value}${g.unit?' '+g.unit:''}`:''].filter(Boolean).join(' · ');
       h+=`<text class="mlbl" data-mid="${esc(g.id)}" x="${mid[0]}" y="${mid[1]-8}" data-base-y="${mid[1]}" data-dy="-8" text-anchor="middle" fill="${hl?'#fff': '#f8f9fa'}">${esc(lab)}</text>`;
     }
+    h+='</g>';
   };
   const drawArea=(g,hl)=>{
     const col=hl?'#ffd43b':'#ff922b';
     const halo=hl?'#fff':'#111';
     const d=measPolyPts(g.pts);
+    h+=`<g class="mfeat${hl?' hl':''}" data-mid="${esc(g.id)}">`;
     h+=`<polygon class="marea-halo${hl?' sel':''}" data-mid="${esc(g.id)}" points="${d}" fill="none" stroke="${halo}" stroke-opacity="${hl?1:.8}" stroke-width="${hl?5:3.2}" stroke-linejoin="round" pointer-events="none"/>`;
     h+=`<polygon class="marea${hl?' hl':''}" data-mid="${esc(g.id)}" points="${d}" fill="${col}" stroke="${col}" stroke-width="${hl?3:2}" stroke-linejoin="round"><title>${esc(g.label||g.id)}</title></polygon>`;
     if(g.label||g.value){
@@ -954,11 +983,12 @@ function drawMeasOverlays(){
       const lab=[g.label, g.value?`${g.value}${g.unit?' '+g.unit:''}`:''].filter(Boolean).join(' · ');
       h+=`<text class="mlbl" data-mid="${esc(g.id)}" x="${cx}" y="${cy}" data-base-y="${cy}" data-dy="0" text-anchor="middle" fill="#fff">${esc(lab)}</text>`;
     }
+    h+='</g>';
   };
   const drawPt=(g,hl)=>{
     const col=hl?'#ffd43b':'#fab005';
     const [x,y]=g.px;
-    h+=`<g class="mpt${hl?' hl':''}" data-mid="${esc(g.id)}" data-tip="${esc(g.title||g.label||g.id)}">`;
+    h+=`<g class="mfeat mpt${hl?' hl':''}" data-mid="${esc(g.id)}" data-tip="${esc(g.title||g.label||g.id)}">`;
     h+=`<circle class="halo" cx="${x}" cy="${y}" r="9" fill="${col}" fill-opacity="0" stroke="${hl?'#fff':'#fff'}" stroke-width="1.3"/>`;
     h+=`<circle cx="${x}" cy="${y}" r="5.5" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
     if(g.label) h+=`<text class="mlbl" x="${x}" y="${y}" data-base-y="${y}" data-dy="-12" text-anchor="middle" fill="#fff">${esc(g.label)}</text>`;
@@ -1360,11 +1390,14 @@ function showDevicePins(){
 }
 function devicePoints(){
   if(!showDevicePins()) return [];
-  const selOnly=ATYPE!=='Devices'&&ASEL&&isDeviceAsset(findAsset(ASEL.id));
+  if(ASEL&&ASEL.id){
+    const a=findAsset(ASEL.id);
+    if(!isDeviceAsset(a)||!a.px||a.px.length<2) return [];
+    return [{id:a.id,tip:(a.name||a.label||a.id),px:a.px,color:TYPECOL[a.kind]||TYPECOL[a.type]||TYPECOL[a.class]||'#4dabf7'}];
+  }
   const out=[];
   allAssetEntries().forEach(a=>{
     if(!isDeviceAsset(a)||!a.px||a.px.length<2) return;
-    if(selOnly&&a.id!==ASEL.id) return;
     out.push({id:a.id,tip:(a.name||a.label||a.id),px:a.px,color:TYPECOL[a.kind]||TYPECOL[a.type]||TYPECOL[a.class]||'#4dabf7'});
   });
   return out;
@@ -1427,6 +1460,14 @@ function initAssetMap(){
         if(on&&on.classList.contains('on')) refreshNadirMap(AMAP);
       });
     }
+    if(stage&&!stage._assetDeselect){
+      stage._assetDeselect=true;
+      stage.addEventListener('click',e=>{
+        if(!AMAP||AMAP.moved>6) return;
+        if(e.target.closest('button,a,.rgn,.pt,[data-rid],[data-id]')) return;
+        if(ASEL) clearAsset();
+      });
+    }
   }
   drawAssetOverlays();
   const pts=ASEL&&ASEL.fit&&ASEL.pts;
@@ -1460,8 +1501,8 @@ function drawAssetOverlays(){
   const sel=new Set((ASEL&&ASEL.rids)||[]);
   const all=REGS?regionPolysPx(REGS):[];
   const polys=force.size?all.filter(p=>force.has(p.id)):[];
-  const unsel=polys.filter(p=>!sel.has(p.id));
   const chosen=polys.filter(p=>sel.has(p.id));
+  const unsel=(ASEL&&(ASEL.id||ASEL.group||sel.size))?[]:polys.filter(p=>!sel.has(p.id));
   unsel.forEach(p=>{
     const st=unselectedOutlineStyle(p.cls);
     h+=`<path class="rgn-halo unsel" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${st.halo}" stroke-opacity="${st.haloOp}" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd"></path>`;
@@ -1531,7 +1572,15 @@ function applyAssetSelection(){
     }
   }
 }
+function clearAsset(){
+  ASEL=null;
+  setAmapStatus('');
+  document.querySelectorAll('#pg-assets .regitem').forEach(r=>r.classList.remove('sel'));
+  document.querySelectorAll('#pg-assets details.vendors').forEach(d=>d.classList.remove('sel'));
+  drawAssetMap({resetView:true});
+}
 function selectAsset(id,scroll){
+  if(ASEL&&!ASEL.group&&ASEL.id===id){clearAsset();return;}
   if(id==='property-facts'){
     ASEL=null;
     document.querySelectorAll('#pg-assets .regitem').forEach(r=>r.classList.remove('sel'));
