@@ -81,8 +81,8 @@
   }
   function isNewTabUnlockHref(href) {
     if (!href) return false;
-    try { return /(model3d|cameras|zones)\.html$/i.test(new URL(href, location.href).pathname); }
-    catch (e) { return /(model3d|cameras|zones)\.html/i.test(String(href)); }
+    try { return /(model3d|cameras|zones|nearmap-review)\.html$/i.test(new URL(href, location.href).pathname); }
+    catch (e) { return /(model3d|cameras|zones|nearmap-review)\.html/i.test(String(href)); }
   }
   function onNewTabUnlockNavigate(ev) {
     var a = ev.target && ev.target.closest ? ev.target.closest('a[href]') : null;
