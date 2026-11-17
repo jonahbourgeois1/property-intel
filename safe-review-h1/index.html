@@ -654,7 +654,21 @@ function rMeas(){
 }
 const TYPECOL={house:'#ff922b',garage:'#ff922b',building:'#ff922b',chimney:'#ff922b','solar panels':'#ffd43b',patio:'#74c0fc',deck:'#74c0fc',walkway:'#74c0fc',pergola:'#74c0fc','fire pit':'#ff6b6b','parking area':'#adb5bd',driveway:'#adb5bd',track:'#adb5bd',court:'#4dabf7',fence:'#e599f7',wall:'#e599f7',hedge:'#8ce99a',pool:'#3bc9db',lawn:'#8ce99a',garden:'#8ce99a','tree cluster':'#51cf66',woodland:'#51cf66',vehicle:'#ced4da','cannot tell':'#fa5252',camera:'#4dabf7','alarm zone':'#748ffc',Camera:'#4dabf7','Alarm zone':'#748ffc'};
 /* Same class colours as the region editor (nearmap-review v1.7.18). */
-function classColor(name){const f={Building:'#e85d04','Building (Deprecated)':'#9d0208',Roof:'#dc2f02','Translucent Roofing':'#f48c06',Driveway:'#f72585',Asphalt:'#495057','Road (Driveable Surface)':'#343a40','Concrete Slab':'#adb5bd','Solar Panel':'#3a86ff','Swimming Pool':'#4cc9f0','Water Body':'#0077b6','Residential Chimney':'#7b2cbf',Skylight:'#ffd166','Woody Vegetation':'#2d6a4f','Medium and High Vegetation (>2m)':'#40916c','Medium and High Vegetation with Woody Vegetation':'#1b4332','Low Vegetation (0.5m-2m)':'#74c69d','Very Low Vegetation (<0.5m)':'#95d5b2','Lawn Grass':'#52b788','Natural (soft)':'#b7e4c7'};
+const CLASS_REMAP={
+  'Motor court':'Driveway','Solar array':'Solar Panel','Pergola':'Pergola / gazebo','Retaining wall':'Wall','Fire feature':'Fire Pit',
+  'Pool':'Swimming Pool','pool':'Swimming Pool','Solar panels':'Solar Panel','Tennis court':'Tennis Court','Deck':'Wooden Decking',
+  'Fire pit':'Fire Pit','Vehicle':'Car','Shipping container':'Shipping Container'
+};
+const CLASS_REMAP_LC=Object.create(null);
+Object.keys(CLASS_REMAP).forEach(k=>{CLASS_REMAP_LC[k.toLowerCase()]=CLASS_REMAP[k];});
+function canonicalClass(name){
+  if(!name) return name;
+  if(CLASS_REMAP[name]) return CLASS_REMAP[name];
+  return CLASS_REMAP_LC[String(name).toLowerCase()]||name;
+}
+function classColor(name){
+  name=canonicalClass(name);
+  const f={Building:'#e85d04','Building (Deprecated)':'#9d0208',Roof:'#dc2f02','Translucent Roofing':'#f48c06',Driveway:'#f72585',Asphalt:'#495057','Road (Driveable Surface)':'#343a40','Concrete Slab':'#adb5bd','Solar Panel':'#3a86ff','Swimming Pool':'#4cc9f0','Water Body':'#0077b6','Residential Chimney':'#7b2cbf',Skylight:'#ffd166','Woody Vegetation':'#2d6a4f','Medium and High Vegetation (>2m)':'#40916c','Medium and High Vegetation with Woody Vegetation':'#1b4332','Low Vegetation (0.5m-2m)':'#74c69d','Very Low Vegetation (<0.5m)':'#95d5b2','Lawn Grass':'#52b788','Natural (soft)':'#b7e4c7','Tennis Court':'#20c997','Wooden Decking':'#d9480f','Fire Pit':'#c92a2a',Car:'#1971c2',Boat:'#0c8599',Trailer:'#1864ab',Dumpster:'#5c5f66','Shipping Container':'#2b8a3e',Playground:'#f59f00',Trampoline:'#fd7e14','Unmaintained Swimming Pool':'#15aabf'};
   if(f[name])return f[name];let h=0;for(let i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);return 'hsl('+(Math.abs(h)%360)+', 62%, 46%)';}
 const REG_GROUPS=[
   ['Roof & buildings',c=>/roof|building|tile|solar/i.test(c),true,'#dc2f02'],
@@ -715,7 +729,7 @@ function regionPolysPx(fc){
   const b=D.cam_ctx.bounds,W=D.cam_ctx.img.w,H=D.cam_ctx.img.h;
   const px=p=>[(p[0]-b.west)/(b.east-b.west)*W,(b.north-p[1])/(b.north-b.south)*H];
   const out=[];(fc.features||[]).forEach(f=>{const g=f.geometry||{};const polys=g.type==='Polygon'?[g.coordinates]:g.type==='MultiPolygon'?g.coordinates:[];
-    const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
+    const cls=canonicalClass((f.properties&&(f.properties['class']||f.properties.description))||'Unknown');
     polys.forEach(poly=>{
       const rings=poly.map(r=>(r||[]).map(p=>px(p)));
       const pts=rings.reduce((a,r)=>a.concat(r),[]);
@@ -815,7 +829,7 @@ function rAssets(){
   };
   const showClass=a=>{
     const lab=assetLabel(a).trim().toLowerCase();
-    const cls=assetClass(a).trim().toLowerCase();
+    const cls=String(canonicalClass(assetClass(a))||'').trim().toLowerCase();
     return cls&&lab!==cls;
   };
   const factLine=a=>{
@@ -830,8 +844,8 @@ function rAssets(){
   };
   const itemRow=a=>{
     const lab=assetLabel(a);
-    const cls=assetClass(a);
-    const col=TYPECOL[a.type]||TYPECOL[a.class]||classColor(cls)||'#999';
+    const cls=canonicalClass(assetClass(a));
+    const col=classColor(cls)||TYPECOL[a.type]||TYPECOL[a.class]||'#999';
     const sz=sizeText(a);
     const devNote=isDev(a)?(a.kind==='camera'?(a.px?'camera pin':(a.status||'camera pin')):(a.status||'alarm zone')):'';
     const meta=[showClass(a)?esc(cls):'',sz?esc(sz):'',devNote?esc(devNote):'',a.needs_trace?'needs trace':'',(a.origin&&a.origin!=='vendor')?esc(a.origin):''].filter(Boolean).join(' · ');
@@ -977,9 +991,10 @@ function syncAssetHighlight(){
   const s=Math.max(AMAP.s,0.05);
   const svg=document.getElementById(AMAP.svgId);
   if(svg){
-    svg.querySelectorAll('.rgn-halo').forEach(el=>el.setAttribute('stroke-width',String(5/s)));
+    svg.querySelectorAll('.rgn-halo.sel').forEach(el=>el.setAttribute('stroke-width',String(5/s)));
+    svg.querySelectorAll('.rgn-halo.unsel').forEach(el=>el.setAttribute('stroke-width',String(3.2/s)));
     svg.querySelectorAll('.rgn.hl').forEach(el=>el.setAttribute('stroke-width',String(3/s)));
-    svg.querySelectorAll('.rgn:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(1.5/s)));
+    svg.querySelectorAll('.rgn:not(.hl)').forEach(el=>el.setAttribute('stroke-width',String(2/s)));
     svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
   }
   const r=5.5/s;
@@ -1049,7 +1064,9 @@ function drawAssetOverlays(){
   const unsel=polys.filter(p=>!sel.has(p.id));
   const chosen=polys.filter(p=>sel.has(p.id));
   unsel.forEach(p=>{
-    h+=`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${classColor(p.cls)}" stroke-width="1.5" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
+    const col=classColor(p.cls);
+    h+=`<path class="rgn-halo unsel" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="#111" stroke-opacity=".8" stroke-width="3.2" stroke-linejoin="round" fill-rule="evenodd"></path>`;
+    h+=`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
   });
   const M=D.map;
   if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
@@ -1060,7 +1077,7 @@ function drawAssetOverlays(){
   // Selected regions last, so the highlight sits above the parcel and other outlines.
   chosen.forEach(p=>{
     const col=classColor(p.cls);
-    h+=`<path class="rgn-halo" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" fill-rule="evenodd"></path>`;
+    h+=`<path class="rgn-halo sel" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" fill-rule="evenodd"></path>`;
     h+=`<path class="rgn hl" data-rid="${esc(p.id)}" d="${p.d}" fill="${col}" fill-opacity=".32" stroke="#ffd43b" stroke-width="3" stroke-linejoin="round" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
   });
   svg.innerHTML=h;
@@ -1308,7 +1325,7 @@ function linkTarget(link){
   if(link.kind==='region'){
     const feat=regionFeat(link.id);
     const pts=[];if(feat) ringsOf(feat).forEach(poly=>poly[0].forEach(p=>pts.push(pxOfLonLat(p[0],p[1]))));
-    return {label:'region '+link.id+(feat?' · '+((feat.properties&&(feat.properties['class']||feat.properties.description))||''):''),pts,rid:String(link.id),ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null};
+    return {label:'region '+link.id+(feat?' · '+canonicalClass((feat.properties&&(feat.properties['class']||feat.properties.description))||''):''),pts,rid:String(link.id),ringsLL:feat?ringsOf(feat).map(poly=>poly[0]):null};
   }
   if(link.kind==='outline'){
     if(link.id==='parcel') return {label:'parcel line',pts:D.map.parcel,ringsLL:[D.cam_ctx.parcel]};
@@ -1553,7 +1570,7 @@ function qMergeRegionClasses(){
   initQly();
   if(!REGS||!REGS.features) return;
   REGS.features.forEach(f=>{
-    const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
+    const cls=canonicalClass((f.properties&&(f.properties['class']||f.properties.description))||'Unknown');
     if(QLY.ai[cls]===undefined) QLY.ai[cls]=true;
   });
   if(QLY.ai.Driveway===undefined) QLY.ai.Driveway=true;
@@ -1566,7 +1583,7 @@ function qClassCounts(){
   if(REGS&&REGS.features){
     const live={};
     REGS.features.forEach(f=>{
-      const cls=(f.properties&&(f.properties['class']||f.properties.description))||'Unknown';
+      const cls=canonicalClass((f.properties&&(f.properties['class']||f.properties.description))||'Unknown');
       live[cls]=(live[cls]||0)+1;
     });
     Object.keys(live).forEach(k=>{counts[k]=live[k];});
