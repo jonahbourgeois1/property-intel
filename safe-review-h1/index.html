@@ -186,6 +186,11 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .chip.on b{color:#cfe3de}
 .assetwrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
 .assetwrap .mapcol{position:sticky;top:20px}
+.amap-zoom{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+.amap-zoom button{border:0;background:transparent;width:34px;height:30px;cursor:pointer;font-size:18px;line-height:1;color:var(--ink);border-right:1px solid var(--line)}
+.amap-zoom button:last-child{border-right:0}
+.amap-zoom button:hover{background:#f4f2ee}
+#amap .qnorth{pointer-events:none}
 .atbl{table-layout:fixed}
 .atbl .tag{white-space:normal;text-align:right;display:inline-block;margin:2px 0}
 .atbl tr{cursor:pointer}
@@ -292,6 +297,7 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .qnorth{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;z-index:2;pointer-events:none}
 .qnorth i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:translateX(-50%)}
 .qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em}
+.amap-stage.qmap-stage,#amap.amap-stage{height:min(64vh,560px);min-height:420px;border-radius:var(--r);flex:none}
 .qmap-status{position:absolute;left:12px;bottom:12px;z-index:2;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:3px 9px;border-radius:999px;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q3wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c4d0cb;background:#1b1f1d;z-index:1;padding:24px;text-align:center}
 .qside{overflow:auto;padding:22px 26px 48px;background:var(--bg);min-width:0}
@@ -461,6 +467,7 @@ function route(){
   document.querySelectorAll('section.page').forEach(s=>s.classList.toggle('on',s.id==='pg-'+key));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
   if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
+  if(key==='assets') refreshNadirMap(AMAP);
   if(target&&key==='assets'){if(target.startsWith('asset-')){const rid='asset-'+resolveAssetId(target.slice(6));target=rid;}if(ATYPE!=='all'){const all=document.querySelector('#achips .chip[data-t=all]');if(all)all.click();}}
   if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){let d=el.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);}}
   else window.scrollTo(0,0);
@@ -658,7 +665,7 @@ function classGroupIndex(cls){
   for(let i=0;i<REG_GROUPS.length-1;i++) if(REG_GROUPS[i][1](cls)) return i;
   return REG_GROUPS.length-1;
 }
-let ATYPE='all',REGS=null,REGSRC='',ASEL=null,AVEND=Object.create(null);
+let ATYPE='all',REGS=null,REGSRC='',ASEL=null,AVEND=Object.create(null),AMAP=null,ACROP='house';
 const AOPEN_DEFAULT='Buildings and roof';
 const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
 function allAssetEntries(){
@@ -847,7 +854,7 @@ function rAssets(){
     return `<details class="regcat" data-cat="${esc(c)}" data-t="${esc(c)}"${open}><summary>${esc(c)}<span class="n">${rows.length}</span></summary><div class="reglist">${body}</div></details>`;
   }).join('');
   h+=`<div class="assetwrap mt"><div class="card regpanel">${blocks}</div>
-<div class="mapcol"><div class="maptools"><div class="seg" data-seg="as"><button data-crop="house" class="on">House</button><button data-crop="parcel">Parcel</button></div></div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote"></div><div id="amap-status" class="small"></div></div></div>`;
+<div class="mapcol"><div class="maptools"><div class="seg" data-seg="as"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div><div class="amap-zoom"><button type="button" id="amap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="amap-zout" title="Zoom out" aria-label="Zoom out">−</button></div></div><div class="qmap-stage amap-stage" id="amap"><div id="a2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div></div><div class="small muted" style="margin-top:8px" id="regnote"></div><div id="amap-status" class="small"></div></div></div>`;
   h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
   const pfs=A.property_facts||D.property_facts||[];
   if(pfs.length){
@@ -863,15 +870,23 @@ function rAssets(){
     });
   }
   applyChipFilter();
-  drawAssetMap();
-  loadRegions().then(()=>drawAssetMap());
+  initAssetMap();
   el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{
     ATYPE=c.dataset.t;
     ASEL=null;
     setAmapStatus('');
     applyChipFilter();
-    drawAssetMap();
+    drawAssetMap({resetView:true});
   });
+  el.querySelectorAll('[data-seg=as] [data-crop]').forEach(b=>b.onclick=()=>{
+    ACROP=b.dataset.crop;
+    b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    if(ASEL) ASEL.fit=false;
+    if(AMAP){AMAP._user=false;scheduleNadirFit(AMAP,ACROP);}
+  });
+  const zin=el.querySelector('#amap-zin'), zout=el.querySelector('#amap-zout');
+  if(zin) zin.onclick=()=>zoomNadirCenter(AMAP,1.2);
+  if(zout) zout.onclick=()=>zoomNadirCenter(AMAP,1/1.2);
   el.querySelectorAll('.regcat').forEach(d=>d.addEventListener('toggle',()=>{if(!ASEL) drawAssetMap();}));
   el.querySelectorAll('details.vendors').forEach(d=>{
     d.addEventListener('toggle',()=>{AVEND[d.dataset.vkey]=d.open;});
@@ -905,15 +920,11 @@ function setAmapStatus(msg,warn){
   el.className='small'+(warn?' warn':'');
   el.textContent=msg||'';
 }
-function fitMapToPts(box,pts){
-  if(!box||!pts||!pts.length) return;
-  let minx=Infinity,miny=Infinity,maxx=-Infinity,maxy=-Infinity;
-  pts.forEach(p=>{const x=p[0],y=p[1];if(!isFinite(x)||!isFinite(y))return;minx=Math.min(minx,x);miny=Math.min(miny,y);maxx=Math.max(maxx,x);maxy=Math.max(maxy,y);});
-  if(!isFinite(minx)) return;
-  const span=Math.max(maxx-minx,maxy-miny,24);
-  const pad=Math.max(span*0.35,28);
-  const w=Math.max(maxx-minx,24)+pad*2, h=Math.max(maxy-miny,24)+pad*2;
-  const svg=box.querySelector('svg');if(svg) svg.setAttribute('viewBox',[minx-pad,miny-pad,w,h].join(' '));
+function fitAssetView(pts){
+  if(!AMAP) return;
+  AMAP._user=false;
+  if(pts&&pts.length){AMAP._fit={pts};fitNadirBounds(AMAP,pts);}
+  else {AMAP._fit=ACROP;fitNadirMap(AMAP,ACROP);}
 }
 function isDeviceAsset(a){
   return !!(a&&(a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices'));
@@ -948,63 +959,95 @@ function visibleOutlineIds(){
   });
   return {ids:[...new Set(ids)],filled:false};
 }
-function restyleParcel(box){
-  const par=box.querySelector('.ly-parcel');if(!par)return;
-  const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
-  const sw=(D.map.crop[crop][2]/700);
-  par.setAttribute('stroke-width',String(1.05*sw));
-  par.setAttribute('stroke-opacity','0.4');
-  par.setAttribute('stroke','#efe39a');
-}
-function syncPinSize(box){
-  const svg=box.querySelector('svg');if(!svg)return;
-  const vb=svg.viewBox.baseVal;
-  const w=box.getBoundingClientRect().width||700;
-  const r=Math.max(vb.width,1)/Math.max(w,1)*5.5;
-  box.querySelectorAll('#amap .pt circle:not(.halo), .pt circle:not(.halo)').forEach(c=>{
-    if(c.closest&&!c.closest('#amap')&&box.id!=='amap') return;
+function syncAssetPins(){
+  if(!AMAP) return;
+  const box=document.getElementById(AMAP.stageId); if(!box) return;
+  const r=5.5/Math.max(AMAP.s,0.05);
+  box.querySelectorAll('.pt circle:not(.halo)').forEach(c=>{
     c.setAttribute('r',r);
-    c.setAttribute('stroke-width',String(Math.max(r*0.22, vb.width/w*1)));
+    c.setAttribute('stroke-width',String(Math.max(r*0.22,1/Math.max(AMAP.s,0.05))));
   });
   box.querySelectorAll('.pt .halo').forEach(c=>c.setAttribute('r',r*1.65));
 }
-function drawAssetMap(){
-  const box=document.getElementById('amap');if(!box)return;
-  const crop=document.querySelector('[data-seg=as] .on')?.dataset.crop||'house';
+function initAssetMap(){
+  const host=document.getElementById('a2d'), stage=document.getElementById('amap');
+  if(!host||!stage) return;
+  if(!AMAP||!document.getElementById('a2inner')){
+    AMAP=createNadirMap({
+      hostId:'a2d', stageId:'amap', prefix:'a2',
+      defaultFit:'house',
+      markUserOnPan:true,
+      onApply(){ syncAssetPins(); }
+    });
+    if(!window._a2rz){
+      window._a2rz=true;
+      window.addEventListener('resize',()=>{
+        const on=document.getElementById('pg-assets');
+        if(on&&on.classList.contains('on')) refreshNadirMap(AMAP);
+      });
+    }
+  }
+  drawAssetOverlays();
+  const pts=ASEL&&ASEL.fit&&ASEL.pts;
+  if(pts) fitAssetView(pts);
+  else scheduleNadirFit(AMAP, ACROP);
+  loadRegions().then(()=>{
+    drawAssetOverlays();
+    if(ASEL&&ASEL.fit&&ASEL.pts) fitAssetView(ASEL.pts);
+    else if(AMAP&&!AMAP._user) scheduleNadirFit(AMAP, ACROP);
+  });
+}
+function drawAssetMap(opts){
+  opts=opts||{};
+  if(!AMAP||!document.getElementById('a2inner')){ initAssetMap(); return; }
+  drawAssetOverlays();
+  if(opts.resetView){
+    const pts=ASEL&&ASEL.fit&&ASEL.pts;
+    if(pts) fitAssetView(pts);
+    else fitAssetView(null);
+  } else if(ASEL&&ASEL.fit&&ASEL.pts){
+    fitAssetView(ASEL.pts);
+    ASEL.fit=false;
+  }
+}
+function drawAssetOverlays(){
+  const svg=AMAP&&document.getElementById(AMAP.svgId); if(!svg) return;
   const vis=visibleOutlineIds();
   const force=new Set(vis.ids||[]);
   const points=devicePoints();
-  const sw=(D.map.crop[crop][2]/700);
-  let svg=mapSVG({crop,scale:true,layers:{parcel:true},points,pr:4});
+  const sw=2;
+  let h='';
   if(REGS){
     const all=regionPolysPx(REGS);
     const polys=force.size?all.filter(p=>force.has(p.id)):[];
     const fillOp=vis.filled?'.20':'0';
-    const strokeW=(vis.filled?1.9:1.15)*sw;
-    const g='<g class="regs">'+polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${fillOp}" stroke="${classColor(p.cls)}" stroke-width="${strokeW}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('')+'</g>';
-    const k=svg.indexOf('<polygon class="ly-parcel"');svg=k>0?svg.slice(0,k)+g+svg.slice(k):svg;
+    const strokeW=vis.filled?3.2:2;
+    h+=polys.map(p=>`<path class="rgn" data-rid="${esc(p.id)}" d="${p.d}" fill="${classColor(p.cls)}" fill-opacity="${fillOp}" stroke="${classColor(p.cls)}" stroke-width="${strokeW}" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`).join('');
     const rn=document.getElementById('regnote');
     if(rn) rn.innerHTML='Preview of the '+esc(REGSRC)+' file. Edit outlines in the <a href="'+editorUrl()+'" target="_blank" rel="noopener">region editor</a>.';
   } else {
     const rn=document.getElementById('regnote');
     if(rn) rn.textContent='Regions file not reachable from this page. Open it through the local server.';
   }
-  box.innerHTML=svg;
-  restyleParcel(box);
-  wireTools(document.getElementById('pg-assets'),box);
-  document.querySelectorAll('[data-seg=as] [data-crop]').forEach(b=>{
-    const prev=b.onclick;
-    b.onclick=()=>{ASEL&&(ASEL.fit=false);if(prev)prev.call(b);syncPinSize(box);restyleParcel(box);};
+  const M=D.map;
+  if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.4" stroke-width="2.2"/>`;
+  points.forEach(p=>{
+    h+=`<g class="pt" data-id="${esc(p.id)}" data-tip="${esc(p.tip)}" style="cursor:pointer"><circle cx="${p.px[0]}" cy="${p.px[1]}" r="8" fill="${p.color}" fill-opacity="0" class="halo"/><circle cx="${p.px[0]}" cy="${p.px[1]}" r="5.5" fill="${p.color}" stroke="#fff" stroke-width="1.4"/></g>`;
   });
-  box.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',()=>{
+  svg.innerHTML=h;
+  const box=document.getElementById('amap');
+  const ignoreDrag=()=>AMAP&&AMAP.moved>6;
+  svg.querySelectorAll('.rgn').forEach(p=>p.addEventListener('click',e=>{
+    if(ignoreDrag()) return;
+    e.stopPropagation();
     const rid=p.dataset.rid;
     const rows=[...document.querySelectorAll('#pg-assets .regitem[data-id]')].filter(r=>(r.dataset.regions||'').split(/\s+/).includes(rid)||r.dataset.id===rid);
     if(rows[0]) selectAsset(rows[0].dataset.id,true);
     else {ASEL={id:rid,rids:[rid],fit:true,pts:null};drawAssetMap();}
   }));
-  wireMap(box,id=>selectAsset(id,true));
+  if(box) wireMap(box,id=>{if(!ignoreDrag()) selectAsset(id,true);});
   applyAssetSelection();
-  syncPinSize(box);
+  syncAssetPins();
 }
 function revealAssetRow(id){
   const r=document.getElementById('asset-'+id);
@@ -1035,7 +1078,7 @@ function applyAssetSelection(){
         const pin=box.querySelector('.pt.hl')||(rids.size?null:box.querySelector('.pt'));
         if(pin){const c=pin.querySelector('circle:not(.halo)')||pin.querySelector('circle');if(c)pts.push([+c.getAttribute('cx'),+c.getAttribute('cy')]);}
       }
-      if(pts.length) fitMapToPts(box,pts);
+      if(pts.length){fitAssetView(pts);if(ASEL)ASEL.fit=false;}
     }
   }
 }
@@ -1043,9 +1086,8 @@ function selectAsset(id,scroll){
   if(id==='property-facts'){
     ASEL=null;
     document.querySelectorAll('#pg-assets .regitem').forEach(r=>r.classList.remove('sel'));
-    const box=document.getElementById('amap');
-    if(box){box.querySelectorAll('.rgn,.pt').forEach(x=>x.classList.remove('hl'));}
     setAmapStatus('Property facts have no map geometry — they are records attached here rather than a drawn region.',true);
+    drawAssetOverlays();
     const pf=document.getElementById('property-facts');if(pf&&scroll!==false)pf.scrollIntoView({block:'center',behavior:'smooth'});
     return;
   }
@@ -1268,40 +1310,175 @@ function setQMode(m){
   if(m==='3d')ensureQ3().then(()=>{if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();}});
   else {if(QSEL)showQ(QSEL);else scheduleFitQ2();}
 }
-function stageSize(){
-  const st=document.getElementById('qstage');
-  if(!st)return {w:0,h:0,st:null};
-  const r=st.getBoundingClientRect();
-  return {w:st.clientWidth||r.width||0,h:st.clientHeight||r.height||0,st:st};
+function nadirCropPts(which){
+  const M=D.map;
+  if(which==='parcel'&&M.parcel&&M.parcel.length) return M.parcel;
+  const c=M.crop&&M.crop[which];
+  if(c&&c.length>=4) return [[c[0],c[1]],[c[0]+c[2],c[1]],[c[0]+c[2],c[1]+c[3]],[c[0],c[1]+c[3]]];
+  return null;
 }
-function scheduleFitQ2(which){
-  if(which) QFIT=which;
-  if(!QMAP) return;
-  if(QMAP._user && !which) return;
+function createNadirMap(cfg){
+  const host=document.getElementById(cfg.hostId), stage=document.getElementById(cfg.stageId);
+  if(!host||!stage) return null;
+  const M=D.map, prefix=cfg.prefix||cfg.hostId;
+  const innerId=prefix+'inner', imgId=prefix+'img', svgId=prefix+'svg';
+  host.innerHTML=`<div class="q2inner" id="${innerId}" style="width:${M.w}px;height:${M.h}px"><img id="${imgId}" alt="Nadir 2 Jul 2026" draggable="false"><svg id="${svgId}" viewBox="0 0 ${M.w} ${M.h}" preserveAspectRatio="none"></svg></div>`;
+  const img=document.getElementById(imgId); if(img) img.src=URLS.nadir||'';
+  const map={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h,_user:false,pointers:new Map(),moved:0,cfg:cfg,prefix,innerId,imgId,svgId,hostId:cfg.hostId,stageId:cfg.stageId,_fit:cfg.defaultFit||'parcel'};
+  wireNadirMap(map);
+  if(cfg.observe!==false) observeNadirMap(map);
+  return map;
+}
+function nadirActive(map){return !map.cfg.active||map.cfg.active();}
+function nadirStageSize(map){
+  const st=document.getElementById(map&&map.stageId); if(!st) return {w:0,h:0,st:null};
+  const r=st.getBoundingClientRect();
+  return {w:st.clientWidth||r.width||0,h:st.clientHeight||r.height||0,st};
+}
+function applyNadirMap(map){
+  if(!map) return;
+  const el=document.getElementById(map.innerId); if(!el) return;
+  el.style.transform=`translate(${map.tx}px,${map.ty}px) scale(${map.s})`;
+  if(map.cfg.onApply) map.cfg.onApply(map);
+}
+function fitNadirMap(map,which){
+  const {w,h,st}=nadirStageSize(map); if(!st||!map) return false;
+  if(w<80||h<80){scheduleNadirFit(map,which||map._fit||'parcel');return false;}
+  const pts=typeof which==='string'?nadirCropPts(which):null;
+  if(pts&&pts.length) return fitNadirBounds(map,pts);
+  const M=D.map;
+  map.s=Math.min(w/M.w,h/M.h); map.tx=(w-M.w*map.s)/2; map.ty=(h-M.h*map.s)/2;
+  applyNadirMap(map); return true;
+}
+function fitNadirBounds(map,pts){
+  const {w,h,st}=nadirStageSize(map); if(!st||!map||!pts||!pts.length) return false;
+  if(w<80||h<80){scheduleNadirFit(map,{pts:pts});return false;}
+  const [x0,y0,x1,y1]=boundsOfPx(pts);
+  const pad=Math.max(20,(x1-x0)*0.18,(y1-y0)*0.18);
+  const bx0=x0-pad,by0=y0-pad,bx1=x1+pad,by1=y1+pad;
+  map.s=Math.min(24,Math.max(0.15,Math.min(w/(bx1-bx0),h/(by1-by0))));
+  map.tx=(w-(bx0+bx1)*map.s)/2; map.ty=(h-(by0+by1)*map.s)/2;
+  applyNadirMap(map); return true;
+}
+function scheduleNadirFit(map,which){
+  if(!map) return;
+  if(which) map._fit=which;
+  if(map._user && !which) return;
   let tries=0;
   const run=()=>{
-    if(!QMAP) return;
-    if(QMAP._user && QFIT==='parcel') return;
-    const {w,h}=stageSize();
-    if(w<80||h<80){
-      if(++tries<60) requestAnimationFrame(run);
-      return;
-    }
-    if(QFIT && QFIT.pts) fitQ2Bounds(QFIT.pts);
-    else fitQ2(typeof QFIT==='string'?QFIT:'parcel');
+    if(!map) return;
+    if(map._user && map._fit==='parcel') return;
+    if(map._user && typeof map._fit==='string') return;
+    const {w,h}=nadirStageSize(map);
+    if(w<80||h<80){if(++tries<60) requestAnimationFrame(run);return;}
+    if(map._fit&&map._fit.pts) fitNadirBounds(map,map._fit.pts);
+    else fitNadirMap(map, typeof map._fit==='string'?map._fit:(map.cfg.defaultFit||'parcel'));
   };
   requestAnimationFrame(()=>requestAnimationFrame(run));
   setTimeout(run,50);setTimeout(run,200);setTimeout(run,500);
 }
-let QFIT='parcel';
+function zoomNadir(map,cx,cy,fac){
+  if(!map) return;
+  const s2=Math.min(24,Math.max(0.15,map.s*fac));
+  const wx=(cx-map.tx)/map.s, wy=(cy-map.ty)/map.s;
+  map.s=s2; map.tx=cx-wx*s2; map.ty=cy-wy*s2;
+  applyNadirMap(map);
+}
+function zoomNadirCenter(map,fac){
+  const {w,h,st}=nadirStageSize(map); if(!st) return;
+  map._user=true;
+  zoomNadir(map,w/2,h/2,fac);
+}
+function wireNadirMap(map){
+  const st=document.getElementById(map.stageId); if(!st||st._nadirWired) return;
+  st._nadirWired=true;
+  st.addEventListener('wheel',e=>{
+    if(!nadirActive(map)) return;
+    e.preventDefault();
+    map._user=true;
+    const r=st.getBoundingClientRect();
+    zoomNadir(map,e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);
+  },{passive:false});
+  st.addEventListener('pointerdown',e=>{
+    if(!nadirActive(map)||e.button!==0) return;
+    if(e.target.closest('button,a,input,label,.qly-btn,#qly-panel')) return;
+    st.setPointerCapture(e.pointerId);
+    map.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    map.moved=0;
+    if(map.pointers.size===1){
+      map.drag=true; map.lx=e.clientX; map.ly=e.clientY; st.classList.add('drag');
+    }
+  });
+  st.addEventListener('pointermove',e=>{
+    if(!nadirActive(map)||!map.pointers.has(e.pointerId)) return;
+    if(map.pointers.size>=2){
+      const ids=[...map.pointers.keys()];
+      const prev=ids.map(id=>map.pointers.get(id));
+      map.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+      const cur=ids.map(id=>map.pointers.get(id));
+      const mid0=[(prev[0].x+prev[1].x)/2,(prev[0].y+prev[1].y)/2];
+      const mid1=[(cur[0].x+cur[1].x)/2,(cur[0].y+cur[1].y)/2];
+      const d0=Math.hypot(prev[0].x-prev[1].x,prev[0].y-prev[1].y)||1;
+      const d1=Math.hypot(cur[0].x-cur[1].x,cur[0].y-cur[1].y)||1;
+      const r=st.getBoundingClientRect();
+      map._user=true; map.drag=false; map.moved+=Math.hypot(e.clientX-map.lx||0,e.clientY-map.ly||0);
+      map.tx+=mid1[0]-mid0[0]; map.ty+=mid1[1]-mid0[1];
+      zoomNadir(map,mid1[0]-r.left,mid1[1]-r.top,d1/d0);
+      return;
+    }
+    if(!map.drag) return;
+    const dx=e.clientX-map.lx, dy=e.clientY-map.ly;
+    map.tx+=dx; map.ty+=dy; map.lx=e.clientX; map.ly=e.clientY;
+    map.moved+=Math.hypot(dx,dy);
+    if(map.cfg.markUserOnPan) map._user=true;
+    applyNadirMap(map);
+  });
+  const up=e=>{
+    map.pointers.delete(e.pointerId);
+    if(map.pointers.size===1){
+      const p=[...map.pointers.values()][0];
+      map.drag=true; map.lx=p.x; map.ly=p.y;
+    } else {
+      map.drag=false; st.classList.remove('drag');
+    }
+  };
+  st.addEventListener('pointerup',up);
+  st.addEventListener('pointercancel',up);
+}
+function observeNadirMap(map){
+  const st=document.getElementById(map.stageId); if(!st||st._ro) return;
+  st._ro=new ResizeObserver(()=>{
+    if(!nadirActive(map)) return;
+    const {w,h}=nadirStageSize(map);
+    if(w>=80&&h>=80){ if(map._user) applyNadirMap(map); else scheduleNadirFit(map); }
+  });
+  st._ro.observe(st);
+}
+function refreshNadirMap(map){
+  if(!map) return;
+  const {w,h}=nadirStageSize(map);
+  if(w<80||h<80){ scheduleNadirFit(map); return; }
+  if(map._user) applyNadirMap(map);
+  else if(map._fit&&map._fit.pts) fitNadirBounds(map,map._fit.pts);
+  else scheduleNadirFit(map);
+}
+
+function stageSize(){
+  return nadirStageSize(QMAP||{stageId:'qstage'});
+}
+function scheduleFitQ2(which){
+  if(!QMAP) return;
+  scheduleNadirFit(QMAP, which);
+}
 function initQMap(){
   const stage=document.getElementById('q2d');if(!stage)return;
-  const M=D.map;
-  stage.innerHTML=`<div class="q2inner" id="q2inner" style="width:${M.w}px;height:${M.h}px"><img id="q2img" alt="Nadir 2 Jul 2026" draggable="false"><svg id="q2svg" viewBox="0 0 ${M.w} ${M.h}" preserveAspectRatio="none"></svg></div>`;
-  const img=document.getElementById('q2img');
-  img.src=URLS.nadir||'';
-  QMAP={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h};
-  wireQ2();
+  QMAP=createNadirMap({
+    hostId:'q2d', stageId:'qstage', prefix:'q2',
+    defaultFit:'parcel',
+    observe:false,
+    active:()=>QMODE==='2d',
+    onApply(){ if(typeof drawHydrantCallout==='function') drawHydrantCallout(); }
+  });
   drawQ2();
   scheduleFitQ2('parcel');
   loadRegions().then(()=>{qMergeRegionClasses();buildQlyPanel();drawQ2();if(QSEL)showQ(QSEL);else scheduleFitQ2('parcel');});
@@ -1310,44 +1487,11 @@ function initQMap(){
   if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){const {w,h}=stageSize();if(w>=80&&h>=80){if(QMAP&&QMAP._user)applyQ2();else scheduleFitQ2();}}if(Q3)Q3.resize();});st._ro.observe(st);}
   if(!window._q2rz){window._q2rz=true;window.addEventListener('resize',()=>{if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();});}
 }
-function applyQ2(){const el=document.getElementById('q2inner');if(!el||!QMAP)return;el.style.transform=`translate(${QMAP.tx}px,${QMAP.ty}px) scale(${QMAP.s})`;if(typeof drawHydrantCallout==='function')drawHydrantCallout();}
-function fitQ2(which){
-  const {w,h,st}=stageSize();if(!st||!QMAP)return false;
-  if(w<80||h<80){scheduleFitQ2(which||'parcel');return false;}
-  const M=D.map;let pts=which==='parcel'?M.parcel:null;
-  if(pts&&pts.length)return fitQ2Bounds(pts);
-  QMAP.s=Math.min(w/M.w,h/M.h);QMAP.tx=(w-M.w*QMAP.s)/2;QMAP.ty=(h-M.h*QMAP.s)/2;applyQ2();return true;
-}
-function fitQ2Bounds(pts){
-  const {w,h,st}=stageSize();if(!st||!QMAP||!pts||!pts.length)return false;
-  if(w<80||h<80){scheduleFitQ2({pts:pts});return false;}
-  const [x0,y0,x1,y1]=boundsOfPx(pts);const pad=Math.max(20,(x1-x0)*0.18,(y1-y0)*0.18);
-  const bx0=x0-pad,by0=y0-pad,bx1=x1+pad,by1=y1+pad;
-  QMAP.s=Math.min(24,Math.max(0.15,Math.min(w/(bx1-bx0),h/(by1-by0))));
-  QMAP.tx=(w-(bx0+bx1)*QMAP.s)/2;QMAP.ty=(h-(by0+by1)*QMAP.s)/2;applyQ2();return true;
-}
-function wireQ2(){
-  const st=document.getElementById('qstage');if(!st||st._q2)return;st._q2=true;
-  st.addEventListener('wheel',e=>{
-    if(QMODE!=='2d'||!QMAP)return;e.preventDefault();
-    const r=st.getBoundingClientRect();QMAP._user=true;zoomQ2(e.clientX-r.left,e.clientY-r.top,e.deltaY<0?1.12:1/1.12);
-  },{passive:false});
-  st.addEventListener('pointerdown',e=>{
-    if(QMODE!=='2d'||!QMAP)return;if(e.button!==0)return;
-    QMAP.drag=true;QMAP.lx=e.clientX;QMAP.ly=e.clientY;st.setPointerCapture(e.pointerId);st.classList.add('drag');
-  });
-  st.addEventListener('pointermove',e=>{
-    if(QMODE!=='2d'||!QMAP||!QMAP.drag)return;
-    QMAP.tx+=e.clientX-QMAP.lx;QMAP.ty+=e.clientY-QMAP.ly;QMAP.lx=e.clientX;QMAP.ly=e.clientY;applyQ2();
-  });
-  const up=()=>{if(!QMAP)return;QMAP.drag=false;st.classList.remove('drag');};
-  st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
-}
-function zoomQ2(cx,cy,fac){
-  const s2=Math.min(24,Math.max(0.15,QMAP.s*fac));
-  const wx=(cx-QMAP.tx)/QMAP.s,wy=(cy-QMAP.ty)/QMAP.s;
-  QMAP.s=s2;QMAP.tx=cx-wx*s2;QMAP.ty=cy-wy*s2;applyQ2();
-}
+function applyQ2(){applyNadirMap(QMAP);}
+function fitQ2(which){return fitNadirMap(QMAP, which||'parcel');}
+function fitQ2Bounds(pts){return fitNadirBounds(QMAP, pts);}
+function wireQ2(){if(QMAP) wireNadirMap(QMAP);}
+function zoomQ2(cx,cy,fac){zoomNadir(QMAP,cx,cy,fac);}
 let QLY=null, QLY_OPEN=true, QCAM_PINS=null, QZONE_PINS=null;
 const QSYS_PALETTE=['#4c6ef5','#0ca678','#f08c00','#ae3ec9','#1971c2','#c92a2a'];
 function qSysColor(ref){
