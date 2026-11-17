@@ -436,8 +436,8 @@ function route(){
   document.querySelectorAll('section.page').forEach(s=>s.classList.toggle('on',s.id==='pg-'+key));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
   if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
-  if(target&&key==='assets'&&ATYPE!=='all'){document.querySelector('#achips .chip[data-t=all]').click();}
-  if(target){const el=document.getElementById(target);if(el){const d=el.closest('details');if(d)d.open=true;el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets')selectAsset(target.replace('asset-',''),false);}}
+  if(target&&key==='assets'){if(target.startsWith('asset-')){const rid='asset-'+resolveAssetId(target.slice(6));target=rid;}if(ATYPE!=='all'){const all=document.querySelector('#achips .chip[data-t=all]');if(all)all.click();}}
+  if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){const d=el.closest('details');if(d)d.open=true;el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);}}
   else window.scrollTo(0,0);
 }
 function go(sec,id){location.hash=sec+(id?':'+id:'');}
@@ -617,14 +617,32 @@ function rMeas(){
    <div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${D.caveats.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div></div></div>`;
   document.getElementById('pg-measurements').innerHTML=h;
 }
-const TYPECOL={house:'#ff922b',garage:'#ff922b',building:'#ff922b',chimney:'#ff922b','solar panels':'#ffd43b',patio:'#74c0fc',deck:'#74c0fc',walkway:'#74c0fc',pergola:'#74c0fc','fire pit':'#ff6b6b','parking area':'#adb5bd',driveway:'#adb5bd',track:'#adb5bd',court:'#4dabf7',fence:'#e599f7',wall:'#e599f7',hedge:'#8ce99a',pool:'#3bc9db',lawn:'#8ce99a',garden:'#8ce99a','tree cluster':'#51cf66',woodland:'#51cf66',vehicle:'#ced4da','cannot tell':'#fa5252'};
+const TYPECOL={house:'#ff922b',garage:'#ff922b',building:'#ff922b',chimney:'#ff922b','solar panels':'#ffd43b',patio:'#74c0fc',deck:'#74c0fc',walkway:'#74c0fc',pergola:'#74c0fc','fire pit':'#ff6b6b','parking area':'#adb5bd',driveway:'#adb5bd',track:'#adb5bd',court:'#4dabf7',fence:'#e599f7',wall:'#e599f7',hedge:'#8ce99a',pool:'#3bc9db',lawn:'#8ce99a',garden:'#8ce99a','tree cluster':'#51cf66',woodland:'#51cf66',vehicle:'#ced4da','cannot tell':'#fa5252',camera:'#4dabf7','alarm zone':'#748ffc',Camera:'#4dabf7','Alarm zone':'#748ffc'};
 /* Same class colours as the region editor (nearmap-review v1.7.18). */
 function classColor(name){const f={Building:'#e85d04','Building (Deprecated)':'#9d0208',Roof:'#dc2f02','Translucent Roofing':'#f48c06',Driveway:'#f72585',Asphalt:'#495057','Road (Driveable Surface)':'#343a40','Concrete Slab':'#adb5bd','Solar Panel':'#3a86ff','Swimming Pool':'#4cc9f0','Water Body':'#0077b6','Residential Chimney':'#7b2cbf',Skylight:'#ffd166','Woody Vegetation':'#2d6a4f','Medium and High Vegetation (>2m)':'#40916c','Medium and High Vegetation with Woody Vegetation':'#1b4332','Low Vegetation (0.5m-2m)':'#74c69d','Very Low Vegetation (<0.5m)':'#95d5b2','Lawn Grass':'#52b788','Natural (soft)':'#b7e4c7'};
   if(f[name])return f[name];let h=0;for(let i=0;i<name.length;i++)h=((h<<5)-h)+name.charCodeAt(i);return 'hsl('+(Math.abs(h)%360)+', 62%, 46%)';}
 const REG_GROUPS=[['Roof & buildings',c=>/roof|building|tile/i.test(c),true],['Hard surfaces',c=>/hard surface|asphalt|concrete|driveway/i.test(c),true],['Natural ground',c=>/natural|very low/i.test(c),false],['Vegetation',c=>/vegetation|overhang/i.test(c),false]];
 let ATYPE='all',REGS=null,REGSRC='';
 const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
+function allAssetEntries(){
+  const A=D.assets||{};
+  return (A.located||[]).concat(A.on_record||[]).concat(A.devices_unplaced||[]);
+}
+function resolveAssetId(id){
+  if(!id) return id;
+  const all=allAssetEntries();
+  if(all.some(a=>a.id===id)) return id;
+  const map=D.asset_aliases||D.asset_id_map||{};
+  if(map[id]) return map[id];
+  const hit=all.find(a=>(a.aliases||[]).map(String).includes(String(id)));
+  return hit?hit.id:id;
+}
+function findAsset(id){
+  const rid=resolveAssetId(id);
+  return allAssetEntries().find(a=>a.id===rid||a.id===id||(a.aliases||[]).map(String).includes(String(id)));
+}
 function mergePipelineRegions(fc){
+
   const pipe=window.H1_REVIEW_DATA&&H1_REVIEW_DATA.region_review;
   if(!pipe||!pipe.features||!pipe.features.length) return fc;
   const base=(fc&&fc.features)?fc:{type:'FeatureCollection',features:[]};
@@ -655,28 +673,52 @@ function regionPolysPx(fc){
 }
 function rAssets(){
   const A=D.assets;
-  const CAT_ORDER=['Buildings and roof','Driveway and paving','Recreation and outdoor living','Lawn','Vegetation/trees','Vehicles','Records-only'];
-  const allItems=A.located.concat(A.on_record||[]);
+  const CAT_ORDER=['Buildings and roof','Driveway and paving','Recreation and outdoor living','Lawn','Vegetation/trees','Vehicles','Devices'];
+  const allItems=allAssetEntries();
   const cats={};allItems.forEach(a=>{const c=a.category||'Uncategorised';cats[c]=(cats[c]||0)+1;});
-  let h=head('Section 7','Assets','Inventory as seen in imagery and the county record, linked to the Nearmap AI regions it sits on. Presence, position and size only. Grouped by category.');
-  h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">The full Nearmap AI data layer (${'<span id="regcount">…</span>'} regions) as editable polygons. Pick a region, paint to grow or add, right-drag to erase, then Save. The vendor original is never changed. Pipeline region-review features are merged in for display and are not written over your edits.</div></div><a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a></div>`;
+  const nReg=allItems.filter(a=>a.kind==='region'||(!a.kind&&a.regions)).length;
+  const nDev=allItems.filter(a=>a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices').length;
+  let h=head('Section 7','Assets','Each region is the asset record, with cameras and alarm zones as point assets from the pin files. Grouped by category. Asset and region links open the same region.');
+  h+=`<div class="card pad cta"><div><h3>Region editor</h3><div class="small" style="color:var(--ink2);margin-top:4px">${nReg} regions and ${nDev} devices. Pipeline region-review features are merged in for display and are not written over your edits. The vendor original is never changed.</div></div><a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a></div>`;
   const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
   h+=`<div class="chips mt" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
+  const factLine=a=>{
+    const facts=a.facts||[];
+    if(!facts.length) return '';
+    const bits=facts.slice(0,4).map(f=>{
+      const v=typeof f.value==='object'?JSON.stringify(f.value):String(f.value??'');
+      const short=v.length>120?v.slice(0,117)+'…':v;
+      return `<div><b>${esc(f.kind||'fact')}${f.unit?' ('+esc(f.unit)+')':''}:</b> ${esc(short)}</div>`;
+    }).join('');
+    return `<div class="small" style="margin-top:6px">${bits}${facts.length>4?'<div class="muted">+'+(facts.length-4)+' more</div>':''}</div>`;
+  };
   const row=a=>{
-    const isRec=a.category==='Records-only'||!(a.px|| (a.regions&&a.regions.length) || A.located.includes(a));
-    const rec=!(A.located||[]).some(x=>x.id===a.id);
-    const regionCell=rec?'<span class="muted">on record only</span>':((a.regions||[]).length?`<div class="tiny muted">${esc(a.region_label||a.region_class||'')}</div>`+(a.regions||[]).slice(0,4).map((r,i)=>`<a class="rchip${i?'':' p'}" href="${editorUrl(r,a.id)}" target="_blank" rel="noopener" title="Open in the region editor">${esc(r)}</a>`).join(''):'<span class="muted">no AI region</span>');
-    const obs=a.obs?`<details><summary>Observation</summary><div class="body">${esc(a.obs)}${a.conf_reason?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}:</b> ${esc(a.conf_reason)}</div>`:''}${a.src?`<div style="margin-top:6px">${a.src.split(' + ').map(tag).join(' ')}</div>`:''}${rec?'<div style="margin-top:6px">'+tag('County record')+'</div>':''}</div></details>`:(rec?`<div class="small muted">${esc(a.loc_note||'')}</div><div style="margin-top:6px">${tag('County record')}</div>`:'');
-    return `<tr id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.category||'')}" data-cat="${esc(a.category||'')}" data-regions="${esc((a.regions||[]).join(' '))}"><td class="aid">${a.id}</td><td><div style="display:flex;gap:8px;align-items:center"><span class="dot" style="color:${TYPECOL[a.type]||'#999'};width:9px;height:9px"></span><span class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em">${esc(a.type)}</span></div><div style="font-weight:550;margin-top:2px">${esc(a.name)}</div>${obs}</td><td class="small">${regionCell}</td><td class="small num">${a.size?esc(a.size):`<span class="muted">${esc(a.size_note||'—')}</span>`}</td></tr>`;
+    const rec=a.kind==='alarm_zone'&&a.status==='unplaced'||a.kind==='camera'&&!a.px;
+    const isDev=a.kind==='camera'||a.kind==='alarm_zone'||a.category==='Devices';
+    const regionCell=isDev
+      ? `<span class="muted">${esc(a.kind==='camera'?'camera pin':(a.status||'alarm zone'))}</span>${a.regions&&a.regions[0]?`<div class="tiny muted">linked ${esc(a.regions[0])}</div>`:''}`
+      : ((a.regions||[a.id]).length?`<div class="tiny muted">${esc(a.region_label||a.region_class||a.class||'')}</div>`+(a.regions||[a.id]).slice(0,4).map((r,i)=>`<a class="rchip${i?'':' p'}" href="${editorUrl(r,a.id)}" target="_blank" rel="noopener" title="Open in the region editor">${esc(r)}</a>`).join(''):'<span class="muted">no region</span>');
+    const badges=(a.needs_trace?'<span class="tiny muted"> needs trace</span>':'')+(a.origin&&a.origin!=='vendor'?`<span class="tiny muted"> · ${esc(a.origin)}</span>`:'');
+    const obs=a.obs||(a.facts&&a.facts.length)||a.loc_note
+      ? `<details><summary>Facts / observation</summary><div class="body">${a.obs?esc(a.obs):''}${a.conf?`<div style="margin-top:6px"><b>Confidence ${esc(a.conf)}</b>${a.conf_reason?': '+esc(a.conf_reason):''}</div>`:''}${factLine(a)}${a.loc_note?`<div class="small muted" style="margin-top:6px">${esc(a.loc_note)}</div>`:''}${a.src?`<div style="margin-top:6px">${String(a.src).split(' + ').map(tag).join(' ')}</div>`:''}</div></details>`
+      : '';
+    return `<tr id="asset-${a.id}" data-id="${a.id}" data-t="${esc(a.category||'')}" data-cat="${esc(a.category||'')}" data-kind="${esc(a.kind||'')}" data-regions="${esc((a.regions||(a.kind==='region'?[a.id]:[])).join(' '))}"><td class="aid">${a.id}</td><td><div style="display:flex;gap:8px;align-items:center"><span class="dot" style="color:${TYPECOL[a.type]||TYPECOL[a.class]||'#999'};width:9px;height:9px"></span><span class="tiny muted" style="text-transform:uppercase;letter-spacing:.06em">${esc(a.class||a.type||a.kind||'')}${badges}</span></div><div style="font-weight:550;margin-top:2px">${esc(a.name||a.label||a.id)}</div>${obs}</td><td class="small">${regionCell}</td><td class="small num">${a.size?esc(a.size):`<span class="muted">${esc(a.size_note||a.status||'—')}</span>`}</td></tr>`;
   };
   const groups=CAT_ORDER.filter(c=>cats[c]).map(c=>{
     const rows=allItems.filter(a=>(a.category||'Uncategorised')===c);
+    const order={region:0,camera:1,alarm_zone:2};
+    rows.sort((x,y)=>(order[x.kind]??9)-(order[y.kind]??9)||String(x.id).localeCompare(String(y.id)));
     return `<tr class="cathead" data-t="${esc(c)}" data-cat="${esc(c)}"><td colspan="4">${esc(c)} · ${rows.length}</td></tr>`+rows.map(row).join('');
   }).join('');
-  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Asset</th><th>AI region</th><th>Size</th></tr></thead><tbody>${groups}</tbody></table></div>
+  h+=`<div class="assetwrap mt"><div class="card"><table class="atbl"><colgroup><col style="width:82px"><col><col style="width:150px"><col style="width:118px"></colgroup><thead><tr><th>ID</th><th>Asset / region</th><th>Region</th><th>Size</th></tr></thead><tbody>${groups}</tbody></table></div>
 <div class="mapcol">${mapTools('as',[['house','House'],['parcel','Parcel']],[['parcel','#ffe066','Parcel']])}<div class="regleg" id="regleg">${REG_GROUPS.map(([n,,on],i)=>`<label><input type="checkbox" data-rg="${i}" ${on?'checked':''}><span class="sw" style="background:${['#dc2f02','#adb5bd','#b7e4c7','#2d6a4f'][i]}"></span>${n}</label>`).join('')}</div><div class="mapbox" id="amap"></div><div class="small muted" style="margin-top:8px" id="regnote">Loading regions…</div></div></div>`;
   h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
-  const el=document.getElementById('pg-assets');el.innerHTML=h;
+  const pfs=A.property_facts||D.property_facts||[];
+  if(pfs.length){
+    h+=`<div class="card pad mt2" id="property-facts"><h3>Property facts</h3><div class="small muted" style="margin-top:4px">Records with no geometry of their own — attached here rather than inventing a region.</div><ul class="clean small" style="margin-top:8px">${pfs.map(f=>`<li style="margin:6px 0"><b>${esc(f.kind||'fact')}</b> — ${esc(typeof f.value==='string'?f.value:JSON.stringify(f.value))}${f.source?`<div class="muted">${esc(f.source)}</div>`:''}</li>`).join('')}</ul></div>`;
+  }
+
+    const el=document.getElementById('pg-assets');el.innerHTML=h;
   drawAssetMap();
   loadRegions().then(fc=>{document.getElementById('regcount').textContent=fc?fc.features.length:'?';drawAssetMap();});
   el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{ATYPE=c.dataset.t;el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x===c));el.querySelectorAll('.atbl tbody tr').forEach(r=>r.style.display=(ATYPE==='all'||r.dataset.cat===ATYPE||r.dataset.t===ATYPE)?'':'none');});
@@ -810,8 +852,8 @@ function rQuestions(){
 }
 function progress(){const n=D.questions.filter(q=>ANS[q.id]&&ANS[q.id].answer).length;const b=document.getElementById('qprogbar');if(!b)return;b.style.width=(100*n/D.questions.length)+'%';document.getElementById('qprogtxt').textContent=n+' of '+D.questions.length+' answered';}
 function linkBtn(l){if(!l)return '';
-  if(l.kind==='asset'){const a=D.assets.located.concat(D.assets.on_record).find(x=>x.id===l.id);const lab=l.id+(a?' · '+a.name.split('(')[0].trim():'');return `<button class="linkchip" onclick="go('assets','asset-${l.id}')">↗ ${esc(lab)}</button>`;}
-  if(l.kind==='region')return `<a class="linkchip" style="text-decoration:none" href="${editorUrl(l.id)}" target="_blank" rel="noopener">↗ region ${esc(l.id)} in the editor</a>`;
+  if(l.kind==='asset'||l.kind==='region'){const a=findAsset(l.id);const rid=resolveAssetId(l.id);const lab=(rid||l.id)+(a?' · '+(a.name||a.label||'').split('(')[0].trim():'');const ed=(a&&a.kind==='region'||l.kind==='region')?` <a class="linkchip" style="text-decoration:none" href="${editorUrl(rid,l.legacy_id||l.id)}" target="_blank" rel="noopener">editor ↗</a>`:'';return `<button class="linkchip" onclick="go('assets','asset-${rid}')">↗ ${esc(lab)}</button>${ed}`;}
+  if(l.kind==='property_fact')return `<button class="linkchip" onclick="go('assets','property-facts')">↗ property fact</button>`;
   if(l.kind==='camera'){const c=D.cams.find(x=>x.device===l.id);return `<button class="linkchip" onclick="go('cameras','cam-${l.id}')">↗ ${esc(c?c.name:l.id)}</button><a class="linkchip" style="text-decoration:none" href="cameras.html" target="_blank" rel="noopener">↗ pin page</a>`;}
   if(l.kind==='outline')return `<button class="linkchip" onclick="go('imagery')">↗ ${l.id==='parcel'?'parcel line':'roof outlines'} on Imagery</button>`;
   if(l.kind==='nearmap')return `<button class="linkchip" onclick="go('nearmap','nm-${l.id}')">↗ Nearmap ${esc(l.id)} pack</button>`;
