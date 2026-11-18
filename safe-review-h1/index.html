@@ -3389,17 +3389,25 @@ function capQ3Texture(tex,max){
   if(!tex||!Q3||!Q3.THREE) return;
   const THREE=Q3.THREE;
   max=max||2048;
-  tex.generateMipmaps=true;
-  tex.minFilter=THREE.LinearMipmapLinearFilter;
-  tex.magFilter=THREE.LinearFilter;
   tex.anisotropy=1;
+  tex.magFilter=THREE.LinearFilter;
   const img=tex.image;
-  if(img&&(img.width>max||img.height>max)){
-    const s=max/Math.max(img.width,img.height);
+  const w=img&&img.width||0, h=img&&img.height||0;
+  if(w&&h&&(w>max||h>max)){
+    const s=max/Math.max(w,h);
     const c=document.createElement('canvas');
-    c.width=Math.max(1,Math.round(img.width*s));
-    c.height=Math.max(1,Math.round(img.height*s));
+    c.width=Math.max(1,Math.round(w*s));
+    c.height=Math.max(1,Math.round(h*s));
     const ctx=c.getContext('2d'); if(ctx){ctx.drawImage(img,0,0,c.width,c.height);tex.image=c;tex.needsUpdate=true;}
+  }
+  const iw=(tex.image&&tex.image.width)||w, ih=(tex.image&&tex.image.height)||h;
+  const pot=n=>n>0&&(n&(n-1))===0;
+  if(iw&&ih&&pot(iw)&&pot(ih)){
+    tex.generateMipmaps=true;
+    tex.minFilter=THREE.LinearMipmapLinearFilter;
+  }else{
+    tex.generateMipmaps=false;
+    tex.minFilter=THREE.LinearFilter;
   }
 }
 function tuneQ3Materials(){
@@ -3430,38 +3438,47 @@ function tuneQ3Materials(){
   });
 }
 function renderQ3(){
-  if(!Q3||!Q3.renderer||QMODE!=='3d') return;
-  if(Q3.controls) Q3.controls.update();
+  if(!Q3||!Q3.renderer||QMODE!=='3d') return false;
+  const moved=Q3.controls?!!Q3.controls.update():false;
+  const info=Q3.renderer.info;
+  if(info&&info.reset) info.reset();
   Q3.renderer.render(Q3.scene,Q3.cam);
+  if(info&&info.render) Q3._draw=info.render.calls;
   if(typeof updateNorth3==='function') updateNorth3();
+  return moved;
 }
 function demandQ3(){
-  if(!Q3||!Q3.renderer||QMODE!=='3d') return;
-  if(Q3.raf) return;
-  Q3.raf=requestAnimationFrame(tickQ3);
+  startQ3Loop();
 }
-function tickQ3(){
-  if(Q3) Q3.raf=0;
+function startQ3Loop(){
   if(!Q3||!Q3.renderer||QMODE!=='3d') return;
-  renderQ3();
-  if(Q3._moving){ Q3._idle=0; Q3.raf=requestAnimationFrame(tickQ3); }
-  else {
-    Q3._idle=(Q3._idle||0)+1;
-    if(Q3._idle<40) Q3.raf=requestAnimationFrame(tickQ3);
-  }
+  if(Q3._looping) return;
+  Q3._looping=true;
+  const step=()=>{
+    if(!Q3||!Q3.renderer||QMODE!=='3d'){
+      if(Q3){Q3._looping=false;Q3.raf=0;}
+      return;
+    }
+    const moved=renderQ3();
+    if(Q3._interacting||moved){
+      Q3.raf=requestAnimationFrame(step);
+    }else{
+      Q3._looping=false;
+      Q3.raf=0;
+    }
+  };
+  Q3.raf=requestAnimationFrame(step);
 }
 function wireQ3Demand(){
   if(!Q3||!Q3.controls||Q3._demandWired) return;
   Q3._demandWired=true;
-  const start=()=>{Q3._moving=true;demandQ3();};
-  const end=()=>{Q3._moving=false;demandQ3();};
-  Q3.controls.addEventListener('start',start);
-  Q3.controls.addEventListener('end',end);
-  Q3.controls.addEventListener('change',demandQ3);
+  Q3.controls.addEventListener('start',()=>{Q3._interacting=true;startQ3Loop();});
+  Q3.controls.addEventListener('end',()=>{Q3._interacting=false;startQ3Loop();});
 }
 function disposeQ3(){
   if(!Q3) return;
   if(Q3.raf){cancelAnimationFrame(Q3.raf);Q3.raf=0;}
+  Q3._looping=false;Q3._interacting=false;
   if(!Q3.renderer){Q3=null;return;}
   try{
     const root=Q3.root, scene=Q3.scene, renderer=Q3.renderer;
@@ -3515,8 +3532,8 @@ function ensureQ3(){
       URL.revokeObjectURL(url);
       scene.add(root.scene);
       const extras=(root.parser&&root.parser.json.meshes&&root.parser.json.meshes[0]&&root.parser.json.meshes[0].extras)||{};
-      Q3={THREE,scene,cam,renderer,controls,root:root.scene,extras,ready:true,loading:false,host,raf:0,_moving:false,_idle:0,
-        resize(){const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));renderer.setSize(w,h);demandQ3();},
+      Q3={THREE,scene,cam,renderer,controls,root:root.scene,extras,ready:true,loading:false,host,raf:0,_interacting:false,_looping:false,_draw:0,
+        resize(){const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));renderer.setSize(w,h);startQ3Loop();},
         marker:null,line:null,parcel:null};
       tuneQ3Materials();
       const wait=document.getElementById('q3wait');if(wait)wait.remove();
