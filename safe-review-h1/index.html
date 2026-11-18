@@ -2972,7 +2972,7 @@ function initQMap(){
   loadRegions().then(()=>{qMergeRegionClasses();buildQlyPanel();drawQ2();if(QSEL)showQ(QSEL);else scheduleFitQ2('parcel');});
   loadQPins().then(()=>{buildQlyPanel();drawQ2();});
   const st=document.getElementById('qstage');
-  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){const {w,h}=stageSize();if(w>=80&&h>=80){if(QMAP&&QMAP._user)applyQ2();else scheduleFitQ2();}}if(Q3)Q3.resize();});st._ro.observe(st);}
+  if(st&&!st._ro){st._ro=new ResizeObserver(()=>{if(QMODE==='2d'){const {w,h}=stageSize();if(w>=80&&h>=80){if(QMAP&&QMAP._user)applyQ2();else scheduleFitQ2();}}if(Q3&&Q3.ready&&Q3.resize)Q3.resize();});st._ro.observe(st);}
   if(!window._q2rz){window._q2rz=true;window.addEventListener('resize',()=>{if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();});}
 }
 function applyQ2(){applyNadirMap(QMAP);}
