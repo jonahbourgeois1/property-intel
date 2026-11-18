@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/review/; worker-src blob:; base-uri 'none'; form-action 'none'">
-<title>H1 review</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/; worker-src blob:; base-uri 'none'; form-action 'none'">
+<title>SAFE review</title>
 <style>
 :root{
   --bg:#f5f6f4; --panel:#ffffff; --ink:#1c2321; --ink2:#4a5551; --ink3:#7b8682; --line:#e3e7e4; --line2:#eef1ef;
@@ -45,6 +45,20 @@ aside nav a .c{margin-left:auto;font-size:11.5px;color:#8fa29b}
 aside nav a:hover{background:rgba(255,255,255,.05)}
 aside nav a.on{background:#24403a;color:#fff}
 aside nav a.on .n{background:#3c7a6f;color:#fff}
+aside nav .navgrp{margin:12px 10px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f948d;font-weight:700}
+aside nav .navgrp b{display:inline-block;width:16px;height:16px;border-radius:4px;background:#2c4a43;color:#d6e4df;text-align:center;line-height:16px;margin-right:6px;font-size:10px}
+.l2row{cursor:pointer;padding:9px 12px;border-bottom:1px solid var(--line,#e6e9e7);display:flex;gap:10px;align-items:flex-start}
+.l2row:last-child{border-bottom:0}
+.l2row:hover{background:rgba(60,122,111,.06)}
+.l2row.sel{background:rgba(60,122,111,.13)}
+.l2row .l2dot{width:10px;height:10px;border-radius:50%;flex:none;margin-top:5px}
+.l2row .l2t{font-weight:600}
+.l2row .l2s{font-size:12.5px;color:var(--ink2,#5b6964)}
+.l2grp{padding:8px 12px;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink2,#5b6964);background:rgba(0,0,0,.025);font-weight:700}
+.l2legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin-top:8px}
+.l2legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.rdy td,.rdy th{padding:7px 10px}
+
 aside .foot{margin-top:24px;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#8fa29b;line-height:1.5}
 main{padding:34px 44px 80px;min-width:0}
 .wrap{max-width:1240px;margin:0 auto}
@@ -307,7 +321,7 @@ html.qmode,html.splitmap,html.qmode body,html.splitmap body{height:100vh;overflo
 html.qmode #app,html.splitmap #app{height:100vh;overflow:hidden}
 html.qmode main,html.splitmap main{padding:0;overflow:hidden;min-height:0;display:flex;flex-direction:column}
 html.qmode main .wrap,html.splitmap main .wrap{max-width:none;width:100%;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
-html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on,html.splitmap #pg-alarms.on,html.splitmap #pg-cameras.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
+html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on,html.splitmap #pg-alarms.on,html.splitmap #pg-cameras.on,html.splitmap .page.l2page.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
 .qsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;height:100%}
 .qmap{position:relative;min-width:0;min-height:0;background:#141816;display:flex;flex-direction:column;border-right:1px solid var(--line)}
 .qmap-tools{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 12px;background:rgba(20,24,22,.92);color:#d7e0dc;z-index:3;flex-shrink:0}
@@ -442,13 +456,14 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .sys-group .sys-body{padding:0 8px 8px}
 .sys-plain{margin:0 0 8px;font-size:13px;color:var(--ink2)}
 </style>
-<script src="vendor/h1-crypto.js"></script>
+<script src="review-config.js"></script>
+<script src="vendor/safe-crypto.js"></script>
 </head>
 <body>
 <div id="lock">
   <form class="box" id="lockform" autocomplete="off">
     <div class="eyebrow">SAFE · Pass 1 review</div>
-    <h1>H1 review</h1>
+    <h1>SAFE review</h1>
     <p>This reviewer is encrypted. Enter the passphrase to open it.</p>
     <input id="pw" type="password" placeholder="Passphrase" autofocus>
     <button type="submit" id="unl">Unlock</button>
@@ -457,7 +472,7 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 </div>
 <div id="app">
   <aside><div class="inner">
-    <div class="brand"><div class="t">Highlands 1</div><div class="s">Reference lot · Pass 1 review</div></div>
+    <div class="brand"><div class="t lotname">SAFE review</div><div class="s">Pass 1 review</div></div>
     <nav id="nav"></nav>
     <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" target="_blank" rel="noopener">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8" target="_blank" rel="noopener">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8" target="_blank" rel="noopener">Camera pins ↗</a></div></div>
   </div></aside>
@@ -467,25 +482,22 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 <script>
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let KEY=null, D=null; const URLS={};
-const SALT=H1Crypto.SALT, ITER=H1Crypto.ITER, CHECK=H1Crypto.CHECK;
-async function dec(buf){return H1Crypto.dec(buf);}
-async function fetchDec(f,opts){return H1Crypto.fetchDec(f,opts);}
+const SALT=SafeCrypto.SALT, ITER=SafeCrypto.ITER, CHECK=SafeCrypto.CHECK;
+async function dec(buf){return SafeCrypto.dec(buf);}
+async function fetchDec(f,opts){return SafeCrypto.fetchDec(f,opts);}
 async function afterUnlock(){
-  KEY=H1Crypto.getKey();
+  KEY=SafeCrypto.getKey();
   D=JSON.parse(new TextDecoder().decode(await fetchDec('data.bin')));
   await Promise.all(Object.entries(D.files).map(async([k,f])=>{URLS[k]=URL.createObjectURL(new Blob([await fetchDec(f)],{type:'image/jpeg'}))}));
   document.getElementById('lock').remove();document.getElementById('app').style.display='grid';
   render();
 }
-H1Crypto.wireUnlock({onReady:afterUnlock});
+SafeCrypto.wireUnlock({onReady:afterUnlock});
 const esc=s=>s==null?'':String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=(n,d=0)=>Number(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const tag=s=>s?`<span class="tag" title="${esc(s)}">${esc(s)}</span>`:'';
 const prov=(t='provisional')=>`<span class="badge b-prov"><span class="dot"></span>${t}</span>`;
-const Q_PROV_TEXT={
-  'RQ-02':'For now distances use the 3D mesh roof, which sits within about 1 m of the AI roof.',
-  'RQ-09':'An empty debris result is counted as none detected for now.'
-};
+const Q_PROV_TEXT={};
 function qIsProv(q){const p=q&&q.provisional;return !!(p&&p!==false&&p!=='false'&&p!==0&&p!=='0');}
 function qProvText(q){
   const p=q&&q.provisional;
@@ -520,7 +532,13 @@ function botEstimateLine(q){
   const wrk=prov?`<div class="botest-prov">Working answer: ${esc(prov)}</div>`:'';
   return `<div class="botest${tone?' '+tone:''}">${head}${ass}${wrk}</div>`;
 }
-const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
+let HIDE=new Set();
+function T(k,f){const c=(typeof D!=='undefined'&&D&&D.copy)||{};return Object.prototype.hasOwnProperty.call(c,k)?c[k]:f;}
+const SECTIONS=[['overview','Overview'],['readiness','Pass 2 readiness'],['access','Security & access'],['entry','Entry points'],['coverage','Camera coverage'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['perimeter','Perimeter & lighting'],['parcel','Parcel & assessor'],['imagery','Imagery & Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['fire','Fire'],['fuel','Fuel bands'],['layers','Map layers'],['questions','Reviewer questions']];
+const SAFE_GROUPS={S:'Security',A:'Assets',F:'Fire',E:'Environment'};
+const PAGE_ELEMENT={access:'S',entry:'S',coverage:'S',cameras:'S',alarms:'S',perimeter:'S',parcel:'A',imagery:'A',measurements:'A',assets:'A',fire:'F',fuel:'F',layers:'E'};
+const L2_PAGES=['access','entry','coverage','perimeter','fuel'];
+const SPLIT_PAGES=['questions','assets','measurements','alarms','cameras'].concat(L2_PAGES);
 
 /* ---------------- map ---------------- */
 const pts=a=>a.map(p=>p[0]+','+p[1]).join(' ');
@@ -572,20 +590,34 @@ document.getElementById('lb').addEventListener('click',e=>{if(e.target.id==='lb'
 
 /* ---------------- render ---------------- */
 function render(){
-  const counts={parcel:D.facts.length,layers:D.layers.length,assets:D.assets.located.length,cameras:D.cams.length,alarms:(D.mas&&D.mas.zones||[]).length,questions:D.questions.length};
-  document.getElementById('nav').innerHTML=SECTIONS.map(([k,l],i)=>`<a href="#${k}" data-k="${k}"><span class="n">${i+1}</span>${l}${counts[k]?`<span class="c">${counts[k]}</span>`:''}</a>`).join('');
+  const counts={entry:((D.lane2||{}).entry_points&&Object.values(D.lane2.entry_points.facades||{}).reduce((a,r)=>a+r.length,0)+(D.lane2.entry_points.unassigned||[]).length)||0,parcel:D.facts.length,layers:D.layers.length,assets:D.assets.located.length,cameras:D.cams.length,alarms:(D.mas&&D.mas.zones||[]).length,questions:D.questions.length};
+  HIDE=new Set(D.hidden_pages||[]);const PGL=Object.fromEntries((D.pages||[]).map(p=>[p.id,p.label]));
+  const L2=D.lane2||{};const L2KEY={entry:'entry_points',coverage:'coverage',access:'access',perimeter:'perimeter',fuel:'fuel'};
+  L2_PAGES.forEach(k=>{if(!L2[L2KEY[k]])HIDE.add(k);});
+  if(!D.readiness) HIDE.add('readiness');
+  const PEL=Object.fromEntries((D.pages||[]).filter(p=>p.element).map(p=>[p.id,p.element]));
+  let navh='',grp=null,i=0;
+  SECTIONS.filter(([k])=>!HIDE.has(k)).forEach(([k,l])=>{
+    const el=PEL[k]||PAGE_ELEMENT[k]||null;
+    if(el!==grp){grp=el;if(el)navh+=`<div class="navgrp"><b>${el}</b>${SAFE_GROUPS[el]}</div>`;else if(i)navh+='<div class="navgrp">&nbsp;</div>';}
+    i++;
+    const lab=(k==='imagery'&&PGL[k]==='Imagery')?l:(PGL[k]||l);
+    navh+=`<a href="#${k}" data-k="${k}"><span class="n">${i}</span>${esc(lab)}${counts[k]?`<span class="c">${counts[k]}</span>`:''}</a>`;
+  });
+  document.getElementById('nav').innerHTML=navh;
   document.getElementById('footsurvey').textContent='Imagery survey: '+D.overview.survey;
   const P=document.getElementById('pages');
   P.innerHTML=SECTIONS.map(([k])=>`<section class="page" id="pg-${k}"></section>`).join('');
-  rOverview();rParcel();rLayers();rFire();rImagery();rNearmap();rMeas();rAssets();rCams();rAlarms();rQuestions();
+  rOverview();rParcel();rLayers();rFire();rImagery();rNearmap();rMeas();rAssets();rCams();rAlarms();rQuestions();safeRender(rReadiness);L2_PAGES.forEach(k=>{if(!HIDE.has(k))safeRender(()=>rL2(k));});
   window.addEventListener('hashchange',route);route();
   wireReviewerOutside();
 }
 function route(){
   let h=(location.hash||'#overview').slice(1);let [k,target]=h.split(':');
   if(k==='regions') k='assets';
-  const key=SECTIONS.some(s=>s[0]===k)?k:'overview';
-  const split=key==='questions'||key==='assets'||key==='measurements'||key==='alarms'||key==='cameras';
+  if(k==='nearmap'){k='imagery';if(!target)target='pg-nearmap';}
+  const key=SECTIONS.some(s=>s[0]===k)&&!HIDE.has(k)?k:'overview';
+  const split=SPLIT_PAGES.includes(key);
   document.documentElement.classList.toggle('qmode',key==='questions');
   document.body.classList.toggle('qmode',key==='questions');
   document.documentElement.classList.toggle('splitmap',split);
@@ -597,6 +629,7 @@ function route(){
   if(key==='measurements') refreshNadirMap(MMAP);
   if(key==='alarms') refreshNadirMap(ZMAP);
   if(key==='cameras') refreshNadirMap(CMAP);
+  if(L2_PAGES.includes(key)&&L2S[key]&&L2S[key].map){refreshNadirMap(L2S[key].map);if(!L2S[key].sel)scheduleNadirFit(L2S[key].map,'house');}
   if(target&&key==='assets'){if(target.startsWith('asset-')){const rid='asset-'+resolveAssetId(target.slice(6));target=rid;}if(ATYPE!=='all'){const all=document.querySelector('#achips .chip[data-t=all]');if(all)all.click();}}
   if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){let d=el.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);if(key==='measurements'&&target.startsWith('meas-'))selectMeas(target.slice(5),false);}}
   else window.scrollTo(0,0);
@@ -609,7 +642,7 @@ function waterBanner(extra, compact){
   const obs=W.observation||(D.water&&D.water.insight)||'';
   if(!obs) return '';
   const link=extra||'';
-  const src='Private well · nearest public hydrant 968.6 m straight-line · none within 800 m';
+  const src=T('fire_src','');
   if(compact) return `<div class="keyfact compact" title="${esc(obs)}"><span class="kf-kicker">Key firefighting-water fact</span><span class="kf-body">${esc(src)}</span>${link?`<span class="kf-link">${link}</span>`:''}</div>`;
   return `<div class="keyfact"><div class="kf-kicker">Key firefighting-water fact</div><div class="kf-body">${esc(obs)}</div><div class="kf-src">Pass 1 observation · ${esc(src)}${link}</div></div>`;
 }
@@ -621,15 +654,15 @@ function rFire(){
   const ev=M.events_summary||{};
   const H=D.hydrant||{};
   let h=head('Fire','Firefighting water & life safety','Pass 1 observations only. This is not a tactical recommendation and it does not rate hydrant flow or access.');
-  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Water supply</h3><div class="kv"><div><div class="k">Kind</div><div class="v">Private well</div></div><div><div class="k">Source</div><div class="v">Confirmed by Jonah · 16 Nov 2026</div></div></div><p class="small muted" style="margin-top:10px">${esc((D.water&&D.water.note)||'The lot is not on a community water system.')}</p></div>`;
-  h+=`<div class="card pad"><h3>Nearest public hydrant</h3><div class="kv"><div><div class="k">Straight-line</div><div class="v num">${esc(H.value||'968.6 m')}</div></div><div><div class="k">Within 800 m</div><div class="v">No</div></div><div><div class="k">Road distance</div><div class="v">${esc((H.road_distance_m&& (H.road_distance_m.from_driveway_entrance+' m from the driveway entrance'))||'2,444.3 m from the driveway entrance')}</div></div><div><div class="k">In service</div><div class="v">${H.in_service===false?'No':'Yes'}</div></div></div><p class="small muted" style="margin-top:10px">${esc(H.note||'')}</p></div></div>`;
+  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Water supply</h3><div class="kv"><div><div class="k">Kind</div><div class="v">${esc(T('water_kind',(D.water&&D.water.value)||''))}</div></div><div><div class="k">Source</div><div class="v">${esc(T('water_source',''))}</div></div></div><p class="small muted" style="margin-top:10px">${esc((D.water&&D.water.note)||'The lot is not on a community water system.')}</p></div>`;
+  h+=`<div class="card pad"><h3>Nearest public hydrant</h3><div class="kv"><div><div class="k">Straight-line</div><div class="v num">${esc(H.value||'')}</div></div><div><div class="k">Within 800 m</div><div class="v">${esc(T('hydrant_within_800',''))}</div></div><div><div class="k">Road distance</div><div class="v">${esc((H.road_distance_m&& (H.road_distance_m.from_driveway_entrance+' m from the driveway entrance'))||'')}</div></div><div><div class="k">In service</div><div class="v">${H.in_service===false?'No':'Yes'}</div></div></div><p class="small muted" style="margin-top:10px">${esc(H.note||'')}</p></div></div>`;
   h+=`<div class="card pad mt"><h3>Monitored life-safety zones</h3><div class="small muted" style="margin-top:-4px;margin-bottom:8px">${lifeRows.length} smoke, CO, sprinkler-waterflow or well-pump zones in the MAS export. Details on the Alarm (MAS) page.</div>`;
   if(lifeRows.length){
     h+=`<table class="mas-table"><thead><tr><th>Zone</th><th>Type</th><th>Programming</th></tr></thead><tbody>`+lifeRows.map(z=>`<tr><td>${esc(z.label)}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td></tr>`).join('')+`</tbody></table>`;
   }
   const wellEv=(ev.counts_by_type&&ev.counts_by_type['ENVIRO / WELL TROUBLE W/ MULTI SIG PROC'])||0;
   if(wellEv) h+=`<p class="small muted" style="margin-top:10px">${wellEv} well-pump trouble events were logged in the export window (${esc(ev.window_start||'')} to ${esc(ev.window_end||'')}). No burglary or fire alarm events were in that window.</p>`;
-  h+=`</div><div class="card pad mt cta"><div><h3>Confirm this on the questions page</h3><div class="small" style="color:var(--ink2);margin-top:4px">RQ-54 asks you to confirm or flag the private-well / no-local-hydrant record. It is a Pass 1 confirmation, not a visual-only item.</div></div><a class="btnl" href="#questions">Open reviewer questions</a></div>`;
+  h+=`</div><div class="card pad mt cta"><div><h3>Confirm this on the questions page</h3><div class="small" style="color:var(--ink2);margin-top:4px">${esc(D.water_cta||'A reviewer question asks you to confirm or flag the water-supply record.')}</div></div><a class="btnl" href="#questions">Open reviewer questions</a></div>`;
   document.getElementById('pg-fire').innerHTML=h;
 }
 function sysKindLabel(s){
@@ -724,7 +757,7 @@ function rAlarms(){
   const placed=pins.filter(zoneHasPx).length, links=pins.filter(p=>p.camera_link).length;
   const pinOf=zonePinOf;
   const multi=withZones.length>1;
-  let list=`${head('Alarm (MAS)','Monitoring accounts and zones','Sanitized from the 16 Nov 2026 central-station export. Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them in the zone editor. Zones are listed by system; a single-system customer is shown as a plain list.',`<a class="btnl" href="zones.html" target="_blank" rel="noopener">Open zone editor ↗</a>`)}`;
+  let list=`${head('Alarm (MAS)','Monitoring accounts and zones',T('mas_source','Sanitized from the central-station export.')+' Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them in the zone editor. Zones are listed by system; a single-system customer is shown as a plain list.',`<a class="btnl" href="zones.html" target="_blank" rel="noopener">Open zone editor ↗</a>`)}`;
   list+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Systems</div><div class="v num">${systems.length}</div></div><div class="card kpi"><div class="k">Zones</div><div class="v num">${zones.length}</div></div><div class="card kpi"><div class="k">Draft pins</div><div class="v num">${placed}<small> placed · ${Math.max(0,zones.length-placed)} not placed</small></div><div class="s">${links} camera-link candidates</div></div></div>`;
   if(systems.length){
     list+=`<div class="card pad mt"><h3>Systems</h3><table class="mas-table"><thead><tr><th>System</th><th>Type</th><th>Status</th><th>Zones</th></tr></thead><tbody>`;
@@ -827,8 +860,8 @@ function zoneDotMarkup(px,col,tip,cls,opts){
 function syncPinDots(svg,s){
   if(!svg) return;
   svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
-  svg.querySelectorAll('.cpin, .zpin').forEach(g=>{
-    const dim=g.classList.contains('cpin-dim')||g.classList.contains('zpin-dim');
+  svg.querySelectorAll('.cpin, .zpin, .l2pin').forEach(g=>{
+    const dim=g.classList.contains('cpin-dim')||g.classList.contains('zpin-dim')||g.classList.contains('l2pin-dim');
     const r=(dim?7.5:11)/s;
     g.querySelectorAll('circle:not(.halo)').forEach(c=>{
       c.setAttribute('r',String(r));
@@ -906,10 +939,10 @@ function rOverview(){
   let h=`<div class="card hero"><div class="l"><div class="eyebrow">${esc(O.customer_type)}</div><h1>${esc(O.title)} <span>· ${esc(O.subtitle)}</span></h1><div class="addr">${esc(O.situs)}</div>
   <div class="kv"><div><div class="k">Taxlot</div><div class="v num">${esc(O.taxlot)}</div></div><div><div class="k">Account</div><div class="v num">${esc(O.account)}</div></div><div><div class="k">Lot size</div><div class="v">${esc(O.acres)} acres</div></div>
   <div><div class="k">Zoning</div><div class="v">${esc(O.zoning)}</div></div><div><div class="k">County</div><div class="v">${esc(O.county)}</div></div><div><div class="k">Imagery survey</div><div class="v">${esc(O.survey)}</div></div></div></div>
-  <div class="r" onclick="go('imagery')">${mapSVG({crop:'parcel',layers:{parcel:true,ai:true}})}<span class="cap">Nadir 2 Jul 2026 · parcel and 2026 roof · open imagery →</span></div></div>`;
+  <div class="r" onclick="go('imagery')">${mapSVG({crop:'parcel',layers:{parcel:true,ai:true}})}<span class="cap">${esc(T('overview_map_cap','Nadir · parcel and roof · open imagery →'))}</span></div></div>`;
   const waterCard=`<div class="card kpi"><div class="k">${esc((D.water&&D.water.label)||'Water supply')}</div><div class="v">${esc((D.water&&D.water.value)||'')}</div><div class="s">${tag((D.water&&D.water.tag)||'')}</div></div>`;
   h+=`<div class="grid g3 mt">`+waterCard+O.kpis.map(k=>`<div class="card kpi"><div class="k">${esc(k.label)}</div><div class="v num">${esc(k.value)}<small>${esc(k.unit)}</small></div><div class="s">${tag(k.src)}${k.provisional?prov():''}</div></div>`).join('')+`</div>`;
-  h+=`<div class="grid g3 mt">`+N.perils.map(p=>`<div class="card kpi"><div class="k">Nearmap ${p.label.toLowerCase()} score</div><div class="peril"><div class="v num">${p.score}<small>/ 5</small></div><div>${scoreBar(p.score,pcol(p.score))}<div class="tiny muted" style="margin-top:4px">5 = most resilient</div></div></div><div class="s">${tag('Nearmap AI · 2 Jul 2026')}<span class="tag">footprint capped at 1,000 m²</span></div></div>`).join('')+`</div>`;
+  h+=`<div class="grid g3 mt">`+N.perils.map(p=>`<div class="card kpi"><div class="k">Nearmap ${p.label.toLowerCase()} score</div><div class="peril"><div class="v num">${p.score}<small>/ 5</small></div><div>${scoreBar(p.score,pcol(p.score))}<div class="tiny muted" style="margin-top:4px">5 = most resilient</div></div></div><div class="s">${tag(T('nearmap_tag','Nearmap AI'))}<span class="tag">footprint capped at 1,000 m²</span></div></div>`).join('')+`</div>`;
   h+=`<div class="card status mt"><div class="first"><div class="v">✓ ${esc(S.audit)}</div><div class="k">Pass 1 completeness check</div></div>
    <div><div class="v num">${S.facts}</div><div class="k">assessor facts · ${S.facts_missing} missing</div></div>
    <div><div class="v num">${S.layers}</div><div class="k">map layers</div></div>
@@ -930,11 +963,11 @@ function factRow(f){
 }
 function rParcel(){
   const groups=['Building','Values & sale','Land'];
-  let h=head('Section 2','Parcel & assessor','Facts as recorded by Deschutes County (DIAL assessor record and county GIS). Missing facts show the reason and the sources that were checked.');
+  let h=head('Section 2','Parcel & assessor','Facts as recorded by the county assessor and county GIS. Missing facts show the reason and the sources that were checked.');
   h+=`<div class="grid" style="grid-template-columns:2fr 1fr;align-items:start">`;
   h+=`<div>`+groups.map(g=>`<div class="card mt" style="margin-top:${g==='Building'?0:18}px"><div class="tblhead"><h3>${g}</h3><span class="muted small">${D.facts.filter(f=>f.group===g).length} facts</span></div><table class="facts"><tbody>${D.facts.filter(f=>f.group===g).map(factRow).join('')}</tbody></table></div>`).join('')+`</div>`;
   h+=`<div><div class="card pad"><h3>Value history</h3><div class="small" style="color:var(--ink2)">${esc(D.rmv_note)}</div><div class="small" style="color:var(--ink2);margin-top:10px">${esc(D.assessed_note)}</div></div>
-  <div class="card pad mt"><h3>Record notes</h3><ul class="clean small"><li>Square footage is “from plans” (DIAL).</li><li>Later finaled permits: 2010 and 2025 (see question q-year-built-later-permits).</li><li>Owner names were removed at retrieval; this page uses “reference lot”.</li></ul></div></div></div>`;
+  <div class="card pad mt"><h3>Record notes</h3><ul class="clean small">${(T('record_notes',[])||[]).map(x=>`<li>${esc(x)}</li>`).join('')}<li>Owner names were removed at retrieval; this page uses “reference lot”.</li></ul></div></div></div>`;
   document.getElementById('pg-parcel').innerHTML=h;
 }
 function rLayers(){
@@ -951,22 +984,23 @@ function rLayers(){
   document.getElementById('pg-layers').innerHTML=h;
 }
 function rImagery(){
-  let h=head('Section 4','Imagery','Nearmap Vertical survey, 2 Jul 2026. The nadir is georeferenced, so outlines are drawn from their coordinates.');
-  h+=mapTools('img',[['parcel','Parcel'],['house','House'],['full','Full frame']],[['parcel','#ffe066','Parcel (county taxlot)'],['ai','#b197fc','2026 roof (Nearmap AI)'],['trace','#5ce1e6','2026 nadir roof trace',false],['sbfo','#ff5c5c','2018 county footprint'],['drive','#69db7c','Driveway centreline',false]]);
+  let h=head('Assets','Imagery & Nearmap AI',T('imagery_intro','Nearmap Vertical survey. The nadir is georeferenced, so outlines are drawn from their coordinates.'));
+  h+=mapTools('img',[['parcel','Parcel'],['house','House'],['full','Full frame']],[['parcel','#ffe066','Parcel (county taxlot)'],['ai','#b197fc',T('lbl_ai','Roof (Nearmap AI)')],['trace','#5ce1e6',T('lbl_trace','Nadir roof trace'),false],['sbfo','#ff5c5c',T('lbl_sbfo','County footprint')],['drive','#69db7c','Driveway centreline',false]]);
   h+=`<div class="mapbox" id="imgmap">${mapSVG({crop:'parcel',scale:true,layers:{parcel:true,ai:true,trace:false,sbfo:true,drive:false}})}</div>`;
-  h+=`<div class="small muted" style="margin-top:8px">The 2018 county footprint sits about 6–8 m west of the 2026 roof; the SE wing already shows in 2011 lidar, so the footprint is misplaced rather than out of date. Map scale ≈ 0.43 m per pixel.</div>`;
-  h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">Captured views</h3><div class="gal">`+D.gallery.map((g,i)=>`<div class="card tile" onclick="lbOpen(D.gallery,${i})"><div class="im" style="background-image:url(${URLS[g.img]})"></div><div class="cap"><b>${esc(g.label)}</b><div class="small muted">${esc(g.sub)} · 2 Jul 2026</div></div></div>`).join('')+`</div>`;
+  h+=`<div class="small muted" style="margin-top:8px">${esc(T('imagery_note',''))}</div>`;
+  h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">Captured views</h3><div class="gal">`+D.gallery.map((g,i)=>`<div class="card tile" onclick="lbOpen(D.gallery,${i})"><div class="im" style="background-image:url(${URLS[g.img]})"></div><div class="cap"><b>${esc(g.label)}</b><div class="small muted">${esc(g.sub)}${T('survey_label','')?' · '+esc(T('survey_label','')):''}</div></div></div>`).join('')+`</div>`;
   h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">QA images</h3><div class="grid g2">`+D.qa.map((g,i)=>`<div class="card tile" onclick="lbOpen(D.qa,${i})"><div class="im" style="background-image:url(${URLS[g.img]});background-size:contain;background-color:#fff"></div><div class="cap"><b>${esc(g.label)}</b><div class="small muted">${esc(g.sub)}</div></div></div>`).join('')+`</div>`;
+  h+=`<div id="pg-nearmap" class="mt2" style="border-top:1px solid var(--line,#e6e9e7);padding-top:18px"></div>`;
   const el=document.getElementById('pg-imagery');el.innerHTML=h;wireTools(el,el.querySelector('#imgmap'));
 }
 function rNearmap(){
   const N=D.nearmap;
-  let h=head('Section 5','Nearmap AI','Two AI Feature API calls on the 2 Jul 2026 survey ('+esc(N.system)+'), plus the 3D mesh export.');
+  let h=head('Nearmap AI','Nearmap AI results',T('nearmap_intro','Nearmap AI Feature API results')+' ('+esc(N.system)+'), plus the 3D mesh export.');
   h+=`<div class="packs">`+N.packs.map(p=>`<div class="card pad pack" id="nm-${p.id==='wildfire_risk'?'wildfire_risk':p.id}"><div class="eyebrow">${esc(p.label)} pack</div><div class="n num">${p.count}<small class="muted" style="font-size:14px;font-weight:500"> features</small></div><div style="margin-top:4px">${p.count?'<span class="badge b-ok">present</span>':'<span class="badge b-grey">empty response</span> '+prov()}</div><div class="cls">${Object.entries(p.classes).map(([k,v])=>`<div><span>${esc(k)}</span><b class="num">${v}</b></div>`).join('')||`<div>${esc(p.note)}</div>`}</div></div>`).join('')+`</div>`;
   h+=`<div class="small muted" style="margin-top:8px">Pack membership is inferred from class names (the API response does not label packs).</div>`;
   h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">Peril scores <span class="muted small" style="font-weight:400">· roof feature, 5 = most resilient, 1 = most vulnerable</span></h3><div class="grid g3">`+N.perils.map(p=>`<div class="card pcard"><div class="eyebrow">${p.label}</div><div class="big num">${p.score}<small> / 5</small></div>
    <dl><dt>Vulnerability probability</dt><dd class="num">${p.prob}</dd><dt>Rate factor</dt><dd class="num">${p.rate}</dd><dt>FEMA annual frequency</dt><dd class="num">${Number(p.fema).toPrecision(3)} / yr</dd>${p.risk_score!=null?`<dt>Risk score · rate factor</dt><dd class="num">${p.risk_score} · ${p.risk_rate}</dd>`:''}</dl></div>`).join('')+`</div>`;
-  h+=`<div class="callout amber mt"><b>Footprint cap.</b> The model’s footprint input is ln(1000), so it treats the house as 1,000 m². The roof is about 1,300–1,400 m² (mesh 1,304 m², nadir 1,412 m²), so read these scores as approximate. Staining and compromised-structure inputs sit at the floor value (none found). FEMA data v${esc(N.fema_version)}.</div>`;
+  h+=`<div class="callout amber mt"><b>Footprint cap.</b> The model’s footprint input is ln(1000), so it treats the house as 1,000 m². ${esc(T('footprint_cap_note','Read these scores as approximate when the roof is larger than that.'))} Staining and compromised-structure inputs sit at the floor value (none found). FEMA data v${esc(N.fema_version)}.</div>`;
   h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Defensible space zones</h3><div class="small muted" style="margin-bottom:6px">Share of each ring around the Nearmap roof covered by medium/high woody vegetation.</div>`+N.zones.map(z=>`<div class="zone"><b>${esc(z.label)}</b><div><div class="bar"><i style="width:${z.risk*100}%;background:#d9822b"></i><i style="width:${z.clear*100}%;background:#cfe3d8"></i></div><div class="tiny muted" style="margin-top:3px">${fmt(z.risk_area,1)} m² vegetated of ${fmt(z.area_m2,1)} m²</div></div><div class="num" style="text-align:right"><b>${Math.round(z.risk*1000)/10}%</b> <span class="muted small">vegetated</span></div></div>`).join('')+`</div>
    <div class="card" style="overflow:hidden"><div class="mapbox" style="border-radius:0">${mapSVG({crop:'house',layers:{zones:true,ai:true}})}</div><div class="small muted" style="padding:10px 14px">Zones 0–5 ft (red), 5–30 ft (orange), 30–100 ft (yellow) around the AI roof (violet).</div></div></div>`;
   h+=`<div class="grid g3 mt2"><div class="card pad"><h3>AI roof & buildings</h3>
@@ -992,7 +1026,7 @@ function rMeas(){
   (D.meas||[]).forEach((g,i)=>{
     list+=`<div class="card${i?' mt':''}"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+(g.rows||[]).map(r=>`<tr class="mrow" id="meas-${esc(r.id)}" data-mid="${esc(r.id)}"><td><b style="font-weight:600">${esc(r.label)}</b>${has(r.id)?'':nogeom}${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${(r.alts||[]).length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
   });
-  list+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
+  list+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">${esc(T('trees_tag','3D mesh'))}</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>${esc(T('lidar_col','Lidar'))}</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
   list+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
   if(D.qa) list+=`<div class="card tile mt" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div>`;
   const el=document.getElementById('pg-measurements');
@@ -1445,6 +1479,7 @@ function classGroupIndex(cls){
   for(let i=0;i<REG_GROUPS.length-1;i++) if(REG_GROUPS[i][1](cls)) return i;
   return REG_GROUPS.length-1;
 }
+let AVEG=false;const VEG_CAT='Vegetation/trees';
 let ATYPE='all',REGS=null,REGSRC='',ASEL=null,AVEND=Object.create(null),AMAP=null,ACROP='house';
 const AOPEN_DEFAULT='Buildings and roof';
 const editorUrl=(rid,aid)=>'nearmap-review.html'+(rid||aid?'?'+[rid?'region='+encodeURIComponent(rid):'',aid?'asset='+encodeURIComponent(aid):''].filter(Boolean).join('&'):'');
@@ -1466,7 +1501,7 @@ function findAsset(id){
   return allAssetEntries().find(a=>a.id===rid||a.id===id||(a.aliases||[]).map(String).includes(String(id)));
 }
 function mergePipelineRegions(fc){
-  const pipe=(window.H1_REVIEW_DATA&&H1_REVIEW_DATA.region_review)
+  const pipe=(window.SAFE_REVIEW_DATA&&SAFE_REVIEW_DATA.region_review)
     || (typeof D!=='undefined'&&D&&D.region_review)
     || null;
   if(!pipe||!pipe.features||!pipe.features.length) return fc;
@@ -1476,10 +1511,13 @@ function mergePipelineRegions(fc){
   if(!extra.length) return base;
   return Object.assign({},base,{features:(base.features||[]).concat(extra)});
 }
+/* Migrated lots (legacy_keys in review-config) keep the old shell's fallback: any nm-regions:* edit on this origin. */
+function legacyRegionsRaw(){const c=window.SAFE_REVIEW_CONFIG||{};if(!c.legacy_keys)return null;
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('nm-regions:')===0)return localStorage.getItem(k);}}catch(e){}return null;}
 async function loadRegions(){
   if(REGS)return REGS;
-  try{const raw=localStorage.getItem('h1-regions')||localStorage.getItem('nm-regions:h1');if(raw){const j=JSON.parse(raw);if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC='browser edits + pipeline';return REGS;}}}catch(e){}
-  if(H1Crypto.isLocal() && D.cam_ctx && D.cam_ctx.delivery){
+  try{const dk=D.cam_ctx&&D.cam_ctx.delivery?'nm-regions:'+String(D.cam_ctx.delivery).replace(/[^a-z0-9-]/gi,''):null;const raw=localStorage.getItem(SafeCrypto.REG_KEYS[0])||localStorage.getItem(SafeCrypto.REG_KEYS[1])||(dk&&localStorage.getItem(dk))||legacyRegionsRaw();if(raw){const j=JSON.parse(raw);if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC='browser edits + pipeline';return REGS;}}}catch(e){}
+  if(SafeCrypto.isLocal() && D.cam_ctx && D.cam_ctx.delivery){
     const base='nearmap/'+D.cam_ctx.delivery+'/ai/';
     for(const [f,lab] of [['edits/regions.json','working edits'],['original/regions.json','vendor original']]){
       try{const r=await fetch(base+f+'?_='+Date.now(),{cache:'no-store'});if(r.ok){const j=await r.json();if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC=lab+' + pipeline';return REGS;}}}catch(e){}
@@ -1620,7 +1658,8 @@ function rAssets(){
     return `<details class="vendors" data-vkey="${esc(key)}"${open}><summary>${esc(label)}</summary><div class="vendorlist">${children.map(itemRow).join('')}</div></details>`;
   };
   const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
-  let list=`${head('Section 7','Regions','Click a region to show it on the map.',`<a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a>`)}<div class="chips" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
+  const nveg=cats[VEG_CAT]||0;
+  let list=`${head('Assets','Regions','Click a region to show it on the map. Raw vegetation patches are hidden until you turn them on.',`<a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a>`)}${nveg?`<label class="small" id="aveg" style="display:inline-flex;gap:6px;align-items:center;margin:0 0 8px;cursor:pointer"><input type="checkbox" id="aveg-cb" ${AVEG?'checked':''}> Show raw vegetation (${nveg})</label>`:''}<div class="chips" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
   const blocks=CAT_ORDER.filter(c=>cats[c]).map(c=>{
     const rows=allItems.filter(a=>(a.category||'Uncategorised')===c);
     const tree=organizeCategory(rows,c);
@@ -1652,13 +1691,16 @@ function rAssets(){
     <div class="qside">${list}<div class="small muted" id="regnote"></div></div></div>`;
   function applyChipFilter(){
     el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x.dataset.t===ATYPE));
+    el.querySelectorAll('#achips .chip').forEach(x=>{if(x.dataset.t===VEG_CAT)x.style.display=AVEG?'':'none';});
     el.querySelectorAll('.regcat').forEach(d=>{
-      const show=ATYPE==='all'||d.dataset.cat===ATYPE;
+      const show=(ATYPE==='all'||d.dataset.cat===ATYPE)&&(AVEG||d.dataset.cat!==VEG_CAT);
       d.style.display=show?'':'none';
       if(ATYPE!=='all'&&show) d.open=true;
     });
   }
   applyChipFilter();
+  const vcb=el.querySelector('#aveg-cb');
+  if(vcb) vcb.onchange=()=>{AVEG=vcb.checked;if(!AVEG&&ATYPE===VEG_CAT)ATYPE='all';ASEL=null;setAmapStatus('');applyChipFilter();drawAssetMap({resetView:true});};
   initAssetMap();
   el.querySelectorAll('#achips .chip').forEach(c=>c.onclick=()=>{
     ATYPE=c.dataset.t;
@@ -1745,6 +1787,7 @@ function visibleOutlineIds(){
     const cat=el.closest('details.regcat');
     if(cat&&!cat.open) return;
     if(ATYPE!=='all'&&el.dataset.cat!==ATYPE) return;
+    if(!AVEG&&cat&&cat.dataset.cat===VEG_CAT) return;
     const vend=el.closest('details.vendors');
     if(vend&&!vend.open) return;
     if(el.dataset.kind==='camera'||el.dataset.kind==='alarm_zone') return;
@@ -1997,16 +2040,16 @@ function sanitizeStaleCamPins(doc){
 }
 async function persistCamPinsLocal(doc){
   try{
-    if(window.H1Crypto&&H1Crypto.sealJson){
-      const sealed=await H1Crypto.sealJson(doc);
-      localStorage.setItem('h1-camera-pins', JSON.stringify(sealed));
+    if(window.SafeCrypto&&SafeCrypto.sealJson){
+      const sealed=await SafeCrypto.sealJson(doc);
+      localStorage.setItem(SafeCrypto.PINS_KEY, JSON.stringify(sealed));
     }
   }catch(e){}
 }
 async function loadCamPins(){
   let f=null,l=null;
   try{const r=await fetch('cameras/edits/pins.json?_='+Date.now(),{cache:'no-store'});if(r.ok)f=await openSealed(await r.json());}catch(e){}
-  try{const raw=localStorage.getItem('h1-camera-pins');if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
+  try{const raw=localStorage.getItem(SafeCrypto.PINS_KEY);if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
   CAMPINS=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;
   if(CAMPINS&&!camSessionOverrides()&&sanitizeStaleCamPins(CAMPINS)){
     await persistCamPinsLocal(CAMPINS);
@@ -2263,6 +2306,172 @@ function initCamMap(){
   if(CSEL&&CSEL.px) fitNadirBounds(CMAP,[CSEL.px]);
   else scheduleNadirFit(CMAP, CCROP||'house');
 }
+/* ---------------- Pass 2 readiness + lane 2 pages (calm map conventions) ---------------- */
+function safeRender(fn){try{fn();}catch(e){(window.RENDER_ERRORS=window.RENDER_ERRORS||[]).push(String(e&&e.message||e));console.warn('render',e);}}
+function rReadiness(){
+  const R=D.readiness; const el=document.getElementById('pg-readiness'); if(!R||!el) return;
+  const lab={0:['ready','b-ok'],10:['skipped','b-grey'],2:['usage','b-miss'],3:['waiting upstream','b-miss'],4:['needs work','b-miss'],5:['external','b-miss'],6:['needs approval','b-miss'],7:['safety','b-miss']};
+  const rows=(R.steps||[]).map(s=>{const l=lab[s.code]||['code '+s.code,'b-miss'];return `<tr><td><b>${esc(s.step)}</b></td><td>${esc(s.name||'')}</td><td><span class="badge ${l[1]}">${esc(l[0])}</span></td><td class="num">${s.problems||''}</td></tr>`;}).join('');
+  let h=head('Pass 2','Pass 2 readiness','What Pass 2 can rely on for this lot: every Lane 1 step check, the open region worklist and the Lane 2 layers. Counts only; details stay in the lot record.');
+  h+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Overall</div><div class="v">${R.ready?'Ready':'Not yet'}</div><div class="s">${tag(R.ready?'all checks pass or skip':'see the steps below')}</div></div><div class="card kpi"><div class="k">Region worklist</div><div class="v num">${esc(R.worklist_open??0)}</div><div class="s">${tag('needs trace first, then vegetation near the house')}</div></div><div class="card kpi"><div class="k">Lane 2 layers</div><div class="v num">${(R.layers||[]).length}<small> / 5</small></div><div class="s">${tag((R.layers||[]).join(', ')||'none built')}</div></div></div>`;
+  h+=`<div class="card mt"><table class="rdy"><thead><tr><th>Step</th><th>Name</th><th>Check</th><th>Problems</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  el.innerHTML=h;
+}
+const L2S={};
+const L2COL={both:'#2f9e44',alarmed:'#1c7ed6',camera:'#e67700',neither:'#e03131',pt:'#3c7a6f',warn:'#e67700',none:'#868e96',veg:'#d9822b'};
+function l2Px(o){
+  if(!o) return null;
+  const lat=o.lat, lng=(o.lng!=null?o.lng:o.lon);
+  if(lat!=null&&lng!=null&&D.cam_ctx&&D.cam_ctx.bounds) return pxOfLonLat(+lng,+lat);
+  if(o.px&&o.px.length>=2) return [+o.px[0],+o.px[1]];
+  return null;
+}
+function l2InImage(px){const M=D.map||{};return px&&px[0]>=0&&px[1]>=0&&px[0]<=(M.w||0)&&px[1]<=(M.h||0);}
+function l2Zone(key){return ((D.mas&&D.mas.pins)||[]).find(p=>String(p.zone_key)===String(key))||null;}
+function l2Cam(id){return (D.cams||[]).find(c=>String(c.device)===String(id))||null;}
+function l2RegionPolys(ids){
+  const want=new Set((ids||[]).map(String));
+  if(!want.size||!REGS) return [];
+  const feats=(REGS.features||[]).filter(f=>want.has(String(f.id)));
+  const out=regionPolysPx({features:feats});
+  feats.forEach(f=>{const g=f.geometry||{};const lines=g.type==='LineString'?[g.coordinates]:g.type==='MultiLineString'?g.coordinates:[];
+    lines.forEach(l=>{const p=(l||[]).map(q=>pxOfLonLat(q[0],q[1]));if(p.length>1)out.push({id:String(f.id),line:true,d:'M'+p.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join('L')});});});
+  return out;
+}
+function l2Pin(px,col,tip,id,sel){return zoneDotMarkup(px,col,tip,'l2pin '+(sel?'l2pin-sel':'l2pin-dim'),{label:sel?tip:'',id:id,kind:'l2'});}
+function l2Poly(pts,col,fill){return `<polygon class="l2geom" points="${pts.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="${col}" fill-opacity="${fill==null?.18:fill}" stroke="${col}" stroke-width="2" vector-effect="non-scaling-stroke"/>`;}
+function l2Line(a,b,col,dash){return `<line class="l2geom" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="2" ${dash?'stroke-dasharray="6 4"':''} vector-effect="non-scaling-stroke"/>`;}
+function l2Path(d,col){const line=!/Z\s*$/.test(d);return `<path class="l2geom" d="${d}" fill="${line?'none':col}" fill-opacity=".22" stroke="${col}" stroke-width="${line?3:1.6}" vector-effect="non-scaling-stroke"/>`;}
+function l2Entry(r){
+  const cams=(r.on_camera||[]).length, al=!!r.alarmed;
+  const st=al&&cams?'both':al?'alarmed':cams?'camera':'neither';
+  return {st,txt:{both:'alarmed + on camera',alarmed:'alarmed only',camera:'on camera only',neither:'neither'}[st]};
+}
+function l2Rows(key){
+  const L=D.lane2||{}; const rows=[]; const NR='none recorded';
+  if(key==='entry'){
+    const E=L.entry_points||{};
+    const add=(fac,r)=>{const z=l2Zone(r.zone_key);const px=zonePx(z);const e=l2Entry(r);const nm=(z&&(z.name||z.zone_id))||r.zone_key;
+      rows.push({id:'e-'+r.zone_key,group:fac,label:nm,sub:`${r.kind||'opening'} · ${e.txt}${(r.on_camera||[]).length?' · '+(r.on_camera||[]).map(c=>{const k=l2Cam(c);return k?k.name:c;}).join(', '):''}`,color:L2COL[e.st],px,
+        pop:{name:nm,type:'Entry point · '+fac,status:e.txt,color:L2COL[e.st],confidence:z&&z.confidence},
+        draw:sel=>{let h='';if(sel)(r.on_camera||[]).forEach(c=>{const k=l2Cam(c);const cp=k&&camMapPx(k);if(cp&&px){h+=l2Line(cp,px,L2COL.camera,true)+l2Pin(cp,L2COL.camera,k.name,'c-'+c,false);}});return h;}});};
+    Object.entries(E.facades||{}).forEach(([f,list])=>(list||[]).forEach(r=>add(f[0].toUpperCase()+f.slice(1),r)));
+    (E.unassigned||[]).forEach(r=>add('Facade not assigned',r));
+  }
+  if(key==='coverage'){
+    const C=L.coverage||{};
+    (C.cameras||[]).forEach(c=>{const k=l2Cam(c.device_id);const px=k&&camMapPx(k);const w=(c.wedge||[]).map(p=>l2Px({lat:p[0],lng:p[1]})).filter(Boolean);
+      const fov=String(c.fov_source||'').startsWith('default')?'FOV 90° · range 15 m (defaults)':('FOV '+(c.hfov_deg||'')+'° · range '+(c.range_m||'')+' m');
+      rows.push({id:'c-'+c.device_id,group:'Cameras',label:(k&&k.name)||('device '+c.device_id),sub:w.length?fov+' · wedge from pin and heading':'No pin or heading on file, so no wedge',color:L2COL.camera,px,
+        pop:{name:(k&&k.name)||c.device_id,type:'Camera coverage',status:fov,color:L2COL.camera},draw:sel=>sel&&w.length>2?l2Poly(w,L2COL.camera,.16):''});});
+    (C.gaps||[]).forEach((g,i)=>{const z=l2Zone(g.id);const px=zonePx(z);const nm=(z&&(z.name||z.zone_id))||g.id;
+      rows.push({id:'g-'+i,group:'Gaps against entry points',label:nm,sub:(g.test||'not inside any camera wedge'),color:L2COL.neither,px,pop:{name:nm,type:'Coverage gap',status:g.test||'no camera covers it',color:L2COL.neither},draw:()=>''});});
+  }
+  if(key==='access'){
+    const A=L.access||{}; const H=D.hydrant||{};
+    const pt=(id,label,o,sub,col)=>{const px=l2Px(o);rows.push({id,group:'Approach',label,sub:o&&o.value===null&&!px?(o.note||NR):sub,color:px?(col||L2COL.pt):L2COL.none,px,pop:{name:label,type:'Security & access',status:sub,color:col||L2COL.pt},draw:()=>''});};
+    const se=A.street_entrance||{};
+    pt('a-street','Street entrance',se,(se.status||'estimated')+(se.source?' · '+se.source:'')+(se.warning?' · ⚠ '+se.warning:''),se.warning?L2COL.warn:L2COL.pt);
+    const de=A.driveway_entry||{}; pt('a-drive','Driveway entry',de,(de.status||'')+(de.basis?' · '+de.basis:''));
+    const pd=A.path_to_door||{}; rows.push({id:'a-path',group:'Approach',label:'Drive path to the door',sub:pd.value==null?(pd.note||NR):(pd.length_m?Math.round(pd.length_m)+' m':String(pd.value)),color:L2COL.none,px:null,draw:()=>''});
+    const tu=A.turnaround||{}; rows.push({id:'a-turn',group:'Approach',label:'Turnaround',sub:tu.size_m!=null?tu.size_m+' m ('+(tu.source||'')+')':(tu.source||NR),color:L2COL.none,px:null,draw:()=>''});
+    const sc=A.staging_candidate||{}; pt('a-stage','Staging estimate',sc,(sc.status||'estimated')+(sc.basis?' · '+sc.basis:''),L2COL.warn);
+    const mp=A.meet_point_candidate||{}; pt('a-meet','Meet-point estimate',mp,(mp.status||'estimated')+(mp.basis?' · '+mp.basis:''),L2COL.warn);
+    rows.push({id:'a-egress',group:'Approach',label:'Second egress',sub:A.second_egress?String(A.second_egress):(A.second_egress_note||NR),color:L2COL.none,px:null,draw:()=>''});
+    const hpx=H.px?[+H.px[0],+H.px[1]]:null; const dist=A.hydrant_road_m!=null?Math.round(A.hydrant_road_m)+' m '+(A.hydrant_distance_basis||'by road'):(H.value?H.value+' straight line (no road geometry)':NR);
+    rows.push({id:'a-hyd',group:'Water',label:'Nearest hydrant',sub:dist+(hpx&&!l2InImage(hpx)?' · off this image':''),color:L2COL.alarmed,px:l2InImage(hpx)?hpx:null,pop:{name:'Nearest hydrant',type:'Water',status:dist,color:L2COL.alarmed},draw:()=>''});
+    const gk=v=>typeof v==='string'?v:(v&&v.regions?v.regions.length+' gate region(s) on the map':NR);
+    rows.push({id:'a-gates',group:'Barriers',label:'Gates',sub:gk(A.gates),color:L2COL.none,px:null,draw:()=>(A.gates&&A.gates.regions)?l2RegionPolys(A.gates.regions).map(r=>l2Path(r.d,L2COL.warn)).join(''):''});
+    rows.push({id:'a-knox',group:'Barriers',label:'Knox box',sub:typeof A.knox==='string'?A.knox:NR,color:L2COL.none,px:null,draw:()=>''});
+  }
+  if(key==='perimeter'){
+    const P=L.perimeter||{};
+    (P.sides||[]).forEach(sd=>rows.push({id:'p-'+sd.side,group:'Lot sides',label:sd.side[0].toUpperCase()+sd.side.slice(1)+' side',sub:`${sd.length_m!=null?Math.round(sd.length_m)+' m':''} · ${sd.edge_type||'edge type not recorded'}${sd.beyond?' · beyond: '+sd.beyond:''}`,color:L2COL.pt,px:null,
+      draw:()=>l2RegionPolys(sd.edge_regions).map(r=>l2Path(r.d,L2COL.pt)).join('')}));
+    rows.push({id:'p-lights',group:'Lighting',label:'Exterior lights',sub:(P.exterior_lights||[]).length?(P.exterior_lights.length+' recorded'):(P.exterior_lights_note||NR),color:L2COL.none,px:null,draw:()=>''});
+  }
+  if(key==='fuel'){
+    const F=L.fuel||{}; const BL={'0_5ft':'0–5 ft','5_30ft':'5–30 ft','30_100ft':'30–100 ft'};
+    Object.entries(F.bands||{}).forEach(([b,facs])=>Object.entries(facs||{}).forEach(([fac,c])=>{const n=(c.region_ids||[]).length;
+      rows.push({id:'f-'+b+'-'+fac,group:BL[b]||b,label:fac[0].toUpperCase()+fac.slice(1),sub:`${n} vegetation region${n===1?'':'s'} · ${Math.round(c.area_m2||0)} m²`,color:n?L2COL.veg:L2COL.none,px:null,
+        draw:()=>l2RegionPolys(c.region_ids).map(r=>l2Path(r.d,L2COL.veg)).join('')});}));
+    rows.push({id:'f-notes',group:'Notes',label:'Structure & deck',sub:`deck material: ${F.deck_material||'missing'} · overhang: ${F.overhang??'not recorded'} · beyond 100 ft: ${F.beyond_100ft??0} regions`,color:L2COL.none,px:null,draw:()=>''});
+  }
+  return rows;
+}
+const L2META={
+  entry:['Security','Entry points','Doors and openings from the alarm zones, by facade, marked alarmed, on camera, both or neither. Click one to see it and the cameras that see it.','zones.html','Open zone editor ↗'],
+  coverage:['Security','Camera coverage','Each camera’s field of view drawn from its pin and heading (defaults marked), and the entry points no camera covers.','cameras.html','Open camera pin editor ↗'],
+  access:['Security','Security & access','How responders reach the house: street entrance, drive path, turnaround, staging and meet-point estimates, second egress, hydrant distance, gates and Knox box. Estimates are labelled; nothing is invented.','nearmap-review.html','Open region editor ↗'],
+  perimeter:['Security','Perimeter & lighting','Lot sides with their edge types from the region record, and exterior lighting on record.','nearmap-review.html','Open region editor ↗'],
+  fuel:['Fire','Fuel bands','Vegetation regions by defensible-space band (0–5, 5–30, 30–100 ft) and facade.','nearmap-review.html','Open region editor ↗']
+};
+function rL2(key){
+  const el=document.getElementById('pg-'+key); if(!el) return;
+  el.classList.add('l2page');
+  const m=L2META[key]; const rows=l2Rows(key);
+  let list=head(m[0],m[1],m[2],`<a class="btnl" href="${m[3]}" target="_blank" rel="noopener">${m[4]}</a>`);
+  if(key==='entry'){const c=((D.lane2.entry_points||{}).counts)||{};list+=`<div class="l2legend">${[['both','alarmed + on camera'],['alarmed','alarmed only'],['camera','on camera only'],['neither','neither']].map(([k,t])=>`<span><i style="background:${L2COL[k]}"></i>${t} <b>${c[k]??0}</b></span>`).join('')}</div>`;}
+  let g=null,body='';
+  rows.forEach(r=>{if(r.group!==g){g=r.group;body+=`<div class="l2grp">${esc(g)}</div>`;}
+    body+=`<div class="l2row" data-l2="${esc(r.id)}"><span class="l2dot" style="background:${r.color}"></span><div><div class="l2t">${esc(r.label)}</div><div class="l2s">${esc(r.sub||'')}</div></div></div>`;});
+  list+=`<div class="card mt" style="padding:0;overflow:hidden">${body||'<div class="pad muted">Nothing recorded yet.</div>'}</div>`;
+  el.innerHTML=`<div class="qsplit"><div class="qmap">
+      <div class="qmap-tools">
+        <div class="seg"><button type="button" class="on">2D</button></div>
+        <div class="seg" data-seg="l2"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div>
+        <div class="amap-zoom"><button type="button" data-zoom="in" title="Zoom in" aria-label="Zoom in">+</button><button type="button" data-zoom="out" title="Zoom out" aria-label="Zoom out">−</button></div>
+        <button type="button" class="btnl ghost" data-reset style="padding:5px 10px">Reset view</button>
+        <span class="qmap-hint">Click an item to show it on the map</span>
+      </div>
+      <div class="qmap-stage" id="${key}map"><div id="${key}2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div><div class="qmap-status" id="${key}-status">Click an item to show it on the map</div></div>
+    </div><div class="qside">${list}</div></div>`;
+  const st=L2S[key]={rows,sel:null,crop:'house',map:null};
+  st.map=createNadirMap({hostId:key+'2d',stageId:key+'map',prefix:key+'n',defaultFit:'house',markUserOnPan:true,active:()=>el.classList.contains('on'),onApply(){syncPinDots(document.getElementById(st.map.svgId),Math.max(st.map.s,0.05));}});
+  el.querySelectorAll('[data-seg=l2] [data-crop]').forEach(b=>b.onclick=()=>{st.crop=b.dataset.crop;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));st.map._user=false;scheduleNadirFit(st.map,st.crop);});
+  el.querySelector('[data-zoom=in]').onclick=()=>zoomNadirCenter(st.map,1.2);
+  el.querySelector('[data-zoom=out]').onclick=()=>zoomNadirCenter(st.map,1/1.2);
+  el.querySelector('[data-reset]').onclick=()=>l2Clear(key);
+  el.querySelectorAll('.l2row').forEach(r=>r.onclick=()=>l2Select(key,r.dataset.l2));
+  const svg=document.getElementById(st.map.svgId);
+  svg.addEventListener('click',e=>{const g=e.target.closest&&e.target.closest('.l2pin');if(!g||st.map.moved>6)return;e.stopPropagation();const id=g.dataset.id;if(rows.some(r=>r.id===id))l2Select(key,id,true);});
+  l2Draw(key);scheduleNadirFit(st.map,'house');
+  if((key==='perimeter'||key==='fuel'||key==='access')&&!REGS) loadRegions().then(()=>{if(L2S[key].sel)l2Draw(key);});
+}
+function l2Draw(key){
+  const st=L2S[key]; if(!st||!st.map) return;
+  const M=D.map||{}; let h='';
+  if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
+  const sel=st.sel&&st.rows.find(r=>r.id===st.sel);
+  if(sel){h+=sel.draw(true)||'';if(sel.px)h+=l2Pin(sel.px,sel.color,sel.label,sel.id,true);}
+  nadirSetGeom(st.map,h);
+  syncPinDots(document.getElementById(st.map.svgId),Math.max(st.map.s,0.05));
+}
+function l2Status(key,msg){const e=document.getElementById(key+'-status');if(e)e.textContent=msg||'';}
+function l2Clear(key){
+  const st=L2S[key]; if(!st) return;
+  hideNadirPop();st.sel=null;
+  document.querySelectorAll('#pg-'+key+' .l2row').forEach(r=>r.classList.remove('sel'));
+  l2Status(key,'Click an item to show it on the map');l2Draw(key);
+  if(st.map){st.map._user=false;st.crop='house';document.querySelectorAll('#pg-'+key+' [data-seg=l2] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));scheduleNadirFit(st.map,'house');}
+}
+function l2Select(key,id,fromMap){
+  const st=L2S[key]; if(!st) return;
+  if(st.sel===id&&!fromMap){l2Clear(key);return;}
+  const r=st.rows.find(x=>x.id===id); if(!r) return;
+  st.sel=id;
+  document.querySelectorAll('#pg-'+key+' .l2row').forEach(x=>x.classList.toggle('sel',x.dataset.l2===id));
+  if(fromMap){const row=document.querySelector('#pg-'+key+' .l2row[data-l2="'+CSS.escape(id)+'"]');if(row)row.scrollIntoView({block:'center'});}
+  l2Draw(key);
+  const svg=document.getElementById(st.map.svgId);
+  const fit=[];if(r.px)fit.push(r.px);
+  svg.querySelectorAll('.l2geom').forEach(g=>{try{const b=g.getBBox();if(b.width||b.height){fit.push([b.x,b.y],[b.x+b.width,b.y+b.height]);}}catch(e){}});
+  st.map._user=false;
+  if(fit.length) fitNadirBounds(st.map,fit); else scheduleNadirFit(st.map,st.crop);
+  l2Status(key,r.label+(r.px||fit.length?'':' · not on the map'));
+  hideNadirPop();
+  if(r.px&&r.pop) showNadirPop(st.map,r.px,r.pop);
+}
 /* ---------------- reviewer questions ---------------- */
 let QG='all',QOPEN=false,QTXT='',ANS={},ANSFILE=null,ansTimer=null;
 let QMODE='2d',QMAP=null,QSEL=null,Q3=null;
@@ -2270,16 +2479,16 @@ const QGROUPS=()=>[...new Set(D.questions.map(q=>q.group))];
 async function loadAnswers(){
   let f=null,l=null;
   try{const r=await fetch('reviews/edits/answers.json?_='+Date.now(),{cache:'no-store'});if(r.ok)f=await openSealed(await r.json());}catch(e){}
-  try{const raw=localStorage.getItem('h1-review-answers');if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
+  try{const raw=localStorage.getItem(SafeCrypto.ANS_KEY);if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
   ANSFILE=f;const pick=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;ANS=(pick&&pick.answers)||{};
 }
-function ansDoc(){return {type:'reviewer-answers',name:'h1-reviewer-answers',property:'highlands-1',questions_file:'questions-reviewer.json',saved:new Date().toISOString(),answers:ANS};}
+function ansDoc(){return {type:'reviewer-answers',name:'safe-reviewer-answers',property:(D.lot&&D.lot.slug)||'',question_set_version:(D.lot&&D.lot.question_set_version)||null,question_set_sha256:(D.lot&&D.lot.question_set_sha256)||null,saved:new Date().toISOString(),answers:ANS};}
 function qStatus(m,k){const e=document.getElementById('qstat');if(e){e.textContent=m;e.className='qstat'+(k?' '+k:'');}}
 async function saveAnswers(){
   const env=await sealJson(ansDoc());
-  try{localStorage.setItem('h1-review-answers',JSON.stringify(env));}catch(e){}
+  try{localStorage.setItem(SafeCrypto.ANS_KEY,JSON.stringify(env));}catch(e){}
   let how='local';
-  if(H1Crypto.canPut()){try{const r=await fetch('reviews/edits/answers.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(env)});if(r.ok)how='file';}catch(e){}}
+  if(SafeCrypto.canPut()){try{const r=await fetch('reviews/edits/answers.json',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(env)});if(r.ok)how='file';}catch(e){}}
   const n=Object.values(ANS).filter(a=>a.answer).length;
   if(how==='file')qStatus('Saved '+n+' answers to reviews/edits/answers.json');
   else qStatus('Saved '+n+' answers in this browser. Use Export my review to send a copy.');
@@ -2334,18 +2543,20 @@ function rQuestions(){
     <div class="qside">
       ${waterBanner(' · <a href="#fire">Fire tab</a>', true)}${head('Section 9','Reviewer questions','Click a question to show it on the map. Answer from the nadir, 3D model and outlines. Answers save automatically.')}
       <div class="qbar"><div class="chips" id="qchips"><button class="chip on" data-g="all">All<b>${Q.length}</b></button>${gs.map(g=>`<button class="chip" data-g="${esc(g)}">${esc(g)}<b>${Q.filter(q=>q.group===g).length}</b></button>`).join('')}</div><label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="qopen"> Unanswered only</label><input type="search" id="qtxt" placeholder="Search questions…" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;min-width:180px"></div>
-      <div class="qbar" style="top:auto;padding-top:0"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><span class="qstat" id="qstat"></span></div>
+      <div class="qbar" style="top:auto;padding-top:0"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><button type="button" class="btnl ghost" id="qapprove" style="padding:6px 12px" title="Ask for Pass 1 approval. The pipeline checks the gate; export your review after this.">Request approval</button><span class="qstat" id="qstat"></span></div>
       <div id="qlist"></div>
     </div></div>`;
   const el=document.getElementById('pg-questions');el.innerHTML=h;
   el.querySelectorAll('#qchips .chip').forEach(c=>c.onclick=()=>{QG=c.dataset.g;el.querySelectorAll('#qchips .chip').forEach(x=>x.classList.toggle('on',x===c));drawQ()});
   el.querySelector('#qopen').onchange=e=>{QOPEN=e.target.checked;drawQ()};el.querySelector('#qtxt').oninput=e=>{QTXT=e.target.value.toLowerCase();drawQ()};
-  el.querySelector('#qsave').onclick=()=>saveAnswers();const nm=el.querySelector('#qrevname');if(nm){nm.value=H1Crypto.reviewerName();nm.onchange=()=>H1Crypto.setReviewerName(nm.value);}el.querySelector('#qexport').onclick=async()=>{if(nm)H1Crypto.setReviewerName(nm.value);qStatus('Exporting…');try{await H1Crypto.exportReview();qStatus('Downloaded the review export.');}catch(e){qStatus('Export failed: '+e.message,'err');}};
+  el.querySelector('#qsave').onclick=()=>saveAnswers();const nm=el.querySelector('#qrevname');if(nm){nm.value=SafeCrypto.reviewerName();nm.onchange=()=>SafeCrypto.setReviewerName(nm.value);}const qa=el.querySelector('#qapprove');if(qa)qa.onclick=async()=>{if(nm)SafeCrypto.setReviewerName(nm.value);if(!SafeCrypto.reviewerName()){qStatus('Add your name first.','err');return;}const n=D.questions.filter(q=>ANS[q.id]&&ANS[q.id].answer).length;const note=prompt('Note for the approver (optional):')||'';try{await saveAnswers();await SafeCrypto.requestApproval(note,{answered:n,total:D.questions.length});qStatus('Approval requested. Now use Export my review and send the file.');}catch(e){qStatus('Could not record the request: '+e.message,'err');}};el.querySelector('#qexport').onclick=async()=>{if(nm)SafeCrypto.setReviewerName(nm.value);qStatus('Exporting…');try{await SafeCrypto.exportReview();qStatus('Downloaded the review export.');}catch(e){qStatus('Export failed: '+e.message,'err');}};
   el.querySelector('#qlist').addEventListener('click',e=>{
     const b=e.target.closest('.qopt');
     if(b){const id=b.dataset.q;const cur=ANS[id]||{};
       cur.answer=cur.answer===b.dataset.v?null:b.dataset.v;cur.at=new Date().toISOString();ANS[id]=cur;
       const card=document.getElementById('q-'+id);card.querySelectorAll('.qopt').forEach(x=>x.classList.toggle('on',x.dataset.v===cur.answer));card.classList.toggle('done',!!cur.answer);progress();queueSave();return;}
+    const o3=e.target.closest('[data-open3d]');
+    if(o3){openQ3(o3.dataset.open3d);return;}
     if(e.target.closest('textarea,a,button.linkchip:not(.showmap)'))return;
     const card=e.target.closest('.q');if(!card)return;
     showQ(card.id.slice(2));
@@ -2377,7 +2588,7 @@ function drawQ(){
   let h='';
   QGROUPS().forEach(g=>{const qs=Q.filter(q=>q.group===g);if(!qs.length)return;
     h+=`<div class="qgroup"><h3>${esc(g)} <span class="badge b-grey">${qs.length}</span></h3>`+qs.map(q=>{const a=ANS[q.id]||{};
-      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${qIsProv(q)?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}${botEstimateLine(q)}
+      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${qIsProv(q)?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button><button type="button" class="linkchip open3d" data-open3d="${esc(q.id)}" title="Show this question's place on the 3D model">Open in 3D</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}${botEstimateLine(q)}${q.pre_answered&&q.pre_answered.answer!=null?`<div class="callout ans" style="margin-top:8px"><b>Pre-answered from data:</b> ${esc(String(q.pre_answered.answer))}${q.pre_answered.evidence?` · ${esc(q.pre_answered.evidence)}`:''} <span class="small">Pick an answer only if this is wrong.</span></div>`:''}
      ${(!botEstimate(q)&&qProvText(q))?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(qProvText(q))}</div>`:''}
      <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}${qEstClass(q,o)}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
      <textarea data-q="${esc(q.id)}" rows="1" placeholder="Note (optional)">${esc(a.note||'')}</textarea></div>`;}).join('')+`</div>`;});
@@ -2513,6 +2724,8 @@ function resetReviewerOutside(){
   const zOn=document.getElementById('pg-alarms')&&document.getElementById('pg-alarms').classList.contains('on');
   const cOn=document.getElementById('pg-cameras')&&document.getElementById('pg-cameras').classList.contains('on');
   hideNadirPop();
+  const l2On=L2_PAGES.find(k=>{const e=document.getElementById('pg-'+k);return e&&e.classList.contains('on');});
+  if(l2On){l2Clear(l2On);return;}
   if(qOn){
     resetQLayersDefault();
     QSEL=null;
@@ -2556,9 +2769,9 @@ function resetReviewerOutside(){
 function reviewerOutsideIgnore(el){
   if(!el||!el.closest) return true;
   if(el.closest('#qly-panel, .qmap-tools, #qly-toggle, #lb, #qsave, #qexport')) return true;
-  if(el.closest('#qlist .q, #pg-assets .regitem, #pg-assets .pfact, #pg-measurements .mrow, #pg-alarms .zrow, #pg-cameras .cam')) return true;
+  if(el.closest('#qlist .q, #pg-assets .regitem, #pg-assets .pfact, #pg-measurements .mrow, #pg-alarms .zrow, #pg-cameras .cam, .l2row, #aveg')) return true;
   if(el.closest('input,textarea,select,label,summary')) return true;
-  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin, .zpin, .cpin, .nadir-pinpop, .q2overlay')) return true;
+  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin, .zpin, .cpin, .l2pin, .l2geom, .nadir-pinpop, .q2overlay')) return true;
   return false;
 }
 function wireReviewerOutside(){
@@ -2570,16 +2783,21 @@ function wireReviewerOutside(){
     down={x:e.clientX,y:e.clientY};
   },true);
   document.addEventListener('click',e=>{
-    const pg=document.querySelector('#pg-questions.on, #pg-assets.on, #pg-measurements.on, #pg-alarms.on, #pg-cameras.on');
+    const pg=document.querySelector('#pg-questions.on, #pg-assets.on, #pg-measurements.on, #pg-alarms.on, #pg-cameras.on'+L2_PAGES.map(k=>', #pg-'+k+'.on').join(''));
     if(!pg) return;
     if(e.button!=null&&e.button!==0) return;
     if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>6) return;
     const t=e.target;
     if(!(t instanceof Element)) return;
     if(reviewerOutsideIgnore(t)) return;
-    if(!t.closest('#pg-questions, #pg-assets, #pg-measurements, #pg-alarms, #pg-cameras, #app')) return;
+    if(!t.closest('#pg-questions, #pg-assets, #pg-measurements, #pg-alarms, #pg-cameras, '+L2_PAGES.map(k=>'#pg-'+k).join(', ')+', #app')) return;
     resetReviewerOutside();
   });
+}
+function openQ3(id){
+  // Per-question Open in 3D: select the question, switch the map to 3D, focus its place once the model is ready.
+  QSEL=id;
+  if(QMODE!=='3d') setQMode('3d'); else showQ(id);
 }
 function setQMode(m){
   if(m!=='2d'&&m!=='3d')return;QMODE=m;
@@ -2614,7 +2832,7 @@ function createNadirMap(cfg){
   if(!host||!stage) return null;
   const M=D.map, prefix=cfg.prefix||cfg.hostId;
   const innerId=prefix+'inner', imgId=prefix+'img', svgId=prefix+'svg', geomId=prefix+'geom';
-  host.innerHTML=`<div class="q2inner" id="${innerId}" style="width:${M.w}px;height:${M.h}px"><img id="${imgId}" alt="Nadir 2 Jul 2026" draggable="false"></div><svg class="q2overlay" id="${svgId}" xmlns="http://www.w3.org/2000/svg"></svg>`;
+  host.innerHTML=`<div class="q2inner" id="${innerId}" style="width:${M.w}px;height:${M.h}px"><img id="${imgId}" alt="Nadir" draggable="false"></div><svg class="q2overlay" id="${svgId}" xmlns="http://www.w3.org/2000/svg"></svg>`;
   const img=document.getElementById(imgId); if(img) img.src=URLS.nadir||'';
   const map={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h,_user:false,pointers:new Map(),moved:0,cfg:cfg,prefix,innerId,imgId,svgId,geomId,hostId:cfg.hostId,stageId:cfg.stageId,_fit:cfg.defaultFit||'parcel'};
   wireNadirMap(map);
@@ -3183,7 +3401,7 @@ function qLabel(x,y,text,anchor,force){
   return `<text x="${x+dx}" y="${y-10}" text-anchor="${ax}" fill="#fff" stroke="#1c2321" stroke-width="3" paint-order="stroke" font-size="18" font-weight="650">${esc(text)}</text>`;
 }
 async function loadQPins(){
-  const crypto=window.H1Crypto;
+  const crypto=window.SafeCrypto;
   const take=async (storageKey)=>{
     if(!crypto||!crypto.maybeOpen) return null;
     try{return await crypto.maybeOpen(localStorage.getItem(storageKey));}catch(e){return null;}
@@ -3511,9 +3729,9 @@ function ensureQ3(){
   Q3={loading:true,ready:false};
   Q3.loading=(async()=>{
     try{
-      if(!window.H1Three) await loadScript('vendor/three-viewer.js');
-      const {THREE,OrbitControls,GLTFLoader}=window.H1Three;
-      const buf=await fetchQ3Mesh((a,b)=>{const e=document.getElementById('qmapstat');if(e)e.textContent=H1Crypto.progressMsg(a,b);});
+      if(!window.SafeThree) await loadScript('vendor/three-viewer.js');
+      const {THREE,OrbitControls,GLTFLoader}=window.SafeThree;
+      const buf=await fetchQ3Mesh((a,b)=>{const e=document.getElementById('qmapstat');if(e)e.textContent=SafeCrypto.progressMsg(a,b);});
       const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'}));
       const w=host.clientWidth||400,h=host.clientHeight||400;
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x1b1f1d);
