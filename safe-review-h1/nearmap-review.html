@@ -175,8 +175,6 @@
   .layer-group > h3 { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-dim); margin: 10px 0 4px; font-weight: 700; }
   .layer-group > .layer-sub { font-size: 11px; color: #c4d0cb; margin: 8px 0 2px; font-weight: 650; letter-spacing: 0; text-transform: none; }
   .layer-btns { display: flex; gap: 6px; margin: 6px 0 8px; }
-  #closePoly { display: none; }
-  #closePoly.show { display: inline-block; }
   #pinList { margin: 8px 0 0; padding: 0; list-style: none; }
   #pinList li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--line); }
   #pinList li span.grow { flex: 1; min-width: 0; }
@@ -260,8 +258,6 @@
         <span id="modeChip" class="mode-chip"></span>
         <button type="button" class="btn tool on" data-tool="pan" id="toolPan">Pan</button>
         <button type="button" class="btn tool regions-only" data-tool="draw" id="toolDraw">Draw</button>
-        <button type="button" class="btn tool regions-only" data-tool="polygon" id="toolPolygon">Polygon</button>
-        <button type="button" class="btn regions-only" id="closePoly" title="Close the polygon and fill it with the armed class">Close shape</button>
         <button type="button" class="btn tool pins-only" data-tool="place" id="toolPlace">Place pin</button>
         <button type="button" class="btn tool pins-only" data-tool="delete" id="toolDelete">Delete pin</button>
         <button type="button" class="btn pins-only" id="seedPins" title="Pin each region except cover/veg skips; name is the region class">Auto Generate Pins</button>
@@ -284,7 +280,7 @@
     <div class="panel-scroll">
       <p class="meta" id="survey"></p>
       <p class="meta regions-only" id="regionsNote">Vendor polygons live in <code>ai/original/regions.json</code> and never change. Save writes the working set to <code>ai/edits/regions.json</code> in this browser (use Export my review to send a copy). <strong>Revert changes</strong> discards paint since the last Save (or since you opened). <strong>Revert to original</strong> puts the vendor file back.</p>
-      <p class="meta regions-only how"><b>Draw</b>: click a class (present or not present) to arm it, then Draw — the brush takes that class colour. Left-drag to paint or fill a new region; right-drag to erase. <b>Polygon</b>: with a class armed, click vertices and Close shape (or double-click) to fill. New regions save to <code>ai/edits/regions.json</code> with origin <code>reviewer</code>; the vendor original never changes. Ctrl+Z / Ctrl+Y undo and redo.</p>
+      <p class="meta regions-only how"><b>Draw</b>: click a class (present or not present) to arm it, then Draw — the brush takes that class colour. Left-drag to paint or fill a new region; right-drag to erase. New regions save to <code>ai/edits/regions.json</code> with origin <code>reviewer</code>; the vendor original never changes. Ctrl+Z / Ctrl+Y undo and redo.</p>
       <label class="toggle"><input type="checkbox" id="parcelToggle" checked> Parcel line</label>
       <label class="toggle"><input type="checkbox" id="hydrantToggle" checked> Hydrant</label>
       <p class="meta pins-only" id="pinsNote">Pins editor. Regions are read-only (finish them in the Regions editor). <strong>Auto Generate Pins</strong> places one pin per region at its interior point, named after the region class in regions.json (Lawn Grass stays Lawn Grass — not a catalog entry). Cover/veg classes are skipped (asphalt, building deprecated, concrete slab, driveway, vegetation, natural, roof, translucent roofing, water body, woody). No cap. <strong>Place pin</strong>: turn on a layer, then click a painted region that has no pin — the pin is placed at that region's interior point, not at the click. <strong>Delete pin</strong>: click a painted region that has a pin, or the pin itself — the region stays. Bare map clicks do nothing. Save writes the Nearmap sheet.</p>
@@ -1637,7 +1633,7 @@
     return toolMode === 'draw' || toolMode === 'polygon';
   }
   function isPolyTool() {
-    return toolMode === 'polygon';
+    return false;
   }
 
   function updateBrushLabel() {
@@ -4403,6 +4399,7 @@
   }
 
   function setTool(mode) {
+    if (mode === 'polygon') mode = 'pan';
     var wasDraw = toolMode === 'draw';
     var wasPoly = toolMode === 'polygon';
     var wasEdit = wasDraw || wasPoly;
@@ -5212,12 +5209,6 @@
   });
   var hydrantToggle = document.getElementById('hydrantToggle');
   if (hydrantToggle) hydrantToggle.addEventListener('change', function () { drawH1ContextOverlays(); });
-  var closePolyBtn = document.getElementById('closePoly');
-  if (closePolyBtn) closePolyBtn.addEventListener('click', function (ev) {
-    ev.preventDefault();
-    ev.stopPropagation();
-    if (isPolyTool()) finishDraw();
-  });
   window.nmApi = {
     pickRegion: function (rid) {
       return ensureFeatures().then(function () {
