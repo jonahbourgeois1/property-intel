@@ -184,6 +184,7 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .alts div b{font-weight:600;color:var(--ink)}
 #mmap-status{min-height:1.35em;margin-top:6px}
 #mmap-status.warn{color:#8a5a00}
+#mmap-status.qmap-status.warn,#amap-status.qmap-status.warn{color:#ffd8a8}
 #mmap .qnorth{pointer-events:none}
 #mmap .ly-parcel{pointer-events:none}
 #mmap .mln,#mmap .marea,#mmap .mpt{cursor:pointer}
@@ -191,7 +192,11 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 #mmap .marea.hl{fill-opacity:.28}
 #mmap .mlbl{font-family:Inter,Segoe UI,sans-serif;font-weight:650;paint-order:stroke fill;stroke:#111;stroke-linejoin:round;pointer-events:none;opacity:0}
 #mmap .mfeat:hover .mlbl,#mmap .mfeat.hl .mlbl,#mmap .mpt:hover .mlbl,#mmap .mpt.hl .mlbl{opacity:1}
-.amap-stage.qmap-stage,#amap.amap-stage,#mmap.amap-stage{height:min(64vh,560px);min-height:420px;border-radius:var(--r);flex:none}
+.amap-stage.qmap-stage,#amap.amap-stage,#mmap.amap-stage{height:auto;min-height:0;border-radius:0;flex:1 1 auto}
+.qmap-tools .amap-zoom{background:#1c2321;border-color:#3a4440}
+.qmap-tools .amap-zoom button{color:#d7e0dc;border-right-color:#3a4440}
+.qmap-tools .amap-zoom button:hover{background:#2a3230}
+.qmap #amap-status,.qmap #mmap-status{min-height:0;margin:0}
 /* assets */
 .chips{display:flex;flex-wrap:wrap;gap:6px}
 .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;cursor:pointer;color:var(--ink2)}
@@ -289,11 +294,11 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .qstat.err{color:var(--miss)}
 
 /* questions split map */
-html.qmode,html.qmode body{height:100vh;overflow:hidden}
-html.qmode #app{height:100vh;overflow:hidden}
-html.qmode main{padding:0;overflow:hidden;min-height:0;display:flex;flex-direction:column}
-html.qmode main .wrap{max-width:none;width:100%;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
-html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
+html.qmode,html.splitmap,html.qmode body,html.splitmap body{height:100vh;overflow:hidden}
+html.qmode #app,html.splitmap #app{height:100vh;overflow:hidden}
+html.qmode main,html.splitmap main{padding:0;overflow:hidden;min-height:0;display:flex;flex-direction:column}
+html.qmode main .wrap,html.splitmap main .wrap{max-width:none;width:100%;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
+html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
 .qsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;height:100%}
 .qmap{position:relative;min-width:0;min-height:0;background:#141816;display:flex;flex-direction:column;border-right:1px solid var(--line)}
 .qmap-tools{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 12px;background:rgba(20,24,22,.92);color:#d7e0dc;z-index:3;flex-shrink:0}
@@ -322,6 +327,14 @@ html.qmode #pg-questions.on{display:flex;flex-direction:column;flex:1;min-height
 .qside .ph{margin-bottom:14px}
 .qside .qbar{position:sticky;top:0;background:var(--bg);z-index:3}
 .q.sel{box-shadow:0 0 0 2px var(--accent)}
+.botest{font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.4}
+.botest .botconf{font-variant-numeric:tabular-nums;font-weight:700}
+.botest .botconf.ok{color:var(--ok,#2f9e44)}
+.botest .botconf.amber{color:#c4811a}
+.botest .botconf.bad{color:var(--miss,#c92a2a)}
+.botest .bot-prov{color:var(--ink3)}
+.qopt.est{box-shadow:0 0 0 1.5px var(--accent);border-color:var(--accent)}
+.qopt.est:not(.on){background:#fff;color:var(--ink)}
 @media (max-width:900px){
   .qsplit{grid-template-columns:1fr;grid-template-rows:minmax(240px,42vh) minmax(0,1fr)}
   .qmap{border-right:0;border-bottom:1px solid var(--line)}
@@ -451,6 +464,25 @@ function qProvText(q){
   if(typeof p==='string'){const s=p.trim();if(s&&!/^(true|false|1|0)$/i.test(s)) return s;}
   return (q&&Q_PROV_TEXT[q.id])||'';
 }
+function botEstimate(q){
+  const e=q&&q.bot_estimate;
+  if(!e||e.answer==null||String(e.answer).trim()==='') return null;
+  const conf=Math.round(Number(e.confidence));
+  return {answer:String(e.answer).trim(), assumption:(e.assumption&&String(e.assumption).trim())||'', confidence:isFinite(conf)?Math.max(0,Math.min(100,conf)):null, source:(e.source_bot&&String(e.source_bot).trim())||''};
+}
+function botEstimateLine(q){
+  const e=botEstimate(q); if(!e) return '';
+  const tone=e.confidence==null?'':(e.confidence>=80?'ok':e.confidence>=50?'amber':'bad');
+  const bits=[`<span>Bot estimate: ${esc(e.answer)}</span>`];
+  if(e.confidence!=null) bits.push(`<b class="botconf ${tone}">${e.confidence}%</b>`);
+  if(e.assumption||e.source){
+    const tail=(e.assumption?esc(e.assumption):'')+(e.source?`${e.assumption?' ':''}(${esc(e.source)})`:'');
+    bits.push(`<span>${tail}</span>`);
+  }
+  const prov=qProvText(q);
+  if(prov) bits.push(`<span class="bot-prov">Working answer: ${esc(prov)}</span>`);
+  return `<div class="botest">${bits.join(' · ')}</div>`;
+}
 const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
 
 /* ---------------- map ---------------- */
@@ -515,8 +547,11 @@ function route(){
   let h=(location.hash||'#overview').slice(1);let [k,target]=h.split(':');
   if(k==='regions') k='assets';
   const key=SECTIONS.some(s=>s[0]===k)?k:'overview';
+  const split=key==='questions'||key==='assets'||key==='measurements';
   document.documentElement.classList.toggle('qmode',key==='questions');
   document.body.classList.toggle('qmode',key==='questions');
+  document.documentElement.classList.toggle('splitmap',split);
+  document.body.classList.toggle('splitmap',split);
   document.querySelectorAll('section.page').forEach(s=>s.classList.toggle('on',s.id==='pg-'+key));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
   if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
@@ -699,16 +734,25 @@ function rMeas(){
   const geoms=listMeasGeometry();
   const has=id=>geoms.some(g=>g.id===id||(g.ids||[]).includes(id));
   const nogeom='<div class="tiny muted" style="margin-top:4px">No geometry on file</div>';
-  let h=head('Section 6','Measurements','Mesh heights and the georeferenced nadir. The 3D mesh roof is the provisional primary reference; alternates are one click away.');
-  h+=`<div class="assetwrap mt"><div>`;
+  let list='';
   (D.meas||[]).forEach((g,i)=>{
-    h+=`<div class="card${i?' mt':''}"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+(g.rows||[]).map(r=>`<tr class="mrow" id="meas-${esc(r.id)}" data-mid="${esc(r.id)}"><td><b style="font-weight:600">${esc(r.label)}</b>${has(r.id)?'':nogeom}${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${(r.alts||[]).length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
+    list+=`<div class="card${i?' mt':''}"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+(g.rows||[]).map(r=>`<tr class="mrow" id="meas-${esc(r.id)}" data-mid="${esc(r.id)}"><td><b style="font-weight:600">${esc(r.label)}</b>${has(r.id)?'':nogeom}${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${(r.alts||[]).length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
   });
-  h+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
-  h+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
-  h+=`</div><div class="mapcol"><div class="maptools"><div class="seg" data-seg="ms"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div><div class="amap-zoom"><button type="button" id="mmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="mmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div></div><div class="qmap-stage amap-stage" id="mmap"><div id="m2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div></div><div id="mmap-status" class="small muted">Distance lines, area outlines and height points are shown when their geometry is on file.</div></div></div>`;
-  h+=`<div class="grid g2 mt"><div class="card tile" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div></div>`;
-  const el=document.getElementById('pg-measurements'); el.innerHTML=h;
+  list+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">3D mesh · DOGAMI 2011</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>2011 lidar</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
+  list+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  if(D.qa) list+=`<div class="card tile mt" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div>`;
+  const el=document.getElementById('pg-measurements');
+  el.innerHTML=`<div class="qsplit"><div class="qmap">
+      <div class="qmap-tools">
+        <div class="seg"><button type="button" class="on">2D</button></div>
+        <div class="seg" data-seg="ms"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div>
+        <div class="amap-zoom"><button type="button" id="mmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="mmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div>
+        <button type="button" class="btnl ghost" id="mmap-reset" style="padding:5px 10px">Reset view</button>
+        <span class="qmap-hint">Click a measurement to show it on the map</span>
+      </div>
+      <div class="qmap-stage" id="mmap"><div id="m2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div><div class="qmap-status" id="mmap-status">Distance lines, area outlines and height points are shown when their geometry is on file.</div></div>
+    </div>
+    <div class="qside">${head('Section 6','Measurements','Mesh heights and the georeferenced nadir. The 3D mesh roof is the provisional primary reference; alternates are one click away.')}${list}</div></div>`;
   initMeasMap();
   el.querySelectorAll('[data-seg=ms] [data-crop]').forEach(b=>b.onclick=()=>{
     MCROP=b.dataset.crop;
@@ -719,6 +763,8 @@ function rMeas(){
   const zin=el.querySelector('#mmap-zin'), zout=el.querySelector('#mmap-zout');
   if(zin) zin.onclick=()=>zoomNadirCenter(MMAP,1.2);
   if(zout) zout.onclick=()=>zoomNadirCenter(MMAP,1/1.2);
+  const mreset=el.querySelector('#mmap-reset');
+  if(mreset) mreset.onclick=()=>{clearMeas();MCROP='house';el.querySelectorAll('[data-seg=ms] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));if(MMAP){MMAP._user=false;scheduleNadirFit(MMAP,'house');}};
   el.querySelectorAll('.mrow[data-mid]').forEach(r=>r.addEventListener('click',e=>{
     if(e.target.closest('details,a,summary')) return;
     selectMeas(r.dataset.mid,false);
@@ -727,7 +773,7 @@ function rMeas(){
 let MSEL=null,MMAP=null,MCROP='house';
 function setMmapStatus(msg,warn){
   const el=document.getElementById('mmap-status'); if(!el) return;
-  el.className='small'+(warn?' warn':'');
+  el.className='qmap-status'+(warn?' warn':'');
   el.textContent=msg||'';
 }
 function looksLikePx(pt){
@@ -1319,9 +1365,8 @@ function rAssets(){
     const open=AVEND[key]?' open':'';
     return `<details class="vendors" data-vkey="${esc(key)}"${open}><summary>${esc(label)}</summary><div class="vendorlist">${children.map(itemRow).join('')}</div></details>`;
   };
-  let h=head('Section 7','Regions','Click a region to show it on the map.',`<a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a>`);
   const catChips=CAT_ORDER.filter(c=>cats[c]).map(c=>`<button class="chip" data-t="${esc(c)}">${esc(c)}<b>${cats[c]}</b></button>`).join('');
-  h+=`<div class="chips" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
+  let list=`${head('Section 7','Regions','Click a region to show it on the map.',`<a class="btnl" href="${editorUrl()}" target="_blank" rel="noopener">Open region editor ↗</a>`)}<div class="chips" id="achips"><button class="chip on" data-t="all">All<b>${allItems.length}</b></button>${catChips}</div>`;
   const blocks=CAT_ORDER.filter(c=>cats[c]).map(c=>{
     const rows=allItems.filter(a=>(a.category||'Uncategorised')===c);
     const tree=organizeCategory(rows,c);
@@ -1333,14 +1378,24 @@ function rAssets(){
     const open=c===AOPEN_DEFAULT?' open':'';
     return `<details class="regcat" data-cat="${esc(c)}" data-t="${esc(c)}"${open}><summary>${esc(c)}<span class="n">${rows.length}</span></summary><div class="reglist">${body}</div></details>`;
   }).join('');
-  h+=`<div class="assetwrap mt"><div class="card regpanel">${blocks}</div>
-<div class="mapcol"><div class="maptools"><div class="seg" data-seg="as"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div><div class="amap-zoom"><button type="button" id="amap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="amap-zout" title="Zoom out" aria-label="Zoom out">−</button></div></div><div class="qmap-stage amap-stage" id="amap"><div id="a2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div></div><div class="small muted" style="margin-top:8px" id="regnote"></div><div id="amap-status" class="small"></div></div></div>`;
-  h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div></div>`;
+  list+=`<div class="card regpanel">${blocks}</div>`;
+  list+=`<div class="card pad mt"><h3>Looked for, not seen in imagery</h3><ul class="clean small">${Object.entries(A.not_seen).map(([k,v])=>`<li style="display:flex;justify-content:space-between;gap:10px"><span>${esc(k.replace(/_/g,' ').replace(/^./,c=>c.toUpperCase()))}</span><span class="muted">${v?esc(v):'not seen · open question'}</span></li>`).join('')}</ul><div class="small muted" style="margin-top:8px">Nothing was invented: unseen items stay empty.</div></div>`;
   const pfs=A.property_facts||D.property_facts||[];
   if(pfs.length){
-    h+=`<div class="card pad mt2" id="property-facts"><h3>Property facts</h3><div class="small muted" style="margin-top:4px">Records with no geometry of their own — attached here rather than inventing a region. Click a fact to see that on the map panel.</div><ul class="clean small" style="margin-top:8px">${pfs.map(f=>`<li class="pfact" style="margin:6px 0;cursor:pointer"><b>${esc(f.kind||'fact')}</b> — ${esc(typeof f.value==='string'?f.value:JSON.stringify(f.value))}${f.source?`<div class="muted">${esc(f.source)}</div>`:''}</li>`).join('')}</ul></div>`;
+    list+=`<div class="card pad mt" id="property-facts"><h3>Property facts</h3><div class="small muted" style="margin-top:4px">Records with no geometry of their own — attached here rather than inventing a region. Click a fact to see that on the map panel.</div><ul class="clean small" style="margin-top:8px">${pfs.map(f=>`<li class="pfact" style="margin:6px 0;cursor:pointer"><b>${esc(f.kind||'fact')}</b> — ${esc(typeof f.value==='string'?f.value:JSON.stringify(f.value))}${f.source?`<div class="muted">${esc(f.source)}</div>`:''}</li>`).join('')}</ul></div>`;
   }
-  const el=document.getElementById('pg-assets');el.innerHTML=h;
+  const el=document.getElementById('pg-assets');
+  el.innerHTML=`<div class="qsplit"><div class="qmap">
+      <div class="qmap-tools">
+        <div class="seg"><button type="button" class="on">2D</button></div>
+        <div class="seg" data-seg="as"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div>
+        <div class="amap-zoom"><button type="button" id="amap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="amap-zout" title="Zoom out" aria-label="Zoom out">−</button></div>
+        <button type="button" class="btnl ghost" id="amap-reset" style="padding:5px 10px">Reset view</button>
+        <span class="qmap-hint">Click a region to show it on the map</span>
+      </div>
+      <div class="qmap-stage" id="amap"><div id="a2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div><div class="qmap-status" id="amap-status"></div></div>
+    </div>
+    <div class="qside">${list}<div class="small muted" id="regnote"></div></div></div>`;
   function applyChipFilter(){
     el.querySelectorAll('#achips .chip').forEach(x=>x.classList.toggle('on',x.dataset.t===ATYPE));
     el.querySelectorAll('.regcat').forEach(d=>{
@@ -1367,6 +1422,8 @@ function rAssets(){
   const zin=el.querySelector('#amap-zin'), zout=el.querySelector('#amap-zout');
   if(zin) zin.onclick=()=>zoomNadirCenter(AMAP,1.2);
   if(zout) zout.onclick=()=>zoomNadirCenter(AMAP,1/1.2);
+  const areset=el.querySelector('#amap-reset');
+  if(areset) areset.onclick=()=>{clearAsset();ACROP='house';el.querySelectorAll('[data-seg=as] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));if(AMAP){AMAP._user=false;scheduleNadirFit(AMAP,'house');}};
   el.querySelectorAll('.regcat').forEach(d=>d.addEventListener('toggle',()=>{if(!ASEL) drawAssetMap();}));
   el.querySelectorAll('details.vendors').forEach(d=>{
     d.addEventListener('toggle',()=>{AVEND[d.dataset.vkey]=d.open;});
@@ -1397,7 +1454,7 @@ function rAssets(){
 }
 function setAmapStatus(msg,warn){
   const el=document.getElementById('amap-status');if(!el)return;
-  el.className='small'+(warn?' warn':'');
+  el.className='qmap-status'+(warn?' warn':'');
   el.textContent=msg||'';
 }
 function fitAssetView(pts){
@@ -1786,9 +1843,9 @@ function drawQ(){
   let h='';
   QGROUPS().forEach(g=>{const qs=Q.filter(q=>q.group===g);if(!qs.length)return;
     h+=`<div class="qgroup"><h3>${esc(g)} <span class="badge b-grey">${qs.length}</span></h3>`+qs.map(q=>{const a=ANS[q.id]||{};
-      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${qIsProv(q)?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}
-     ${qProvText(q)?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(qProvText(q))}</div>`:''}
-     <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+      return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${qIsProv(q)?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}${botEstimateLine(q)}
+     ${(!botEstimate(q)&&qProvText(q))?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(qProvText(q))}</div>`:''}
+     <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}${(botEstimate(q)&&botEstimate(q).answer===o)?' est':''}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
      <textarea data-q="${esc(q.id)}" rows="1" placeholder="Note (optional)">${esc(a.note||'')}</textarea></div>`;}).join('')+`</div>`;});
   const list=document.getElementById('qlist');if(!list)return;
   list.innerHTML=h||'<div class="card empty">No questions match.</div>';
@@ -1962,8 +2019,8 @@ function nadirMPerPx(){
   }
   return 0.43;
 }
-const NADIR_MAX_SCALE=1, NADIR_MIN_SCALE=0.15, NADIR_MIN_EXTENT_M=90, NADIR_PAD_FRAC=0.25, NADIR_PAD_M=12;
-function nadirClampScale(s){return Math.min(NADIR_MAX_SCALE,Math.max(NADIR_MIN_SCALE,s));}
+const NADIR_MAX_SCALE=1, NADIR_MAX_FIT_SCALE=1, NADIR_MAX_ZOOM_SCALE=4, NADIR_MIN_SCALE=0.15, NADIR_MIN_EXTENT_M=90, NADIR_PAD_FRAC=0.25, NADIR_PAD_M=12;
+function nadirClampScale(s,max){return Math.min(max==null?NADIR_MAX_FIT_SCALE:max,Math.max(NADIR_MIN_SCALE,s));}
 function applyNadirMap(map){
   if(!map) return;
   const el=document.getElementById(map.innerId); if(!el) return;
@@ -2015,7 +2072,7 @@ function scheduleNadirFit(map,which){
 }
 function zoomNadir(map,cx,cy,fac){
   if(!map) return;
-  const s2=nadirClampScale(map.s*fac);
+  const s2=nadirClampScale(map.s*fac, NADIR_MAX_ZOOM_SCALE);
   const wx=(cx-map.tx)/map.s, wy=(cy-map.ty)/map.s;
   map.s=s2; map.tx=cx-wx*s2; map.ty=cy-wy*s2;
   applyNadirMap(map);
