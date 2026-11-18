@@ -325,7 +325,8 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 #q3d canvas{display:block;width:100%;height:100%}
 .q2inner{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 .q2inner img,.q2inner svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
-.q2inner svg{overflow:visible}
+.q2inner svg{overflow:visible;z-index:1;pointer-events:none}
+.q2inner svg .cpin,.q2inner svg .zpin{pointer-events:auto}
 .qnorth{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;z-index:2;pointer-events:none}
 .qnorth i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:translateX(-50%)}
 .qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em}
@@ -678,15 +679,18 @@ function zonePlaceLabel(p){
   return zoneIsSurveyed(p)?'Surveyed':'Estimated';
 }
 function zoneLinkedCamera(z,pin){
-  const link=(pin&&pin.camera_link)||null;
-  const name=(link&&(link.name||link.device||link.id))||(z&&z.linked_camera)||'';
-  const dev=link&&(link.device||link.id||link.hubId);
-  const cams=D.cams||[];
+  const link=(pin&&(pin.camera_link||pin.linked_camera))||null;
+  const refs=[];
+  const take=v=>{
+    if(v==null||v==='') return;
+    if(typeof v==='object'){['device','id','hubId','camera_id','pin','name'].forEach(k=>{if(v[k]!=null&&v[k]!=='') refs.push(v[k]);});}
+    else refs.push(v);
+  };
+  take(link); take(z&&z.linked_camera); take(z&&z.camera_link);
   let c=null;
-  if(dev) c=cams.find(x=>x.device===dev||x.id===dev||x.pin===dev)||null;
-  if(!c&&name) c=cams.find(x=>(x.name||'')===name||(x.device||'')===name)||null;
+  for(let i=0;i<refs.length&&!c;i++) c=camByRef(refs[i]);
   if(!c) return null;
-  const px=typeof camPinPx==='function'?camPinPx(c):null;
+  const px=typeof camMapPx==='function'?camMapPx(c):(typeof camPinPx==='function'?camPinPx(c):null);
   if(!px||px.length<2||!isFinite(px[0])||!isFinite(px[1])) return null;
   return {px,label:c.name||c.device||'Camera'};
 }
@@ -803,8 +807,37 @@ function selectZone(key,scroll){
   if(cam&&cam.px) msg+=' · linked camera '+(cam.label||'');
   setZmapStatus(msg);
 }
-function zoneDotMarkup(px,col,tip,cls){
-  return `<g class="${cls}" data-tip="${esc(tip)}"><circle class="halo" cx="${px[0]}" cy="${px[1]}" r="6" fill="${col}" fill-opacity="0" stroke="#fff" stroke-width="2"/><circle cx="${px[0]}" cy="${px[1]}" r="4.5" fill="${col}" stroke="#fff" stroke-width="1.3"><title>${esc(tip)}</title></circle></g>`;
+function zoneDotMarkup(px,col,tip,cls,opts){
+  opts=opts||{};
+  const label=opts.label||'';
+  const side=opts.side==='end'?'end':'start';
+  const dx=side==='end'?-12:12;
+  const lab=label?`<text class="pinlab" data-cx="${px[0]}" data-cy="${px[1]}" data-side="${side}" x="${px[0]+dx}" y="${px[1]-12}" text-anchor="${side}" fill="#fff" stroke="#1c2321" stroke-width="3.2" paint-order="stroke" font-size="13" font-weight="700">${esc(label)}</text>`:'';
+  return `<g class="${cls}" data-tip="${esc(tip)}"><circle class="halo" cx="${px[0]}" cy="${px[1]}" r="8" fill="${col}" fill-opacity="0" stroke="#fff" stroke-width="2.4"/><circle cx="${px[0]}" cy="${px[1]}" r="7.5" fill="${col}" stroke="#fff" stroke-width="1.6"><title>${esc(tip)}</title></circle>${lab}</g>`;
+}
+function syncPinDots(svg,s){
+  if(!svg) return;
+  svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  svg.querySelectorAll('.cpin, .zpin').forEach(g=>{
+    const dim=g.classList.contains('cpin-dim')||g.classList.contains('zpin-dim');
+    const r=(dim?7.5:11)/s;
+    g.querySelectorAll('circle:not(.halo)').forEach(c=>{
+      c.setAttribute('r',String(r));
+      c.setAttribute('stroke-width',String((dim?1.6:2.1)/s));
+    });
+    g.querySelectorAll('circle.halo').forEach(c=>{
+      c.setAttribute('r',String(r*1.85));
+      c.setAttribute('stroke-width',String((dim?2:2.6)/s));
+    });
+    g.querySelectorAll('text.pinlab').forEach(t=>{
+      const cx=+t.getAttribute('data-cx'), cy=+t.getAttribute('data-cy');
+      const side=t.getAttribute('data-side')||'start';
+      const dx=(side==='end'?-12:12)/s;
+      if(isFinite(cx)&&isFinite(cy)){t.setAttribute('x',String(cx+dx));t.setAttribute('y',String(cy-12/s));}
+      t.setAttribute('font-size',String(13/s));
+      t.setAttribute('stroke-width',String(3.2/s));
+    });
+  });
 }
 function drawZoneOverlays(){
   const svg=ZMAP&&document.getElementById(ZMAP.svgId); if(!svg) return;
@@ -814,10 +847,12 @@ function drawZoneOverlays(){
   if(ZSEL&&ZSEL.px){
     const col=ZSEL.surveyed?'#2f7a4a':'#e67700';
     const lab=(ZSEL.zone&&(ZSEL.zone.label||('Zone '+(ZSEL.zone.zone_id||''))))||'Zone';
-    h+=zoneDotMarkup(ZSEL.px,col,lab,'zpin');
+    h+=zoneDotMarkup(ZSEL.px,col,lab,'zpin',{label:lab});
   }
   if(ZSEL&&ZSEL.cam&&ZSEL.cam.px){
-    h+=zoneDotMarkup(ZSEL.cam.px,'#228be6',ZSEL.cam.label||'Camera','zpin zcam');
+    const clab=ZSEL.cam.label||'Camera';
+    const same=ZSEL.px&&Math.hypot(ZSEL.cam.px[0]-ZSEL.px[0],ZSEL.cam.px[1]-ZSEL.px[1])<18;
+    h+=zoneDotMarkup(ZSEL.cam.px,'#228be6',clab,'zpin zcam',{label:clab,side:same?'end':'start'});
   }
   svg.innerHTML=h;
   syncZoneHighlight();
@@ -825,17 +860,7 @@ function drawZoneOverlays(){
 function syncZoneHighlight(){
   if(!ZMAP) return;
   const s=Math.max(ZMAP.s,0.05);
-  const svg=document.getElementById(ZMAP.svgId); if(!svg) return;
-  svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
-  const r=4.5/s;
-  svg.querySelectorAll('.zpin circle:not(.halo)').forEach(c=>{
-    c.setAttribute('r',String(r));
-    c.setAttribute('stroke-width',String(1.4/s));
-  });
-  svg.querySelectorAll('.zpin circle.halo').forEach(c=>{
-    c.setAttribute('r',String(r*1.7));
-    c.setAttribute('stroke-width',String(2/s));
-  });
+  syncPinDots(document.getElementById(ZMAP.svgId),s);
 }
 function initAlarmMap(){
   const host=document.getElementById('z2d'), stage=document.getElementById('zmap');
@@ -1932,23 +1957,78 @@ async function loadCamPins(){
   CAMPINS=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;return CAMPINS;
 }
 const CAMCOL={surveyed:'#2f9e44',placed:'#f59f00',confirmed:'#1c7ed6',unsure:'#ae3ec9',unplaced:'#868e96',cant_place:'#868e96'};
-function camState(dev){const c=D.cams.find(x=>x.device===dev);const p=CAMPINS&&CAMPINS.pins.find(x=>x.device===dev);
-  if(p){const st=p.lat==null?(p.status==='cant_place'?'cant_place':'unplaced'):(p.locked?'surveyed':p.status);return {st,hd:p.heading};}
-  return {st:c.placement==='surveyed'?'surveyed':'unplaced',hd:null};}
+function camRefEq(a,b){return a!=null&&b!=null&&a!==''&&String(a)===String(b);}
+function camByRef(ref){
+  if(ref==null||ref==='') return null;
+  const cams=D.cams||[], s=String(ref).trim();
+  const keys=c=>[c.device,c.id,c.pin,c.hubId,c.camera_id,c.name];
+  const hit=cams.find(x=>keys(x).some(v=>camRefEq(v,s)));
+  if(hit) return hit;
+  const sl=s.toLowerCase();
+  return cams.find(x=>x.name&&String(x.name).toLowerCase()===sl)||null;
+}
+function camPair(v){
+  if(v==null) return null;
+  if(Array.isArray(v)&&v.length>=2&&isFinite(+v[0])&&isFinite(+v[1])) return [+v[0],+v[1]];
+  if(typeof v==='object'&&v.x!=null&&v.y!=null&&isFinite(+v.x)&&isFinite(+v.y)) return [+v.x,+v.y];
+  return null;
+}
+function camLL(o){
+  if(!o||typeof o!=='object') return null;
+  const lat=o.lat!=null?o.lat:(o.latitude!=null?o.latitude:null);
+  const lng=o.lng!=null?o.lng:(o.lon!=null?o.lon:(o.longitude!=null?o.longitude:null));
+  if(lat==null||lng==null) return null;
+  const a=+lat,b=+lng;
+  if(!isFinite(a)||!isFinite(b)||Math.abs(a)>90||Math.abs(b)>180) return null;
+  return [a,b];
+}
+function camXyPx(x,y){
+  const M=D.map; if(!M||x==null||y==null) return null;
+  x=+x; y=+y; if(!isFinite(x)||!isFinite(y)) return null;
+  const X=x>0&&x<=1?x*M.w:(x>0&&x<=100?x/100*M.w:x);
+  const Y=y>0&&y<=1?y*M.h:(y>0&&y<=100?y/100*M.h:y);
+  return (isFinite(X)&&isFinite(Y))?[X,Y]:null;
+}
+function camSrcPx(o,depth){
+  if(!o||typeof o!=='object'||(depth||0)>2) return null;
+  depth=depth||0;
+  const pair=camPair(o.px)||camPair(o.point)||camPair(o.xy);
+  if(pair) return pair;
+  const ll=camLL(o)||camLL(o.location)||camLL(o.coords);
+  if(ll&&typeof qPxLL==='function'){
+    const px=qPxLL(ll[0],ll[1]);
+    if(px&&isFinite(px[0])&&isFinite(px[1])) return px;
+  }
+  if(o.x!=null&&o.y!=null){
+    const xy=camXyPx(o.x,o.y);
+    if(xy) return xy;
+  }
+  if(o.pin&&typeof o.pin==='object') return camSrcPx(o.pin,depth+1);
+  if(o.geometry&&typeof o.geometry==='object') return camSrcPx(o.geometry,depth+1);
+  return null;
+}
+function camState(dev){
+  const c=camByRef(dev)||(D.cams||[]).find(x=>camRefEq(x.device,dev));
+  const p=camEditPin(dev);
+  if(p&&camSrcPx(p)){
+    const st=p.locked?'surveyed':(p.status||'placed');
+    return {st,hd:p.heading};
+  }
+  if(p&&p.status==='cant_place'&&!camSrcPx(c)) return {st:'cant_place',hd:p.heading};
+  const pl=String((c&&(c.placement||c.status))||'').toLowerCase();
+  if(pl==='surveyed'||pl==='confirmed') return {st:'surveyed',hd:null};
+  return {st:camSrcPx(c)?'placed':'unplaced',hd:null};
+}
 const CAMLAB={surveyed:'surveyed · locked',placed:'placed · not confirmed',confirmed:'confirmed',unsure:'unsure',unplaced:'unplaced',cant_place:"can't place"};
 function camEditPin(dev){
-  return (CAMPINS&&CAMPINS.pins&&CAMPINS.pins.find(x=>x.device===dev))||null;
+  const pins=CAMPINS&&CAMPINS.pins;
+  if(!pins||!pins.length||dev==null) return null;
+  return pins.find(x=>x&&(camRefEq(x.device,dev)||camRefEq(x.id,dev)||camRefEq(x.pin,dev)))||null;
 }
 function camMapPx(c){
   if(!c) return null;
-  const p=camEditPin(c.device);
-  if(p){
-    if(p.px&&p.px.length>=2&&isFinite(+p.px[0])&&isFinite(+p.px[1])) return [+p.px[0],+p.px[1]];
-    if(p.lat!=null&&p.lng!=null&&isFinite(+p.lat)&&isFinite(+p.lng)&&typeof qPxLL==='function'){
-      const px=qPxLL(+p.lat,+p.lng);
-      if(px&&isFinite(px[0])&&isFinite(px[1])) return px;
-    }
-  }
+  const ep=camSrcPx(camEditPin(c.device||c.id||c.pin));
+  if(ep) return ep;
   if(typeof camPinPx==='function'){
     const px=camPinPx(c);
     if(px&&px.length>=2&&isFinite(px[0])&&isFinite(px[1])) return px;
@@ -2035,17 +2115,17 @@ function clearCam(opts){
   if(!opts.keepView&&CMAP){CMAP._user=false;scheduleNadirFit(CMAP,CCROP||'house');}
 }
 function selectCam(dev,scroll){
-  if(CSEL&&CSEL.id===dev){clearCam();return;}
-  const c=(D.cams||[]).find(x=>x.device===dev);
+  const c=camByRef(dev);
   if(!c) return;
+  if(CSEL&&(camRefEq(CSEL.id,c.device)||camRefEq(CSEL.id,dev))){clearCam();return;}
   const px=camMapPx(c);
   const surveyed=!!(px&&camIsSurveyed(c));
-  CSEL={id:dev,cam:c,px,surveyed};
-  document.querySelectorAll('#pg-cameras .cam').forEach(el=>el.classList.toggle('sel',el.id==='cam-'+dev));
-  const row=document.getElementById('cam-'+dev);
+  CSEL={id:c.device,cam:c,px,surveyed};
+  document.querySelectorAll('#pg-cameras .cam').forEach(el=>el.classList.toggle('sel',camRefEq(el.dataset.device,c.device)));
+  const row=document.getElementById('cam-'+c.device);
   if(scroll&&row) row.scrollIntoView({block:'center'});
   drawCamOverlays();
-  const lab=c.name||dev;
+  const lab=c.name||c.device||dev;
   if(!px){
     setCmapStatus(lab+' · Not placed');
     return;
@@ -2058,28 +2138,23 @@ function drawCamOverlays(){
   const M=D.map||{};
   let h='';
   if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
-  if(CSEL&&CSEL.px){
-    const col=CSEL.surveyed?'#2f7a4a':'#e67700';
-    const lab=(CSEL.cam&&CSEL.cam.name)||CSEL.id||'Camera';
-    h+=zoneDotMarkup(CSEL.px,col,lab,'cpin');
-  }
+  const selId=CSEL&&CSEL.id;
+  (D.cams||[]).forEach(c=>{
+    const px=camMapPx(c);
+    if(!px) return;
+    const selected=selId!=null&&camRefEq(selId,c.device);
+    const surveyed=camIsSurveyed(c);
+    const col=surveyed?'#2f7a4a':'#e67700';
+    const lab=c.name||c.device||'Camera';
+    h+=zoneDotMarkup(px,col,lab,selected?'cpin cpin-sel':'cpin cpin-dim',{label:selected?lab:''});
+  });
   svg.innerHTML=h;
   syncCamHighlight();
 }
 function syncCamHighlight(){
   if(!CMAP) return;
   const s=Math.max(CMAP.s,0.05);
-  const svg=document.getElementById(CMAP.svgId); if(!svg) return;
-  svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
-  const r=4.5/s;
-  svg.querySelectorAll('.cpin circle:not(.halo)').forEach(c=>{
-    c.setAttribute('r',String(r));
-    c.setAttribute('stroke-width',String(1.4/s));
-  });
-  svg.querySelectorAll('.cpin circle.halo').forEach(c=>{
-    c.setAttribute('r',String(r*1.7));
-    c.setAttribute('stroke-width',String(2/s));
-  });
+  syncPinDots(document.getElementById(CMAP.svgId),s);
 }
 function initCamMap(){
   const host=document.getElementById('c2d'), stage=document.getElementById('cmap');
@@ -2829,9 +2904,12 @@ function wireQlyPanel(){
   });
 }
 function qPxLL(lat,lng){
-  const b=D.cam_ctx&&D.cam_ctx.bounds, img=D.cam_ctx&&D.cam_ctx.img;
-  if(!b||!img||lat==null||lng==null) return null;
-  return [(lng-b.west)/(b.east-b.west)*img.w, (b.north-lat)/(b.north-b.south)*img.h];
+  const b=(D.cam_ctx&&D.cam_ctx.bounds)||(D.map&&D.map.bounds)||null;
+  const img=(D.cam_ctx&&D.cam_ctx.img)||(D.map?{w:D.map.w,h:D.map.h}:null);
+  lat=+lat; lng=+lng;
+  if(!b||!img||!isFinite(lat)||!isFinite(lng)||!img.w||!img.h) return null;
+  const x=(lng-b.west)/(b.east-b.west)*img.w, y=(b.north-lat)/(b.north-b.south)*img.h;
+  return (isFinite(x)&&isFinite(y))?[x,y]:null;
 }
 function qRings(x){
   if(!x||!x.length) return [];
@@ -2863,12 +2941,15 @@ async function loadQPins(){
   QZONE_PINS=pinList(zones,zoneFb).filter(p=>p&&(p.lat!=null&&p.lng!=null));
 }
 function camPinPx(c){
-  if(c.px&&c.px.length===2) return c.px;
-  if(c.lat!=null&&c.lng!=null) return qPxLL(c.lat,c.lng);
-  if(c.x!=null&&c.y!=null&&D.map){
-    const x=c.x>0&&c.x<=1?c.x*D.map.w:(c.x<=100?c.x/100*D.map.w:c.x);
-    const y=c.y>0&&c.y<=1?c.y*D.map.h:(c.y<=100?c.y/100*D.map.h:c.y);
-    return [x,y];
+  if(!c) return null;
+  const own=camSrcPx(c);
+  if(own) return own;
+  const assets=((D.assets&&D.assets.located)||[]).filter(a=>a&&(a.kind==='camera'||a.type==='camera'));
+  const a=assets.find(x=>camRefEq(x.device,c.device)||camRefEq(x.id,c.device)||camRefEq(x.id,c.pin)||(c.name&&camRefEq(x.name,c.name)));
+  if(a){const ap=camSrcPx(a); if(ap) return ap;}
+  if(typeof QCAM_PINS!=='undefined'&&QCAM_PINS&&QCAM_PINS.length){
+    const q=QCAM_PINS.find(x=>x&&(camRefEq(x.device,c.device)||camRefEq(x.id,c.device)||camRefEq(x.pin,c.pin)||(c.name&&camRefEq(x.name,c.name))));
+    if(q){const qp=camSrcPx(q); if(qp) return qp;}
   }
   return null;
 }
