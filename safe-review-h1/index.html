@@ -326,7 +326,14 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .q2inner{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
 .q2inner img,.q2inner svg{position:absolute;left:0;top:0;width:100%;height:100%;display:block;user-select:none;-webkit-user-drag:none}
 .q2inner svg{overflow:visible;z-index:1;pointer-events:none}
-.q2inner svg .cpin,.q2inner svg .zpin{pointer-events:auto}
+.q2overlay{position:absolute;left:0;top:0;width:100%;height:100%;display:block;overflow:visible;z-index:2;pointer-events:none}
+.q2overlay .cpin,.q2overlay .zpin,.q2overlay .pt,.q2overlay .mpt,.q2overlay .qpin,.q2overlay .ly-asset,.q2overlay .ly-campin,.q2overlay .ly-zpin,.q2overlay .ly-hydrant,.q2overlay .mfeat,.q2overlay .rgn{pointer-events:auto;cursor:pointer}
+.nadir-pinpop{position:absolute;z-index:8;min-width:168px;max-width:260px;background:rgba(20,24,22,.96);color:#eef3f0;border:1px solid rgba(255,255,255,.16);border-radius:10px;padding:10px 12px;box-shadow:0 10px 28px rgba(0,0,0,.4);pointer-events:auto;font-size:13px;line-height:1.35}
+.nadir-pinpop .pp-n{font-weight:700;font-size:14px}
+.nadir-pinpop .pp-t{color:#c4d0cb;font-size:12px;margin-top:2px}
+.nadir-pinpop .pp-st{margin-top:7px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.nadir-pinpop .pp-st i{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none}
+.nadir-pinpop .pp-conf{font-size:11px;color:#d8e2de;background:rgba(255,255,255,.08);border-radius:999px;padding:1px 7px}
 .qnorth{position:absolute;top:12px;right:12px;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;z-index:2;pointer-events:none}
 .qnorth i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:translateX(-50%)}
 .qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em}
@@ -813,7 +820,9 @@ function zoneDotMarkup(px,col,tip,cls,opts){
   const side=opts.side==='end'?'end':'start';
   const dx=side==='end'?-12:12;
   const lab=label?`<text class="pinlab" data-cx="${px[0]}" data-cy="${px[1]}" data-side="${side}" x="${px[0]+dx}" y="${px[1]-12}" text-anchor="${side}" fill="#fff" stroke="#1c2321" stroke-width="3.2" paint-order="stroke" font-size="13" font-weight="700">${esc(label)}</text>`:'';
-  return `<g class="${cls}" data-tip="${esc(tip)}"><circle class="halo" cx="${px[0]}" cy="${px[1]}" r="8" fill="${col}" fill-opacity="0" stroke="#fff" stroke-width="2.4"/><circle cx="${px[0]}" cy="${px[1]}" r="7.5" fill="${col}" stroke="#fff" stroke-width="1.6"><title>${esc(tip)}</title></circle>${lab}</g>`;
+  const did=opts.id?` data-id="${esc(opts.id)}"`:'';
+  const dk=opts.kind?` data-kind="${esc(opts.kind)}"`:'';
+  return `<g class="${cls}" data-tip="${esc(tip)}"${did}${dk}><circle class="halo" cx="${px[0]}" cy="${px[1]}" r="8" fill="${col}" fill-opacity="0" stroke="#fff" stroke-width="2.4"/><circle cx="${px[0]}" cy="${px[1]}" r="7.5" fill="${col}" stroke="#fff" stroke-width="1.6"><title>${esc(tip)}</title></circle>${lab}</g>`;
 }
 function syncPinDots(svg,s){
   if(!svg) return;
@@ -847,14 +856,14 @@ function drawZoneOverlays(){
   if(ZSEL&&ZSEL.px){
     const col=ZSEL.surveyed?'#2f7a4a':'#e67700';
     const lab=(ZSEL.zone&&(ZSEL.zone.label||('Zone '+(ZSEL.zone.zone_id||''))))||'Zone';
-    h+=zoneDotMarkup(ZSEL.px,col,lab,'zpin',{label:lab});
+    h+=zoneDotMarkup(ZSEL.px,col,lab,'zpin',{label:lab,id:ZSEL.key,kind:'zone'});
   }
   if(ZSEL&&ZSEL.cam&&ZSEL.cam.px){
     const clab=ZSEL.cam.label||'Camera';
     const same=ZSEL.px&&Math.hypot(ZSEL.cam.px[0]-ZSEL.px[0],ZSEL.cam.px[1]-ZSEL.px[1])<18;
     h+=zoneDotMarkup(ZSEL.cam.px,'#228be6',clab,'zpin zcam',{label:clab,side:same?'end':'start'});
   }
-  svg.innerHTML=h;
+  nadirSetGeom(ZMAP,h);
   syncZoneHighlight();
 }
 function syncZoneHighlight(){
@@ -1329,7 +1338,7 @@ function drawMeasOverlays(){
     else if(g.kind==='area') drawArea(g,true);
     else if(g.kind==='point') drawPt(g,true);
   });
-  svg.innerHTML=h;
+  nadirSetGeom(MMAP,h);
   syncMeasHighlight();
   const ignoreDrag=()=>MMAP&&MMAP.moved>6;
   svg.querySelectorAll('[data-mid]').forEach(el=>el.addEventListener('click',e=>{
@@ -1848,7 +1857,7 @@ function drawAssetOverlays(){
     h+=`<path class="rgn-halo sel" data-rid="${esc(p.id)}" d="${p.d}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" fill-rule="evenodd"></path>`;
     h+=`<path class="rgn hl" data-rid="${esc(p.id)}" d="${p.d}" fill="${col}" fill-opacity=".32" stroke="#ffd43b" stroke-width="3" stroke-linejoin="round" fill-rule="evenodd"><title>${esc(p.id)} · ${esc(p.cls)}</title></path>`;
   });
-  svg.innerHTML=h;
+  nadirSetGeom(AMAP,h);
   const rn=document.getElementById('regnote');
   if(REGS){ if(rn) rn.innerHTML='Preview of the '+esc(REGSRC)+' file. Edit outlines in the <a href="'+editorUrl()+'" target="_blank" rel="noopener">region editor</a>.'; }
   else { if(rn) rn.textContent='Regions file not reachable from this page. Open it through the local server.'; }
@@ -1950,11 +1959,59 @@ async function openSealed(env){const pt=await crypto.subtle.decrypt({name:'AES-G
 async function sealJson(obj){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},KEY,new TextEncoder().encode(JSON.stringify(obj)));
   const t=u=>{let s='';u=new Uint8Array(u);for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s)};
   return {enc:'AES-GCM',v:1,kdf:'PBKDF2-SHA256',iter:ITER,salt:SALT,iv:t(iv),ct:t(ct)};}
+const CAMSESS_START=Date.now();
+const CAMEDITED=new Set();
+function camSessionOverrides(){
+  if(!CAMPINS||!CAMPINS.saved) return false;
+  const t=Date.parse(CAMPINS.saved);
+  return isFinite(t)&&t>=CAMSESS_START;
+}
+function camUsesEditor(dev){
+  return CAMEDITED.has(String(dev))||camSessionOverrides();
+}
+function payloadCamStamp(){
+  const raws=(D.cams||[]).map(c=>c.still_at).filter(Boolean);
+  let t=NaN;
+  raws.forEach(s=>{
+    const d=Date.parse(String(s).replace(',',' ')+' GMT-6');
+    const d2=Date.parse(s);
+    const v=isFinite(d)?d:(isFinite(d2)?d2:NaN);
+    if(isFinite(v)&&(!isFinite(t)||v<t)) t=v;
+  });
+  return t;
+}
+function sanitizeStaleCamPins(doc){
+  if(!doc||!doc.pins) return false;
+  let changed=false;
+  doc.pins.forEach(p=>{
+    const c=camByRef(p.device||p.id||p.pin||p.name);
+    const pl=String((c&&(c.placement||c.status))||'').toLowerCase();
+    const payloadSurveyed=pl==='surveyed'||pl==='confirmed';
+    if(!payloadSurveyed && (p.locked || p.status==='surveyed'||p.status==='confirmed')){
+      p.locked=false;
+      if(p.status==='surveyed'||p.status==='confirmed') p.status=pl||'placed';
+      changed=true;
+    }
+  });
+  return changed;
+}
+async function persistCamPinsLocal(doc){
+  try{
+    if(window.H1Crypto&&H1Crypto.sealJson){
+      const sealed=await H1Crypto.sealJson(doc);
+      localStorage.setItem('h1-camera-pins', JSON.stringify(sealed));
+    }
+  }catch(e){}
+}
 async function loadCamPins(){
   let f=null,l=null;
   try{const r=await fetch('cameras/edits/pins.json?_='+Date.now(),{cache:'no-store'});if(r.ok)f=await openSealed(await r.json());}catch(e){}
   try{const raw=localStorage.getItem('h1-camera-pins');if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
-  CAMPINS=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;return CAMPINS;
+  CAMPINS=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;
+  if(CAMPINS&&!camSessionOverrides()&&sanitizeStaleCamPins(CAMPINS)){
+    await persistCamPinsLocal(CAMPINS);
+  }
+  return CAMPINS;
 }
 const CAMCOL={surveyed:'#2f9e44',placed:'#f59f00',confirmed:'#1c7ed6',unsure:'#ae3ec9',unplaced:'#868e96',cant_place:'#868e96'};
 function camRefEq(a,b){return a!=null&&b!=null&&a!==''&&String(a)===String(b);}
@@ -2010,13 +2067,14 @@ function camSrcPx(o,depth){
 function camState(dev){
   const c=camByRef(dev)||(D.cams||[]).find(x=>camRefEq(x.device,dev));
   const p=camEditPin(dev);
-  if(p&&camSrcPx(p)){
+  if(p&&camUsesEditor(c&&c.device||dev)&&camSrcPx(p)){
     const st=p.locked?'surveyed':(p.status||'placed');
     return {st,hd:p.heading};
   }
-  if(p&&p.status==='cant_place'&&!camSrcPx(c)) return {st:'cant_place',hd:p.heading};
+  if(p&&camUsesEditor(c&&c.device||dev)&&p.status==='cant_place'&&!camSrcPx(c)) return {st:'cant_place',hd:p.heading};
   const pl=String((c&&(c.placement||c.status))||'').toLowerCase();
   if(pl==='surveyed'||pl==='confirmed') return {st:'surveyed',hd:null};
+  if(pl==='estimated') return {st:'placed',hd:null};
   return {st:camSrcPx(c)?'placed':'unplaced',hd:null};
 }
 const CAMLAB={surveyed:'surveyed · locked',placed:'placed · not confirmed',confirmed:'confirmed',unsure:'unsure',unplaced:'unplaced',cant_place:"can't place"};
@@ -2027,8 +2085,10 @@ function camEditPin(dev){
 }
 function camMapPx(c){
   if(!c) return null;
-  const ep=camSrcPx(camEditPin(c.device||c.id||c.pin));
-  if(ep) return ep;
+  if(camUsesEditor(c.device||c.id||c.pin)){
+    const ep=camSrcPx(camEditPin(c.device||c.id||c.pin));
+    if(ep) return ep;
+  }
   if(typeof camPinPx==='function'){
     const px=camPinPx(c);
     if(px&&px.length>=2&&isFinite(px[0])&&isFinite(px[1])) return px;
@@ -2127,16 +2187,18 @@ function setCmapStatus(msg,warn){
 }
 function clearCam(opts){
   opts=opts||{};
+  hideNadirPop();
   CSEL=null;
   document.querySelectorAll('#pg-cameras .cam').forEach(r=>r.classList.remove('sel'));
   setCmapStatus('Click a camera to show it on the map');
   drawCamOverlays();
   if(!opts.keepView&&CMAP){CMAP._user=false;scheduleNadirFit(CMAP,CCROP||'house');}
 }
-function selectCam(dev,scroll){
+function selectCam(dev,scroll,opts){
+  opts=opts||{};
   const c=camByRef(dev);
   if(!c) return;
-  if(CSEL&&(camRefEq(CSEL.id,c.device)||camRefEq(CSEL.id,dev))){clearCam();return;}
+  if(!opts.keep&&CSEL&&(camRefEq(CSEL.id,c.device)||camRefEq(CSEL.id,dev))){clearCam();return;}
   const px=camMapPx(c);
   const surveyed=!!(px&&camIsSurveyed(c));
   CSEL={id:c.device,cam:c,px,surveyed};
@@ -2151,6 +2213,10 @@ function selectCam(dev,scroll){
   }
   if(CMAP){CMAP._user=false;fitNadirBounds(CMAP,[px]);}
   setCmapStatus(lab+' · '+(surveyed?'surveyed':'estimated'));
+  if(opts.pop!==false){
+    const st=camStatusLabel(c);
+    showNadirPop(CMAP,px,{name:lab,type:'Camera',status:st.label,color:st.color,confidence:pinConfidence(c)});
+  }
 }
 function drawCamOverlays(){
   const svg=CMAP&&document.getElementById(CMAP.svgId); if(!svg) return;
@@ -2165,9 +2231,9 @@ function drawCamOverlays(){
     const surveyed=camIsSurveyed(c);
     const col=surveyed?'#2f7a4a':'#e67700';
     const lab=c.name||c.device||'Camera';
-    h+=zoneDotMarkup(px,col,lab,selected?'cpin cpin-sel':'cpin cpin-dim',{label:selected?lab:''});
+    h+=zoneDotMarkup(px,col,lab,selected?'cpin cpin-sel':'cpin cpin-dim',{label:selected?lab:'',id:c.device,kind:'camera'});
   });
-  svg.innerHTML=h;
+  nadirSetGeom(CMAP,h);
   syncCamHighlight();
 }
 function syncCamHighlight(){
@@ -2446,6 +2512,7 @@ function resetReviewerOutside(){
   const mOn=document.getElementById('pg-measurements')&&document.getElementById('pg-measurements').classList.contains('on');
   const zOn=document.getElementById('pg-alarms')&&document.getElementById('pg-alarms').classList.contains('on');
   const cOn=document.getElementById('pg-cameras')&&document.getElementById('pg-cameras').classList.contains('on');
+  hideNadirPop();
   if(qOn){
     resetQLayersDefault();
     QSEL=null;
@@ -2491,7 +2558,7 @@ function reviewerOutsideIgnore(el){
   if(el.closest('#qly-panel, .qmap-tools, #qly-toggle, #lb, #qsave, #qexport')) return true;
   if(el.closest('#qlist .q, #pg-assets .regitem, #pg-assets .pfact, #pg-measurements .mrow, #pg-alarms .zrow, #pg-cameras .cam')) return true;
   if(el.closest('input,textarea,select,label,summary')) return true;
-  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin, .zpin, .cpin')) return true;
+  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin, .zpin, .cpin, .nadir-pinpop, .q2overlay')) return true;
   return false;
 }
 function wireReviewerOutside(){
@@ -2521,8 +2588,8 @@ function setQMode(m){
   if(a)a.classList.toggle('on',m==='2d');if(b)b.classList.toggle('on',m==='3d');
   const n=document.getElementById('qnorth');if(n)n.style.transform='';
   applyQ3LayerMode();
-  if(m==='3d')ensureQ3().then(()=>{applyQ3LayerMode();if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();}});
-  else {if(QSEL)showQ(QSEL);else{scheduleFitQ2();drawQ2();}}
+  if(m==='3d')ensureQ3().then(()=>{applyQ3LayerMode();if(QSEL)showQ(QSEL);else if(Q3&&Q3.ready){resetQ3();syncQ3Overlays();demandQ3();}});
+  else {disposeQ3();if(QSEL)showQ(QSEL);else{scheduleFitQ2();drawQ2();}}
 }
 function applyQ3LayerMode(){
   const is3d=QMODE==='3d';
@@ -2546,11 +2613,12 @@ function createNadirMap(cfg){
   const host=document.getElementById(cfg.hostId), stage=document.getElementById(cfg.stageId);
   if(!host||!stage) return null;
   const M=D.map, prefix=cfg.prefix||cfg.hostId;
-  const innerId=prefix+'inner', imgId=prefix+'img', svgId=prefix+'svg';
-  host.innerHTML=`<div class="q2inner" id="${innerId}" style="width:${M.w}px;height:${M.h}px"><img id="${imgId}" alt="Nadir 2 Jul 2026" draggable="false"><svg id="${svgId}" viewBox="0 0 ${M.w} ${M.h}" preserveAspectRatio="none"></svg></div>`;
+  const innerId=prefix+'inner', imgId=prefix+'img', svgId=prefix+'svg', geomId=prefix+'geom';
+  host.innerHTML=`<div class="q2inner" id="${innerId}" style="width:${M.w}px;height:${M.h}px"><img id="${imgId}" alt="Nadir 2 Jul 2026" draggable="false"></div><svg class="q2overlay" id="${svgId}" xmlns="http://www.w3.org/2000/svg"></svg>`;
   const img=document.getElementById(imgId); if(img) img.src=URLS.nadir||'';
-  const map={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h,_user:false,pointers:new Map(),moved:0,cfg:cfg,prefix,innerId,imgId,svgId,hostId:cfg.hostId,stageId:cfg.stageId,_fit:cfg.defaultFit||'parcel'};
+  const map={tx:0,ty:0,s:1,drag:false,lx:0,ly:0,w:M.w,h:M.h,_user:false,pointers:new Map(),moved:0,cfg:cfg,prefix,innerId,imgId,svgId,geomId,hostId:cfg.hostId,stageId:cfg.stageId,_fit:cfg.defaultFit||'parcel'};
   wireNadirMap(map);
+  wireNadirPinClicks(map);
   if(cfg.observe!==false) observeNadirMap(map);
   return map;
 }
@@ -2576,10 +2644,183 @@ const NADIR_MAX_SCALE=1, NADIR_MAX_FIT_SCALE=1, NADIR_MAX_ZOOM_SCALE=4, NADIR_MI
 function nadirClampScale(s,max){return Math.min(max==null?NADIR_MAX_FIT_SCALE:max,Math.max(NADIR_MIN_SCALE,s));}
 function applyNadirMap(map){
   if(!map) return;
-  const el=document.getElementById(map.innerId); if(!el) return;
-  el.style.transform=`translate(${map.tx}px,${map.ty}px) scale(${map.s})`;
+  const el=document.getElementById(map.innerId);
+  if(el) el.style.transform=`translate(${map.tx}px,${map.ty}px) scale(${map.s})`;
+  syncNadirOverlay(map);
   if(map.cfg.onApply) map.cfg.onApply(map);
+  refreshNadirPop(map);
 }
+function syncNadirOverlay(map){
+  if(!map) return;
+  const svg=document.getElementById(map.svgId); if(!svg) return;
+  const {w,h}=nadirStageSize(map);
+  if(w>0&&h>0){
+    svg.setAttribute('width',String(Math.round(w)));
+    svg.setAttribute('height',String(Math.round(h)));
+    svg.setAttribute('viewBox','0 0 '+w+' '+h);
+  }
+  const g=document.getElementById(map.geomId);
+  if(g) g.setAttribute('transform','translate('+map.tx+','+map.ty+') scale('+map.s+')');
+}
+function nadirSetGeom(map,html){
+  if(!map) return null;
+  const svg=document.getElementById(map.svgId); if(!svg) return null;
+  syncNadirOverlay(map);
+  let g=document.getElementById(map.geomId);
+  if(!g){
+    g=document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('id',map.geomId);
+    svg.appendChild(g);
+  }
+  g.setAttribute('transform','translate('+map.tx+','+map.ty+') scale('+map.s+')');
+  g.innerHTML=html||'';
+  return svg;
+}
+function hideNadirPop(){
+  document.querySelectorAll('.nadir-pinpop').forEach(el=>{el.hidden=true;el._pin=null;});
+}
+function ensureNadirPop(stageId){
+  const st=document.getElementById(stageId); if(!st) return null;
+  let pop=st.querySelector(':scope > .nadir-pinpop');
+  if(!pop){
+    pop=document.createElement('div');
+    pop.className='nadir-pinpop';
+    pop.hidden=true;
+    st.appendChild(pop);
+  }
+  return pop;
+}
+function placeNadirPop(map,imgPx){
+  if(!map||!imgPx) return;
+  const pop=ensureNadirPop(map.stageId); if(!pop) return;
+  const st=document.getElementById(map.stageId);
+  const x=map.tx+imgPx[0]*map.s, y=map.ty+imgPx[1]*map.s;
+  const wr=(st&&st.clientWidth)||0, hr=(st&&st.clientHeight)||0;
+  pop.style.left=Math.max(8,Math.min(wr-176,x+14))+'px';
+  pop.style.top=Math.max(8,Math.min(hr-80,y-18))+'px';
+  pop._pin={map:map,px:imgPx};
+}
+function refreshNadirPop(map){
+  document.querySelectorAll('.nadir-pinpop').forEach(pop=>{
+    if(pop.hidden||!pop._pin) return;
+    if(map&&pop._pin.map!==map) return;
+    placeNadirPop(pop._pin.map,pop._pin.px);
+  });
+}
+function showNadirPop(map,imgPx,info){
+  const pop=ensureNadirPop(map&&map.stageId); if(!pop) return;
+  info=info||{};
+  const typ=info.type||info.cls||info.kind||'';
+  const st=info.status||'';
+  const conf=info.confidence;
+  const col=info.color||'#e67700';
+  let confHtml='';
+  if(conf!=null&&conf!=='') confHtml='<span class="pp-conf">'+esc(String(conf))+'</span>';
+  pop.innerHTML='<div class="pp-n">'+esc(info.name||'Item')+'</div>'+(typ?'<div class="pp-t">'+esc(typ)+'</div>':'')+'<div class="pp-st"><i style="background:'+col+'"></i><span>'+esc(st)+'</span>'+confHtml+'</div>';
+  pop.hidden=false;
+  placeNadirPop(map,imgPx);
+}
+function camStatusLabel(c){
+  if(!c) return {label:'Unknown',color:'#868e96'};
+  const s=camState(c.device||c.id);
+  const pl=String((c.placement||c.status||s.st||'')).toLowerCase();
+  if(s.st==='unplaced'||pl==='unplaced'||pl==='pending') return {label:'Not placed',color:'#868e96'};
+  if(s.st==='surveyed'||s.st==='confirmed'||pl==='surveyed'||pl==='confirmed') return {label:'Surveyed',color:'#2f7a4a'};
+  if(pl==='estimated'||s.st==='placed') return {label:'Estimated · not confirmed',color:'#e67700'};
+  return {label:(typeof CAMLAB!=='undefined'&&CAMLAB[s.st])||s.st||'Placed',color:'#e67700'};
+}
+function pinConfidence(o){
+  if(!o) return null;
+  const v=o.confidence!=null?o.confidence:(o.conf!=null?o.conf:null);
+  if(v==null||v==='') return null;
+  if(typeof v==='number') return (v<=1?Math.round(v*100):Math.round(v))+'%';
+  const n=parseFloat(v);
+  if(isFinite(n)&&/^[0-9.]+$/.test(String(v).trim())) return (n<=1?Math.round(n*100):Math.round(n))+'%';
+  return String(v);
+}
+function wireNadirPinClicks(map){
+  const svg=document.getElementById(map&&map.svgId); if(!svg||svg._pinClick) return;
+  svg._pinClick=true;
+  svg.addEventListener('click',e=>{
+    const g=e.target.closest&&e.target.closest('.cpin,.zpin,.pt,.mpt,.qpin,.ly-asset,.ly-campin,.ly-zpin,.ly-hydrant,[data-mid],.rgn');
+    if(!g) return;
+    if(map&&map.moved>6) return;
+    e.stopPropagation();
+    handleNadirPinClick(map,g);
+  });
+}
+function handleNadirPinClick(map,g){
+  if(!map||!g) return;
+  const cls=g.classList;
+  const pxOf=el=>{
+    const c=el.querySelector&&el.querySelector('circle:not(.halo)');
+    if(c) return [+c.getAttribute('cx'),+c.getAttribute('cy')];
+    if(el.hasAttribute&&el.hasAttribute('cx')) return [+el.getAttribute('cx'),+el.getAttribute('cy')];
+    return null;
+  };
+  if(cls.contains('cpin')||cls.contains('ly-campin')){
+    const id=g.dataset.id||g.dataset.device;
+    const c=camByRef(id)||(D.cams||[]).find(x=>camRefEq(x.device,id)||camRefEq(x.name,g.dataset.tip));
+    if(c){selectCam(c.device,true,{keep:true,pop:true});return;}
+  }
+  if(cls.contains('zpin')){
+    if(cls.contains('zcam')){
+      const lab=g.dataset.tip||'Camera';
+      const c=(D.cams||[]).find(x=>x.name===lab)||camByRef(g.dataset.id);
+      const px=pxOf(g)||(c&&camMapPx(c));
+      const st=camStatusLabel(c);
+      showNadirPop(map,px,{name:(c&&c.name)||lab,type:'Camera',status:st.label,color:st.color,confidence:pinConfidence(c)});
+      return;
+    }
+    const key=g.dataset.id||g.dataset.zkey;
+    if(key&&typeof selectZone==='function') selectZone(key,true);
+    if(ZSEL&&ZSEL.px){
+      const z=ZSEL.zone||{};
+      showNadirPop(map,ZSEL.px,{name:z.label||('Zone '+(z.zone_id||'')),type:z.device_type||z.type||'Alarm zone',status:ZSEL.surveyed?'Surveyed':'Estimated',color:ZSEL.surveyed?'#2f7a4a':'#e67700',confidence:pinConfidence(ZSEL.pin)});
+    }
+    return;
+  }
+  if(cls.contains('ly-zpin')){
+    showNadirPop(map,pxOf(g),{name:g.dataset.tip||'Zone',type:'Alarm zone',status:'Estimated',color:'#e67700'});
+    return;
+  }
+  if(cls.contains('pt')||cls.contains('ly-asset')){
+    const id=g.dataset.id;
+    if(id&&typeof selectAsset==='function') selectAsset(id,true);
+    const a=(typeof findAsset==='function')?findAsset(id):(((D.assets&&D.assets.located)||[]).find(x=>String(x.id)===String(id)));
+    showNadirPop(map,pxOf(g)||(a&&a.px),{name:(a&&(a.name||a.label))||g.dataset.tip||id||'Asset',type:(a&&(a.type||a.cls||a.class||a.kind))||'Asset',status:(a&&(a.status||a.placement))||'Located',color:'#be4bdb'});
+    return;
+  }
+  if(cls.contains('mpt')||g.dataset.mid||cls.contains('mfeat')){
+    const id=g.dataset.mid||g.dataset.id;
+    if(id&&typeof selectMeas==='function') selectMeas(id,true);
+    const geoms=(typeof listMeasGeometry==='function')?listMeasGeometry().filter(x=>x.id===id):[];
+    const g0=geoms[0];
+    showNadirPop(map,pxOf(g)||(g0&&g0.pts&&g0.pts[0]),{name:(g0&&g0.label)||id||'Measurement',type:(g0&&g0.kind)||'Measurement',status:(g0&&g0.value!=null)?(String(g0.value)+(g0.unit?' '+g0.unit:'')):'On file',color:'#74c0fc'});
+    return;
+  }
+  if(cls.contains('qpin')||(cls.contains('qsel')&&g.tagName==='G')){
+    const qid=g.dataset.qid||(typeof QSEL!=='undefined'&&QSEL);
+    if(qid&&typeof showQ==='function') showQ(qid);
+    const q=(D.questions||[]).find(x=>x.id===qid);
+    showNadirPop(map,pxOf(g),{name:(q&&(q.title||q.id))||qid||'Question',type:(q&&q.group)||'Question',status:'Selected',color:'#ffe066'});
+    const card=qid&&document.getElementById('q-'+qid);
+    if(card) card.scrollIntoView({block:'center'});
+    return;
+  }
+  if(cls.contains('ly-hydrant')){
+    showNadirPop(map,pxOf(g),{name:'Hydrant',type:'Water supply',status:(D.hydrant&&D.hydrant.value)||'Located',color:'#228be6'});
+    return;
+  }
+  if(cls.contains('rgn')){
+    const rid=g.dataset.rid;
+    if(typeof selectAsset==='function'){
+      const rows=[...document.querySelectorAll('#pg-assets .regitem[data-id]')].filter(r=>(r.dataset.regions||'').split(/\s+/).includes(rid)||r.dataset.id===rid);
+      if(rows[0]) selectAsset(rows[0].dataset.id,true);
+    }
+  }
+}
+
 function fitNadirMap(map,which){
   const {w,h,st}=nadirStageSize(map); if(!st||!map) return false;
   if(w<80||h<80){scheduleNadirFit(map,which||map._fit||'parcel');return false;}
@@ -2648,7 +2889,7 @@ function wireNadirMap(map){
   },{passive:false});
   st.addEventListener('pointerdown',e=>{
     if(!nadirActive(map)||e.button!==0) return;
-    if(e.target.closest('button,a,input,label,.qly-btn,#qly-panel')) return;
+    if(e.target.closest('button,a,input,label,.qly-btn,#qly-panel,.nadir-pinpop,.cpin,.zpin,.pt,.mpt,.qpin,.ly-asset,.ly-campin,.ly-zpin,.ly-hydrant')) return;
     st.setPointerCapture(e.pointerId);
     map.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
     map.moved=0;
@@ -3006,13 +3247,13 @@ function drawQ2(){
   if(qlyOn('assets')){
     ((D.assets&&D.assets.located)||[]).forEach(a=>{
       const px=a.px; if(!px||px.length<2) return;
-      h+=`<g class="ly-asset"><circle cx="${px[0]}" cy="${px[1]}" r="6" fill="#be4bdb" fill-opacity=".9" stroke="#fff" stroke-width="1.6"/>${qLabel(px[0],px[1],a.name||a.type||a.id)}</g>`;
+      h+=`<g class="ly-asset" data-id="${esc(a.id||'')}" data-tip="${esc(a.name||a.type||a.id)}"><circle cx="${px[0]}" cy="${px[1]}" r="6" fill="#be4bdb" fill-opacity=".9" stroke="#fff" stroke-width="1.6"/>${qLabel(px[0],px[1],a.name||a.type||a.id)}</g>`;
     });
   }
   if(qlyOn('cameras')){
     (QCAM_PINS||((D.cams||[]).filter(c=>c.px||(c.lat!=null&&c.lng!=null)))).forEach((c,i)=>{
       const px=camPinPx(c); if(!px) return;
-      h+=`<g class="ly-campin"><circle cx="${px[0]}" cy="${px[1]}" r="6" fill="#228be6" stroke="#fff" stroke-width="1.5"/><text x="${px[0]}" y="${px[1]+3}" data-cy="${px[1]}" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">${i+1}</text>${qLabel(px[0],px[1],c.name||c.device||('Camera '+(i+1)))}</g>`;
+      h+=`<g class="ly-campin" data-id="${esc(c.device||c.id||'')}" data-tip="${esc(c.name||c.device||('Camera '+(i+1)))}"><circle cx="${px[0]}" cy="${px[1]}" r="6" fill="#228be6" stroke="#fff" stroke-width="1.5"/><text x="${px[0]}" y="${px[1]+3}" data-cy="${px[1]}" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">${i+1}</text>${qLabel(px[0],px[1],c.name||c.device||('Camera '+(i+1)))}</g>`;
     });
   }
   if(qlyOn('zonepins')){
@@ -3029,7 +3270,7 @@ function drawQ2(){
     });
   }
   h+=qSelMarkup(t);
-  svg.innerHTML=h;
+  nadirSetGeom(QMAP,h);
   const lg=document.getElementById('qly-legend');
   if(lg) lg.hidden=QMODE==='3d'||!qlyOn('zones');
   syncQHighlight();
@@ -3100,9 +3341,9 @@ function qSelMarkup(t){
     drew=true;
   }
   if(t.shape==='points' && t.pts){
-    t.pts.forEach(p=>{h+=`<g class="qpin qsel"><circle class="halo" cx="${p[0]}" cy="${p[1]}" r="10" fill="${gold}" fill-opacity=".28" stroke="#fff" stroke-width="2"/><circle class="qsel" cx="${p[0]}" cy="${p[1]}" r="6.5" fill="${gold}" stroke="#fff" stroke-width="2"/></g>`;});
+    t.pts.forEach(p=>{h+=`<g class="qpin qsel" data-qid="${esc(QSEL||'')}"> <circle class="halo" cx="${p[0]}" cy="${p[1]}" r="10" fill="${gold}" fill-opacity=".28" stroke="#fff" stroke-width="2"/><circle class="qsel" cx="${p[0]}" cy="${p[1]}" r="6.5" fill="${gold}" stroke="#fff" stroke-width="2"/></g>`;});
   }else if(t.px && !drew){
-    h+=`<g class="qpin qsel"><circle class="halo" cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="${gold}" fill-opacity=".28" stroke="#fff" stroke-width="2"/><circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="6.5" fill="${gold}" stroke="#fff" stroke-width="2"/></g>`;
+    h+=`<g class="qpin qsel" data-qid="${esc(QSEL||'')}"><circle class="halo" cx="${t.px[0]}" cy="${t.px[1]}" r="10" fill="${gold}" fill-opacity=".28" stroke="#fff" stroke-width="2"/><circle class="qsel" cx="${t.px[0]}" cy="${t.px[1]}" r="6.5" fill="${gold}" stroke="#fff" stroke-width="2"/></g>`;
   }
   return h;
 }
@@ -3140,9 +3381,114 @@ function heightAt(x,y){
   const hits=ray.intersectObject(Q3.root,true);
   return hits.length?hits[0].point.z:8;
 }
-async function ensureQ3(){
+async function fetchQ3Mesh(onProgress){
+  try{ return await fetchDec('mesh-lite.bin',{onProgress}); }
+  catch(e){ return await fetchDec('mesh.bin',{onProgress}); }
+}
+function capQ3Texture(tex,max){
+  if(!tex||!Q3||!Q3.THREE) return;
+  const THREE=Q3.THREE;
+  max=max||2048;
+  tex.generateMipmaps=true;
+  tex.minFilter=THREE.LinearMipmapLinearFilter;
+  tex.magFilter=THREE.LinearFilter;
+  tex.anisotropy=1;
+  const img=tex.image;
+  if(img&&(img.width>max||img.height>max)){
+    const s=max/Math.max(img.width,img.height);
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round(img.width*s));
+    c.height=Math.max(1,Math.round(img.height*s));
+    const ctx=c.getContext('2d'); if(ctx){ctx.drawImage(img,0,0,c.width,c.height);tex.image=c;tex.needsUpdate=true;}
+  }
+}
+function tuneQ3Materials(){
+  if(!Q3||!Q3.root||!Q3.THREE) return;
+  const THREE=Q3.THREE;
+  Q3.root.traverse(o=>{
+    if(o.frustumCulled!=null) o.frustumCulled=true;
+    if(o.castShadow!=null) o.castShadow=false;
+    if(o.receiveShadow!=null) o.receiveShadow=false;
+    if(!o.isMesh) return;
+    const mats=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];
+    mats.forEach(mat=>{
+      if(!mat) return;
+      Object.keys(mat).forEach(k=>{ const v=mat[k]; if(v&&v.isTexture) capQ3Texture(v,2048); });
+      if(mat.type==='MeshStandardMaterial'||mat.type==='MeshPhysicalMaterial'){
+        const basic=new THREE.MeshBasicMaterial({
+          map:mat.map||null, color:mat.color?mat.color.clone():new THREE.Color(0xffffff),
+          transparent:!!mat.transparent, opacity:mat.opacity, side:mat.side, name:mat.name
+        });
+        if(o.material===mat) o.material=basic;
+        else {
+          const arr=Array.isArray(o.material)?o.material:[];
+          const i=arr.indexOf(mat); if(i>=0) arr[i]=basic;
+        }
+        if(mat.dispose) mat.dispose();
+      }
+    });
+  });
+}
+function renderQ3(){
+  if(!Q3||!Q3.renderer||QMODE!=='3d') return;
+  if(Q3.controls) Q3.controls.update();
+  Q3.renderer.render(Q3.scene,Q3.cam);
+  if(typeof updateNorth3==='function') updateNorth3();
+}
+function demandQ3(){
+  if(!Q3||!Q3.renderer||QMODE!=='3d') return;
+  if(Q3.raf) return;
+  Q3.raf=requestAnimationFrame(tickQ3);
+}
+function tickQ3(){
+  if(Q3) Q3.raf=0;
+  if(!Q3||!Q3.renderer||QMODE!=='3d') return;
+  renderQ3();
+  if(Q3._moving){ Q3._idle=0; Q3.raf=requestAnimationFrame(tickQ3); }
+  else {
+    Q3._idle=(Q3._idle||0)+1;
+    if(Q3._idle<40) Q3.raf=requestAnimationFrame(tickQ3);
+  }
+}
+function wireQ3Demand(){
+  if(!Q3||!Q3.controls||Q3._demandWired) return;
+  Q3._demandWired=true;
+  const start=()=>{Q3._moving=true;demandQ3();};
+  const end=()=>{Q3._moving=false;demandQ3();};
+  Q3.controls.addEventListener('start',start);
+  Q3.controls.addEventListener('end',end);
+  Q3.controls.addEventListener('change',demandQ3);
+}
+function disposeQ3(){
+  if(!Q3) return;
+  if(Q3.raf){cancelAnimationFrame(Q3.raf);Q3.raf=0;}
+  if(!Q3.renderer){Q3=null;return;}
+  try{
+    const root=Q3.root, scene=Q3.scene, renderer=Q3.renderer;
+    if(root){
+      root.traverse(o=>{
+        if(o.geometry&&o.geometry.dispose) o.geometry.dispose();
+        const mats=o.material?(Array.isArray(o.material)?o.material:[o.material]):[];
+        mats.forEach(mat=>{
+          if(!mat) return;
+          Object.keys(mat).forEach(k=>{const v=mat[k]; if(v&&v.isTexture&&v.dispose) v.dispose();});
+          if(mat.dispose) mat.dispose();
+        });
+      });
+      if(scene) scene.remove(root);
+    }
+    renderer.dispose();
+    if(renderer.forceContextLoss) renderer.forceContextLoss();
+    const el=renderer.domElement;
+    if(el&&el.parentNode) el.parentNode.removeChild(el);
+  }catch(e){}
+  const host=document.getElementById('q3d');
+  if(host) host.innerHTML='';
+  Q3=null;
+}
+function ensureQ3(){
   const host=document.getElementById('q3d');if(!host)return;
-  if(Q3&&Q3.ready){Q3.resize();return;}
+  if(Q3&&Q3.ready){Q3.resize();demandQ3();return;}
   if(Q3&&Q3.loading)return Q3.loading;
   host.innerHTML='<div class="q3wait" id="q3wait">Loading the 3D model…</div>';
   Q3={loading:true,ready:false};
@@ -3150,14 +3496,16 @@ async function ensureQ3(){
     try{
       if(!window.H1Three) await loadScript('vendor/three-viewer.js');
       const {THREE,OrbitControls,GLTFLoader}=window.H1Three;
-      const buf=await fetchDec('mesh.bin',{onProgress:(a,b)=>{const e=document.getElementById('qmapstat');if(e)e.textContent=H1Crypto.progressMsg(a,b);}});
+      const buf=await fetchQ3Mesh((a,b)=>{const e=document.getElementById('qmapstat');if(e)e.textContent=H1Crypto.progressMsg(a,b);});
       const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'}));
       const w=host.clientWidth||400,h=host.clientHeight||400;
       const scene=new THREE.Scene();scene.background=new THREE.Color(0x1b1f1d);
       const cam=new THREE.PerspectiveCamera(50,w/Math.max(1,h),0.4,4000);cam.up.set(0,0,1);
-      const renderer=new THREE.WebGLRenderer({antialias:true});
-      renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));renderer.setSize(w,Math.max(1,h));
+      const renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance',stencil:false,depth:true,alpha:false});
+      renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));
+      renderer.setSize(w,Math.max(1,h));
       renderer.outputColorSpace=THREE.SRGBColorSpace;
+      renderer.shadowMap.enabled=false;
       host.appendChild(renderer.domElement);
       const controls=new OrbitControls(cam,renderer.domElement);
       controls.enableDamping=true;controls.dampingFactor=0.08;controls.screenSpacePanning=true;
@@ -3167,13 +3515,14 @@ async function ensureQ3(){
       URL.revokeObjectURL(url);
       scene.add(root.scene);
       const extras=(root.parser&&root.parser.json.meshes&&root.parser.json.meshes[0]&&root.parser.json.meshes[0].extras)||{};
-      Q3={THREE,scene,cam,renderer,controls,root:root.scene,extras,ready:true,loading:false,host,
-        resize(){const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setSize(w,h);},
+      Q3={THREE,scene,cam,renderer,controls,root:root.scene,extras,ready:true,loading:false,host,raf:0,_moving:false,_idle:0,
+        resize(){const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));renderer.setSize(w,h);demandQ3();},
         marker:null,line:null,parcel:null};
+      tuneQ3Materials();
       const wait=document.getElementById('q3wait');if(wait)wait.remove();
+      wireQ3Demand();
       resetQ3();syncQ3Overlays();
-      const loop=()=>{if(!Q3||!Q3.renderer)return;Q3.raf=requestAnimationFrame(loop);if(QMODE==='3d'){Q3.controls.update();Q3.renderer.render(Q3.scene,Q3.cam);updateNorth3();}};
-      loop();
+      demandQ3();
     }catch(err){
       const w=document.getElementById('q3wait');
       if(w)w.textContent='Could not load the 3D model. Try again, or open the page over the review link.';
@@ -3182,6 +3531,7 @@ async function ensureQ3(){
   })();
   return Q3.loading;
 }
+
 function updateNorth3(){
   if(QMODE!=='3d'||!Q3||!Q3.ready){const n=document.getElementById('qnorth');if(n&&QMODE==='2d')n.style.transform='';return;}
   const THREE=Q3.THREE,t=Q3.controls.target.clone(),n=t.clone().add(new THREE.Vector3(0,20,0));
@@ -3205,6 +3555,7 @@ function resetQ3(){
   const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
   const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
   frameQ3(cx,cy,heightAt(cx,cy),span);
+  demandQ3();
 }
 function focusQ3(t){
   if(!Q3||!Q3.ready||!t)return;
@@ -3222,6 +3573,7 @@ function focusQ3(t){
   }else return;
   z=heightAt(cx,cy);
   frameQ3(cx,cy,z,Math.max(40,span*1.15));
+  demandQ3();
 }
 function syncQ3Overlays(){
   if(!Q3||!Q3.ready)return;
