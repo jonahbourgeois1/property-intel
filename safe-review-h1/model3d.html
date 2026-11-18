@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/review/; worker-src blob:; base-uri 'none'; form-action 'none'">
-<title>H1 · 3D model</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/; worker-src blob:; base-uri 'none'; form-action 'none'">
+<title>SAFE · 3D model</title>
 <style>
 :root{
   --bg:#101412; --ink:#e8eeea; --ink2:#b4bfba; --ink3:#8a9691; --line:#2a332f;
@@ -49,7 +49,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 <div id="lock">
   <form class="box" id="lockform" autocomplete="off">
     <div class="eyebrow">SAFE · Pass 1 review</div>
-    <h1>H1 · 3D model</h1>
+    <h1><span class="lotname">SAFE</span> · 3D model</h1>
     <p>This 3D model is encrypted. Enter the passphrase to open it.</p>
     <input id="pw" type="password" autocomplete="off" autofocus>
     <button type="submit" id="unl">Unlock</button>
@@ -59,7 +59,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 <div id="app">
   <div id="view"></div>
   <div class="bar">
-    <div class="brand">H1 <span>3D model</span></div>
+    <div class="brand"><b class="lotname">SAFE</b> <span>3D model</span></div>
     <a href="index.html">← Reviewer</a> <a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a> <a href="zones.html" target="_blank" rel="noopener">Zone pins</a> <a href="cameras.html" target="_blank" rel="noopener">Camera pins</a>
     <button type="button" class="btn" id="btnReset">Reset view</button>
     <button type="button" class="btn" id="btnTop">Top-down</button>
@@ -72,19 +72,20 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
   <div class="status" id="stat">Loading the 3D model…</div>
   <div class="wait" id="wait">Loading the 3D model…</div>
 </div>
-<script src="vendor/h1-crypto.js"></script>
+<script src="review-config.js"></script>
+<script src="vendor/safe-crypto.js"></script>
 <script src="vendor/three-viewer.js"></script>
 <script>
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let KEY=null, D=null, V=null;
-async function fetchDec(f,opts){return H1Crypto.fetchDec(f,opts);}
+async function fetchDec(f,opts){return SafeCrypto.fetchDec(f,opts);}
 async function afterUnlock(){
-  KEY=H1Crypto.getKey();
+  KEY=SafeCrypto.getKey();
   D=JSON.parse(new TextDecoder().decode(await fetchDec('data.bin')));
   document.getElementById('lock').remove();document.getElementById('app').style.display='block';
   await start();
 }
-H1Crypto.wireUnlock({onReady:afterUnlock});
+SafeCrypto.wireUnlock({onReady:afterUnlock});
 
 function toUTM10(lat,lon){
   const a=6378137,f=1/298.257222101,k0=0.9996,lon0=-123*Math.PI/180,e0=500000;
@@ -111,8 +112,8 @@ function heightAt(x,y){
 function stat(t){const e=document.getElementById('stat');if(e)e.textContent=t;}
 
 async function start(){
-  if(!window.H1Three){stat('The 3D library did not load.');return;}
-  const {THREE,OrbitControls,GLTFLoader}=window.H1Three;
+  if(!window.SafeThree){stat('The 3D library did not load.');return;}
+  const {THREE,OrbitControls,GLTFLoader}=window.SafeThree;
   const host=document.getElementById('view');
   const scene=new THREE.Scene();scene.background=new THREE.Color(0x101412);
   const w=host.clientWidth||800,h=host.clientHeight||600;
@@ -134,7 +135,7 @@ async function start(){
   scene.add(hemi,sun,amb);
   V={THREE,scene,cam,renderer,controls,host,root:null,extras:{},parcel:null,mats:[]};
 
-  stat('Downloading the 3D model…'); const buf=await fetchDec('mesh.bin',{onProgress:(a,b)=>stat(H1Crypto.progressMsg(a,b))});
+  stat('Downloading the 3D model…'); const buf=await fetchDec('mesh.bin',{onProgress:(a,b)=>stat(SafeCrypto.progressMsg(a,b))});
   const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'}));
   let gltf;
   try{gltf=await new Promise((res,rej)=>new GLTFLoader().load(url,res,undefined,rej));}
@@ -159,7 +160,7 @@ async function start(){
   const wait=document.getElementById('wait');if(wait)wait.remove();
   const v=V.extras, nV=v.vertices, nT=v.triangles;
   // extras may not have counts; don't require them
-  stat('Nearmap textured mesh · 2 Jul 2026 · NAD83 / UTM 10N, heights NAVD88. Drag to move around the lot.');
+  stat('Nearmap textured mesh. Drag to move around the lot.');
   buildParcel();
   resetView(false);
   applyMats();
