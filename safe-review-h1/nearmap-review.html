@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/review/; worker-src blob:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/; worker-src blob:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>H1 region editor</title>
+<title>SAFE region editor</title>
 <!--
-  H1 LOCAL CLONE (v1.7.18-h1.1, 2026-11-16). Regions mode only; Maps JS replaced by a
+  LOCAL CLONE (v1.7.18-safe, 2026-11-16). Regions mode only; Maps JS replaced by a
   local canvas shim (opaque nadir, tilt 0, no basemap tiles, no key). Save is local only:
-  serve-h1.ps1 PUT to nearmap/{delivery}/ai/edits/regions.json, else localStorage.
+  serve-review.ps1 PUT to nearmap/{delivery}/ai/edits/regions.json, else localStorage.
   No sheet, Apps Script or S3 save in this build. Camera pins live in cameras.html.
   Original header follows.
 
@@ -227,13 +227,14 @@
 .qleg{display:inline-flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;color:var(--muted,#6b7280)}
 .qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
 </style>
-<script src="vendor/h1-crypto.js"></script>
+<script src="review-config.js"></script>
+<script src="vendor/safe-crypto.js"></script>
 </head>
 <body>
 <div id="lock" style="position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#141a18,#1a1814)">
   <form class="box" id="lockform" autocomplete="off" style="width:400px;background:#fff;color:#1c2321;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px">
     <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#7b8682">SAFE · review</div>
-    <h1 style="font-size:24px;margin:6px 0 4px">H1 region editor</h1>
+    <h1 style="font-size:24px;margin:6px 0 4px"><span class="lotname">SAFE</span> region editor</h1>
     <p style="color:#4a5551;margin:0 0 20px;font-size:14px">This map is encrypted. Enter the passphrase to open it.</p>
     <input id="pw" type="password" autocomplete="off" autofocus style="width:100%;padding:12px 14px;border:1px solid #e3e7e4;border-radius:10px;font-size:15px">
     <button type="submit" id="unl" style="margin-top:12px;width:100%;padding:12px;border:0;border-radius:10px;background:#1f5f57;color:#fff;font-weight:600;cursor:pointer;font:inherit">Unlock</button>
@@ -242,7 +243,7 @@
 </div>
 
 <header>
-  <h1>H1 assets · region editor</h1>
+  <h1><span class="lotname">SAFE</span> assets · region editor</h1>
   <span id="build"></span><button type="button" class="btn" id="exportReview">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;margin-left:8px;padding:4px 8px">
   <span id="addr"></span>
   <nav class="hnav"><a href="index.html#assets">Reviewer</a><a href="cameras.html" target="_blank" rel="noopener">Camera pins</a><a href="index.html#alarms">Alarm (MAS)</a><a href="zones.html" target="_blank" rel="noopener">Zone pins</a></nav>
@@ -676,8 +677,8 @@
 </script>
 <script>
 (function () {
-  var BUILD = 'v1.7.18-h1.1';
-  // H1 local build: no Apps Script, no Maps key, no CloudFront. Tiles are the
+  var BUILD = 'v1.7.18-' + SafeCrypto.TEMPLATE;
+  // Local build: no Apps Script, no Maps key, no CloudFront. Tiles are the
   // local serve tree next to this page.
   var NM_API_URL = '';
   var CF_TILES = 'nearmap/';
@@ -928,7 +929,7 @@
     return { type: 'FeatureCollection', features: [] };
   }
 
-  // H1 local: no sheet identity, no remote tiles. delivery defaults to H1.
+  // Local: no sheet identity, no remote tiles. delivery defaults to SAFE.
   var propertyId = '';
   var delivery = String(qp('delivery') || '').replace(/[^a-z0-9-]/gi, '');
   var siteNo = '';
@@ -941,7 +942,7 @@
   // ai/original/ every time — edits file and browser backups ignored, local
   // edits/regions.json reset to original. ?fresh=0 resumes local edits;
   // ?fresh=1 forces a fresh start even for sheet-driven opens.
-  // H1 local: reviewers resume their saved edits; ?fresh=1 starts from original.
+  // Local: reviewers resume their saved edits; ?fresh=1 starts from original.
   var FRESH_ON_OPEN = qp('fresh') === '1';
   // Remote regions for sheet mode: { original: url, edits: url|'' }.
   var regionsRemote = { original: '', edits: '' };
@@ -950,7 +951,7 @@
   //   pins   (?mode=pins) — Auto Generate Pins from regions.json class names,
   //                         skipping cover/veg classes (not the catalog).
   //                         Place pin / Delete pin click painted regions.
-  // H1 local: regions editor only (camera pins are cameras.html).
+  // Local: regions editor only (camera pins are cameras.html).
   var MODE = 'regions';
   document.body.className = 'mode-' + MODE;
   var modeChipEl = document.getElementById('modeChip');
@@ -1133,7 +1134,7 @@
 
 
   function mergePipelineRegions(fc) {
-    var D = window.H1_REVIEW_DATA;
+    var D = window.SAFE_REVIEW_DATA;
     var pipe = D && D.region_review;
     if (!pipe || !pipe.features || !pipe.features.length) return fc;
     var base = (fc && fc.features) ? fc : { type: 'FeatureCollection', features: [] };
@@ -1161,7 +1162,7 @@
       source: 'edits',
       delivery_id: delivery || '',
       saved: new Date().toISOString(),
-      saved_by: 'nearmap-review (H1 local)',
+      saved_by: 'nearmap-review (local)',
       counts: recountFeatures(aiPack.features),
       catalog: catalogNames(),
       features: aiPack.features
@@ -4503,14 +4504,14 @@
       setTimeout(run, 50);
       setTimeout(run, 250);
     })();
-    // H1: parcel line as read-only context (taxlot clipping stays on the viewer).
+    // Lot: parcel line as read-only context (taxlot clipping stays on the viewer).
     var ctxRing = record.context && record.context.parcel;
     if (ctxRing && ctxRing.length) {
       parcelShape = new google.maps.Polygon({ paths: ringToPath(ctxRing), strokeColor: '#ffe066', strokeOpacity: 0.95,
         strokeWeight: 2, fillOpacity: 0, clickable: false, zIndex: 9, dashed: [8, 5] });
       if (document.getElementById('parcelToggle').checked) parcelShape.setMap(map);
     }
-    drawH1ContextOverlays();
+    drawSafeContextOverlays();
     map.addListener('idle', function () {
       if (MODE === 'pins') drawPins();
     });
@@ -4861,7 +4862,7 @@
       tryInitMap();
       return;
     }
-    // H1 local: the map shim is inlined above; nothing to load.
+    // Local: the map shim is inlined above; nothing to load.
     fail('Map shim missing');
   }
 
@@ -4870,9 +4871,9 @@
   function pxToLlCtx(x, y, b, W, H) {
     return { lng: b.west + x / W * (b.east - b.west), lat: b.north - y / H * (b.north - b.south) };
   }
-  function drawH1ContextOverlays() {
+  function drawSafeContextOverlays() {
     if (hydrantShape) { hydrantShape.setMap(null); hydrantShape = null; }
-    var D = window.H1_REVIEW_DATA;
+    var D = window.SAFE_REVIEW_DATA;
     if (!map || !D) return;
     var showH = !document.getElementById('hydrantToggle') || document.getElementById('hydrantToggle').checked;
     if (showH && D.hydrant) {
@@ -5132,8 +5133,8 @@
       .then(function () { saveBtn.disabled = false; });
   });
 
-  window.__h1StartNm = function (fromEncrypted) {
-  if (fromEncrypted) return window.__h1StartNmEncrypted();
+  window.__safeStartNm = function (fromEncrypted) {
+  if (fromEncrypted) return window.__safeStartNmEncrypted();
   bootMaps();
   if (delivery) {
     preloadVertJpg(joinUrl(tilesBase, delivery + '/vert.jpg'));
@@ -5173,15 +5174,15 @@
     if (MODE === 'pins') loadCatalog().then(function () { if (map) drawPins(); });
   }).catch(function (e) { fail(String(e.message || e)); });
   };
-  window.__h1StartNmEncrypted = async function () {
+  window.__safeStartNmEncrypted = async function () {
     try {
-      var man = JSON.parse(new TextDecoder().decode(await H1Crypto.fetchDec('manifest.bin')));
-      var vertUrl = URL.createObjectURL(new Blob([await H1Crypto.fetchDec('vert.bin')], { type: 'image/jpeg' }));
-      var featUrl = URL.createObjectURL(new Blob([await H1Crypto.fetchDec('features.bin')], { type: 'application/json' }));
-      var origBuf = await H1Crypto.fetchDec('regions-original.bin');
+      var man = JSON.parse(new TextDecoder().decode(await SafeCrypto.fetchDec('manifest.bin')));
+      var vertUrl = URL.createObjectURL(new Blob([await SafeCrypto.fetchDec('vert.bin')], { type: 'image/jpeg' }));
+      var featUrl = URL.createObjectURL(new Blob([await SafeCrypto.fetchDec('features.bin')], { type: 'application/json' }));
+      var origBuf = await SafeCrypto.fetchDec('regions-original.bin');
       var origJson = JSON.parse(new TextDecoder().decode(origBuf));
       var origUrl = URL.createObjectURL(new Blob([JSON.stringify(origJson)], { type: 'application/json' }));
-      delivery = 'h1';
+      delivery = SafeCrypto.LOT_KEY;
       tilesBase = '';
       regionsRemote.original = origUrl;
       originalPrefetch = Promise.resolve(origJson);
@@ -5199,16 +5200,16 @@
       bootMaps();
       loadAiIndex();
     } catch (e) {
-      if (H1Crypto.isLocal()) { window.__h1StartNm(false); return; }
+      if (SafeCrypto.isLocal()) { window.__safeStartNm(false); return; }
       fail('Could not load the encrypted map (' + (e.message || e) + ').');
     }
   };
-  // ── H1: small API for the asset list and for automated checks ──────────────
+  // ── Lot: small API for the asset list and for automated checks ──────────────
   document.getElementById('parcelToggle').addEventListener('change', function (ev) {
     if (parcelShape) parcelShape.setMap(ev.target.checked ? map : null);
   });
   var hydrantToggle = document.getElementById('hydrantToggle');
-  if (hydrantToggle) hydrantToggle.addEventListener('change', function () { drawH1ContextOverlays(); });
+  if (hydrantToggle) hydrantToggle.addEventListener('change', function () { drawSafeContextOverlays(); });
   window.nmApi = {
     pickRegion: function (rid) {
       return ensureFeatures().then(function () {
@@ -5254,7 +5255,7 @@
 })();
 </script>
 <script>
-// H1: asset inventory list (decrypted from d/data.bin with the reviewer passphrase).
+// Lot: asset inventory list (decrypted from d/data.bin with the reviewer passphrase).
 (function () {
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   var KEY = null;
@@ -5287,14 +5288,14 @@
     if (rid && window.nmApi) window.nmApi.pickRegion(rid);
   });
   async function afterUnlock() {
-    KEY = H1Crypto.getKey();
-    var D = JSON.parse(new TextDecoder().decode(await H1Crypto.fetchDec('data.bin')));
-    window.H1_REVIEW_DATA = D;
-    if (typeof window.drawH1ContextOverlays === 'function') window.drawH1ContextOverlays();
+    KEY = SafeCrypto.getKey();
+    var D = JSON.parse(new TextDecoder().decode(await SafeCrypto.fetchDec('data.bin')));
+    window.SAFE_REVIEW_DATA = D;
+    if (typeof window.drawSafeContextOverlays === 'function') window.drawSafeContextOverlays();
     render(D);
-    if (typeof window.__h1StartNmEncrypted === 'function') await window.__h1StartNmEncrypted();
+    if (typeof window.__safeStartNmEncrypted === 'function') await window.__safeStartNmEncrypted();
   }
-  H1Crypto.wireUnlock({ onReady: afterUnlock });
+  SafeCrypto.wireUnlock({ onReady: afterUnlock });
   // ?region= opens with that region picked.
   var r0 = new URLSearchParams(location.search).get('region');
   if (r0) { var t = setInterval(function () { if (window.nmApi && window.nmApi.ready()) { clearInterval(t); window.nmApi.pickRegion(r0); } }, 200); }
@@ -5308,10 +5309,10 @@
 document.addEventListener('DOMContentLoaded', function () {
   var n = document.getElementById('revname');
   var b = document.getElementById('exportReview');
-  if (n && window.H1Crypto) { n.value = H1Crypto.reviewerName(); n.onchange = function () { H1Crypto.setReviewerName(n.value); }; }
-  if (b && window.H1Crypto) b.onclick = async function () {
-    if (n) H1Crypto.setReviewerName(n.value);
-    try { await H1Crypto.exportReview(); } catch (e) { alert('Export failed: ' + e.message); }
+  if (n && window.SafeCrypto) { n.value = SafeCrypto.reviewerName(); n.onchange = function () { SafeCrypto.setReviewerName(n.value); }; }
+  if (b && window.SafeCrypto) b.onclick = async function () {
+    if (n) SafeCrypto.setReviewerName(n.value);
+    try { await SafeCrypto.exportReview(); } catch (e) { alert('Export failed: ' + e.message); }
   };
 });
 </script>
