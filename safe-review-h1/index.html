@@ -184,7 +184,16 @@ details .body{font-size:13px;color:var(--ink2);margin-top:6px;line-height:1.55}
 .alts div b{font-weight:600;color:var(--ink)}
 #mmap-status{min-height:1.35em;margin-top:6px}
 #mmap-status.warn{color:#8a5a00}
-#mmap-status.qmap-status.warn,#amap-status.qmap-status.warn{color:#ffd8a8}
+#mmap-status.qmap-status.warn,#amap-status.qmap-status.warn,#zmap-status.qmap-status.warn,#cmap-status.qmap-status.warn{color:#ffd8a8}
+#pg-cameras .cam.sel{box-shadow:0 0 0 2px var(--accent);background:#eef6f4}
+.zrow{cursor:pointer}
+.zrow:hover td{background:#fafcfb}
+.zrow.sel td{background:#eef6f4;box-shadow:none;border-left:0;border-right:0;border-top-color:transparent;border-bottom-color:transparent}
+.zrow.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.zrow .zplace{white-space:nowrap}
+.zrow .zplace.est{color:var(--amber)}
+.zrow .zplace.sv{color:var(--ok);font-weight:650}
+.zrow .zplace.off{color:var(--ink3)}
 #mmap .qnorth{pointer-events:none}
 #mmap .ly-parcel{pointer-events:none}
 #mmap .mln,#mmap .marea,#mmap .mpt{cursor:pointer}
@@ -298,7 +307,7 @@ html.qmode,html.splitmap,html.qmode body,html.splitmap body{height:100vh;overflo
 html.qmode #app,html.splitmap #app{height:100vh;overflow:hidden}
 html.qmode main,html.splitmap main{padding:0;overflow:hidden;min-height:0;display:flex;flex-direction:column}
 html.qmode main .wrap,html.splitmap main .wrap{max-width:none;width:100%;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
-html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
+html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on,html.splitmap #pg-alarms.on,html.splitmap #pg-cameras.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
 .qsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;height:100%}
 .qmap{position:relative;min-width:0;min-height:0;background:#141816;display:flex;flex-direction:column;border-right:1px solid var(--line)}
 .qmap-tools{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 12px;background:rgba(20,24,22,.92);color:#d7e0dc;z-index:3;flex-shrink:0}
@@ -568,7 +577,7 @@ function route(){
   let h=(location.hash||'#overview').slice(1);let [k,target]=h.split(':');
   if(k==='regions') k='assets';
   const key=SECTIONS.some(s=>s[0]===k)?k:'overview';
-  const split=key==='questions'||key==='assets'||key==='measurements';
+  const split=key==='questions'||key==='assets'||key==='measurements'||key==='alarms'||key==='cameras';
   document.documentElement.classList.toggle('qmode',key==='questions');
   document.body.classList.toggle('qmode',key==='questions');
   document.documentElement.classList.toggle('splitmap',split);
@@ -578,6 +587,8 @@ function route(){
   if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
   if(key==='assets') refreshNadirMap(AMAP);
   if(key==='measurements') refreshNadirMap(MMAP);
+  if(key==='alarms') refreshNadirMap(ZMAP);
+  if(key==='cameras') refreshNadirMap(CMAP);
   if(target&&key==='assets'){if(target.startsWith('asset-')){const rid='asset-'+resolveAssetId(target.slice(6));target=rid;}if(ATYPE!=='all'){const all=document.querySelector('#achips .chip[data-t=all]');if(all)all.click();}}
   if(target){const el=document.getElementById(target)||(key==='assets'?document.getElementById('property-facts'):null);if(el){let d=el.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}el.scrollIntoView({block:'center'});el.classList.remove('hl');void el.offsetWidth;el.classList.add('hl');if(key==='assets'&&target.startsWith('asset-'))selectAsset(target.replace('asset-',''),false);if(key==='measurements'&&target.startsWith('meas-'))selectMeas(target.slice(5),false);}}
   else window.scrollTo(0,0);
@@ -624,47 +635,235 @@ function sysColor(ref, systems){
   const i=withZones.findIndex(s=>s.system_ref===ref);
   return i<0?'#868e96':palette[i%palette.length];
 }
+function zoneKey(z){
+  if(!z) return '';
+  return String(z.system_ref||'')+'::'+String(z.zone_id!=null?z.zone_id:(z.id||''));
+}
+function masPinList(){
+  const base=((D.mas&&D.mas.pins)||[]).map(p=>Object.assign({},p));
+  const extra=QZONE_PINS||[];
+  if(!extra.length) return base;
+  const ix=new Map();
+  base.forEach((p,i)=>ix.set(String(p.system_ref||'')+'::'+String(p.zone_id||''),i));
+  extra.forEach(p=>{
+    const k=String(p.system_ref||'')+'::'+String(p.zone_id||'');
+    if(ix.has(k)) base[ix.get(k)]=Object.assign({},base[ix.get(k)],p);
+    else base.push(Object.assign({},p));
+  });
+  return base;
+}
+function zonePinOf(z){
+  const pins=masPinList();
+  return pins.find(p=>String(p.system_ref)===String(z.system_ref)&&String(p.zone_id)===String(z.zone_id))||null;
+}
+function zoneHasPx(p){
+  if(!p) return false;
+  if(p.lat!=null&&p.lng!=null&&isFinite(+p.lat)&&isFinite(+p.lng)) return true;
+  if(p.px&&p.px.length>=2&&isFinite(+p.px[0])&&isFinite(+p.px[1])) return true;
+  return false;
+}
+function zonePx(p){
+  if(!p) return null;
+  if(p.px&&p.px.length>=2&&isFinite(+p.px[0])&&isFinite(+p.px[1])) return [+p.px[0],+p.px[1]];
+  if(p.lat!=null&&p.lng!=null&&typeof qPxLL==='function') return qPxLL(+p.lat,+p.lng);
+  return null;
+}
+function zoneIsSurveyed(p){
+  const pl=String((p&&p.placement)||'').toLowerCase();
+  const st=String((p&&p.status)||'').toLowerCase();
+  return pl==='surveyed'||pl==='confirmed'||st==='surveyed'||st==='confirmed';
+}
+function zonePlaceLabel(p){
+  if(!zoneHasPx(p)) return 'Not placed';
+  return zoneIsSurveyed(p)?'Surveyed':'Estimated';
+}
+function zoneLinkedCamera(z,pin){
+  const link=(pin&&pin.camera_link)||null;
+  const name=(link&&(link.name||link.device||link.id))||(z&&z.linked_camera)||'';
+  const dev=link&&(link.device||link.id||link.hubId);
+  const cams=D.cams||[];
+  let c=null;
+  if(dev) c=cams.find(x=>x.device===dev||x.id===dev||x.pin===dev)||null;
+  if(!c&&name) c=cams.find(x=>(x.name||'')===name||(x.device||'')===name)||null;
+  if(!c) return null;
+  const px=typeof camPinPx==='function'?camPinPx(c):null;
+  if(!px||px.length<2||!isFinite(px[0])||!isFinite(px[1])) return null;
+  return {px,label:c.name||c.device||'Camera'};
+}
+function findZone(key){
+  return ((D.mas&&D.mas.zones)||[]).find(z=>zoneKey(z)===key)||null;
+}
 function zoneRow(z, pinOf){
   const p=pinOf(z)||{};
   const cam=p.camera_link||(z.linked_camera?{name:z.linked_camera}:null);
-  return `<tr><td>${esc(z.label)}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td><td>${p.lat!=null?'Estimated':'Unplaced'}</td><td>${cam?'possibly same location as camera '+esc(cam.name||cam.device||''):'—'}</td></tr>`;
+  const place=zonePlaceLabel(p);
+  const cls=place==='Surveyed'?'sv':place==='Estimated'?'est':'off';
+  const key=zoneKey(z);
+  return `<tr class="zrow" id="zone-${esc(key)}" data-zkey="${esc(key)}"><td>${esc(z.label)}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td><td><span class="zplace ${cls}">${esc(place)}</span></td><td>${cam?'possibly same location as camera '+esc(cam.name||cam.device||''):'—'}</td></tr>`;
 }
 function zoneTable(rows, pinOf){
   return `<table class="mas-table"><thead><tr><th>Zone</th><th>Type</th><th>Programming</th><th>Draft pin</th><th>Camera link</th></tr></thead><tbody>`+
     rows.map(z=>zoneRow(z,pinOf)).join('')+`</tbody></table>`;
 }
 function rAlarms(){
-  const M=D.mas||{}, systems=(M.systems||[]).map(s=>Object.assign({},s)), zones=M.zones||[], ev=M.events_summary||{}, pins=M.pins||[];
+  const M=D.mas||{}, systems=(M.systems||[]).map(s=>Object.assign({},s)), zones=M.zones||[], ev=M.events_summary||{};
+  const pins=masPinList();
   systems.forEach(s=>{s._n=zones.filter(z=>z.system_ref===s.system_ref).length;});
   const withZones=systems.filter(s=>s._n>0), empty=systems.filter(s=>s._n===0);
-  const placed=pins.filter(p=>p.lat!=null).length, links=pins.filter(p=>p.camera_link).length;
-  const pinOf=z=>pins.find(p=>p.system_ref===z.system_ref&&String(p.zone_id)===String(z.zone_id));
+  const placed=pins.filter(zoneHasPx).length, links=pins.filter(p=>p.camera_link).length;
+  const pinOf=zonePinOf;
   const multi=withZones.length>1;
-  let h=head('Alarm (MAS)','Monitoring accounts and zones','Sanitized from the 16 Nov 2026 central-station export. Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them on the zone pin page. Zones are listed by system; a single-system customer is shown as a plain list.');
-  h+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Systems</div><div class="v num">${systems.length}</div></div><div class="card kpi"><div class="k">Zones</div><div class="v num">${zones.length}</div></div><div class="card kpi"><div class="k">Draft pins</div><div class="v num">${placed}<small> estimated · ${pins.length-placed} unplaced</small></div><div class="s">${links} camera-link candidates</div></div></div>`;
+  let list=`${head('Alarm (MAS)','Monitoring accounts and zones','Sanitized from the 16 Nov 2026 central-station export. Account, site and system numbers are not shown. Pin locations are draft estimates — confirm or flag them in the zone editor. Zones are listed by system; a single-system customer is shown as a plain list.',`<a class="btnl" href="zones.html" target="_blank" rel="noopener">Open zone editor ↗</a>`)}`;
+  list+=`<div class="grid g3 mt"><div class="card kpi"><div class="k">Systems</div><div class="v num">${systems.length}</div></div><div class="card kpi"><div class="k">Zones</div><div class="v num">${zones.length}</div></div><div class="card kpi"><div class="k">Draft pins</div><div class="v num">${placed}<small> placed · ${Math.max(0,zones.length-placed)} not placed</small></div><div class="s">${links} camera-link candidates</div></div></div>`;
   if(systems.length){
-    h+=`<div class="card pad mt"><h3>Systems</h3><table class="mas-table"><thead><tr><th>System</th><th>Type</th><th>Status</th><th>Zones</th></tr></thead><tbody>`;
-    h+=systems.map(s=>`<tr><td>${esc(s.label||s.make)}</td><td>${esc(sysKindLabel(s))}</td><td>${esc(s.status)}</td><td class="num">${s._n}</td></tr>`).join('');
-    h+=`</tbody></table></div>`;
+    list+=`<div class="card pad mt"><h3>Systems</h3><table class="mas-table"><thead><tr><th>System</th><th>Type</th><th>Status</th><th>Zones</th></tr></thead><tbody>`;
+    list+=systems.map(s=>`<tr><td>${esc(s.label||s.make)}</td><td>${esc(sysKindLabel(s))}</td><td>${esc(s.status)}</td><td class="num">${s._n}</td></tr>`).join('');
+    list+=`</tbody></table></div>`;
   }
-  h+=`<div class="card pad mt"><h3>Zones</h3><div class="small muted" style="margin:-4px 0 8px">Every draft pin is marked estimated, with a rationale. Unplaced zones were left unplaced when the label was not enough. Never invented.</div>`;
+  list+=`<div class="card pad mt"><h3>Zones</h3><div class="small muted" style="margin:-4px 0 8px">Click a zone to show its pin. Unplaced zones stay unplaced — positions are never invented.</div>`;
   if(!multi){
     const s=withZones[0];
-    if(s) h+=`<div class="sys-plain">${esc(s.label||s.make)} · ${esc(sysKindLabel(s))} · ${s._n} zone${s._n===1?'':'s'}</div>`+zoneTable(zones.filter(z=>z.system_ref===s.system_ref), pinOf);
-    else h+=`<p class="small muted">No zones in the export.</p>`;
+    if(s) list+=`<div class="sys-plain">${esc(s.label||s.make)} · ${esc(sysKindLabel(s))} · ${s._n} zone${s._n===1?'':'s'}</div>`+zoneTable(zones.filter(z=>z.system_ref===s.system_ref), pinOf);
+    else list+=`<p class="small muted">No zones in the export.</p>`;
   } else {
     withZones.forEach(s=>{
       const rows=zones.filter(z=>z.system_ref===s.system_ref);
-      h+=`<details class="sys-group" open><summary><i class="sys-dot" style="background:${sysColor(s.system_ref,systems)}"></i><span class="sys-title">${esc(s.label||s.make)}</span><span class="sys-meta">${esc(sysKindLabel(s))}</span><span class="sys-count">${s._n} zone${s._n===1?'':'s'}</span></summary><div class="sys-body">`+zoneTable(rows, pinOf)+`</div></details>`;
+      list+=`<details class="sys-group" open><summary><i class="sys-dot" style="background:${sysColor(s.system_ref,systems)}"></i><span class="sys-title">${esc(s.label||s.make)}</span><span class="sys-meta">${esc(sysKindLabel(s))}</span><span class="sys-count">${s._n} zone${s._n===1?'':'s'}</span></summary><div class="sys-body">`+zoneTable(rows, pinOf)+`</div></details>`;
     });
   }
   empty.forEach(s=>{
-    h+=`<details class="sys-group empty"><summary><i class="sys-dot" style="background:#adb5bd"></i><span class="sys-title">${esc(s.label||s.make)}</span><span class="sys-meta">${esc(sysKindLabel(s))}</span><span class="sys-count">no zones</span></summary><div class="sys-body"><p class="small muted" style="margin:4px 8px 8px">This system has no zones in the export.</p></div></details>`;
+    list+=`<details class="sys-group empty"><summary><i class="sys-dot" style="background:#adb5bd"></i><span class="sys-title">${esc(s.label||s.make)}</span><span class="sys-meta">${esc(sysKindLabel(s))}</span><span class="sys-count">no zones</span></summary><div class="sys-body"><p class="small muted" style="margin:4px 8px 8px">This system has no zones in the export.</p></div></details>`;
   });
-  h+=`</div>`;
-  if(ev.window_start) h+=`<div class="card pad mt"><h3>Event window</h3><p class="small">${esc(ev.window_start)} to ${esc(ev.window_end)}. ${Object.entries(ev.counts_by_type||{}).map(([k,v])=>esc(k)+': '+v).join(' · ')}. No burglary or fire alarm events in this window; user fields were empty in the export.</p></div>`;
-  h+=`<div class="card pad mt cta"><div><h3>Zone pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Place each zone on the nadir, confirm or flag it, and add a note. Draft locations are estimates. Where a zone name resembles a camera, the editor shows “possibly same location as camera X”. Systems are grouped the same way on that page.</div></div><a class="btnl" href="zones.html" target="_blank" rel="noopener">Open zone pin editor</a></div>`;
-  document.getElementById('pg-alarms').innerHTML=h;
+  list+=`</div>`;
+  if(ev.window_start) list+=`<div class="card pad mt"><h3>Event window</h3><p class="small">${esc(ev.window_start)} to ${esc(ev.window_end)}. ${Object.entries(ev.counts_by_type||{}).map(([k,v])=>esc(k)+': '+v).join(' · ')}. No burglary or fire alarm events in this window; user fields were empty in the export.</p></div>`;
+  const el=document.getElementById('pg-alarms');
+  el.innerHTML=`<div class="qsplit"><div class="qmap">
+      <div class="qmap-tools">
+        <div class="seg"><button type="button" class="on">2D</button></div>
+        <div class="seg" data-seg="zs"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div>
+        <div class="amap-zoom"><button type="button" id="zmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="zmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div>
+        <button type="button" class="btnl ghost" id="zmap-reset" style="padding:5px 10px">Reset view</button>
+        <span class="qmap-hint">Click a zone to show it on the map</span>
+      </div>
+      <div class="qmap-stage" id="zmap"><div id="z2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div><div class="qmap-status" id="zmap-status">Click a zone to show it on the map</div></div>
+    </div>
+    <div class="qside">${list}</div></div>`;
+  initAlarmMap();
+  el.querySelectorAll('[data-seg=zs] [data-crop]').forEach(b=>b.onclick=()=>{
+    ZCROP=b.dataset.crop;
+    b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    if(ZMAP){ZMAP._user=false;scheduleNadirFit(ZMAP,ZCROP);}
+  });
+  const zin=el.querySelector('#zmap-zin'), zout=el.querySelector('#zmap-zout');
+  if(zin) zin.onclick=()=>zoomNadirCenter(ZMAP,1.2);
+  if(zout) zout.onclick=()=>zoomNadirCenter(ZMAP,1/1.2);
+  const zreset=el.querySelector('#zmap-reset');
+  if(zreset) zreset.onclick=()=>{ZCROP='house';el.querySelectorAll('[data-seg=zs] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));clearZone();};
+  el.querySelectorAll('.zrow[data-zkey]').forEach(r=>r.addEventListener('click',e=>{
+    if(e.target.closest('details,a,summary')) return;
+    selectZone(r.dataset.zkey,false);
+  }));
+}
+let ZSEL=null,ZMAP=null,ZCROP='house';
+function setZmapStatus(msg,warn){
+  const el=document.getElementById('zmap-status'); if(!el) return;
+  el.className='qmap-status'+(warn?' warn':'');
+  el.textContent=msg||'';
+}
+function clearZone(opts){
+  opts=opts||{};
+  ZSEL=null;
+  document.querySelectorAll('#pg-alarms .zrow').forEach(r=>r.classList.remove('sel'));
+  setZmapStatus('Click a zone to show it on the map');
+  drawZoneOverlays();
+  if(!opts.keepView&&ZMAP){ZMAP._user=false;scheduleNadirFit(ZMAP,ZCROP||'house');}
+}
+function selectZone(key,scroll){
+  if(ZSEL&&ZSEL.key===key){clearZone();return;}
+  const z=findZone(key);
+  if(!z) return;
+  const pin=zonePinOf(z);
+  const px=zonePx(pin);
+  const surveyed=!!(px&&zoneIsSurveyed(pin));
+  const cam=zoneLinkedCamera(z,pin);
+  ZSEL={key,zone:z,pin,px,surveyed,cam};
+  document.querySelectorAll('#pg-alarms .zrow').forEach(r=>r.classList.toggle('sel',r.dataset.zkey===key));
+  const row=document.querySelector('#pg-alarms .zrow[data-zkey="'+CSS.escape(key)+'"]');
+  if(scroll&&row) row.scrollIntoView({block:'center'});
+  drawZoneOverlays();
+  const lab=z.label||('Zone '+(z.zone_id||''));
+  if(!px){
+    setZmapStatus(lab+' · Not placed');
+    return;
+  }
+  const pts=[px];
+  if(cam&&cam.px) pts.push(cam.px);
+  if(ZMAP){ZMAP._user=false;fitNadirBounds(ZMAP,pts);}
+  let msg=lab+' · '+(surveyed?'surveyed':'estimated');
+  if(cam&&cam.px) msg+=' · linked camera '+(cam.label||'');
+  setZmapStatus(msg);
+}
+function zoneDotMarkup(px,col,tip,cls){
+  return `<g class="${cls}" data-tip="${esc(tip)}"><circle class="halo" cx="${px[0]}" cy="${px[1]}" r="6" fill="${col}" fill-opacity="0" stroke="#fff" stroke-width="2"/><circle cx="${px[0]}" cy="${px[1]}" r="4.5" fill="${col}" stroke="#fff" stroke-width="1.3"><title>${esc(tip)}</title></circle></g>`;
+}
+function drawZoneOverlays(){
+  const svg=ZMAP&&document.getElementById(ZMAP.svgId); if(!svg) return;
+  const M=D.map||{};
+  let h='';
+  if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
+  if(ZSEL&&ZSEL.px){
+    const col=ZSEL.surveyed?'#2f7a4a':'#e67700';
+    const lab=(ZSEL.zone&&(ZSEL.zone.label||('Zone '+(ZSEL.zone.zone_id||''))))||'Zone';
+    h+=zoneDotMarkup(ZSEL.px,col,lab,'zpin');
+  }
+  if(ZSEL&&ZSEL.cam&&ZSEL.cam.px){
+    h+=zoneDotMarkup(ZSEL.cam.px,'#228be6',ZSEL.cam.label||'Camera','zpin zcam');
+  }
+  svg.innerHTML=h;
+  syncZoneHighlight();
+}
+function syncZoneHighlight(){
+  if(!ZMAP) return;
+  const s=Math.max(ZMAP.s,0.05);
+  const svg=document.getElementById(ZMAP.svgId); if(!svg) return;
+  svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  const r=4.5/s;
+  svg.querySelectorAll('.zpin circle:not(.halo)').forEach(c=>{
+    c.setAttribute('r',String(r));
+    c.setAttribute('stroke-width',String(1.4/s));
+  });
+  svg.querySelectorAll('.zpin circle.halo').forEach(c=>{
+    c.setAttribute('r',String(r*1.7));
+    c.setAttribute('stroke-width',String(2/s));
+  });
+}
+function initAlarmMap(){
+  const host=document.getElementById('z2d'), stage=document.getElementById('zmap');
+  if(!host||!stage) return;
+  if(!ZMAP||!document.getElementById('z2inner')){
+    ZMAP=createNadirMap({
+      hostId:'z2d', stageId:'zmap', prefix:'z2',
+      defaultFit:'house',
+      markUserOnPan:true,
+      onApply(){ syncZoneHighlight(); }
+    });
+    if(!window._z2rz){
+      window._z2rz=true;
+      window.addEventListener('resize',()=>{
+        const on=document.getElementById('pg-alarms');
+        if(on&&on.classList.contains('on')) refreshNadirMap(ZMAP);
+      });
+    }
+  }
+  drawZoneOverlays();
+  if(ZSEL&&ZSEL.px) fitNadirBounds(ZMAP,[ZSEL.px].concat((ZSEL.cam&&ZSEL.cam.px)?[ZSEL.cam.px]:[]));
+  else scheduleNadirFit(ZMAP, ZCROP||'house');
+  if(typeof loadQPins==='function'){
+    loadQPins().then(()=>{
+      if(ZSEL){const key=ZSEL.key;ZSEL=null;selectZone(key,false);}
+      else drawZoneOverlays();
+    });
+  }
 }
 function rOverview(){
   const O=D.overview, S=O.status, N=D.nearmap;
@@ -1737,18 +1936,172 @@ function camState(dev){const c=D.cams.find(x=>x.device===dev);const p=CAMPINS&&C
   if(p){const st=p.lat==null?(p.status==='cant_place'?'cant_place':'unplaced'):(p.locked?'surveyed':p.status);return {st,hd:p.heading};}
   return {st:c.placement==='surveyed'?'surveyed':'unplaced',hd:null};}
 const CAMLAB={surveyed:'surveyed · locked',placed:'placed · not confirmed',confirmed:'confirmed',unsure:'unsure',unplaced:'unplaced',cant_place:"can't place"};
+function camEditPin(dev){
+  return (CAMPINS&&CAMPINS.pins&&CAMPINS.pins.find(x=>x.device===dev))||null;
+}
+function camMapPx(c){
+  if(!c) return null;
+  const p=camEditPin(c.device);
+  if(p){
+    if(p.px&&p.px.length>=2&&isFinite(+p.px[0])&&isFinite(+p.px[1])) return [+p.px[0],+p.px[1]];
+    if(p.lat!=null&&p.lng!=null&&isFinite(+p.lat)&&isFinite(+p.lng)&&typeof qPxLL==='function'){
+      const px=qPxLL(+p.lat,+p.lng);
+      if(px&&isFinite(px[0])&&isFinite(px[1])) return px;
+    }
+  }
+  if(typeof camPinPx==='function'){
+    const px=camPinPx(c);
+    if(px&&px.length>=2&&isFinite(px[0])&&isFinite(px[1])) return px;
+  }
+  return null;
+}
+function camIsSurveyed(c){
+  const s=camState(c.device);
+  return s.st==='surveyed'||s.st==='confirmed';
+}
 function rCams(){
   const C=D.cams,M=D.cam_meta;
-  let h=head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Pins are placed on the camera pin page.');
-  h+=`<div class="card pad cta"><div><h3>Camera pin page</h3><div class="small" style="color:var(--ink2);margin-top:4px">Pick a camera, click where it is mounted on the nadir, drag to adjust, set which way it faces, then Confirm or mark Unsure. Surveyed pins start locked.</div></div><a class="btnl" href="cameras.html" target="_blank" rel="noopener">Open camera pin page ↗</a></div>`;
-  h+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">12 Nov 2026</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
-  h+=`<div class="cams mt" id="camgrid"></div>`;
-  const el=document.getElementById('pg-cameras');el.innerHTML=h;
+  let list=`${head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Click a camera to show its pin. Positions are never invented.',`<a class="btnl" href="cameras.html" target="_blank" rel="noopener">Open camera pin editor ↗</a>`)}`;
+  list+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">12 Nov 2026</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
+  list+=`<div class="cams mt" id="camgrid"></div>`;
+  const el=document.getElementById('pg-cameras');
+  el.innerHTML=`<div class="qsplit"><div class="qmap">
+      <div class="qmap-tools">
+        <div class="seg"><button type="button" class="on">2D</button></div>
+        <div class="seg" data-seg="cs"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div>
+        <div class="amap-zoom"><button type="button" id="cmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="cmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div>
+        <button type="button" class="btnl ghost" id="cmap-reset" style="padding:5px 10px">Reset view</button>
+        <span class="qmap-hint">Click a camera to show it on the map</span>
+      </div>
+      <div class="qmap-stage" id="cmap"><div id="c2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div><div class="qmap-status" id="cmap-status">Click a camera to show it on the map</div></div>
+    </div>
+    <div class="qside">${list}</div></div>`;
+  initCamMap();
+  el.querySelectorAll('[data-seg=cs] [data-crop]').forEach(b=>b.onclick=()=>{
+    CCROP=b.dataset.crop;
+    b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));
+    if(CMAP){CMAP._user=false;scheduleNadirFit(CMAP,CCROP);}
+  });
+  const zin=el.querySelector('#cmap-zin'), zout=el.querySelector('#cmap-zout');
+  if(zin) zin.onclick=()=>zoomNadirCenter(CMAP,1.2);
+  if(zout) zout.onclick=()=>zoomNadirCenter(CMAP,1/1.2);
+  const creset=el.querySelector('#cmap-reset');
+  if(creset) creset.onclick=()=>{CCROP='house';el.querySelectorAll('[data-seg=cs] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));clearCam();};
   window.CAMLB=C.map(c=>({img:c.img,label:c.name,sub:'still '+c.still_at+' CT'}));
-  const draw=()=>{let n=0;document.getElementById('camgrid').innerHTML=C.map((c,i)=>{const s=camState(c.device);if(s.st!=='unplaced'&&s.st!=='surveyed'&&s.st!=='cant_place')n++;
-    return `<div class="card cam" id="cam-${c.device}"><div class="im" style="background-image:url(${URLS[c.img]})" onclick="lbOpen(CAMLB,${i})"><span class="pinno" style="background:${CAMCOL[s.st]}">${i+1}</span></div><div class="b"><div class="nm">${esc(c.name)}</div><div class="meta"><span class="camstat"><i style="background:${CAMCOL[s.st]}"></i>${esc(CAMLAB[s.st]||s.st)}${s.hd!=null?' · faces '+Math.round(s.hd)+'°':''}</span><span class="tag">device ${esc(c.device)}</span></div>${c.note?`<div class="small muted" style="margin-top:7px">${esc(c.note)}</div>`:''}</div></div>`;}).join('');
-    document.getElementById('kplaced').textContent=n;};
+  const draw=()=>{
+    let n=0;
+    const grid=document.getElementById('camgrid'); if(!grid) return;
+    grid.innerHTML=C.map((c,i)=>{
+      const s=camState(c.device);
+      const px=camMapPx(c);
+      if(s.st!=='unplaced'&&s.st!=='surveyed'&&s.st!=='cant_place') n++;
+      const stLab=px?(CAMLAB[s.st]||s.st):'Not placed';
+      const stCol=px?(CAMCOL[s.st]||CAMCOL.placed):CAMCOL.unplaced;
+      return `<div class="card cam" id="cam-${c.device}" data-device="${esc(c.device)}"><div class="im" style="background-image:url(${URLS[c.img]})" onclick="lbOpen(CAMLB,${i})"><span class="pinno" style="background:${stCol}">${i+1}</span></div><div class="b"><div class="nm">${esc(c.name)}</div><div class="meta"><span class="camstat"><i style="background:${stCol}"></i>${esc(stLab)}${px&&s.hd!=null?' · faces '+Math.round(s.hd)+'°':''}</span><span class="tag">device ${esc(c.device)}</span></div>${c.note?`<div class="small muted" style="margin-top:7px">${esc(c.note)}</div>`:''}</div></div>`;
+    }).join('');
+    const kp=document.getElementById('kplaced'); if(kp) kp.textContent=n;
+    grid.querySelectorAll('.cam[data-device]').forEach(card=>{
+      card.addEventListener('click',e=>{
+        if(e.target.closest('a,button')) return;
+        if(e.target.closest('.im')&&CSEL&&CSEL.id===card.dataset.device) return;
+        selectCam(card.dataset.device,false);
+      });
+    });
+    if(CSEL){
+      const row=document.getElementById('cam-'+CSEL.id);
+      if(row) row.classList.add('sel');
+      const c=C.find(x=>x.device===CSEL.id);
+      if(c){
+        const px=camMapPx(c);
+        CSEL={id:CSEL.id,cam:c,px,surveyed:!!(px&&camIsSurveyed(c))};
+        drawCamOverlays();
+      }
+    }
+  };
   draw();loadCamPins().then(draw);
+}
+let CSEL=null,CMAP=null,CCROP='house';
+function setCmapStatus(msg,warn){
+  const el=document.getElementById('cmap-status'); if(!el) return;
+  el.className='qmap-status'+(warn?' warn':'');
+  el.textContent=msg||'';
+}
+function clearCam(opts){
+  opts=opts||{};
+  CSEL=null;
+  document.querySelectorAll('#pg-cameras .cam').forEach(r=>r.classList.remove('sel'));
+  setCmapStatus('Click a camera to show it on the map');
+  drawCamOverlays();
+  if(!opts.keepView&&CMAP){CMAP._user=false;scheduleNadirFit(CMAP,CCROP||'house');}
+}
+function selectCam(dev,scroll){
+  if(CSEL&&CSEL.id===dev){clearCam();return;}
+  const c=(D.cams||[]).find(x=>x.device===dev);
+  if(!c) return;
+  const px=camMapPx(c);
+  const surveyed=!!(px&&camIsSurveyed(c));
+  CSEL={id:dev,cam:c,px,surveyed};
+  document.querySelectorAll('#pg-cameras .cam').forEach(el=>el.classList.toggle('sel',el.id==='cam-'+dev));
+  const row=document.getElementById('cam-'+dev);
+  if(scroll&&row) row.scrollIntoView({block:'center'});
+  drawCamOverlays();
+  const lab=c.name||dev;
+  if(!px){
+    setCmapStatus(lab+' · Not placed');
+    return;
+  }
+  if(CMAP){CMAP._user=false;fitNadirBounds(CMAP,[px]);}
+  setCmapStatus(lab+' · '+(surveyed?'surveyed':'estimated'));
+}
+function drawCamOverlays(){
+  const svg=CMAP&&document.getElementById(CMAP.svgId); if(!svg) return;
+  const M=D.map||{};
+  let h='';
+  if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
+  if(CSEL&&CSEL.px){
+    const col=CSEL.surveyed?'#2f7a4a':'#e67700';
+    const lab=(CSEL.cam&&CSEL.cam.name)||CSEL.id||'Camera';
+    h+=zoneDotMarkup(CSEL.px,col,lab,'cpin');
+  }
+  svg.innerHTML=h;
+  syncCamHighlight();
+}
+function syncCamHighlight(){
+  if(!CMAP) return;
+  const s=Math.max(CMAP.s,0.05);
+  const svg=document.getElementById(CMAP.svgId); if(!svg) return;
+  svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  const r=4.5/s;
+  svg.querySelectorAll('.cpin circle:not(.halo)').forEach(c=>{
+    c.setAttribute('r',String(r));
+    c.setAttribute('stroke-width',String(1.4/s));
+  });
+  svg.querySelectorAll('.cpin circle.halo').forEach(c=>{
+    c.setAttribute('r',String(r*1.7));
+    c.setAttribute('stroke-width',String(2/s));
+  });
+}
+function initCamMap(){
+  const host=document.getElementById('c2d'), stage=document.getElementById('cmap');
+  if(!host||!stage) return;
+  if(!CMAP||!document.getElementById('c2inner')){
+    CMAP=createNadirMap({
+      hostId:'c2d', stageId:'cmap', prefix:'c2',
+      defaultFit:'house',
+      markUserOnPan:true,
+      onApply(){ syncCamHighlight(); }
+    });
+    if(!window._c2rz){
+      window._c2rz=true;
+      window.addEventListener('resize',()=>{
+        const on=document.getElementById('pg-cameras');
+        if(on&&on.classList.contains('on')) refreshNadirMap(CMAP);
+      });
+    }
+  }
+  drawCamOverlays();
+  if(CSEL&&CSEL.px) fitNadirBounds(CMAP,[CSEL.px]);
+  else scheduleNadirFit(CMAP, CCROP||'house');
 }
 /* ---------------- reviewer questions ---------------- */
 let QG='all',QOPEN=false,QTXT='',ANS={},ANSFILE=null,ansTimer=null;
@@ -1997,6 +2350,8 @@ function resetReviewerOutside(){
   const qOn=document.getElementById('pg-questions')&&document.getElementById('pg-questions').classList.contains('on');
   const aOn=document.getElementById('pg-assets')&&document.getElementById('pg-assets').classList.contains('on');
   const mOn=document.getElementById('pg-measurements')&&document.getElementById('pg-measurements').classList.contains('on');
+  const zOn=document.getElementById('pg-alarms')&&document.getElementById('pg-alarms').classList.contains('on');
+  const cOn=document.getElementById('pg-cameras')&&document.getElementById('pg-cameras').classList.contains('on');
   if(qOn){
     resetQLayersDefault();
     QSEL=null;
@@ -2021,14 +2376,28 @@ function resetReviewerOutside(){
     document.querySelectorAll('#pg-measurements [data-seg=ms] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));
     clearMeas();
     if(MMAP){MMAP._user=false;scheduleNadirFit(MMAP,'house');}
+    return;
+  }
+  if(zOn){
+    ZCROP='house';
+    document.querySelectorAll('#pg-alarms [data-seg=zs] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));
+    clearZone();
+    if(ZMAP){ZMAP._user=false;scheduleNadirFit(ZMAP,'house');}
+    return;
+  }
+  if(cOn){
+    CCROP='house';
+    document.querySelectorAll('#pg-cameras [data-seg=cs] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));
+    clearCam();
+    if(CMAP){CMAP._user=false;scheduleNadirFit(CMAP,'house');}
   }
 }
 function reviewerOutsideIgnore(el){
   if(!el||!el.closest) return true;
   if(el.closest('#qly-panel, .qmap-tools, #qly-toggle, #lb, #qsave, #qexport')) return true;
-  if(el.closest('#qlist .q, #pg-assets .regitem, #pg-assets .pfact, #pg-measurements .mrow')) return true;
+  if(el.closest('#qlist .q, #pg-assets .regitem, #pg-assets .pfact, #pg-measurements .mrow, #pg-alarms .zrow, #pg-cameras .cam')) return true;
   if(el.closest('input,textarea,select,label,summary')) return true;
-  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin')) return true;
+  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin, .zpin, .cpin')) return true;
   return false;
 }
 function wireReviewerOutside(){
@@ -2040,14 +2409,14 @@ function wireReviewerOutside(){
     down={x:e.clientX,y:e.clientY};
   },true);
   document.addEventListener('click',e=>{
-    const pg=document.querySelector('#pg-questions.on, #pg-assets.on, #pg-measurements.on');
+    const pg=document.querySelector('#pg-questions.on, #pg-assets.on, #pg-measurements.on, #pg-alarms.on, #pg-cameras.on');
     if(!pg) return;
     if(e.button!=null&&e.button!==0) return;
     if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>6) return;
     const t=e.target;
     if(!(t instanceof Element)) return;
     if(reviewerOutsideIgnore(t)) return;
-    if(!t.closest('#pg-questions, #pg-assets, #pg-measurements, #app')) return;
+    if(!t.closest('#pg-questions, #pg-assets, #pg-measurements, #pg-alarms, #pg-cameras, #app')) return;
     resetReviewerOutside();
   });
 }
