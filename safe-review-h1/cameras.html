@@ -5,13 +5,13 @@
 <meta charset="utf-8">
 <meta name="robots" content="noindex,nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/review/; worker-src blob:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/; worker-src blob:; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>H1 cameras</title>
+<title>SAFE cameras</title>
 <!--
-  H1 camera pin placement (pins mode of the nearmap-review pattern, own page).
+  SAFE camera pin placement (pins mode of the nearmap-review pattern, own page).
   Regions are not shown or saved here. Save sends pins only (no regions key):
-  serve-h1.ps1 PUT cameras/edits/pins.json, else localStorage. Pins and stills are
+  serve-review.ps1 PUT cameras/edits/pins.json, else localStorage. Pins and stills are
   encrypted with the reviewer passphrase; x,y are percent of the full vert.jpg plus
   lat/lng; non-finite coordinates are refused, never clamped.
 -->
@@ -77,18 +77,19 @@
   #lb img { max-width:92vw; max-height:84vh; border-radius:6px; }
   #lb .t { color:#fff; font-size:13px; }
 </style>
-<script src="vendor/h1-crypto.js"></script>
+<script src="review-config.js"></script>
+<script src="vendor/safe-crypto.js"></script>
 </head>
 <body>
 <div id="lock"><form id="lockform" autocomplete="off">
-  <div style="font-weight:650">H1 camera pins</div>
+  <div style="font-weight:650"><span class="lotname">SAFE</span> camera pins</div>
   <div class="meta">Camera stills and pins are encrypted. Enter the reviewer passphrase.</div>
   <input id="pw" type="password" placeholder="Passphrase" autofocus>
   <button class="btn primary" id="unl" type="submit">Unlock</button>
   <div class="err" id="lerr"></div>
 </form></div>
 <header>
-  <h1>H1 cameras · pin placement</h1><span id="build"></span><span class="sp"></span>
+  <h1><span class="lotname">SAFE</span> cameras · pin placement</h1><span id="build"></span><span class="sp"></span>
   <nav class="hnav"><a href="index.html#cameras">Reviewer</a><a href="index.html#alarms">Alarm (MAS)</a><a href="zones.html" target="_blank" rel="noopener">Zone pins</a><a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a><a href="model3d.html" target="_blank" rel="noopener">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
 </header>
 <main>
@@ -475,11 +476,11 @@
 <script>
 (function () {
   'use strict';
-  var BUILD = 'cams-h1.live';
-  var SALT = H1Crypto.SALT, ITER = H1Crypto.ITER, CHECK = H1Crypto.CHECK;
-  var DELIVERY = 'h1';
+  var BUILD = 'cams-' + SafeCrypto.TEMPLATE;
+  var SALT = SafeCrypto.SALT, ITER = SafeCrypto.ITER, CHECK = SafeCrypto.CHECK;
+  var DELIVERY = SafeCrypto.LOT_KEY;
   var PINS_PATH = 'cameras/edits/pins.json';
-  var LS_KEY = 'h1-camera-pins';
+  var LS_KEY = SafeCrypto.PINS_KEY;
   var FOV = 70, HANDLE_PX = 54;
   document.getElementById('build').textContent = BUILD;
   function $(id) { return document.getElementById(id); }
@@ -488,8 +489,8 @@
   function tob64(u) { var s = ''; u = new Uint8Array(u); for (var i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); }
   var KEY = null, D = null, URLS = {}, CAMS = [], ST = {}, sel = null, armed = false, map = null, lastSaved = null;
   function setStatus(m, k) { var e = $('status'); e.textContent = m || ''; e.className = 'status' + (k ? ' ' + k : ''); }
-  async function dec(buf) { return H1Crypto.dec(buf); }
-  async function fetchDec(f, opts) { return H1Crypto.fetchDec(f, opts); }
+  async function dec(buf) { return SafeCrypto.dec(buf); }
+  async function fetchDec(f, opts) { return SafeCrypto.fetchDec(f, opts); }
   async function sealJson(obj) {
     var iv = crypto.getRandomValues(new Uint8Array(12));
     var ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, KEY, new TextEncoder().encode(JSON.stringify(obj)));
@@ -553,7 +554,7 @@
   }
   function docNow() {
     return {
-      type: 'camera-pins', name: 'h1-camera-pins', version: BUILD, mode: 'pins', delivery_id: DELIVERY,
+      type: 'camera-pins', name: 'safe-camera-pins', version: BUILD, mode: 'pins', delivery_id: DELIVERY,
       saved: new Date().toISOString(), image: { ref: 'vert.jpg', w: D.cam_ctx.img.w, h: D.cam_ctx.img.h, xy: 'percent of full vert.jpg' },
       pins: CAMS.map(function (c) { return JSON.parse(JSON.stringify(ST[c.device])); }),
       drawn: { type: 'FeatureCollection', features: [] }
@@ -745,7 +746,7 @@
     if (pick === fileDoc && fileDoc) setStatus('Loaded saved pins (' + fileDoc.saved + ')');
     else if (pick) setStatus('Loaded unsaved pins from this browser');
   }
-  function canWriteFile() { return H1Crypto.canPut(); }
+  function canWriteFile() { return SafeCrypto.canPut(); }
   async function save() {
     var doc = docNow();
     for (var i = 0; i < doc.pins.length; i++) {
@@ -766,8 +767,8 @@
     else setStatus('Saved in this browser (' + n + ' on the map). Use Export my review to send a copy.');
   }
   $('save').onclick = save;
-  (function(){ var n=$('revname'); if(n){ n.value=H1Crypto.reviewerName(); n.onchange=function(){ H1Crypto.setReviewerName(n.value); }; }
-    var b=$('exportReview'); if(b) b.onclick=async function(){ if(n) H1Crypto.setReviewerName(n.value); setStatus('Exporting…'); try{ await H1Crypto.exportReview(); setStatus('Downloaded the review export.'); }catch(e){ setStatus('Export failed: '+e.message,'err'); } }; })();
+  (function(){ var n=$('revname'); if(n){ n.value=SafeCrypto.reviewerName(); n.onchange=function(){ SafeCrypto.setReviewerName(n.value); }; }
+    var b=$('exportReview'); if(b) b.onclick=async function(){ if(n) SafeCrypto.setReviewerName(n.value); setStatus('Exporting…'); try{ await SafeCrypto.exportReview(); setStatus('Downloaded the review export.'); }catch(e){ setStatus('Export failed: '+e.message,'err'); } }; })();
   $('revert').onclick = function () {
     if (!confirm('Discard changes since the last save?')) return;
     applyDoc(lastSaved); backup(); renderList(); renderDetail(); map.redraw(); setStatus(lastSaved ? 'Reverted to last save' : 'Reverted to the roster (nothing saved yet)');
@@ -788,7 +789,7 @@
     map = new google.maps.Map($('map'), { center: { lat: clat, lng: clng }, zoom: 19, backgroundColor: '#1b2027', tilt: 0 });
     var vertUrl;
     try { vertUrl = URL.createObjectURL(new Blob([await fetchDec('vert.bin')], { type: 'image/jpeg' })); }
-    catch (e) { vertUrl = (H1Crypto.isLocal() && DELIVERY) ? ('nearmap/' + DELIVERY + '/vert.jpg') : (URLS.nadir || ''); }
+    catch (e) { vertUrl = (SafeCrypto.isLocal() && DELIVERY) ? ('nearmap/' + DELIVERY + '/vert.jpg') : (URLS.nadir || ''); }
     new google.maps.GroundOverlay(vertUrl, b, { opacity: 1 }).setMap(map);
     map.addDrawHook(draw);
     fitHouse();
@@ -807,8 +808,8 @@
     renderList(); renderDetail();
     window.camApi = { state: function () { return JSON.parse(JSON.stringify(ST)); }, select: function (d) { select(d, true); }, toScreen: function (lat, lng) { var p = scr(lat, lng), r = $('map').getBoundingClientRect(); return { x: r.left + p.x, y: r.top + p.y }; }, handle: function () { var s = ST[sel], h = handlePos(s), r = $('map').getBoundingClientRect(); return { x: r.left + h.x, y: r.top + h.y }; }, save: save };
   }
-  H1Crypto.wireUnlock({ form: 'lockform', pw: 'pw', btn: 'unl', err: 'lerr', lock: 'lock', onReady: async function () {
-    KEY = H1Crypto.getKey();
+  SafeCrypto.wireUnlock({ form: 'lockform', pw: 'pw', btn: 'unl', err: 'lerr', lock: 'lock', onReady: async function () {
+    KEY = SafeCrypto.getKey();
     await boot();
   }});
 })();
