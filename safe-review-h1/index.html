@@ -327,13 +327,24 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .qside .ph{margin-bottom:14px}
 .qside .qbar{position:sticky;top:0;background:var(--bg);z-index:3}
 .q.sel{box-shadow:0 0 0 2px var(--accent)}
-.botest{font-size:12px;color:var(--ink2);margin-top:5px;line-height:1.4}
-.botest .botconf{font-variant-numeric:tabular-nums;font-weight:700}
-.botest .botconf.ok{color:var(--ok,#2f9e44)}
-.botest .botconf.amber{color:#c4811a}
-.botest .botconf.bad{color:var(--miss,#c92a2a)}
-.botest .bot-prov{color:var(--ink3)}
+.botest{margin-top:6px;padding:6px 8px 6px 9px;border-radius:7px;border-left:3px solid var(--ink3);background:var(--line2);color:var(--ink);font-size:13px;line-height:1.4}
+.botest.ok{border-left-color:var(--ok);background:var(--okbg)}
+.botest.amber{border-left-color:var(--amber);background:var(--amberbg)}
+.botest.bad{border-left-color:var(--miss);background:var(--missbg)}
+.botest-head{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.botest-title{font-weight:700;font-size:12.5px;color:var(--ink)}
+.botest-ans{font-weight:700;font-size:13px;color:var(--ink)}
+.botest .botconf{display:inline-flex;align-items:center;font-variant-numeric:tabular-nums;font-weight:700;font-size:11.5px;line-height:1;padding:2px 7px;border-radius:999px;background:#fff;color:var(--ink2)}
+.botest .botconf.ok{color:var(--ok);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--ok) 40%, transparent)}
+.botest .botconf.amber{color:var(--amber);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--amber) 40%, transparent)}
+.botest .botconf.bad{color:var(--miss);box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--miss) 40%, transparent)}
+.botest-src{display:inline-flex;align-items:center;font-size:11px;color:var(--ink2);background:rgba(255,255,255,.72);border-radius:999px;padding:1px 7px;max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.botest-ass{margin-top:3px;font-size:13px;color:var(--ink);line-height:1.4}
+.botest-prov{margin-top:2px;font-size:12px;color:var(--ink3);line-height:1.35}
 .qopt.est{box-shadow:0 0 0 1.5px var(--accent);border-color:var(--accent)}
+.qopt.est.ok{box-shadow:0 0 0 1.5px var(--ok);border-color:var(--ok)}
+.qopt.est.amber{box-shadow:0 0 0 1.5px var(--amber);border-color:var(--amber)}
+.qopt.est.bad{box-shadow:0 0 0 1.5px var(--miss);border-color:var(--miss)}
 .qopt.est:not(.on){background:#fff;color:var(--ink)}
 @media (max-width:900px){
   .qsplit{grid-template-columns:1fr;grid-template-rows:minmax(240px,42vh) minmax(0,1fr)}
@@ -470,18 +481,27 @@ function botEstimate(q){
   const conf=Math.round(Number(e.confidence));
   return {answer:String(e.answer).trim(), assumption:(e.assumption&&String(e.assumption).trim())||'', confidence:isFinite(conf)?Math.max(0,Math.min(100,conf)):null, source:(e.source_bot&&String(e.source_bot).trim())||''};
 }
+function botEstimateTone(e){
+  if(!e||e.confidence==null) return '';
+  return e.confidence>=80?'ok':e.confidence>=50?'amber':'bad';
+}
+function qEstClass(q,o){
+  const e=botEstimate(q);
+  if(!e||e.answer!==o) return '';
+  const t=botEstimateTone(e);
+  return ' est'+(t?' '+t:'');
+}
 function botEstimateLine(q){
   const e=botEstimate(q); if(!e) return '';
-  const tone=e.confidence==null?'':(e.confidence>=80?'ok':e.confidence>=50?'amber':'bad');
-  const bits=[`<span>Bot estimate: ${esc(e.answer)}</span>`];
-  if(e.confidence!=null) bits.push(`<b class="botconf ${tone}">${e.confidence}%</b>`);
-  if(e.assumption||e.source){
-    const tail=(e.assumption?esc(e.assumption):'')+(e.source?`${e.assumption?' ':''}(${esc(e.source)})`:'');
-    bits.push(`<span>${tail}</span>`);
-  }
+  const tone=botEstimateTone(e);
+  let head=`<div class="botest-head"><span class="botest-title">Bot estimate</span><span class="botest-ans">${esc(e.answer)}</span>`;
+  if(e.confidence!=null) head+=`<span class="botconf ${tone}">${e.confidence}%</span>`;
+  if(e.source) head+=`<span class="botest-src">${esc(e.source)}</span>`;
+  head+='</div>';
+  const ass=e.assumption?`<div class="botest-ass">${esc(e.assumption)}</div>`:'';
   const prov=qProvText(q);
-  if(prov) bits.push(`<span class="bot-prov">Working answer: ${esc(prov)}</span>`);
-  return `<div class="botest">${bits.join(' · ')}</div>`;
+  const wrk=prov?`<div class="botest-prov">Working answer: ${esc(prov)}</div>`:'';
+  return `<div class="botest${tone?' '+tone:''}">${head}${ass}${wrk}</div>`;
 }
 const SECTIONS=[['overview','Overview'],['parcel','Parcel & assessor'],['layers','Map layers'],['fire','Fire'],['imagery','Imagery'],['nearmap','Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['questions','Reviewer questions']];
 
@@ -542,6 +562,7 @@ function render(){
   P.innerHTML=SECTIONS.map(([k])=>`<section class="page" id="pg-${k}"></section>`).join('');
   rOverview();rParcel();rLayers();rFire();rImagery();rNearmap();rMeas();rAssets();rCams();rAlarms();rQuestions();
   window.addEventListener('hashchange',route);route();
+  wireReviewerOutside();
 }
 function route(){
   let h=(location.hash||'#overview').slice(1);let [k,target]=h.split(':');
@@ -1845,7 +1866,7 @@ function drawQ(){
     h+=`<div class="qgroup"><h3>${esc(g)} <span class="badge b-grey">${qs.length}</span></h3>`+qs.map(q=>{const a=ANS[q.id]||{};
       return `<div class="card q${a.answer?' done':''}${QSEL===q.id?' sel':''}" id="q-${q.id}"><div class="top"><span class="qid">${esc(q.id)}</span>${qIsProv(q)?prov('provisional'):''}${qHasLoc(q)?`<button type="button" class="linkchip showmap" data-show="${esc(q.id)}">Show on map</button>`:''}${linkBtn(q.link)}</div><div class="txt">${esc(q.text)}</div>${q.look_at?`<div class="look">${esc(q.look_at)}</div>`:''}${botEstimateLine(q)}
      ${(!botEstimate(q)&&qProvText(q))?`<div class="callout amber ans" style="margin-top:8px"><b>Current working answer (to decide later):</b> ${esc(qProvText(q))}</div>`:''}
-     <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}${(botEstimate(q)&&botEstimate(q).answer===o)?' est':''}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+     <div class="qopts">${q.options.map(o=>`<button class="qopt${a.answer===o?' on':''}${qEstClass(q,o)}" data-q="${esc(q.id)}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
      <textarea data-q="${esc(q.id)}" rows="1" placeholder="Note (optional)">${esc(a.note||'')}</textarea></div>`;}).join('')+`</div>`;});
   const list=document.getElementById('qlist');if(!list)return;
   list.innerHTML=h||'<div class="card empty">No questions match.</div>';
@@ -1960,6 +1981,75 @@ function resetQView(){
   if(QMODE==='2d'){if(QMAP)QMAP._user=false;scheduleFitQ2('parcel');}
   else if(Q3&&Q3.ready)resetQ3();
   QSEL=null;document.querySelectorAll('#qlist .q').forEach(c=>c.classList.remove('sel'));qStat('');drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();
+}
+function resetQLayersDefault(){
+  initQly();
+  qSetAll(false);
+  QLY_OPEN=false;
+  const panel=document.getElementById('qly-panel');
+  const btn=document.getElementById('qly-toggle');
+  if(panel) panel.hidden=true;
+  if(btn){btn.classList.remove('on');btn.setAttribute('aria-expanded','false');}
+  buildQlyPanel();
+  applyQ3LayerMode();
+}
+function resetReviewerOutside(){
+  const qOn=document.getElementById('pg-questions')&&document.getElementById('pg-questions').classList.contains('on');
+  const aOn=document.getElementById('pg-assets')&&document.getElementById('pg-assets').classList.contains('on');
+  const mOn=document.getElementById('pg-measurements')&&document.getElementById('pg-measurements').classList.contains('on');
+  if(qOn){
+    resetQLayersDefault();
+    QSEL=null;
+    document.querySelectorAll('#qlist .q').forEach(c=>c.classList.remove('sel'));
+    qStat('');
+    if(QMODE!=='2d') setQMode('2d');
+    if(QMAP) QMAP._user=false;
+    scheduleFitQ2('parcel');
+    drawQ2();
+    if(Q3&&Q3.ready) syncQ3Overlays();
+    return;
+  }
+  if(aOn){
+    ACROP='house';
+    document.querySelectorAll('#pg-assets [data-seg=as] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));
+    clearAsset();
+    if(AMAP){AMAP._user=false;scheduleNadirFit(AMAP,'house');}
+    return;
+  }
+  if(mOn){
+    MCROP='house';
+    document.querySelectorAll('#pg-measurements [data-seg=ms] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));
+    clearMeas();
+    if(MMAP){MMAP._user=false;scheduleNadirFit(MMAP,'house');}
+  }
+}
+function reviewerOutsideIgnore(el){
+  if(!el||!el.closest) return true;
+  if(el.closest('#qly-panel, .qmap-tools, #qly-toggle, #lb, #qsave, #qexport')) return true;
+  if(el.closest('#qlist .q, #pg-assets .regitem, #pg-assets .pfact, #pg-measurements .mrow')) return true;
+  if(el.closest('input,textarea,select,label,summary')) return true;
+  if(el.closest('.rgn, .rgn-halo, .qsel, .qsel-halo, .qpin, .mfeat, .mpt, .pt, .ly-asset, .ly-campin, .ly-zpin')) return true;
+  return false;
+}
+function wireReviewerOutside(){
+  if(document.documentElement._reviewerOutside) return;
+  document.documentElement._reviewerOutside=true;
+  let down=null;
+  document.addEventListener('pointerdown',e=>{
+    if(e.button!==0){down=null;return;}
+    down={x:e.clientX,y:e.clientY};
+  },true);
+  document.addEventListener('click',e=>{
+    const pg=document.querySelector('#pg-questions.on, #pg-assets.on, #pg-measurements.on');
+    if(!pg) return;
+    if(e.button!=null&&e.button!==0) return;
+    if(down&&Math.hypot(e.clientX-down.x,e.clientY-down.y)>6) return;
+    const t=e.target;
+    if(!(t instanceof Element)) return;
+    if(reviewerOutsideIgnore(t)) return;
+    if(!t.closest('#pg-questions, #pg-assets, #pg-measurements, #app')) return;
+    resetReviewerOutside();
+  });
 }
 function setQMode(m){
   if(m!=='2d'&&m!=='3d')return;QMODE=m;
