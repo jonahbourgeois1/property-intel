@@ -2039,10 +2039,29 @@ function camIsSurveyed(c){
   const s=camState(c.device);
   return s.st==='surveyed'||s.st==='confirmed';
 }
+function camStillDateLabel(){
+  const meta=D.cam_meta||{};
+  const pick=meta.stills_at||meta.still_at||meta.stills_date||meta.still_date||meta.stills||'';
+  const datePart=s=>{
+    const t=String(s||'').trim();
+    if(!t) return '';
+    const m=t.match(/(\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}|[A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4}|\d{4}-\d{2}-\d{2})/);
+    return m?m[1].replace(',',''):t.split(',')[0].trim();
+  };
+  if(pick){const d=datePart(pick); if(d) return d;}
+  const parts=(D.cams||[]).map(c=>datePart(c.still_at)).filter(Boolean);
+  if(parts.length){
+    const uniq=[...new Set(parts)];
+    uniq.sort();
+    return uniq.length===1?uniq[0]:uniq[0]+' – '+uniq[uniq.length-1];
+  }
+  const fromSrc=datePart(meta.source||meta.pin_source||'');
+  return fromSrc||'—';
+}
 function rCams(){
   const C=D.cams,M=D.cam_meta;
   let list=`${head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Click a camera to show its pin. Positions are never invented.',`<a class="btnl" href="cameras.html" target="_blank" rel="noopener">Open camera pin editor ↗</a>`)}`;
-  list+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">12 Nov 2026</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
+  list+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">${esc(camStillDateLabel())}</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
   list+=`<div class="cams mt" id="camgrid"></div>`;
   const el=document.getElementById('pg-cameras');
   el.innerHTML=`<div class="qsplit"><div class="qmap">
