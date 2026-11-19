@@ -386,6 +386,7 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .qleg{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:11px;color:var(--ink2);margin-left:6px}
 .qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
 .qly-btn{padding:5px 10px}
+.qmap-tog{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:#d7e0dc;cursor:pointer}
 .qmap-tools .btnl.ghost{background:#1c2321;color:#d7e0dc!important;border-color:#3a4440}
 .qmap-tools .btnl.ghost:hover{border-color:#6abf69;color:#fff!important}
 .qmap-tools .seg button.on{background:var(--accent);color:#fff!important}
@@ -534,10 +535,12 @@ function botEstimateLine(q){
 }
 let HIDE=new Set();
 function T(k,f){const c=(typeof D!=='undefined'&&D&&D.copy)||{};return Object.prototype.hasOwnProperty.call(c,k)?c[k]:f;}
-const SECTIONS=[['overview','Overview'],['readiness','Pass 2 readiness'],['access','Security & access'],['entry','Entry points'],['coverage','Camera coverage'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['perimeter','Perimeter & lighting'],['parcel','Parcel & assessor'],['imagery','Imagery & Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['fire','Fire'],['fuel','Fuel bands'],['layers','Map layers'],['questions','Reviewer questions']];
+const SECTIONS=[['overview','Overview'],['readiness','Pass 2 readiness'],['access','Security & access'],['entry','Entry points'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['perimeter','Perimeter & lighting'],['parcel','Parcel & assessor'],['imagery','Imagery & Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['fire','Fire'],['fuel','Fuel bands'],['layers','Map layers'],['questions','Reviewer questions']];
 const SAFE_GROUPS={S:'Security',A:'Assets',F:'Fire',E:'Environment'};
-const PAGE_ELEMENT={access:'S',entry:'S',coverage:'S',cameras:'S',alarms:'S',perimeter:'S',parcel:'A',imagery:'A',measurements:'A',assets:'A',fire:'F',fuel:'F',layers:'E'};
-const L2_PAGES=['access','entry','coverage','perimeter','fuel'];
+const PAGE_ELEMENT={access:'S',entry:'S',cameras:'S',alarms:'S',perimeter:'S',parcel:'A',imagery:'A',measurements:'A',assets:'A',fire:'F',fuel:'F',layers:'E'};
+const L2_PAGES=['access','entry','perimeter','fuel'];
+/* Pass 2 pages: data stays in D.lane2; shown only when the payload lists them in pass2_pages. */
+const PASS2_PAGES=['access','entry','perimeter'];
 const SPLIT_PAGES=['questions','assets','measurements','alarms','cameras'].concat(L2_PAGES);
 
 /* ---------------- map ---------------- */
@@ -592,8 +595,9 @@ document.getElementById('lb').addEventListener('click',e=>{if(e.target.id==='lb'
 function render(){
   const counts={entry:((D.lane2||{}).entry_points&&Object.values(D.lane2.entry_points.facades||{}).reduce((a,r)=>a+r.length,0)+(D.lane2.entry_points.unassigned||[]).length)||0,parcel:D.facts.length,layers:D.layers.length,assets:D.assets.located.length,cameras:D.cams.length,alarms:(D.mas&&D.mas.zones||[]).length,questions:D.questions.length};
   HIDE=new Set(D.hidden_pages||[]);const PGL=Object.fromEntries((D.pages||[]).map(p=>[p.id,p.label]));
-  const L2=D.lane2||{};const L2KEY={entry:'entry_points',coverage:'coverage',access:'access',perimeter:'perimeter',fuel:'fuel'};
+  const L2=D.lane2||{};const L2KEY={entry:'entry_points',access:'access',perimeter:'perimeter',fuel:'fuel'};
   L2_PAGES.forEach(k=>{if(!L2[L2KEY[k]])HIDE.add(k);});
+  PASS2_PAGES.forEach(k=>{if(!(D.pass2_pages||[]).includes(k))HIDE.add(k);});
   if(!D.readiness) HIDE.add('readiness');
   const PEL=Object.fromEntries((D.pages||[]).filter(p=>p.element).map(p=>[p.id,p.element]));
   let navh='',grp=null,i=0;
@@ -616,6 +620,7 @@ function route(){
   let h=(location.hash||'#overview').slice(1);let [k,target]=h.split(':');
   if(k==='regions') k='assets';
   if(k==='nearmap'){k='imagery';if(!target)target='pg-nearmap';}
+  if(k==='coverage') k='cameras';
   const key=SECTIONS.some(s=>s[0]===k)&&!HIDE.has(k)?k:'overview';
   const split=SPLIT_PAGES.includes(key);
   document.documentElement.classList.toggle('qmode',key==='questions');
@@ -804,7 +809,7 @@ function rAlarms(){
   const zreset=el.querySelector('#zmap-reset');
   if(zreset) zreset.onclick=()=>{ZCROP='house';el.querySelectorAll('[data-seg=zs] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));clearZone();};
   el.querySelectorAll('.zrow[data-zkey]').forEach(r=>r.addEventListener('click',e=>{
-    if(e.target.closest('details,a,summary')) return;
+    if(e.target.closest('a,summary')) return;
     selectZone(r.dataset.zkey,false);
   }));
 }
@@ -816,6 +821,7 @@ function setZmapStatus(msg,warn){
 }
 function clearZone(opts){
   opts=opts||{};
+  hideNadirPop();
   ZSEL=null;
   document.querySelectorAll('#pg-alarms .zrow').forEach(r=>r.classList.remove('sel'));
   setZmapStatus('Click a zone to show it on the map');
@@ -846,6 +852,7 @@ function selectZone(key,scroll){
   let msg=lab+' · '+(surveyed?'surveyed':'estimated');
   if(cam&&cam.px) msg+=' · linked camera '+(cam.label||'');
   setZmapStatus(msg);
+  showNadirPop(ZMAP,px,{name:lab,type:z.device_type||'Alarm zone',status:surveyed?'Surveyed':'Estimated (draft)',color:surveyed?'#2f7a4a':'#e67700',confidence:pinConfidence(pin)});
 }
 function zoneDotMarkup(px,col,tip,cls,opts){
   opts=opts||{};
@@ -860,6 +867,7 @@ function zoneDotMarkup(px,col,tip,cls,opts){
 function syncPinDots(svg,s){
   if(!svg) return;
   svg.querySelectorAll('.ly-parcel').forEach(el=>el.setAttribute('stroke-width',String(1.6/s)));
+  svg.querySelectorAll('text.maplab').forEach(t=>{const cy=+t.getAttribute('data-cy');t.setAttribute('font-size',String(12/s));t.setAttribute('stroke-width',String(3/s));if(isFinite(cy))t.setAttribute('y',String(cy-6/s));});
   svg.querySelectorAll('.cpin, .zpin, .l2pin').forEach(g=>{
     const dim=g.classList.contains('cpin-dim')||g.classList.contains('zpin-dim')||g.classList.contains('l2pin-dim');
     const r=(dim?7.5:11)/s;
@@ -886,6 +894,12 @@ function drawZoneOverlays(){
   const M=D.map||{};
   let h='';
   if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
+  ((D.mas&&D.mas.zones)||[]).forEach(z=>{
+    const key=zoneKey(z); if(ZSEL&&ZSEL.key===key) return;
+    const pin=zonePinOf(z); const px=zonePx(pin); if(!px) return;
+    const col=zoneIsSurveyed(pin)?'#2f7a4a':'#e67700';
+    h+=zoneDotMarkup(px,col,z.label||('Zone '+(z.zone_id||'')),'zpin zpin-dim',{id:key,kind:'zone'});
+  });
   if(ZSEL&&ZSEL.px){
     const col=ZSEL.surveyed?'#2f7a4a':'#e67700';
     const lab=(ZSEL.zone&&(ZSEL.zone.label||('Zone '+(ZSEL.zone.zone_id||''))))||'Zone';
@@ -2163,7 +2177,7 @@ function camStillDateLabel(){
 }
 function rCams(){
   const C=D.cams,M=D.cam_meta;
-  let list=`${head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Click a camera to show its pin. Positions are never invented.',`<a class="btnl" href="cameras.html" target="_blank" rel="noopener">Open camera pin editor ↗</a>`)}`;
+  let list=`${head('Section 8','Cameras','Existing cameras on the live CHEKT roster, with their latest stills. Click a camera to show its pin, field of view and range (defaults are labelled); turn on Coverage to see every camera’s view. Positions are never invented.',`<a class="btnl" href="cameras.html" target="_blank" rel="noopener">Open camera pin editor ↗</a>`)}`;
   list+=`<div class="grid g4 mt"><div class="card kpi"><div class="k">On roster</div><div class="v num">${M.roster}</div><div class="s">${tag('CHEKT · all online')}</div></div><div class="card kpi"><div class="k">Surveyed placement</div><div class="v num" style="color:var(--ok)">${M.surveyed}</div><div class="s">${tag(M.pin_source)}</div></div><div class="card kpi"><div class="k">Placed by reviewers</div><div class="v num" id="kplaced">—</div><div class="s">${tag('camera pin page')}</div></div><div class="card kpi"><div class="k">Stills captured</div><div class="v" style="font-size:20px;margin-top:9px">${esc(camStillDateLabel())}</div><div class="s">${tag('CHEKT stills')}</div></div></div>`;
   list+=`<div class="cams mt" id="camgrid"></div>`;
   const el=document.getElementById('pg-cameras');
@@ -2173,7 +2187,8 @@ function rCams(){
         <div class="seg" data-seg="cs"><button type="button" data-crop="house" class="on">House</button><button type="button" data-crop="parcel">Parcel</button></div>
         <div class="amap-zoom"><button type="button" id="cmap-zin" title="Zoom in" aria-label="Zoom in">+</button><button type="button" id="cmap-zout" title="Zoom out" aria-label="Zoom out">−</button></div>
         <button type="button" class="btnl ghost" id="cmap-reset" style="padding:5px 10px">Reset view</button>
-        <span class="qmap-hint">Click a camera to show it on the map</span>
+        ${camCovList().length?`<label class="qmap-tog"><input type="checkbox" id="ccov-cb" ${CCOV?'checked':''}> Coverage</label>`:''}
+        <span class="qmap-hint">Click a camera to show it and its field of view</span>
       </div>
       <div class="qmap-stage" id="cmap"><div id="c2d" class="qpane on"></div><div class="qnorth" title="North"><i></i><b>N</b></div><div class="svgtip"></div><div class="qmap-status" id="cmap-status">Click a camera to show it on the map</div></div>
     </div>
@@ -2188,6 +2203,7 @@ function rCams(){
   if(zin) zin.onclick=()=>zoomNadirCenter(CMAP,1.2);
   if(zout) zout.onclick=()=>zoomNadirCenter(CMAP,1/1.2);
   const creset=el.querySelector('#cmap-reset');
+  const ccb=el.querySelector('#ccov-cb'); if(ccb) ccb.onchange=()=>{CCOV=ccb.checked;drawCamOverlays();};
   if(creset) creset.onclick=()=>{CCROP='house';el.querySelectorAll('[data-seg=cs] [data-crop]').forEach(b=>b.classList.toggle('on',b.dataset.crop==='house'));clearCam();};
   window.CAMLB=C.map(c=>({img:c.img,label:c.name,sub:'still '+c.still_at+' CT'}));
   const draw=()=>{
@@ -2222,7 +2238,18 @@ function rCams(){
   };
   draw();loadCamPins().then(draw);
 }
-let CSEL=null,CMAP=null,CCROP='house';
+let CSEL=null,CMAP=null,CCROP='house',CCOV=false;
+/* Camera coverage (from the coverage layer): FOV wedge and range per camera; selected camera always draws its wedge; Coverage toggle shows every wedge faintly. */
+function camCovList(){return (((D.lane2||{}).coverage||{}).cameras)||[];}
+function camCov(dev){
+  const c=camCovList().find(x=>camRefEq(x.device_id,dev)); if(!c) return null;
+  const w=(c.wedge||[]).map(p=>l2Px({lat:p[0],lng:p[1]})).filter(Boolean);
+  const dflt=String(c.fov_source||'').startsWith('default');
+  const fov=dflt?'FOV 90° · range 15 m (defaults)':('FOV '+(c.hfov_deg||'?')+'° · range '+(c.range_m||'?')+' m');
+  return {w,fov,dflt};
+}
+function camWedgeSvg(w,sel){return `<polygon class="${sel?'cwedge l2geom':'cwedge'}" points="${w.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="#e67700" fill-opacity="${sel?.2:.07}" stroke="#e67700" stroke-opacity="${sel?.95:.45}" stroke-width="${sel?2:1}" vector-effect="non-scaling-stroke"/>`;}
+
 function setCmapStatus(msg,warn){
   const el=document.getElementById('cmap-status'); if(!el) return;
   el.className='qmap-status'+(warn?' warn':'');
@@ -2255,10 +2282,12 @@ function selectCam(dev,scroll,opts){
     return;
   }
   if(CMAP){CMAP._user=false;fitNadirBounds(CMAP,[px]);}
-  setCmapStatus(lab+' · '+(surveyed?'surveyed':'estimated'));
+  const cv=camCov(c.device);
+  setCmapStatus(lab+' · '+(surveyed?'surveyed':'estimated')+(cv?' · '+cv.fov:''));
+  if(cv&&cv.w.length>2&&CMAP){CMAP._user=false;fitNadirBounds(CMAP,[px].concat(cv.w));}
   if(opts.pop!==false){
     const st=camStatusLabel(c);
-    showNadirPop(CMAP,px,{name:lab,type:'Camera',status:st.label,color:st.color,confidence:pinConfidence(c)});
+    showNadirPop(CMAP,px,{name:lab,type:'Camera'+(cv?' · '+cv.fov:''),status:st.label,color:st.color,confidence:pinConfidence(c)});
   }
 }
 function drawCamOverlays(){
@@ -2267,6 +2296,11 @@ function drawCamOverlays(){
   let h='';
   if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
   const selId=CSEL&&CSEL.id;
+  (D.cams||[]).forEach(c=>{
+    const cv=camCov(c.device); if(!cv||cv.w.length<3) return;
+    const selected=selId!=null&&camRefEq(selId,c.device);
+    if(selected||CCOV) h+=camWedgeSvg(cv.w,selected);
+  });
   (D.cams||[]).forEach(c=>{
     const px=camMapPx(c);
     if(!px) return;
@@ -2358,15 +2392,6 @@ function l2Rows(key){
     Object.entries(E.facades||{}).forEach(([f,list])=>(list||[]).forEach(r=>add(f[0].toUpperCase()+f.slice(1),r)));
     (E.unassigned||[]).forEach(r=>add('Facade not assigned',r));
   }
-  if(key==='coverage'){
-    const C=L.coverage||{};
-    (C.cameras||[]).forEach(c=>{const k=l2Cam(c.device_id);const px=k&&camMapPx(k);const w=(c.wedge||[]).map(p=>l2Px({lat:p[0],lng:p[1]})).filter(Boolean);
-      const fov=String(c.fov_source||'').startsWith('default')?'FOV 90° · range 15 m (defaults)':('FOV '+(c.hfov_deg||'')+'° · range '+(c.range_m||'')+' m');
-      rows.push({id:'c-'+c.device_id,group:'Cameras',label:(k&&k.name)||('device '+c.device_id),sub:w.length?fov+' · wedge from pin and heading':'No pin or heading on file, so no wedge',color:L2COL.camera,px,
-        pop:{name:(k&&k.name)||c.device_id,type:'Camera coverage',status:fov,color:L2COL.camera},draw:sel=>sel&&w.length>2?l2Poly(w,L2COL.camera,.16):''});});
-    (C.gaps||[]).forEach((g,i)=>{const z=l2Zone(g.id);const px=zonePx(z);const nm=(z&&(z.name||z.zone_id))||g.id;
-      rows.push({id:'g-'+i,group:'Gaps against entry points',label:nm,sub:(g.test||'not inside any camera wedge'),color:L2COL.neither,px,pop:{name:nm,type:'Coverage gap',status:g.test||'no camera covers it',color:L2COL.neither},draw:()=>''});});
-  }
   if(key==='access'){
     const A=L.access||{}; const H=D.hydrant||{};
     const pt=(id,label,o,sub,col)=>{const px=l2Px(o);rows.push({id,group:'Approach',label,sub:o&&o.value===null&&!px?(o.note||NR):sub,color:px?(col||L2COL.pt):L2COL.none,px,pop:{name:label,type:'Security & access',status:sub,color:col||L2COL.pt},draw:()=>''});};
@@ -2391,20 +2416,34 @@ function l2Rows(key){
     rows.push({id:'p-lights',group:'Lighting',label:'Exterior lights',sub:(P.exterior_lights||[]).length?(P.exterior_lights.length+' recorded'):(P.exterior_lights_note||NR),color:L2COL.none,px:null,draw:()=>''});
   }
   if(key==='fuel'){
-    const F=L.fuel||{}; const BL={'0_5ft':'0–5 ft','5_30ft':'5–30 ft','30_100ft':'30–100 ft'};
-    Object.entries(F.bands||{}).forEach(([b,facs])=>Object.entries(facs||{}).forEach(([fac,c])=>{const n=(c.region_ids||[]).length;
-      rows.push({id:'f-'+b+'-'+fac,group:BL[b]||b,label:fac[0].toUpperCase()+fac.slice(1),sub:`${n} vegetation region${n===1?'':'s'} · ${Math.round(c.area_m2||0)} m²`,color:n?L2COL.veg:L2COL.none,px:null,
-        draw:()=>l2RegionPolys(c.region_ids).map(r=>l2Path(r.d,L2COL.veg)).join('')});}));
-    rows.push({id:'f-notes',group:'Notes',label:'Structure & deck',sub:`deck material: ${F.deck_material||'missing'} · overhang: ${F.overhang??'not recorded'} · beyond 100 ft: ${F.beyond_100ft??0} regions`,color:L2COL.none,px:null,draw:()=>''});
+    const F=L.fuel||{}; const BL={'0_5ft':'0–5 ft','5_30ft':'5–30 ft','30_100ft':'30–100 ft'}; const ZL={'0_5ft':'Zone 0','5_30ft':'Zone 1','30_100ft':'Zone 2'};
+    const zs=fuelZones();
+    Object.entries(F.bands||{}).forEach(([b,facs])=>{const ids=[];let m2=0;const per=[];
+      Object.entries(facs||{}).forEach(([fac,c])=>{const n=(c.region_ids||[]).length;ids.push(...(c.region_ids||[]));m2+=(c.area_m2||0);if(n)per.push(fac+' '+n);});
+      const z=zs.find(x=>x.band===b);
+      rows.push({id:'f-'+b,group:'Defensible space zones',label:(ZL[b]||b)+' · '+(BL[b]||b),sub:`${ids.length} vegetation region${ids.length===1?'':'s'} · ${Math.round(m2)} m²${per.length?' · '+per.join(', '):''}${z?'':' · ring not built'}`,color:FUELCOL[b]||L2COL.veg,px:null,
+        draw:()=>l2RegionPolys(ids).map(r=>l2Path(r.d,FUELVEG)).join('')});});
+    rows.push({id:'f-notes',group:'Notes',label:'Structure & deck',sub:`deck material: ${F.deck_material&&F.deck_material.value||F.deck_material||'missing'} · overhang: ${F.overhang&&F.overhang.value!=null?F.overhang.value:'not recorded'} · beyond 100 ft: ${F.beyond_100ft??0} regions`,color:L2COL.none,px:null,draw:()=>''});
   }
   return rows;
 }
+/* Defensible space zones: rings measured from the structure outline edge (layers/fuel.json "zones"). */
+const FUELCOL={'0_5ft':'#e03131','5_30ft':'#f08c00','30_100ft':'#fab005'};const FUELVEG='#51cf66';
+function fuelZones(){return ((((D.lane2||{}).fuel)||{}).zones)||[];}
+function ringD(r){const p=(r||[]).map(q=>l2Px({lat:q[0],lng:q[1]})).filter(Boolean);return p.length>2?'M'+p.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join('L')+'Z':'';}
+function fuelZonesSvg(selBand){
+  let h='',lab='';
+  fuelZones().forEach(z=>{const col=FUELCOL[z.band]||'#fab005';const sel=selBand===z.band;const d=ringD(z.outer)+' '+ringD(z.inner);
+    h+=`<path class="${sel?'fzone l2geom':'fzone'}" d="${d}" fill="${col}" fill-rule="evenodd" fill-opacity="${sel?.2:(selBand?.03:.07)}" stroke="${col}" stroke-opacity="${sel?1:.75}" stroke-width="${sel?2.6:1.4}" vector-effect="non-scaling-stroke"/>`;
+    const top=(z.outer||[]).map(q=>l2Px({lat:q[0],lng:q[1]})).filter(Boolean).sort((a,b)=>a[1]-b[1])[0];
+    if(top) lab+=`<text class="maplab" data-cx="${top[0]}" data-cy="${top[1]}" x="${top[0]}" y="${top[1]}" text-anchor="middle" fill="#fff" stroke="#1c2321" stroke-width="3" paint-order="stroke" font-size="12" font-weight="700">${esc(z.label+' · '+z.from_ft+'–'+z.to_ft+' ft')}</text>`;});
+  return h+lab;
+}
 const L2META={
   entry:['Security','Entry points','Doors and openings from the alarm zones, by facade, marked alarmed, on camera, both or neither. Click one to see it and the cameras that see it.','zones.html','Open zone editor ↗'],
-  coverage:['Security','Camera coverage','Each camera’s field of view drawn from its pin and heading (defaults marked), and the entry points no camera covers.','cameras.html','Open camera pin editor ↗'],
   access:['Security','Security & access','How responders reach the house: street entrance, drive path, turnaround, staging and meet-point estimates, second egress, hydrant distance, gates and Knox box. Estimates are labelled; nothing is invented.','nearmap-review.html','Open region editor ↗'],
   perimeter:['Security','Perimeter & lighting','Lot sides with their edge types from the region record, and exterior lighting on record.','nearmap-review.html','Open region editor ↗'],
-  fuel:['Fire','Fuel bands','Vegetation regions by defensible-space band (0–5, 5–30, 30–100 ft) and facade.','nearmap-review.html','Open region editor ↗']
+  fuel:['Fire','Fuel bands','Defensible space zones drawn as rings from the house footprint edge (Zone 0: 0–5 ft, Zone 1: 5–30 ft, Zone 2: 30–100 ft), with the vegetation regions inside them. Click a zone to highlight its ring and its regions.','nearmap-review.html','Open region editor ↗']
 };
 function rL2(key){
   const el=document.getElementById('pg-'+key); if(!el) return;
@@ -2443,6 +2482,7 @@ function l2Draw(key){
   const M=D.map||{}; let h='';
   if(M.parcel) h+=`<polygon class="ly-parcel" points="${pts(M.parcel)}" fill="none" stroke="#efe39a" stroke-opacity="0.45" stroke-width="1.6"/>`;
   const sel=st.sel&&st.rows.find(r=>r.id===st.sel);
+  if(key==='fuel') h+=fuelZonesSvg(sel&&sel.id.startsWith('f-')?sel.id.slice(2):null);
   if(sel){h+=sel.draw(true)||'';if(sel.px)h+=l2Pin(sel.px,sel.color,sel.label,sel.id,true);}
   nadirSetGeom(st.map,h);
   syncPinDots(document.getElementById(st.map.svgId),Math.max(st.map.s,0.05));
