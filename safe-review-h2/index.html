@@ -1553,12 +1553,30 @@ function mergePipelineRegions(fc){
   if(!extra.length) return base;
   return Object.assign({},base,{features:(base.features||[]).concat(extra)});
 }
-/* Migrated lots (legacy_keys in review-config) keep the old shell's fallback: any nm-regions:* edit on this origin. */
-function legacyRegionsRaw(){const c=window.SAFE_REVIEW_CONFIG||{};if(!c.legacy_keys)return null;
-  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('nm-regions:')===0)return localStorage.getItem(k);}}catch(e){}return null;}
+/* Browser-saved region edits share one origin with every other lot's reviewer, so a saved doc is used only when
+   its outlines sit on this lot's map frame (regionsDocFits). Migrated lots (non-empty legacy_keys in review-config)
+   keep the old shell's fallback, any nm-regions:* edit on this origin, under the same check. */
+function regionsDocFits(j){
+  if(!j||!Array.isArray(j.features))return false;
+  const b=D.cam_ctx&&D.cam_ctx.bounds;if(!b)return true;
+  const dx=(b.east-b.west)*0.5, dy=(b.north-b.south)*0.5;let seen=0,inside=0;
+  const first=g=>{let c=g&&g.coordinates;while(Array.isArray(c)&&Array.isArray(c[0]))c=c[0];return Array.isArray(c)&&c.length>=2?c:null;};
+  j.features.forEach(f=>{const c=first(f&&f.geometry);if(!c)return;seen++;
+    if(c[0]>=b.west-dx&&c[0]<=b.east+dx&&c[1]>=b.south-dy&&c[1]<=b.north+dy)inside++;});
+  return !seen||inside/seen>=0.5;
+}
+function legacyRegionsRaw(){const c=window.SAFE_REVIEW_CONFIG||{};if(!c.legacy_keys||!Object.keys(c.legacy_keys).length)return null;
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('nm-regions:')===0){const raw=localStorage.getItem(k);try{if(regionsDocFits(JSON.parse(raw)))return raw;}catch(e){}}}}catch(e){}return null;}
+function savedRegionsDoc(){
+  const dk=D.cam_ctx&&D.cam_ctx.delivery?'nm-regions:'+String(D.cam_ctx.delivery).replace(/[^a-z0-9-]/gi,''):null;
+  for(const raw of [()=>localStorage.getItem(SafeCrypto.REG_KEYS[0]),()=>localStorage.getItem(SafeCrypto.REG_KEYS[1]),()=>dk&&localStorage.getItem(dk),legacyRegionsRaw]){
+    try{const r=raw();if(!r)continue;const j=JSON.parse(r);if(j&&j.features&&regionsDocFits(j))return j;if(j&&j.features)console.warn('Skipped saved region edits that are not on this lot\'s map.');}catch(e){}
+  }
+  return null;
+}
 async function loadRegions(){
   if(REGS)return REGS;
-  try{const dk=D.cam_ctx&&D.cam_ctx.delivery?'nm-regions:'+String(D.cam_ctx.delivery).replace(/[^a-z0-9-]/gi,''):null;const raw=localStorage.getItem(SafeCrypto.REG_KEYS[0])||localStorage.getItem(SafeCrypto.REG_KEYS[1])||(dk&&localStorage.getItem(dk))||legacyRegionsRaw();if(raw){const j=JSON.parse(raw);if(j&&j.features){REGS=mergePipelineRegions(j);REGSRC='browser edits + pipeline';return REGS;}}}catch(e){}
+  try{const j=savedRegionsDoc();if(j){REGS=mergePipelineRegions(j);REGSRC='browser edits + pipeline';return REGS;}}catch(e){}
   if(SafeCrypto.isLocal() && D.cam_ctx && D.cam_ctx.delivery){
     const base='nearmap/'+D.cam_ctx.delivery+'/ai/';
     for(const [f,lab] of [['edits/regions.json','working edits'],['original/regions.json','vendor original']]){
@@ -2002,6 +2020,8 @@ function clearAsset(){
   document.querySelectorAll('#pg-assets details.vendors').forEach(d=>d.classList.remove('sel'));
   drawAssetMap({resetView:true});
 }
+/* True when any of the points falls on the map image (pixel frame of D.map), so a fit never pans off the image. */
+function ptsOnMap(pts){const M=D.map;if(!M||!M.w||!M.h)return true;return pts.some(p=>p&&p[0]>=0&&p[0]<=M.w&&p[1]>=0&&p[1]<=M.h);}
 function selectAsset(id,scroll){
   if(ASEL&&!ASEL.group&&ASEL.id===id){clearAsset();return;}
   if(id==='property-facts'){
@@ -2023,6 +2043,11 @@ function selectAsset(id,scroll){
     if(hit.length){hasPoly=true;pts=hit.reduce((s,p)=>s.concat(p.pts||[]),[]);}
   }
   if(a&&a.px&&a.px.length>=2){hasPin=true;if(!pts||!pts.length) pts=[a.px]; else pts=pts.concat([a.px]);}
+  if(pts&&pts.length&&!ptsOnMap(pts)){
+    ASEL={id:a?a.id:id,rids:unique,fit:false,pts:null};
+    setAmapStatus((name)+' has an outline that is not on this lot\'s map, so it is not drawn.',true);
+    revealAssetRow(a?a.id:id);drawAssetMap();return;
+  }
   ASEL={id:a?a.id:id,rids:unique,fit:true,pts:pts&&pts.length?pts:null};
   if(!hasPoly&&!hasPin){
     ASEL.fit=false;
@@ -3360,15 +3385,17 @@ function buildQlyPanel(){
   h+=qRow('labels','Labels',{checked:QLY.labels});
   h+=`<details open><summary>Taxlot / GIS</summary>`;
   h+=qRow('parcel','Parcel / taxlot line',{checked:QLY.parcel,sw:'#ffe066'});
-  h+=qRow('road','Road line',{checked:QLY.road,sw:'#74c0fc'});
-  h+=qRow('drive','Driveway line',{checked:QLY.drive,sw:'#f72585'});
+  const QM=D.map||{}, qHas=k=>Array.isArray(QM[k])&&QM[k].length>0, qOff=[];
+  const qOpt=(k,mk,lab,o)=>{if(qHas(mk))h+=qRow(k,lab,o);else qOff.push(lab);};
+  qOpt('road','road','Road line',{checked:QLY.road,sw:'#74c0fc'});
+  qOpt('drive','drive','Driveway line',{checked:QLY.drive,sw:'#f72585'});
   h+=`<div class="qly-note">Zoning, soils, WUI and other GIS facts in the record have no overlay geometry on this map — only the taxlot and site lines above.</div></details>`;
   h+=`<details open><summary>Roof outlines</summary>`;
-  h+=qRow('roof_trace','Roof trace',{checked:QLY.roof_trace,sw:'#ff922b'});
-  h+=qRow('roof_ai','AI roof',{checked:QLY.roof_ai,sw:'#dc2f02'});
-  h+=qRow('roof_sbfo','Building footprint',{checked:QLY.roof_sbfo,sw:'#fab005'});
+  qOpt('roof_trace','trace','Roof trace',{checked:QLY.roof_trace,sw:'#ff922b'});
+  qOpt('roof_ai','ai_roof','AI roof',{checked:QLY.roof_ai,sw:'#dc2f02'});
+  qOpt('roof_sbfo','sbfo','Building footprint',{checked:QLY.roof_sbfo,sw:'#fab005'});
   h+=`</details>`;
-  h+=qRow('zones','Defensible space',{checked:QLY.zones,sw:'#ffa94d'});
+  qOpt('zones','zones','Defensible space',{checked:QLY.zones,sw:'#ffa94d'});
   if(D.hydrant&&D.hydrant.px) h+=qRow('hydrant','Hydrant',{checked:QLY.hydrant,sw:'#c1121f',round:true});
   h+=`<details open><summary>Nearmap AI</summary>`;
   packs.forEach(p=>{
@@ -3387,8 +3414,10 @@ function buildQlyPanel(){
   });
   h+=`</details>`;
   h+=qRow('assets','Regions',{checked:QLY.assets,sw:'#be4bdb',n:nAssets,round:true});
-  h+=qRow('cameras','Camera pins',{checked:QLY.cameras,sw:'#228be6',n:nCam,round:true});
-  h+=`<details open><summary>Zone pins</summary>`;
+  if((D.cams||[]).length) h+=qRow('cameras','Camera pins',{checked:QLY.cameras,sw:'#228be6',n:nCam,round:true}); else qOff.push('Camera pins');
+  const qHasZ=((D.mas&&D.mas.pins)||[]).length>0||systems.length>0; if(!qHasZ) qOff.push('Alarm zone pins');
+  if(qOff.length) h+=`<div class="qly-note">Not on file for this lot: ${esc(qOff.join(', '))}.</div>`;
+  if(qHasZ){h+=`<details open><summary>Zone pins</summary>`;
   h+=qRow('zonepins','All zone pins',{checked:QLY.zonepins,sw:'#f08c00',n:nZ,round:true});
   if(systems.length>1){
     systems.forEach(s=>{
@@ -3398,7 +3427,7 @@ function buildQlyPanel(){
   }else if(systems.length===1){
     h+=`<div class="qly-note">This lot has one system; the list above is the full set.</div>`;
   }
-  h+=`</details>`;
+  h+=`</details>`;}
   host.innerHTML=h;
   host.querySelectorAll('input[data-mixed="1"]').forEach(el=>{el.indeterminate=true;});
 }
