@@ -100,8 +100,8 @@
   #lb img { max-width:92vw; max-height:84vh; border-radius:6px; }
   #lb .t { color:#fff; font-size:13px; }
 </style>
-<script src="review-config.js"></script>
-<script src="vendor/safe-crypto.js"></script>
+<script src="review-config.js?v=ad30bbeb4de99332"></script>
+<script src="vendor/safe-crypto.js?v=ad30bbeb4de99332"></script>
 </head>
 <body>
 <div id="lock"><form id="lockform" autocomplete="off">
@@ -528,9 +528,9 @@
   }
 
   // ---------- geometry ----------
-  function bounds() { return D.cam_ctx.bounds; }
+  function bounds() { return (D.cam_ctx && D.cam_ctx.bounds) || null; }
   function toPct(lat, lng) {
-    var b = bounds();
+    var b = bounds(); if (!b) return null;
     var x = (lng - b.west) / (b.east - b.west) * 100, y = (b.north - lat) / (b.north - b.south) * 100;
     if (!isFinite(x) || !isFinite(y)) return null;
     return { x: Math.round(x * 1000) / 1000, y: Math.round(y * 1000) / 1000 };
@@ -722,7 +722,7 @@
       s.locked = false; s.status = 'placed'; touch(s);
     });
     on('bRelock', function () {
-      var p0 = D.cams.find(function (x) { return x.device === sel; });
+      var p0 = (D.cams || []).find(function (x) { return x.device === sel; });
       var q = toPct(p0.lat, p0.lng); s.lat = p0.lat; s.lng = p0.lng; s.x = q.x; s.y = q.y; s.locked = true; s.status = 'surveyed'; touch(s);
     });
     on('bConfirm', function () { s.status = 'confirmed'; if (s.source === 'survey' && s.locked) s.status = 'confirmed'; touch(s); setStatus('Confirmed ' + c.name + ' (not saved yet)'); });
@@ -848,7 +848,9 @@
     map.redraw();
   }
   function fitHouse() {
-    var r = D.cam_ctx.roof[0], la = r.map(function (p) { return p[1]; }), ln = r.map(function (p) { return p[0]; });
+    var cx = D.cam_ctx || {}, r = (cx.roof && cx.roof[0]) || cx.parcel;
+    if (!r || !r.length) { var bb = bounds(); if (bb) map.fitBounds(bb); return; }
+    var la = r.map(function (p) { return p[1]; }), ln = r.map(function (p) { return p[0]; });
     var pad = 0.00025;
     map.fitBounds({ north: Math.max.apply(null, la) + pad * 0.7, south: Math.min.apply(null, la) - pad * 0.7, east: Math.max.apply(null, ln) + pad, west: Math.min.apply(null, ln) - pad });
   }
@@ -923,6 +925,7 @@
     SYS_FILTER = 'all';
     if (D.cam_ctx && D.cam_ctx.delivery) DELIVERY = D.cam_ctx.delivery;
     var b = bounds();
+    if (!b) { $('map').innerHTML = '<div style="padding:24px;color:#ccd">No georeferenced nadir is on file for this lot, so there is no map to place pins on.</div>'; renderList(); renderDetail(); return; }
     var clat = (b.north + b.south) / 2, clng = (b.east + b.west) / 2;
     map = new google.maps.Map($('map'), { center: { lat: clat, lng: clng }, zoom: 19, backgroundColor: '#1b2027', tilt: 0 });
     var vertUrl;
