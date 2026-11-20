@@ -457,8 +457,8 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .sys-group .sys-body{padding:0 8px 8px}
 .sys-plain{margin:0 0 8px;font-size:13px;color:var(--ink2)}
 </style>
-<script src="review-config.js"></script>
-<script src="vendor/safe-crypto.js"></script>
+<script src="review-config.js?v=3cbe24e54b5f64c1"></script>
+<script src="vendor/safe-crypto.js?v=3cbe24e54b5f64c1"></script>
 </head>
 <body>
 <div id="lock">
@@ -556,6 +556,13 @@ function botEstimateLine(q){
   return `<div class="botest${tone?' '+tone:''}">${head}${ass}${wrk}</div>`;
 }
 let HIDE=new Set();
+/* Display units: data stay metric; distances show as feet (yards), heights as feet, km as miles (SafeUnits). */
+const isHeightId=id=>/height|eave|(^|_)h$|tree/i.test(String(id||''));
+function uv(v,u,id){if(v==null||v==='')return '';if(!window.SafeUnits)return String(v)+(u?' '+u:'');const uu=String(u||'').trim();
+  if(uu==='m'&&isHeightId(id))return SafeUnits.ft(v);return SafeUnits.dist(v,uu);}
+function uvHTML(v,u,id){const t=uv(v,u,id);const i=t.indexOf(' ');if(['m','km'].includes(String(u||'').trim())&&i>0)return `${esc(t.slice(0,i))}<small>${esc(t.slice(i))}</small>`;return `${esc(v)}<small>${esc(u||'')}</small>`;}
+function ftH(m){return window.SafeUnits?SafeUnits.ft(m):Number(m).toFixed(1)+' m';}
+function ftD(m){return window.SafeUnits?SafeUnits.ftyd(m):Number(m).toFixed(1)+' m';}
 function T(k,f){const c=(typeof D!=='undefined'&&D&&D.copy)||{};return Object.prototype.hasOwnProperty.call(c,k)?c[k]:f;}
 const SECTIONS=[['overview','Overview'],['readiness','Pass 2 readiness'],['access','Security & access'],['entry','Entry points'],['cameras','Cameras'],['alarms','Alarm (MAS)'],['perimeter','Perimeter & lighting'],['parcel','Parcel & assessor'],['imagery','Imagery & Nearmap AI'],['measurements','Measurements'],['assets','Regions'],['fire','Fire'],['fuel','Fuel bands'],['layers','Map layers'],['questions','Reviewer questions']];
 const SAFE_GROUPS={S:'Security',A:'Assets',F:'Fire',E:'Environment'};
@@ -583,7 +590,7 @@ function mapSVG(o){
   if(L.drive!==undefined){s+=`<polyline class="ly-drive" points="${pts(M.drive)}" fill="none" stroke="#69db7c" stroke-width="${2*sw}" ${L.drive?'':'style="display:none"'}/>`;}
   if(o.points){const r=o.pr||5;o.points.forEach(p=>{
     s+=`<g class="pt" data-id="${esc(p.id)}" data-tip="${esc(p.tip)}" style="cursor:pointer"><circle cx="${p.px[0]}" cy="${p.px[1]}" r="${r*1.9}" fill="${p.color}" fill-opacity=".0" class="halo"/><circle cx="${p.px[0]}" cy="${p.px[1]}" r="${r}" fill="${p.color}" stroke="#fff" stroke-width="${r*.35}"/>${p.label?`<text x="${p.px[0]}" y="${p.px[1]+r*.38}" text-anchor="middle" font-size="${r*1.05}" font-weight="700" fill="#fff" style="pointer-events:none;font-family:Inter,Segoe UI,sans-serif">${esc(p.label)}</text>`:''}</g>`;});}
-  if(o.scale){const m=20,px=m/D.map.m_per_px;const x=c[0]+c[2]*.04,y=c[1]+c[3]*.95;s+=`<g><rect x="${x-4*sw}" y="${y-14*sw}" width="${px+8*sw}" height="${20*sw}" rx="${3*sw}" fill="rgba(0,0,0,.5)"/><line x1="${x}" y1="${y}" x2="${x+px}" y2="${y}" stroke="#fff" stroke-width="${2*sw}"/><text x="${x+px/2}" y="${y-4*sw}" fill="#fff" font-size="${10*sw}" text-anchor="middle" style="font-family:Inter,Segoe UI,sans-serif">${m} m</text></g>`;}
+  if(o.scale){const ftLen=50,px=ftLen*0.3048/D.map.m_per_px;const x=c[0]+c[2]*.04,y=c[1]+c[3]*.95;s+=`<g><rect x="${x-4*sw}" y="${y-14*sw}" width="${px+8*sw}" height="${20*sw}" rx="${3*sw}" fill="rgba(0,0,0,.5)"/><line x1="${x}" y1="${y}" x2="${x+px}" y2="${y}" stroke="#fff" stroke-width="${2*sw}"/><text x="${x+px/2}" y="${y-4*sw}" fill="#fff" font-size="${10*sw}" text-anchor="middle" style="font-family:Inter,Segoe UI,sans-serif">${ftLen} ft</text></g>`;}
   s+=`<g transform="translate(${c[0]+c[2]*.95},${c[1]+c[3]*.08})"><circle r="${13*sw}" fill="rgba(0,0,0,.5)"/><path d="M0,${-9*sw} L${5*sw},${6*sw} L0,${3*sw} L${-5*sw},${6*sw}Z" fill="#fff"/><text y="${-15*sw}" fill="#fff" font-size="${10*sw}" text-anchor="middle" font-weight="700" style="font-family:Inter,Segoe UI,sans-serif">N</text></g>`;
   return s+'</svg><div class="svgtip"></div>';
 }
@@ -687,9 +694,9 @@ function rFire(){
   const ev=M.events_summary||{};
   const H=D.hydrant||{};
   let h=head('Fire','Firefighting water & life safety','Pass 1 observations only. This is not a tactical recommendation and it does not rate hydrant flow or access.');
-  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Water supply</h3><div class="kv"><div><div class="k">Kind</div><div class="v">${esc(T('water_kind',(D.water&&D.water.value)||''))}</div></div><div><div class="k">Source</div><div class="v">${esc(T('water_source',''))}</div></div></div><p class="small muted" style="margin-top:10px">${esc((D.water&&D.water.note)||'The lot is not on a community water system.')}</p></div>`;
-  h+=`<div class="card pad"><h3>Nearest public hydrant</h3><div class="kv"><div><div class="k">Straight-line</div><div class="v num">${esc(H.value||'')}</div></div><div><div class="k">Within 800 m</div><div class="v">${esc(T('hydrant_within_800',''))}</div></div><div><div class="k">Road distance</div><div class="v">${esc((H.road_distance_m&& (H.road_distance_m.from_driveway_entrance+' m from the driveway entrance'))||'')}</div></div><div><div class="k">In service</div><div class="v">${H.in_service===false?'No':'Yes'}</div></div></div><p class="small muted" style="margin-top:10px">${esc(H.note||'')}</p></div></div>`;
-  h+=`<div class="card pad mt"><h3>Monitored life-safety zones</h3><div class="small muted" style="margin-top:-4px;margin-bottom:8px">${lifeRows.length} smoke, CO, sprinkler-waterflow or well-pump zones in the MAS export. Details on the Alarm (MAS) page.</div>`;
+  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Water supply</h3><div class="kv"><div><div class="k">Kind</div><div class="v">${esc(T('water_kind',(D.water&&D.water.value)||''))}</div></div><div><div class="k">Source</div><div class="v">${esc(T('water_source',(D.water&&D.water.tag)||'not recorded'))}</div></div></div><p class="small muted" style="margin-top:10px">${esc((D.water&&D.water.note)||T('water_note','No water-supply record is on file for this lot.'))}</p></div>`;
+  h+=`<div class="card pad"><h3>Nearest public hydrant</h3><div class="kv"><div><div class="k">Straight-line</div><div class="v num">${esc(H.value||'')}</div></div><div><div class="k">Within 800 m</div><div class="v">${esc(T('hydrant_within_800',D.firefighting_water?(D.firefighting_water.within_800m?'Yes':'No'):'not checked'))}</div></div><div><div class="k">Road distance</div><div class="v">${esc((H.road_distance_m&& (H.road_distance_m.from_driveway_entrance+' m from the driveway entrance'))||H.road_basis||'not measured')}</div></div><div><div class="k">In service</div><div class="v">${H.in_service===false?'No':H.in_service===true?'Yes':'Not recorded'}</div></div></div><p class="small muted" style="margin-top:10px">${esc(H.note||'')}</p></div></div>`;
+  h+=`<div class="card pad mt"><h3>Monitored life-safety zones</h3><div class="small muted" style="margin-top:-4px;margin-bottom:8px">${(D.mas&&zones.length)?`${lifeRows.length} smoke, CO, sprinkler-waterflow or well-pump zones in the MAS export. Details on the Alarm (MAS) page.`:'No central-station (MAS) export is on file for this lot, so no monitored life-safety zones are listed.'}</div>`;
   if(lifeRows.length){
     h+=`<table class="mas-table"><thead><tr><th>Zone</th><th>Type</th><th>Programming</th></tr></thead><tbody>`+lifeRows.map(z=>`<tr><td>${esc(z.label)}</td><td>${esc(z.device_type)}</td><td>${esc(z.programming_label||z.programming||'')}</td></tr>`).join('')+`</tbody></table>`;
   }
@@ -983,16 +990,16 @@ function rOverview(){
   <div><div class="k">Zoning</div><div class="v">${esc(O.zoning)}</div></div><div><div class="k">County</div><div class="v">${esc(O.county)}</div></div><div><div class="k">Imagery survey</div><div class="v">${esc(O.survey)}</div></div></div></div>
   <div class="r" onclick="go('imagery')">${mapSVG({crop:'parcel',layers:{parcel:true,ai:true}})}<span class="cap">${esc(T('overview_map_cap','Nadir · parcel and roof · open imagery →'))}</span></div></div>`;
   const waterCard=`<div class="card kpi"><div class="k">${esc((D.water&&D.water.label)||'Water supply')}</div><div class="v">${esc((D.water&&D.water.value)||'')}</div><div class="s">${tag((D.water&&D.water.tag)||'')}</div></div>`;
-  h+=`<div class="grid g3 mt">`+waterCard+O.kpis.map(k=>`<div class="card kpi"><div class="k">${esc(k.label)}</div><div class="v num">${esc(k.value)}<small>${esc(k.unit)}</small></div><div class="s">${tag(k.src)}${k.provisional?prov():''}</div></div>`).join('')+`</div>`;
-  h+=`<div class="grid g3 mt">`+N.perils.map(p=>`<div class="card kpi"><div class="k">Nearmap ${p.label.toLowerCase()} score</div><div class="peril"><div class="v num">${p.score}<small>/ 5</small></div><div>${scoreBar(p.score,pcol(p.score))}<div class="tiny muted" style="margin-top:4px">5 = most resilient</div></div></div><div class="s">${tag(T('nearmap_tag','Nearmap AI'))}<span class="tag">footprint capped at 1,000 m²</span></div></div>`).join('')+`</div>`;
-  h+=`<div class="card status mt"><div class="first"><div class="v">✓ ${esc(S.audit)}</div><div class="k">Pass 1 completeness check</div></div>
+  h+=`<div class="grid g3 mt">`+waterCard+O.kpis.map(k=>`<div class="card kpi"><div class="k">${esc(k.label)}</div><div class="v num">${uvHTML(k.value,k.unit,k.id||k.label)}</div><div class="s">${tag(k.src)}${k.provisional?prov():''}</div></div>`).join('')+`</div>`;
+  h+=`<div class="grid g3 mt">`+N.perils.map(p=>`<div class="card kpi"><div class="k">Nearmap ${p.label.toLowerCase()} score</div><div class="peril"><div class="v num">${p.score}<small>/ 5</small></div><div>${scoreBar(p.score,pcol(p.score))}<div class="tiny muted" style="margin-top:4px">5 = most resilient</div></div></div><div class="s">${tag(T('nearmap_tag','Nearmap AI'))}${T('peril_cap_tag','')?`<span class="tag">${esc(T('peril_cap_tag',''))}</span>`:''}</div></div>`).join('')+`</div>`;
+  h+=`<div class="card status mt"><div class="first"><div class="v">${S.audit==='Audit passed'?'✓ ':''}${esc(S.audit)}</div><div class="k">Pass 1 completeness check</div></div>
    <div><div class="v num">${S.facts}</div><div class="k">assessor facts · ${S.facts_missing} missing</div></div>
    <div><div class="v num">${S.layers}</div><div class="k">map layers</div></div>
    <div><div class="v num">${S.assets}</div><div class="k">assets located · +${S.assets_record} on record</div></div>
-   <div><div class="v num">${S.cameras}</div><div class="k">cameras · 4 surveyed</div></div>
+   <div><div class="v num">${S.cameras}</div><div class="k">${(D.cam_meta&&D.cam_meta.roster)?`cameras · ${D.cam_meta.surveyed||0} surveyed`:'cameras on file'}</div></div>
    <div><div class="v num">${S.questions}</div><div class="k">open questions · ${S.prov_questions} provisional</div></div></div>`;
-  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Provisional calls <span class="badge b-prov" style="margin-left:6px"><span class="dot"></span>to decide later</span></h3><ul class="clean">${O.provisional.map(p=>`<li class="prov-item"><b>${esc(p.k)}</b><span>${esc(p.v)}</span></li>`).join('')}</ul></div>
-  <div class="card pad"><h3>Not available in the data</h3><ul class="clean">${O.missing.map(m=>`<li><span class="badge b-miss">missing</span> &nbsp;${esc(m)}</li>`).join('')}<li><span class="badge b-grey">pending</span> &nbsp;9 of 13 camera placements await review</li></ul></div></div>`;
+  h+=`<div class="grid g2 mt"><div class="card pad"><h3>Provisional calls <span class="badge b-prov" style="margin-left:6px"><span class="dot"></span>to decide later</span></h3><ul class="clean">${O.provisional.map(p=>`<li class="prov-item"><b>${esc(p.k)}</b><span>${esc(p.v)}</span></li>`).join('')||'<li class="muted">No provisional calls recorded for this lot.</li>'}</ul></div>
+  <div class="card pad"><h3>Not available in the data</h3><ul class="clean">${O.missing.map(m=>`<li><span class="badge b-miss">missing</span> &nbsp;${esc(m)}</li>`).join('')}${(D.cam_meta&&D.cam_meta.pending>0)?`<li><span class="badge b-grey">pending</span> &nbsp;${D.cam_meta.pending} of ${D.cam_meta.roster} camera placements await review</li>`:''}${O.missing.length||(D.cam_meta&&D.cam_meta.pending>0)?'':'<li class="muted">Nothing recorded as missing.</li>'}</ul></div></div>`;
   h+=`<div class="card pad mt"><h3>Pass 1 stations run</h3><div class="small muted" style="margin:-4px 0 10px">Pass 1 lint status: pending reviewer gate.</div><div class="chips">${S.stations.map(s=>`<span class="badge b-grey">${esc(s)}</span>`).join('')}</div><div class="small muted" style="margin-top:12px">${esc(S.audit_detail)}. This page shows Pass 1 data only: no hazard, value or concealment judgments and no recommendations.</div></div>`;
   document.getElementById('pg-overview').innerHTML=h;
 }
@@ -1005,10 +1012,11 @@ function factRow(f){
 }
 function rParcel(){
   const groups=['Building','Values & sale','Land'];
+  (D.facts||[]).forEach(f=>{if(f.group&&!groups.includes(f.group))groups.push(f.group);});
   let h=head('Section 2','Parcel & assessor','Facts as recorded by the county assessor and county GIS. Missing facts show the reason and the sources that were checked.');
   h+=`<div class="grid" style="grid-template-columns:2fr 1fr;align-items:start">`;
   h+=`<div>`+groups.map(g=>`<div class="card mt" style="margin-top:${g==='Building'?0:18}px"><div class="tblhead"><h3>${g}</h3><span class="muted small">${D.facts.filter(f=>f.group===g).length} facts</span></div><table class="facts"><tbody>${D.facts.filter(f=>f.group===g).map(factRow).join('')}</tbody></table></div>`).join('')+`</div>`;
-  h+=`<div><div class="card pad"><h3>Value history</h3><div class="small" style="color:var(--ink2)">${esc(D.rmv_note)}</div><div class="small" style="color:var(--ink2);margin-top:10px">${esc(D.assessed_note)}</div></div>
+  h+=`<div><div class="card pad"><h3>Value history</h3>${(D.rmv_note||D.assessed_note)?`<div class="small" style="color:var(--ink2)">${esc(D.rmv_note||'')}</div><div class="small" style="color:var(--ink2);margin-top:10px">${esc(D.assessed_note||'')}</div>`:`<div class="small muted">No value history on file for this lot. The county record gives the current year only (see Values &amp; sale).</div>`}</div>
   <div class="card pad mt"><h3>Record notes</h3><ul class="clean small">${(T('record_notes',[])||[]).map(x=>`<li>${esc(x)}</li>`).join('')}<li>Owner names were removed at retrieval; this page uses “reference lot”.</li></ul></div></div></div>`;
   document.getElementById('pg-parcel').innerHTML=h;
 }
@@ -1041,23 +1049,23 @@ function rNearmap(){
   h+=`<div class="packs">`+N.packs.map(p=>`<div class="card pad pack" id="nm-${p.id==='wildfire_risk'?'wildfire_risk':p.id}"><div class="eyebrow">${esc(p.label)} pack</div><div class="n num">${p.count}<small class="muted" style="font-size:14px;font-weight:500"> features</small></div><div style="margin-top:4px">${p.count?'<span class="badge b-ok">present</span>':'<span class="badge b-grey">empty response</span> '+prov()}</div><div class="cls">${Object.entries(p.classes).map(([k,v])=>`<div><span>${esc(k)}</span><b class="num">${v}</b></div>`).join('')||`<div>${esc(p.note)}</div>`}</div></div>`).join('')+`</div>`;
   h+=`<div class="small muted" style="margin-top:8px">Pack membership is inferred from class names (the API response does not label packs).</div>`;
   h+=`<h3 class="mt2" style="font-size:17px;margin-bottom:12px">Peril scores <span class="muted small" style="font-weight:400">· roof feature, 5 = most resilient, 1 = most vulnerable</span></h3><div class="grid g3">`+N.perils.map(p=>`<div class="card pcard"><div class="eyebrow">${p.label}</div><div class="big num">${p.score}<small> / 5</small></div>
-   <dl><dt>Vulnerability probability</dt><dd class="num">${p.prob}</dd><dt>Rate factor</dt><dd class="num">${p.rate}</dd><dt>FEMA annual frequency</dt><dd class="num">${Number(p.fema).toPrecision(3)} / yr</dd>${p.risk_score!=null?`<dt>Risk score · rate factor</dt><dd class="num">${p.risk_score} · ${p.risk_rate}</dd>`:''}</dl></div>`).join('')+`</div>`;
-  h+=`<div class="callout amber mt"><b>Footprint cap.</b> The model’s footprint input is ln(1000), so it treats the house as 1,000 m². ${esc(T('footprint_cap_note','Read these scores as approximate when the roof is larger than that.'))} Staining and compromised-structure inputs sit at the floor value (none found). FEMA data v${esc(N.fema_version)}.</div>`;
+   <dl><dt>Vulnerability probability</dt><dd class="num">${p.prob}</dd><dt>Rate factor</dt><dd class="num">${p.rate}</dd><dt>FEMA annual frequency</dt><dd class="num">${p.fema!=null?Number(p.fema).toPrecision(3)+' / yr':'not given'}</dd>${p.risk_score!=null?`<dt>Risk score · rate factor</dt><dd class="num">${p.risk_score} · ${p.risk_rate}</dd>`:''}</dl></div>`).join('')+`</div>`;
+  if(N.footprint_cap!==false) h+=`<div class="callout amber mt"><b>Footprint cap.</b> The model’s footprint input is ln(1000), so it treats the house as 1,000 m². ${esc(T('footprint_cap_note','Read these scores as approximate when the roof is larger than that.'))} Staining and compromised-structure inputs sit at the floor value (none found). FEMA data v${esc(N.fema_version)}.</div>`;
   h+=`<div class="grid g2 mt2"><div class="card pad"><h3>Defensible space zones</h3><div class="small muted" style="margin-bottom:6px">Share of each ring around the Nearmap roof covered by medium/high woody vegetation.</div>`+N.zones.map(z=>`<div class="zone"><b>${esc(z.label)}</b><div><div class="bar"><i style="width:${z.risk*100}%;background:#d9822b"></i><i style="width:${z.clear*100}%;background:#cfe3d8"></i></div><div class="tiny muted" style="margin-top:3px">${fmt(z.risk_area,1)} m² vegetated of ${fmt(z.area_m2,1)} m²</div></div><div class="num" style="text-align:right"><b>${Math.round(z.risk*1000)/10}%</b> <span class="muted small">vegetated</span></div></div>`).join('')+`</div>
    <div class="card" style="overflow:hidden"><div class="mapbox" style="border-radius:0">${mapSVG({crop:'house',layers:{zones:true,ai:true}})}</div><div class="small muted" style="padding:10px 14px">Zones 0–5 ft (red), 5–30 ft (orange), 30–100 ft (yellow) around the AI roof (violet).</div></div></div>`;
   h+=`<div class="grid g3 mt2"><div class="card pad"><h3>AI roof & buildings</h3>
    <div class="statrow"><span>Roof area</span><span class="num">${fmt(N.roof.area_m2,1)} m²</span></div><div class="statrow"><span>Roof material</span><span>${esc(N.roof.material)} (${Math.round(N.roof.material_share*100)}%)</span></div><div class="statrow"><span>Tree overhang on roof</span><span class="num">${N.roof.overhang_m2} m² (${(N.roof.overhang_share*100).toFixed(2)}%)</span></div>
    ${N.buildings.map(b=>`<div class="statrow"><span>${esc(b.label[0].toUpperCase()+b.label.slice(1))}${b.side?' ('+esc(b.side)+')':''}</span><span class="num">${fmt(b.area_m2,1)} m² · conf ${b.confidence.toFixed(2)}</span></div>`).join('')}
    <div class="statrow"><span>Tall vegetation patches</span><span class="num">${N.vegetation.tall.count} · ${fmt(N.vegetation.tall.area_m2)} m²</span></div><div class="statrow"><span>Hard surface patches</span><span class="num">${N.hard_surface.count} · ${fmt(N.hard_surface.area_m2)} m²</span></div></div>
-   <div class="card pad" id="nm-model_3d"><h3>3D model <span class="badge b-ok">present</span></h3>
-   <div class="statrow"><span>Format</span><span>${esc(N.model3d.format)}</span></div><div class="statrow"><span>Projection</span><span>${esc(N.model3d.crs)}</span></div><div class="statrow"><span>Mesh</span><span class="num">${fmt(N.model3d.vertices)} vertices · ${fmt(N.model3d.triangles)} triangles</span></div><div class="statrow"><span>Credits</span><span>${esc(N.model3d.credits)}</span></div>
+   <div class="card pad" id="nm-model_3d"><h3>3D model <span class="badge ${/present/i.test(N.model3d.status||'')?'b-ok':'b-grey'}">${esc(N.model3d.status||'present')}</span></h3>
+   <div class="statrow"><span>Format</span><span>${esc(N.model3d.format)}</span></div><div class="statrow"><span>Projection</span><span>${esc(N.model3d.crs)}</span></div><div class="statrow"><span>Mesh</span><span class="num">${N.model3d.vertices!=null?fmt(N.model3d.vertices)+' vertices · ':''}${N.model3d.triangles!=null?fmt(N.model3d.triangles)+' triangles':'not recorded'}</span></div><div class="statrow"><span>Credits</span><span>${esc(N.model3d.credits)}</span></div>
    <div class="small muted" style="margin-top:8px">${esc(N.model3d.capture)}. ${esc(N.model3d.coverage)}. ${esc(N.model3d.viewer)}.</div>
    <div style="margin-top:12px"><a class="btnl" href="model3d.html" target="_blank" rel="noopener">Open 3D model viewer ↗</a></div></div>
-   <div class="card pad" id="nm-dsm"><h3>DSM <span class="badge b-grey">${esc(N.dsm.status)}</span></h3><div class="small" style="color:var(--ink2)">${esc(N.dsm.reason)}</div><h3 style="margin-top:16px">Public lidar <span class="badge b-blue">cross-check</span></h3><div class="small" style="color:var(--ink2)">${esc(N.lidar.source)}. Matches the mesh slope to 0.01% and roof heights closely.</div></div></div>`;
+   <div class="card pad" id="nm-dsm"><h3>DSM <span class="badge b-grey">${esc(N.dsm.status)}</span></h3><div class="small" style="color:var(--ink2)">${esc(N.dsm.reason)}</div><h3 style="margin-top:16px">Public lidar <span class="badge ${N.lidar.note===undefined||/cross/i.test(N.lidar.status||'')?'b-blue':'b-grey'}">${esc(N.lidar.note===undefined?'cross-check':(N.lidar.status||''))}</span></h3><div class="small" style="color:var(--ink2)">${esc(N.lidar.source)}.${N.lidar.note===undefined?' Matches the mesh slope to 0.01% and roof heights closely.':(N.lidar.note?' '+esc(N.lidar.note):'')}</div></div></div>`;
   h+=`<div class="card pad mt" id="nm-ai_pack"><h3>Calls & credits</h3><table><thead><tr><th>Call</th><th>Requested</th><th>Area</th><th>Credits</th><th>When</th></tr></thead><tbody>
-   <tr><td>Four-pack call</td><td>${N.call1.packs.map(esc).join(', ')} + ${N.call1.include.join(', ')}</td><td class="num">${fmt(N.call1.area_m2)} m²<div class="tiny muted">roof + 30 m buffer</div></td><td class="num"><b>${N.call1.credits}</b></td><td>${esc(N.call1.retrieved)}</td></tr>
-   <tr><td>Scores call</td><td>building + ${N.call2.include.join(', ')}</td><td class="num">same area</td><td class="num"><b>${N.call2.credits}</b> <span class="muted tiny">est. ${N.call2.estimate}</span></td><td>${esc(N.call2.retrieved)}</td></tr></tbody></table>
-   <div class="small muted" style="margin-top:10px">Other Vertical surveys on file for this lot: ${N.other_surveys.map(esc).join(', ')}.</div></div>`;
+   <tr><td>Four-pack call</td><td>${N.call1.packs.map(esc).join(', ')} + ${N.call1.include.join(', ')}</td><td class="num">${fmt(N.call1.area_m2)} m²<div class="tiny muted">${esc(N.call1.area_source||'roof + 30 m buffer')}</div></td><td class="num"><b>${N.call1.credits}</b></td><td>${esc(N.call1.retrieved)}</td></tr>
+   ${N.call2?`<tr><td>Scores call</td><td>building + ${N.call2.include.join(', ')}</td><td class="num">same area</td><td class="num"><b>${N.call2.credits}</b> <span class="muted tiny">est. ${N.call2.estimate}</span></td><td>${esc(N.call2.retrieved)}</td></tr>`:''}</tbody></table>
+   ${N.credits_basis?`<div class="small muted" style="margin-top:10px">${esc(N.credits_basis)}.</div>`:''}${(N.other_surveys||[]).length?`<div class="small muted" style="margin-top:10px">Other Vertical surveys on file for this lot: ${N.other_surveys.map(esc).join(', ')}.</div>`:''}</div>`;
   document.getElementById('pg-nearmap').innerHTML=h;
 }
 function rMeas(){
@@ -1066,9 +1074,9 @@ function rMeas(){
   const nogeom='<div class="tiny muted" style="margin-top:4px">No geometry on file</div>';
   let list='';
   (D.meas||[]).forEach((g,i)=>{
-    list+=`<div class="card${i?' mt':''}"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+(g.rows||[]).map(r=>`<tr class="mrow" id="meas-${esc(r.id)}" data-mid="${esc(r.id)}"><td><b style="font-weight:600">${esc(r.label)}</b>${has(r.id)?'':nogeom}${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${esc(r.value)}<small>${esc(r.unit)}</small></td><td class="small">${esc(r.method)}${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${(r.alts||[]).length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
+    list+=`<div class="card${i?' mt':''}"><div class="tblhead"><h3>${esc(g.group)}</h3></div><table><thead><tr><th style="width:28%">Measure</th><th style="width:14%">Value</th><th>Method</th><th style="width:20%;text-align:right">Source</th></tr></thead><tbody>`+(g.rows||[]).map(r=>`<tr class="mrow" id="meas-${esc(r.id)}" data-mid="${esc(r.id)}"><td><b style="font-weight:600">${esc(r.label)}</b>${has(r.id)?'':nogeom}${r.provisional?`<div style="margin-top:5px">${prov()}</div>`:''}</td><td class="v num">${uvHTML(r.value,r.unit,r.id)}</td><td class="small"><span data-metric>${esc(r.method)}</span>${r.note?`<div class="${r.provisional?'callout amber':'muted'}" style="margin-top:6px;${r.provisional?'padding:6px 10px':''}">${esc(r.note)}</div>`:''}${(r.alts||[]).length?`<details style="margin-top:6px"><summary>${r.alts.length} alternate${r.alts.length>1?'s':''}</summary><div class="alts">${r.alts.map(a=>`<div><span>${esc(a[0])}</span><span><b class="num">${esc(a[1])}</b> &nbsp;${tag(a[2])}</span></div>`).join('')}</div></details>`:''}</td><td style="text-align:right">${tag(r.source)}<div class="tiny muted" style="margin-top:4px">confidence ${esc(r.conf)}</div></td></tr>`).join('')+`</tbody></table></div>`;
   });
-  list+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">${esc(T('trees_tag','3D mesh'))}</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>${esc(T('lidar_col','Lidar'))}</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${t.h.toFixed(1)} m</b></td><td class="num">${t.d.toFixed(1)} m</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011.toFixed(1)} m</td></tr>`).join('')}</tbody></table></div>`;
+  list+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">${esc(T('trees_tag','3D mesh'))}</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>${esc(T('lidar_col','Lidar'))}</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${ftH(t.h)}</b></td><td class="num">${ftD(t.d)}</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011!=null?ftH(t.h2011):'not checked'}</td></tr>`).join('')}</tbody></table></div>`;
   list+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
   if(D.qa) list+=`<div class="card tile mt" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div>`;
   const el=document.getElementById('pg-measurements');
@@ -1143,13 +1151,14 @@ function packedMeasGeom(r){
   const pushLine=(a,b)=>{const p=toMapPx(a),q=toMapPx(b); if(p&&q) out.push({kind:'line',pts:[p,q]});};
   if(r.from_px&&r.to_px) pushLine(r.from_px,r.to_px);
   if(r.start&&r.end&&Array.isArray(r.start)) pushLine(r.start,r.end);
+  if(Array.isArray(r.lines)) r.lines.forEach(l=>{const pts=asPointList(l); if(pts&&pts.length>=2) out.push({kind:'line',pts});});
   ['line','polyline','path','segment'].forEach(k=>{
     const pts=asPointList(r[k]); if(pts&&pts.length>=2) out.push({kind:'line',pts});
   });
   ['poly','polygon','ring','area','outline'].forEach(k=>{
     const pts=asPointList(r[k]); if(pts&&pts.length>=3) out.push({kind:'area',pts});
   });
-  if(r.px&&typeof r.px[0]==='number'){const p=toMapPx(r.px); if(p) out.push({kind:'point',px:p,label:r.point_label||null});}
+  if(r.px&&typeof r.px[0]==='number'){const p=toMapPx(r.px); if(p) out.push({kind:'point',px:p,label:r.point_label?((isHeightId(r.id)||/^T\d/.test(String(r.point_label)))?String(r.point_label).replace(/(\d+(?:\.\d+)?)\s?m$/,(x,n)=>ftH(+n)):r.point_label):null});}
   if(Array.isArray(r.points)){
     r.points.forEach(it=>{
       const src=Array.isArray(it)?it:(it&&(it.px||it.point));
@@ -1207,15 +1216,15 @@ function listMeasGeometry(){
     const mid=link[t.rank];
     const ids=['tree-'+t.rank,'treetops'];
     if(mid) ids.unshift(mid);
-    const label=`T${t.rank} ${Number(t.h).toFixed(1)} m`;
+    const label=`T${t.rank} ${ftH(t.h)}`;
     const hit=out.find(g=>g.kind==='point'&&g.px&&Math.hypot(g.px[0]-t.px[0],g.px[1]-t.px[1])<1.2);
     if(hit){
       hit.ids=[...new Set((hit.ids||[hit.id]).concat(ids))];
       if(!hit.label) hit.label=label;
-      if(!hit.title) hit.title=`T${t.rank} · ${Number(t.h).toFixed(1)} m · ${Number(t.d).toFixed(1)} m from roof`;
+      if(!hit.title) hit.title=`T${t.rank} · ${ftH(t.h)} · ${ftD(t.d)} from roof`;
       return;
     }
-    out.push({id:mid||('tree-'+t.rank),ids,kind:'point',px:t.px,label,title:`T${t.rank} · ${Number(t.h).toFixed(1)} m · ${Number(t.d).toFixed(1)} m from roof`});
+    out.push({id:mid||('tree-'+t.rank),ids,kind:'point',px:t.px,label,title:`T${t.rank} · ${ftH(t.h)} · ${ftD(t.d)} from roof`});
   });
   // Dedupe packed points that land on the same pixel (e.g. a height row and its tree).
   const pts=out.filter(g=>g.kind==='point'&&g.px);
@@ -1375,7 +1384,7 @@ function drawMeasOverlays(){
     h+=`<circle class="mln${hl?' hl':''}" data-mid="${esc(g.id)}" cx="${b[0]}" cy="${b[1]}" r="4" fill="${col}" stroke="#fff" stroke-width="1.2"/>`;
     if(g.label||g.value){
       const mid=g.pts[Math.floor(g.pts.length/2)];
-      const lab=[g.label, g.value?`${g.value}${g.unit?' '+g.unit:''}`:''].filter(Boolean).join(' · ');
+      const lab=[g.label, g.value?uv(g.value,g.unit,g.id):''].filter(Boolean).join(' · ');
       h+=`<text class="mlbl" data-mid="${esc(g.id)}" x="${mid[0]}" y="${mid[1]-8}" data-base-y="${mid[1]}" data-dy="-8" text-anchor="middle" fill="${hl?'#fff': '#f8f9fa'}">${esc(lab)}</text>`;
     }
     h+='</g>';
@@ -1390,7 +1399,7 @@ function drawMeasOverlays(){
     if(g.label||g.value){
       const xs=g.pts.map(p=>p[0]), ys=g.pts.map(p=>p[1]);
       const cx=(Math.min(...xs)+Math.max(...xs))/2, cy=(Math.min(...ys)+Math.max(...ys))/2;
-      const lab=[g.label, g.value?`${g.value}${g.unit?' '+g.unit:''}`:''].filter(Boolean).join(' · ');
+      const lab=[g.label, g.value?uv(g.value,g.unit,g.id):''].filter(Boolean).join(' · ');
       h+=`<text class="mlbl" data-mid="${esc(g.id)}" x="${cx}" y="${cy}" data-base-y="${cy}" data-dy="0" text-anchor="middle" fill="#fff">${esc(lab)}</text>`;
     }
     h+='</g>';
@@ -2299,7 +2308,7 @@ function camCov(dev){
   const c=camCovList().find(x=>camRefEq(x.device_id,dev)); if(!c) return null;
   const w=(c.wedge||[]).map(p=>l2Px({lat:p[0],lng:p[1]})).filter(Boolean);
   const dflt=String(c.fov_source||'').startsWith('default');
-  const fov=dflt?'FOV 90° · range 15 m (defaults)':('FOV '+(c.hfov_deg||'?')+'° · range '+(c.range_m||'?')+' m');
+  const fov=dflt?'FOV 90° · range '+ftD(15)+' (defaults)':('FOV '+(c.hfov_deg||'?')+'° · range '+(c.range_m?ftD(c.range_m):'not set'));
   return {w,fov,dflt};
 }
 function camWedgeSvg(w,sel){return `<polygon class="${sel?'cwedge l2geom':'cwedge'}" points="${w.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ')}" fill="#e67700" fill-opacity="${sel?.2:.07}" stroke="#e67700" stroke-opacity="${sel?.95:.45}" stroke-width="${sel?2:1}" vector-effect="non-scaling-stroke"/>`;}
@@ -2452,12 +2461,12 @@ function l2Rows(key){
     const se=A.street_entrance||{};
     pt('a-street','Street entrance',se,(se.status||'estimated')+(se.source?' · '+se.source:'')+(se.warning?' · ⚠ '+se.warning:''),se.warning?L2COL.warn:L2COL.pt);
     const de=A.driveway_entry||{}; pt('a-drive','Driveway entry',de,(de.status||'')+(de.basis?' · '+de.basis:''));
-    const pd=A.path_to_door||{}; rows.push({id:'a-path',group:'Approach',label:'Drive path to the door',sub:pd.value==null?(pd.note||NR):(pd.length_m?Math.round(pd.length_m)+' m':String(pd.value)),color:L2COL.none,px:null,draw:()=>''});
-    const tu=A.turnaround||{}; rows.push({id:'a-turn',group:'Approach',label:'Turnaround',sub:tu.size_m!=null?tu.size_m+' m ('+(tu.source||'')+')':(tu.source||NR),color:L2COL.none,px:null,draw:()=>''});
+    const pd=A.path_to_door||{}; rows.push({id:'a-path',group:'Approach',label:'Drive path to the door',sub:pd.value==null?(pd.note||NR):(pd.length_m?ftD(pd.length_m):String(pd.value)),color:L2COL.none,px:null,draw:()=>''});
+    const tu=A.turnaround||{}; rows.push({id:'a-turn',group:'Approach',label:'Turnaround',sub:tu.size_m!=null?ftD(tu.size_m)+' ('+(tu.source||'')+')':(tu.source||NR),color:L2COL.none,px:null,draw:()=>''});
     const sc=A.staging_candidate||{}; pt('a-stage','Staging estimate',sc,(sc.status||'estimated')+(sc.basis?' · '+sc.basis:''),L2COL.warn);
     const mp=A.meet_point_candidate||{}; pt('a-meet','Meet-point estimate',mp,(mp.status||'estimated')+(mp.basis?' · '+mp.basis:''),L2COL.warn);
     rows.push({id:'a-egress',group:'Approach',label:'Second egress',sub:A.second_egress?String(A.second_egress):(A.second_egress_note||NR),color:L2COL.none,px:null,draw:()=>''});
-    const hpx=H.px?[+H.px[0],+H.px[1]]:null; const dist=A.hydrant_road_m!=null?Math.round(A.hydrant_road_m)+' m '+(A.hydrant_distance_basis||'by road'):(H.value?H.value+' straight line (no road geometry)':NR);
+    const hpx=H.px?[+H.px[0],+H.px[1]]:null; const dist=A.hydrant_road_m!=null?ftD(A.hydrant_road_m)+' '+(A.hydrant_distance_basis||'by road'):(H.value?H.value+' straight line (no road geometry)':NR);
     rows.push({id:'a-hyd',group:'Water',label:'Nearest hydrant',sub:dist+(hpx&&!l2InImage(hpx)?' · off this image':''),color:L2COL.alarmed,px:l2InImage(hpx)?hpx:null,pop:{name:'Nearest hydrant',type:'Water',status:dist,color:L2COL.alarmed},draw:()=>''});
     const gk=v=>typeof v==='string'?v:(v&&v.regions?v.regions.length+' gate region(s) on the map':NR);
     rows.push({id:'a-gates',group:'Barriers',label:'Gates',sub:gk(A.gates),color:L2COL.none,px:null,draw:()=>(A.gates&&A.gates.regions)?l2RegionPolys(A.gates.regions).map(r=>l2Path(r.d,L2COL.warn)).join(''):''});
@@ -2465,14 +2474,15 @@ function l2Rows(key){
   }
   if(key==='perimeter'){
     const P=L.perimeter||{};
-    (P.sides||[]).forEach(sd=>rows.push({id:'p-'+sd.side,group:'Lot sides',label:sd.side[0].toUpperCase()+sd.side.slice(1)+' side',sub:`${sd.length_m!=null?Math.round(sd.length_m)+' m':''} · ${sd.edge_type||'edge type not recorded'}${sd.beyond?' · beyond: '+sd.beyond:''}`,color:L2COL.pt,px:null,
+    (P.sides||[]).forEach(sd=>rows.push({id:'p-'+sd.side,group:'Lot sides',label:sd.side[0].toUpperCase()+sd.side.slice(1)+' side',sub:`${sd.length_m!=null?ftD(sd.length_m):''} · ${sd.edge_type||'edge type not recorded'}${sd.beyond?' · beyond: '+sd.beyond:''}`,color:L2COL.pt,px:null,
       draw:()=>l2RegionPolys(sd.edge_regions).map(r=>l2Path(r.d,L2COL.pt)).join('')}));
     rows.push({id:'p-lights',group:'Lighting',label:'Exterior lights',sub:(P.exterior_lights||[]).length?(P.exterior_lights.length+' recorded'):(P.exterior_lights_note||NR),color:L2COL.none,px:null,draw:()=>''});
   }
   if(key==='fuel'){
     const F=L.fuel||{}; const BL={'0_5ft':'0–5 ft','5_30ft':'5–30 ft','30_100ft':'30–100 ft'}; const ZL={'0_5ft':'Zone 0','5_30ft':'Zone 1','30_100ft':'Zone 2'};
     const zs=fuelZones();
-    Object.entries(F.bands||{}).forEach(([b,facs])=>{const ids=[];let m2=0;const per=[];
+    const BO=['0_5ft','5_30ft','30_100ft']; // payload keys are sorted as text; show the bands inside-out
+    Object.entries(F.bands||{}).sort((x,y)=>((BO.indexOf(x[0])+1)||99)-((BO.indexOf(y[0])+1)||99)).forEach(([b,facs])=>{const ids=[];let m2=0;const per=[];
       Object.entries(facs||{}).forEach(([fac,c])=>{const n=(c.region_ids||[]).length;ids.push(...(c.region_ids||[]));m2+=(c.area_m2||0);if(n)per.push(fac+' '+n);});
       const z=zs.find(x=>x.band===b);
       rows.push({id:'f-'+b,group:'Defensible space zones',label:(ZL[b]||b)+' · '+(BL[b]||b),sub:`${ids.length} vegetation region${ids.length===1?'':'s'} · ${Math.round(m2)} m²${per.length?' · '+per.join(', '):''}${z?'':' · ring not built'}`,color:FUELCOL[b]||L2COL.veg,px:null,
@@ -3109,7 +3119,7 @@ function handleNadirPinClick(map,g){
     if(id&&typeof selectMeas==='function') selectMeas(id,true);
     const geoms=(typeof listMeasGeometry==='function')?listMeasGeometry().filter(x=>x.id===id):[];
     const g0=geoms[0];
-    showNadirPop(map,pxOf(g)||(g0&&g0.pts&&g0.pts[0]),{name:(g0&&g0.label)||id||'Measurement',type:(g0&&g0.kind)||'Measurement',status:(g0&&g0.value!=null)?(String(g0.value)+(g0.unit?' '+g0.unit:'')):'On file',color:'#74c0fc'});
+    showNadirPop(map,pxOf(g)||(g0&&g0.pts&&g0.pts[0]),{name:(g0&&g0.label)||id||'Measurement',type:(g0&&g0.kind)||'Measurement',status:(g0&&g0.value!=null)?uv(g0.value,g0.unit,g0.id):'On file',color:'#74c0fc'});
     return;
   }
   if(cls.contains('qpin')||(cls.contains('qsel')&&g.tagName==='G')){
@@ -3686,6 +3696,18 @@ function drawHydrantCallout(){
   st.appendChild(el);
 }
 function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>rej(new Error('Could not load '+src));document.head.appendChild(s);});}
+/* Meshes cut by `safe mesh crop` are standard glTF (Y up, X east, Z south) in the export's offset frame with real
+   elevations and no extras; the viewer works Z-up in local UTM metres. Rotate those into the viewer frame using the
+   offset recorded in the payload (D.mesh_frame), and raycast from above the mesh top instead of z=80. */
+function meshFrameFix(THREE,root,extras){
+  const ex=extras||{};
+  if(ex.offset_utm10n||!(typeof D!=='undefined'&&D&&D.mesh_frame))return ex;
+  const mf=D.mesh_frame;
+  if(mf.up==='y'){root.rotation.x=Math.PI/2;}
+  root.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(root);
+  return {offset_utm10n:mf.offset||[0,0,0],center_local_xyz:[0,0,0],z_top:box.max.z+20,z_ground:box.min.z};
+}
 function llToMesh(lat,lon){
   const [e,n]=toUTM10(lat,lon);const ex=(Q3&&Q3.extras)||{};
   const off=ex.offset_utm10n||[0,0,0],c=ex.center_local_xyz||[0,0,0];
@@ -3694,9 +3716,10 @@ function llToMesh(lat,lon){
 function heightAt(x,y){
   if(!Q3||!Q3.THREE||!Q3.root)return 8;
   const THREE=Q3.THREE;
-  const ray=new THREE.Raycaster(new THREE.Vector3(x,y,80),new THREE.Vector3(0,0,-1));
+  const ex=Q3.extras||{};
+  const ray=new THREE.Raycaster(new THREE.Vector3(x,y,ex.z_top!=null?ex.z_top:80),new THREE.Vector3(0,0,-1));
   const hits=ray.intersectObject(Q3.root,true);
-  return hits.length?hits[0].point.z:8;
+  return hits.length?hits[0].point.z:(ex.z_ground!=null?ex.z_ground:8);
 }
 async function fetchQ3Mesh(onProgress){
   try{ return await fetchDec('mesh-lite.bin',{onProgress}); }
@@ -3828,7 +3851,7 @@ function ensureQ3(){
   Q3={loading:true,ready:false};
   Q3.loading=(async()=>{
     try{
-      if(!window.SafeThree) await loadScript('vendor/three-viewer.js');
+      if(!window.SafeThree) await loadScript(SafeCrypto.ver?SafeCrypto.ver('vendor/three-viewer.js'):'vendor/three-viewer.js');
       const {THREE,OrbitControls,GLTFLoader}=window.SafeThree;
       const buf=await fetchQ3Mesh((a,b)=>{const e=document.getElementById('qmapstat');if(e)e.textContent=SafeCrypto.progressMsg(a,b);});
       const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'}));
@@ -3848,7 +3871,8 @@ function ensureQ3(){
       const root=await new Promise((res,rej)=>new GLTFLoader().load(url,g=>res(g),undefined,rej));
       URL.revokeObjectURL(url);
       scene.add(root.scene);
-      const extras=(root.parser&&root.parser.json.meshes&&root.parser.json.meshes[0]&&root.parser.json.meshes[0].extras)||{};
+      let extras=(root.parser&&root.parser.json.meshes&&root.parser.json.meshes[0]&&root.parser.json.meshes[0].extras)||{};
+      extras=meshFrameFix(THREE,root.scene,extras);
       Q3={THREE,scene,cam,renderer,controls,root:root.scene,extras,ready:true,loading:false,host,raf:0,_interacting:false,_looping:false,_draw:0,
         resize(){const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setPixelRatio(Math.min(1.5,window.devicePixelRatio||1));renderer.setSize(w,h);startQ3Loop();},
         marker:null,line:null,parcel:null};
