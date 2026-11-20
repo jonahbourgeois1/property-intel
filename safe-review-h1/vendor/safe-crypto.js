@@ -26,6 +26,10 @@
   var DATA_LIVE = CFG.data_live || '';
   var KEY = null;
   var LOT_INFO = null;
+  // Build id written by review-build: every asset and ciphertext URL carries ?v=<build>, so a browser can never mix
+  // one build's code with another build's data, and an open tab notices when a newer build is published.
+  var BUILD = /^[0-9a-f]{6,64}$/.test(String(CFG.build || '')) ? String(CFG.build) : '';
+  function ver(u) { return BUILD ? u + (u.indexOf('?') < 0 ? '?' : '&') + 'v=' + BUILD : u; }
 
   // Carry reviewer work saved under an older build's keys (names come from config).
   (function migrateKeys() {
@@ -49,7 +53,44 @@
   }
   function isLocal() { return !DATA_LIVE || /^(localhost|127\.0\.0\.1)$/.test(location.hostname); }
   function canPut() { return /^(localhost|127\.0\.0\.1)$/.test(location.hostname); }
-  function dataUrl(name) { return isLocal() ? (DATA_LOCAL + name) : (DATA_LIVE + name); }
+  function dataUrl(name) { return ver(isLocal() ? (DATA_LOCAL + name) : (DATA_LIVE + name)); }
+
+  var STALE = false;
+  function showStale() {
+    STALE = true;
+    if (!global.document || document.getElementById('safe-stale')) return;
+    var d = document.createElement('div');
+    d.id = 'safe-stale';
+    d.setAttribute('role', 'alert');
+    d.style.cssText = 'position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483000;background:#8a4b00;' +
+      'color:#fff;padding:10px 16px;border-radius:8px;font:600 14px/1.4 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.35)';
+    d.textContent = 'This review was updated after this tab was opened. ';
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = 'Reload now';
+    b.style.cssText = 'margin-left:10px;font:inherit;padding:4px 12px;border-radius:6px;border:0;cursor:pointer;color:#222;background:#fff';
+    b.onclick = function () { location.reload(); };
+    d.appendChild(b);
+    (document.body || document.documentElement).appendChild(d);
+  }
+  // Re-read review-config.js past every cache; a different build id means this tab shows an older build.
+  async function checkBuild() {
+    if (!BUILD) return false;
+    try {
+      var r = await fetch('review-config.js?cb=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return false;
+      var m = (await r.text()).match(/"build":\s*"([0-9a-f]+)"/);
+      if (m && m[1] !== BUILD) { showStale(); return true; }
+    } catch (e) {}
+    return false;
+  }
+  (function watchBuild() {
+    if (!BUILD || !global.document || !global.fetch) return;
+    setTimeout(checkBuild, 4000);
+    setInterval(checkBuild, 5 * 60 * 1000);
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') checkBuild(); });
+    global.addEventListener('focus', function () { checkBuild(); });
+  })();
 
   async function derive(pw) {
     var base = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
@@ -323,7 +364,8 @@
 
   global.SafeCrypto = {
     SALT: SALT, ITER: ITER, CHECK: CHECK, LOT_KEY: LOT, TEMPLATE: TEMPLATE,
-    isLocal: isLocal, canPut: canPut, dataUrl: dataUrl,
+    isLocal: isLocal, canPut: canPut, dataUrl: dataUrl, BUILD: BUILD, ver: ver, checkBuild: checkBuild,
+    isStale: function () { return STALE; },
     getKey: function () { return KEY; },
     setKey: function (k2) { KEY = k2; },
     derive: derive, dec: dec, verify: verify,
@@ -336,4 +378,102 @@
     writeHandoff: writeHandoff, consumeHandoff: consumeHandoff,
     ANS_KEY: ANS_KEY, PINS_KEY: PINS_KEY, ZONES_KEY: ZONES_KEY, APPROVE_KEY: APPROVE_KEY, REG_KEYS: REG_KEYS
   };
+})(window);
+
+/* Display units. Lot data, JSON and method text stay metric; the viewer shows distances in feet and yards
+   (e.g. "976 ft (325 yd)") and kilometres in miles. Areas (m²) are left as they are. Converted on render:
+   SafeUnits.watch() rewrites distance values in page text, SVG labels and tooltips as nodes are added, except
+   inside [data-metric] (method text) and form fields. Pure formatters are exported for templates and tests. */
+(function (global) {
+  'use strict';
+  var FT = 1/0.3048, YD = 1/0.9144, MI = 1000/1609.344;
+  function num(v) { return typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, '')); }
+  function group(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+  function ftNum(m) { var f = num(m) * FT; return Math.abs(f) >= 10 ? group(Math.round(f)) : f.toFixed(1); }
+  function ydNum(m) { var y = Math.round(num(m) * YD); return (y === 0 && num(m) > 0) ? '<1' : group(y); }
+  function ftyd(m) { if (!isFinite(num(m))) return String(m); return ftNum(m) + ' ft (' + ydNum(m) + ' yd)'; }
+  function ft(m) { return isFinite(num(m)) ? ftNum(m) + ' ft' : String(m); }
+  function mi(km) {
+    var x = num(km) * MI;
+    if (!isFinite(x)) return String(km);
+    return (Math.abs(x) < 10 ? x.toFixed(2) : group(Math.round(x))) + ' mi';
+  }
+  // value + unit as stored (unit "m" / "km" converts; anything else, e.g. "m²", is returned unchanged)
+  function dist(v, unit) {
+    var u = String(unit || '').trim();
+    if (v === null || v === undefined || v === '') return '';
+    if (u === 'm' || u === 'metres' || u === 'meters') return ftyd(v);
+    if (u === 'km') return mi(v);
+    return String(v) + (u ? ' ' + u : '');
+  }
+  var N = '(\\d[\\d,]*(?:\\.\\d+)?)';
+  var TAIL = '(?![\\w²³/])';
+  var RANGE2 = new RegExp(N + '\\s?(km|m)\\s?[–-]\\s?' + N + '\\s?\\2' + TAIL, 'g');   // 0.5m-2m
+  var RANGE = new RegExp(N + '\\s?(?:[–-]|to)\\s?' + N + '\\s?(km|m)' + TAIL, 'g');     // 3–10 m, 2.5 to 4 m
+  var ONE = new RegExp(N + '\\s?(km|m)' + TAIL, 'g');
+  // inside brackets or after >/< (class names such as "(>2m)") feet alone read better than "ft (yd)"
+  function tight(str, off, len) { return /[(<>≤≥]\s*$/.test(str.slice(Math.max(0, off - 2), off)) || str[off + len] === ')'; }
+  function glued(str, off) { return off > 0 && /[\w.]/.test(str[off - 1]); }  // part of a token such as "gen6m"
+  function rng(a, b, u, short) {
+    if (u === 'km') return mi(a).replace(' mi', '') + '–' + mi(b);
+    return ftNum(a) + '–' + ftNum(b) + ' ft' + (short ? '' : ' (' + ydNum(a) + '–' + ydNum(b) + ' yd)');
+  }
+  // rewrite every metric distance in free text ("129 m", "0.5m-2m", "3–10 m", "1.2 km")
+  function prose(text) {
+    var s = String(text);
+    if (!/\d\s?k?m/.test(s)) return s;
+    s = s.replace(RANGE2, function (all, a, u, b, off, str) {
+      return glued(str, off) ? all : rng(a, b, u, tight(str, off, all.length));
+    });
+    s = s.replace(RANGE, function (all, a, b, u, off, str) {
+      return glued(str, off) ? all : rng(a, b, u, tight(str, off, all.length));
+    });
+    s = s.replace(ONE, function (all, a, u, off, str) {
+      if (glued(str, off)) return all;
+      return u === 'km' ? mi(a) : (tight(str, off, all.length) ? ft(a) : ftyd(a));
+    });
+    return s;
+  }
+  var ATTRS = ['title', 'data-tip', 'aria-label'];
+  var SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, INPUT: 1, SELECT: 1, OPTION: 1, CODE: 1 };
+  function metric(el) { return !el || (el.closest && el.closest('[data-metric]')); }
+  function convert(root) {
+    if (!root) return;
+    if (root.nodeType === 3) {
+      var p = root.parentNode;
+      if (p && !SKIP[p.nodeName] && !metric(p)) { var t = prose(root.nodeValue); if (t !== root.nodeValue) root.nodeValue = t; }
+      return;
+    }
+    if (root.nodeType !== 1 || SKIP[root.nodeName] || metric(root)) return;
+    var all = [root].concat(Array.prototype.slice.call(root.querySelectorAll('[title],[data-tip],[aria-label]')));
+    all.forEach(function (el) {
+      if (metric(el)) return;
+      ATTRS.forEach(function (a) {
+        var v = el.getAttribute && el.getAttribute(a);
+        if (v) { var t = prose(v); if (t !== v) el.setAttribute(a, t); }
+      });
+    });
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), n;
+    while ((n = w.nextNode())) convert(n);
+  }
+  var obs = null;
+  function watch() {
+    if (obs || !global.MutationObserver || !global.document) return;
+    var start = function () {
+      convert(document.body);
+      obs = new MutationObserver(function (list) {
+        list.forEach(function (m) {
+          if (m.type === 'characterData') convert(m.target);
+          else if (m.type === 'attributes') convert(m.target);
+          else m.addedNodes.forEach(convert);
+        });
+      });
+      obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true,
+        attributeFilter: ATTRS });
+    };
+    if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+  }
+  global.SafeUnits = { ftyd: ftyd, ft: ft, mi: mi, dist: dist, prose: prose, convert: convert, watch: watch,
+    FT: FT, YD: YD, MI: MI };
+  watch();
 })(window);
