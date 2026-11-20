@@ -472,8 +472,8 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .sys-group .sys-body{padding:0 8px 8px}
 .sys-plain{margin:0 0 8px;font-size:13px;color:var(--ink2)}
 </style>
-<script src="review-config.js?v=ad30bbeb4de99332"></script>
-<script src="vendor/safe-crypto.js?v=ad30bbeb4de99332"></script>
+<script src="review-config.js?v=cf9b5cea3399c36a"></script>
+<script src="vendor/safe-crypto.js?v=cf9b5cea3399c36a"></script>
 </head>
 <body>
 <div id="lock">
@@ -2648,6 +2648,29 @@ async function loadAnswers(){
   try{const r=await fetch('reviews/edits/answers.json?_='+Date.now(),{cache:'no-store'});if(r.ok)f=await openSealed(await r.json());}catch(e){}
   try{const raw=localStorage.getItem(SafeCrypto.ANS_KEY);if(raw)l=await openSealed(JSON.parse(raw));}catch(e){}
   ANSFILE=f;const pick=(l&&(!f||String(l.saved)>String(f.saved)))?l:f;ANS=(pick&&pick.answers)||{};
+  const mig=migrateAns(ANS,D.answer_migration);
+  if(mig.moved.length||mig.values_mapped.length){ANS_MIGRATED=mig;queueSave();}
+}
+let ANS_MIGRATED=null;
+function migrateAns(ans,m){
+  // Carry answers saved against an older question set (old id -> new id / new option). Non-destructive:
+  // old keys stay; an answer already given on the new question wins. Mirrors questions.migrate_answers().
+  const rep={moved:[],values_mapped:[],conflicts:[],value_not_carried:[]};
+  if(!m||!m.map||!ans)return rep;
+  Object.keys(m.map).forEach(oid=>{
+    const e=m.map[oid]||{};const a=ans[oid];
+    if(!a||typeof a!=='object'||!(a.answer||a.note))return;
+    let val=a.answer;const vm=e.values||{};
+    if(val!=null&&vm[val]!=null)val=vm[val];
+    if(val!=null&&e.values_only&&!Object.values(vm).includes(val)){rep.value_not_carried.push(oid);return;}
+    if(val!=null&&e.options&&e.options.length&&!e.options.includes(val)){rep.value_not_carried.push(oid);return;}
+    const to=e.to;if(!to)return;
+    if(to!==oid){const cur=ans[to];
+      if(cur&&typeof cur==='object'&&(cur.answer||cur.note)){if(cur.migrated_from!==oid&&cur.answer!==val)rep.conflicts.push(oid);return;}
+      ans[to]=Object.assign({},a,{answer:val,migrated_from:oid});rep.moved.push(oid);}
+    else if(val!==a.answer){ans[oid]=Object.assign({},a,{answer:val,migrated_value_from:a.answer});rep.values_mapped.push(oid);}
+  });
+  return rep;
 }
 function ansDoc(){return {type:'reviewer-answers',name:'safe-reviewer-answers',property:(D.lot&&D.lot.slug)||'',question_set_version:(D.lot&&D.lot.question_set_version)||null,question_set_sha256:(D.lot&&D.lot.question_set_sha256)||null,saved:new Date().toISOString(),answers:ANS};}
 function qStatus(m,k){const e=document.getElementById('qstat');if(e){e.textContent=m;e.className='qstat'+(k?' '+k:'');}}
@@ -2684,7 +2707,8 @@ function featPtsPx(feat){
 }
 function qHasLoc(q){
   const l=q&&q.link; if(!l) return false;
-  if(l.kind==='asset'||l.kind==='region'||l.kind==='outline'||l.kind==='camera'||l.kind==='hydrant'||l.kind==='zone_pins') return true;
+  if(l.kind==='camera'){const c=(D.cams||[]).find(x=>x.device===l.id||x.pin===l.id);return !!(c&&(c.px||(c.lat!=null&&c.lng!=null)));}
+  if(l.kind==='asset'||l.kind==='region'||l.kind==='region_set'||l.kind==='zone_band'||l.kind==='outline'||l.kind==='hydrant'||l.kind==='zone_pins') return true;
   if(l.kind==='measurement'){const m=measPts(measRow(l.id));return !!(m.pts&&m.pts.length);}
   return false;
 }
@@ -2749,6 +2773,8 @@ function linkBtn(l){if(!l)return '';
   if(l.kind==='measurement'){const row=measRow(l.id);return `<button class="linkchip" onclick="go('measurements','meas-${esc(l.id)}')">↗ ${(row&&row.label)||l.id} on Measurements</button>`;}
   if(l.kind==='hydrant')return `<button class="linkchip" onclick="go('fire')">↗ water-supply fact on Fire</button>`;
   if(l.kind==='zone_pins')return `<a class="linkchip" style="text-decoration:none" href="zones.html" target="_blank" rel="noopener">↗ zone pin editor</a>`;
+  if(l.kind==='region_set'){const n=(l.ids||[l.id]).length;return `<button class="linkchip" onclick="go('regions')">↗ ${n} region${n===1?'':'s'} on Regions</button>`;}
+  if(l.kind==='zone_band'){const m=((D.map&&D.map.zone_meta)||[])[zoneBandIndex(l.id)]||{};return `<button class="linkchip" onclick="go('fire')">↗ ${esc(m.label||l.id)} band on Fire</button>`;}
   return '';}
 function drawQ(){
   const Q=D.questions.filter(q=>(QG==='all'||q.group===QG)&&(!QOPEN||!(ANS[q.id]&&ANS[q.id].answer))&&(!QTXT||(q.id+' '+q.text).toLowerCase().includes(QTXT)));
@@ -2779,8 +2805,29 @@ function pxOfLonLat(lon,lat){if(!(D.cam_ctx&&D.cam_ctx.bounds))return [NaN,NaN];
 function regionFeat(id){if(!REGS)return null;return (REGS.features||[]).find(f=>String(f.id)===String(id))||null;}
 function ringsOf(feat){if(!feat||!feat.geometry)return [];const g=feat.geometry;if(g.type==='Polygon')return [g.coordinates];if(g.type==='MultiPolygon')return g.coordinates;return [];}
 function boundsOfPx(pts){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;pts.forEach(p=>{if(p[0]<x0)x0=p[0];if(p[1]<y0)y0=p[1];if(p[0]>x1)x1=p[0];if(p[1]>y1)y1=p[1];});return [x0,y0,x1,y1];}
+function zoneBandIndex(band){const meta=(D.map&&D.map.zone_meta)||[];const i=meta.findIndex(z=>z.band===band);return i>=0?i:({'0_5ft':0,'5_30ft':1,'30_100ft':2}[band]??-1);}
 function linkTarget(link){
   if(!link)return null;
+  if(link.kind==='region_set'){
+    // Several regions at once (debris piles, every patio / deck / solar array): highlight and fit all of them.
+    const ids=(link.ids&&link.ids.length?link.ids:[link.id]).filter(Boolean).map(String);
+    const pts=[], ringsLL=[], classes=new Set();let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    ids.forEach(id=>{const f=regionFeat(id);if(!f)return;featPtsPx(f).forEach(p=>pts.push(p));
+      const cls=canonicalClass((f.properties&&(f.properties['class']||f.properties.description))||'');if(cls)classes.add(cls);
+      ringsOf(f).forEach(poly=>(poly[0]||[]).forEach(c=>{if(c[0]<x0)x0=c[0];if(c[1]<y0)y0=c[1];if(c[0]>x1)x1=c[0];if(c[1]>y1)y1=c[1];ringsLL.push(c);}));});
+    const bbox=isFinite(x0)?[[[x0,y0],[x1,y0],[x1,y1],[x0,y1],[x0,y0]]]:null;
+    const found=ids.filter(id=>regionFeat(id)).length;
+    return {label:found+' region'+(found===1?'':'s')+(classes.size?' · '+[...classes].join(', '):''),pts,rid:ids[0],rids:ids,
+      ringsLL:bbox,shape:'poly',set:true,px:pts.length&&!bbox?pts[0]:null,layers:{ai:[...classes]}};
+  }
+  if(link.kind==='zone_band'){
+    // One defensible-space band (Zone 0 = 0-5 ft): turn the bands on, zoom to the house, draw this band as a ring.
+    const M=D.map||{};const i=zoneBandIndex(link.id);const rings=(M.zones&&M.zones[i])||[];const ring=rings[0]||[];
+    const meta=(M.zone_meta||[])[i]||{};
+    let px=null;if(ring.length){const b=boundsOfPx(ring);px=[(b[0]+b[2])/2,(b[1]+b[3])/2];}
+    return {label:(meta.label||link.id)+' defensible-space band',pts:ring.slice(),band:i,shape:'band',px,
+      layers:{zones:true,ai:(link.classes||[]).map(c=>canonicalClass(c))}};
+  }
   if(link.kind==='asset'){
     const a=D.assets.located.find(x=>x.id===link.id);if(!a)return {label:link.id};
     let pts=a.px?[a.px]:[];
@@ -2803,9 +2850,10 @@ function linkTarget(link){
   }
   if(link.kind==='outline'){
     if(link.id==='parcel') return {label:'parcel line',pts:(D.map||{}).parcel||[],ringsLL:D.cam_ctx&&D.cam_ctx.parcel?[D.cam_ctx.parcel]:null,shape:'poly'};
-    const pts=((D.map||{}).ai_roof||[]).flat();
+    const M=D.map||{};
+    const pts=(M.ai_roof||[]).flat().concat((M.trace||[]).flat());
     const rings=((D.cam_ctx||{}).roof||[]).map(r=>r);
-    return {label:'roof outlines',pts,ringsLL:rings,shape:'poly'};
+    return {label:'roof outlines (nadir trace and AI roof)',pts,ringsLL:rings,shape:'poly',layers:{on:['roof_trace','roof_ai']}};
   }
   if(link.kind==='measurement'){
     const row=measRow(link.id); if(!row) return {label:link.id};
@@ -2834,6 +2882,7 @@ function regionGroup(t){
   if(!t) return {pts,ids};
   (t.pts||[]).forEach(p=>pts.push(p));
   if(t.rid) ids.add(String(t.rid));
+  if(t.rids){t.rids.forEach(id=>ids.add(String(id)));return {pts,ids};}
   if(!(t.rid&&typeof REGS!=='undefined'&&REGS)) return {pts,ids};
   const polys=typeof regionPolysPx==='function'?regionPolysPx(REGS):[];
   const main=polys.filter(p=>String(p.id)===String(t.rid));
@@ -2856,12 +2905,28 @@ function regionGroup(t){
   });
   return {pts,ids,cls};
 }
+let QLY_AUTO={zones:false,ai:[]};
+function qLayersFor(t){
+  // Turn on the layers a question needs (debris class, defensible-space bands) while it is selected, and turn
+  // the previous question's automatic layers back off. A layer the reviewer had switched on stays on.
+  initQly();let changed=false;
+  if(QLY_AUTO.zones&&QLY.zones){QLY.zones=false;changed=true;}
+  QLY_AUTO.ai.forEach(c=>{if(QLY.ai[c]){QLY.ai[c]=false;changed=true;}});
+  (QLY_AUTO.on||[]).forEach(k=>{if(QLY[k]){QLY[k]=false;changed=true;}});
+  QLY_AUTO={zones:false,ai:[]};
+  const L=(t&&t.layers)||{};
+  if(L.zones&&!QLY.zones){QLY.zones=true;QLY_AUTO.zones=true;changed=true;}
+  (L.on||[]).forEach(k=>{if(!QLY[k]){QLY[k]=true;(QLY_AUTO.on=QLY_AUTO.on||[]).push(k);changed=true;}});
+  (L.ai||[]).forEach(c=>{if(c&&!QLY.ai[c]){QLY.ai[c]=true;QLY_AUTO.ai.push(c);changed=true;}});
+  if(changed){if(typeof buildQlyPanel==='function')buildQlyPanel();if(Q3&&Q3.ready)syncQ3Overlays();}
+}
 function qStat(t){const e=document.getElementById('qmapstat');if(e)e.textContent=t||'';}
 function showQ(id){
   QSEL=id;
   document.querySelectorAll('#qlist .q').forEach(c=>c.classList.toggle('sel',c.id==='q-'+id));
   const q=D.questions.find(x=>x.id===id);if(!q)return;
   const t=linkTarget(q.link);
+  qLayersFor(t&&t.pts&&t.pts.length?t:null);
   if(!t||!(t.pts&&t.pts.length)){qStat(qHasLoc(q)?'No outline is available for this question':'This question is not tied to a place on the map');if(Q3&&Q3.ready)syncQ3Overlays();drawQ2();return;}
   qStat('Showing '+t.label);
   const fitPts=regionGroup(t).pts;
@@ -2871,7 +2936,7 @@ function showQ(id){
 function resetQView(){
   if(QMODE==='2d'){if(QMAP)QMAP._user=false;scheduleFitQ2('parcel');}
   else if(Q3&&Q3.ready)resetQ3();
-  QSEL=null;document.querySelectorAll('#qlist .q').forEach(c=>c.classList.remove('sel'));qStat('');drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();
+  QSEL=null;qLayersFor(null);document.querySelectorAll('#qlist .q').forEach(c=>c.classList.remove('sel'));qStat('');drawQ2();if(Q3&&Q3.ready)syncQ3Overlays();
 }
 function resetQLayersDefault(){
   initQly();
@@ -3527,6 +3592,7 @@ function wireQlyPanel(){
     const all=e.target.closest('[data-qly-all]');
     if(!all) return;
     qSetAll(all.getAttribute('data-qly-all')==='1');
+    QLY_AUTO={zones:false,ai:[]};
     buildQlyPanel();
     drawQ2();
     if(Q3&&Q3.ready) syncQ3Overlays();
@@ -3538,6 +3604,7 @@ function wireQlyPanel(){
       const pack=(D.nearmap.packs||[]).find(p=>p.id===id);
       const names=Object.keys((pack&&pack.classes)||{});
       names.forEach(n=>{QLY.ai[n]=el.checked;});
+      QLY_AUTO.ai=QLY_AUTO.ai.filter(c=>!names.includes(c));
       buildQlyPanel();
       drawQ2();
       if(Q3&&Q3.ready) syncQ3Overlays();
@@ -3545,6 +3612,9 @@ function wireQlyPanel(){
     }
     const key=el.getAttribute('data-qly');
     if(!key) return;
+    if(key==='zones') QLY_AUTO.zones=false;
+    if(QLY_AUTO.on) QLY_AUTO.on=QLY_AUTO.on.filter(k=>k!==key);
+    if(key.indexOf('ai:')===0) QLY_AUTO.ai=QLY_AUTO.ai.filter(c=>c!==key.slice(3));
     if(key.indexOf('ai:')===0) QLY.ai[key.slice(3)]=el.checked;
     else if(key.indexOf('zsys:')===0) QLY.zone_sys[key.slice(5)]=el.checked;
     else QLY[key]=el.checked;
@@ -3623,7 +3693,17 @@ function drawQ2(){
       h+=`<path class="rgn${assetOn?' asset':''}" data-rid="${esc(p.id)}" d="${p.d}" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="${sw}" fill-rule="evenodd"></path>`;
     });
   }
-  if(qlyOn('zones')&&M.zones){const meta=M.zone_meta||[];M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones" points="${pts(r)}" fill="${col}" fill-opacity=".14" stroke="${col}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});}
+  if(qlyOn('zones')&&M.zones){const meta=M.zone_meta||[];const sel=(t&&t.shape==='band')?t.band:-1;
+    M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';if(i===sel)return;
+      const dim=sel>=0;(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones${dim?' dim':''}" points="${pts(r)}" fill="${col}" fill-opacity="${dim?'.04':'.14'}" stroke="${col}" stroke-opacity="${dim?'.35':'1'}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});
+    if(sel>=0){const col=(meta[sel]&&meta[sel].color)||'#ff6b6b';const outer=(M.zones[sel]||[])[0]||[];
+      // Inner edge: the recorded inner ring, else the band inside it, else the structure outline (seeded maps).
+      let holes=((M.zone_inner||[])[sel]||[]).filter(r=>r&&r.length>2);
+      if(!holes.length&&sel>0) holes=((M.zones[sel-1]||[]).slice(0,1)).filter(r=>r&&r.length>2);
+      if(!holes.length) holes=qRings(M.ai_roof&&M.ai_roof.length?M.ai_roof:(M.trace&&M.trace.length?M.trace:(M.sbfo||[]))).filter(r=>r&&r.length>2);
+      if(outer.length){const d='M'+outer.map(p=>p[0]+','+p[1]).join('L')+'Z'+holes.map(r=>'M'+r.map(p=>p[0]+','+p[1]).join('L')+'Z').join('');
+        h+=`<path class="ly-zones zband-halo" d="${d}" fill="none" stroke="#fff" stroke-width="4.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`;
+        h+=`<path class="ly-zones zband" data-band="${sel}" d="${d}" fill="${col}" fill-opacity=".42" fill-rule="evenodd" stroke="${col}" stroke-width="2.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`;}}}
   if(qlyOn('road')&&M.road&&M.road.length) qRings(M.road).forEach(r=>{h+=`<polyline class="ly-road" points="${pts(r)}" fill="none" stroke="#74c0fc" stroke-width="2.4" stroke-dasharray="8 5"/>`;});
   if(qlyOn('drive')&&M.drive&&M.drive.length) qRings(M.drive).forEach(r=>{h+=`<polyline class="ly-drive" points="${pts(r)}" fill="none" stroke="#f72585" stroke-width="2.6"/>`;});
   if(qlyOn('roof_sbfo')&&M.sbfo) qRings(M.sbfo).forEach(r=>{h+=`<polygon class="ly-sbfo" points="${pts(r)}" fill="none" stroke="#fab005" stroke-width="2.2" stroke-dasharray="6 4"/>`;});
@@ -3672,6 +3752,7 @@ function syncQHighlight(){
   const svg=document.getElementById('q2svg'); if(!svg) return;
   svg.querySelectorAll('.qsel-halo, .rgn-halo.qsel').forEach(el=>el.setAttribute('stroke-width',String(5.4/s)));
   svg.querySelectorAll('path.qsel, polygon.qsel, polyline.qsel, .rgn.hl.qsel').forEach(el=>el.setAttribute('stroke-width',String(3.2/s)));
+  svg.querySelectorAll('circle.qset-mark').forEach(c=>{c.setAttribute('r',String(15/s));c.setAttribute('stroke-width',String(2.4/s));});
   const pin=6.5/s;
   svg.querySelectorAll('.qpin circle:not(.halo), circle.qsel:not(.halo)').forEach(c=>{
     c.setAttribute('r',String(pin));
@@ -3698,8 +3779,13 @@ function syncQHighlight(){
   }
 }
 function qSelMarkup(t){
-  if(!t) return '';
+  if(!t||t.shape==='band') return '';
   let h='';
+  if(t.set&&t.rids&&REGS){
+    // Small regions (debris piles, panels) get a ring marker so each one is visible at house zoom.
+    t.rids.forEach(id=>{const f=regionFeat(id);if(!f)return;const p=featPtsPx(f);if(!p.length)return;const b=boundsOfPx(p);
+      h+=`<circle class="qset-mark" cx="${(b[0]+b[2])/2}" cy="${(b[1]+b[3])/2}" r="14" fill="none" stroke="#ffe066" stroke-width="2.4" pointer-events="none"></circle>`;});
+  }
   const gold='#ffe066';
   let drew=false;
   const grp=typeof regionGroup==='function'?regionGroup(t):{ids:t.rid?new Set([String(t.rid)]):new Set()};
