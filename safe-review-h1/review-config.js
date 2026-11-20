@@ -3,7 +3,7 @@ window.SAFE_REVIEW_CONFIG = {
  "lot_key": "a2ef91dd66ac",
  "salt": "zSXnotE4tAr80QXNMHbJEw==",
  "iter": 600000,
- "check": "CesbU+hrdh630EG9Wlv0eU5oWS3xd1OERet6EvfwEC4De2rN4AdbumM3",
+ "check": "rheJ/LTDA2RwD2YEOqtbyduCiFYsiqw8M5IDuGXLZ9Kr4B66u5KTSN24",
  "data_base": "d/",
  "data_live": "https://d1h1on7f1v1lpy.cloudfront.net/review/d9f759d7351db3886c79dd689c41e3c0/h1/",
  "legacy_keys": {
@@ -14,5 +14,5 @@ window.SAFE_REVIEW_CONFIG = {
   "reviewer_name": "h1-reviewer-name",
   "delivery": "seed"
  },
- "build": "cf9b5cea3399c36a"
+ "build": "695c7b99863fe754"
 };
