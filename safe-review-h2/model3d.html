@@ -72,9 +72,9 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
   <div class="status" id="stat">Loading the 3D model…</div>
   <div class="wait" id="wait">Loading the 3D model…</div>
 </div>
-<script src="review-config.js"></script>
-<script src="vendor/safe-crypto.js"></script>
-<script src="vendor/three-viewer.js"></script>
+<script src="review-config.js?v=3cbe24e54b5f64c1"></script>
+<script src="vendor/safe-crypto.js?v=3cbe24e54b5f64c1"></script>
+<script src="vendor/three-viewer.js?v=3cbe24e54b5f64c1"></script>
 <script>
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
 let KEY=null, D=null, V=null;
@@ -97,6 +97,18 @@ function toUTM10(lat,lon){
   return [k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*ep2)*A*A*A*A*A/120)+e0,
           k0*(M+N*(s/c)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24+(61-58*T+T*T+600*C-330*ep2)*A*A*A*A*A*A/720))];
 }
+/* Meshes cut by `safe mesh crop` are standard glTF (Y up, X east, Z south) in the export's offset frame with real
+   elevations and no extras; the viewer works Z-up in local UTM metres. Rotate those into the viewer frame using the
+   offset recorded in the payload (D.mesh_frame), and raycast from above the mesh top instead of z=80. */
+function meshFrameFix(THREE,root,extras){
+  const ex=extras||{};
+  if(ex.offset_utm10n||!(typeof D!=='undefined'&&D&&D.mesh_frame))return ex;
+  const mf=D.mesh_frame;
+  if(mf.up==='y'){root.rotation.x=Math.PI/2;}
+  root.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(root);
+  return {offset_utm10n:mf.offset||[0,0,0],center_local_xyz:[0,0,0],z_top:box.max.z+20,z_ground:box.min.z};
+}
 function llToMesh(lat,lon){
   const [e,n]=toUTM10(lat,lon);const ex=(V&&V.extras)||{};
   const off=ex.offset_utm10n||[0,0,0],c=ex.center_local_xyz||[0,0,0];
@@ -105,9 +117,10 @@ function llToMesh(lat,lon){
 function heightAt(x,y){
   if(!V||!V.root)return 8;
   const THREE=V.THREE;
-  const ray=new THREE.Raycaster(new THREE.Vector3(x,y,80),new THREE.Vector3(0,0,-1));
+  const ex=V.extras||{};
+  const ray=new THREE.Raycaster(new THREE.Vector3(x,y,ex.z_top!=null?ex.z_top:80),new THREE.Vector3(0,0,-1));
   const hits=ray.intersectObject(V.root,true);
-  return hits.length?hits[0].point.z:8;
+  return hits.length?hits[0].point.z:(ex.z_ground!=null?ex.z_ground:8);
 }
 function stat(t){const e=document.getElementById('stat');if(e)e.textContent=t;}
 
@@ -143,8 +156,11 @@ async function start(){
   URL.revokeObjectURL(url);
   V.root=gltf.scene;scene.add(V.root);
   V.extras=(gltf.parser&&gltf.parser.json.meshes&&gltf.parser.json.meshes[0]&&gltf.parser.json.meshes[0].extras)||{};
+  V.extras=meshFrameFix(THREE,V.root,V.extras);
   V.root.traverse(o=>{
     if(!o.isMesh||!o.material)return;
+    // a cropped export carries no normals; lit materials render black without them
+    if(o.geometry&&!o.geometry.getAttribute('normal'))o.geometry.computeVertexNormals();
     const list=[].concat(o.material);
     const next=list.map(m=>{
       if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;
