@@ -472,8 +472,8 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .sys-group .sys-body{padding:0 8px 8px}
 .sys-plain{margin:0 0 8px;font-size:13px;color:var(--ink2)}
 </style>
-<script src="review-config.js?v=cf9b5cea3399c36a"></script>
-<script src="vendor/safe-crypto.js?v=cf9b5cea3399c36a"></script>
+<script src="review-config.js?v=695c7b99863fe754"></script>
+<script src="vendor/safe-crypto.js?v=695c7b99863fe754"></script>
 </head>
 <body>
 <div id="lock">
@@ -2851,9 +2851,12 @@ function linkTarget(link){
   if(link.kind==='outline'){
     if(link.id==='parcel') return {label:'parcel line',pts:(D.map||{}).parcel||[],ringsLL:D.cam_ctx&&D.cam_ctx.parcel?[D.cam_ctx.parcel]:null,shape:'poly'};
     const M=D.map||{};
-    const pts=(M.ai_roof||[]).flat().concat((M.trace||[]).flat());
+    // ai_roof / trace may be one ring or a list of rings; draw each ring on its own (never one combined polygon).
+    const pxRings=qRings(M.ai_roof).filter(r=>r&&r.length>2).map(r=>({r,c:'#dc2f02'}))
+      .concat(qRings(M.trace).filter(r=>r&&r.length>2).map(r=>({r,c:'#ff922b'})));
+    const pts=pxRings.map(x=>x.r).flat();
     const rings=((D.cam_ctx||{}).roof||[]).map(r=>r);
-    return {label:'roof outlines (nadir trace and AI roof)',pts,ringsLL:rings,shape:'poly',layers:{on:['roof_trace','roof_ai']}};
+    return {label:'roof outlines (nadir trace and AI roof)',pts,pxRings,ringsLL:rings,shape:'rings',layers:{on:['roof_trace','roof_ai']}};
   }
   if(link.kind==='measurement'){
     const row=measRow(link.id); if(!row) return {label:link.id};
@@ -3788,6 +3791,12 @@ function qSelMarkup(t){
   }
   const gold='#ffe066';
   let drew=false;
+  if(t.shape==='rings'){
+    // each outline keeps its layer colour (AI roof red, nadir trace orange) over a white halo, so the two can be compared
+    (t.pxRings||[]).forEach(x=>{h+=`<polygon class="qsel-halo" points="${pts(x.r)}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" pointer-events="none"/>`;});
+    (t.pxRings||[]).forEach(x=>{h+=`<polygon class="qsel" points="${pts(x.r)}" fill="none" stroke="${x.c}" stroke-width="2.4" stroke-linejoin="round" pointer-events="none"/>`;});
+    return h;
+  }
   const grp=typeof regionGroup==='function'?regionGroup(t):{ids:t.rid?new Set([String(t.rid)]):new Set()};
   if(t.rid&&REGS){
     regionPolysPx(REGS).forEach(p=>{
