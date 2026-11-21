@@ -342,16 +342,18 @@ def static_checks():
         'C:/dev/property-intel/data/cameras/json/6de88883bfd4a8349a901c54611ed9d7.json',
         encoding='utf-8').read())['cameras']
     jones_live = {c['id']: c.get('live') or {} for c in jones_cams if c.get('live')}
-    check('S24c Jones has all 4 CHEKT live cameras on the confirmed pins',
-          len(jones_live) == 4
+    check('S24c Jones has all 12 CHEKT live cameras on pins',
+          len(jones_live) == 12
           and jones_live.get('cam-01', {}).get('name') == 'FRONT DOOR'
-          and jones_live.get('cam-07', {}).get('name') == 'UPPER DECK'
-          and jones_live.get('cam-08', {}).get('name') == 'LOWER DECK'
+          and jones_live.get('cam-07', {}).get('name') == 'UPPER DECK MASTER DOOR'
+          and jones_live.get('cam-08', {}).get('name') == 'LOWER DECK SINGLE DOOR'
           and jones_live.get('cam-14', {}).get('name') == 'DRIVEWAY'
-          and jones_live['cam-01'].get('device') == 'E8ABFAAC68C9'
-          and jones_live['cam-07'].get('device') == 'E8ABFAAC67AE'
-          and jones_live['cam-08'].get('device') == 'E8ABFAAC68DC'
-          and jones_live['cam-14'].get('device') == 'F4B1C20A440D')
+          and jones_live['cam-01'].get('device') == '4350162'
+          and jones_live['cam-07'].get('device') == '4350175'
+          and jones_live['cam-08'].get('device') == '4350171'
+          and jones_live['cam-14'].get('device') == '4350156'
+          and jones_live.get('cam-15', {}).get('name') == 'FRONT COURTYARD'
+          and jones_live.get('cam-22', {}).get('name') == 'SIDE DRONE')
 
 static_checks()
 
