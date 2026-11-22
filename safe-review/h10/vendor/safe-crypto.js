@@ -328,6 +328,25 @@
     if (!total) return rec ? ('Downloading… ' + fmtBytes(rec)) : 'Downloading…';
     return 'Downloading… ' + fmtBytes(rec) + ' of ' + fmtBytes(total) + ' (' + Math.min(100, Math.round(100 * rec / total)) + '%)';
   }
+  function directoryHref() {
+    try { if (CFG && CFG.directory) return String(CFG.directory); } catch (e) {}
+    try {
+      if (/\/safe-review\/h\d+(\/|$)/.test(location.pathname)) return '/safe-review/dir/';
+    } catch (e) {}
+    return '';
+  }
+  function redirectToDirectory() {
+    var dir = directoryHref();
+    if (!dir) return false;
+    var next = '';
+    try { next = location.pathname + location.search + location.hash; } catch (e) {}
+    var url = String(dir).replace(/\/?$/, '/');
+    if (next && next.indexOf('/safe-review/dir') !== 0) {
+      url += (url.indexOf('?') >= 0 ? '&' : '?') + 'from=' + encodeURIComponent(next);
+    }
+    try { location.replace(url); } catch (e) { return false; }
+    return true;
+  }
   async function wireUnlock(opts) {
     opts = opts || {};
     var form = document.getElementById(opts.form || 'lockform');
@@ -341,6 +360,10 @@
       if (opts.onReady) await opts.onReady();
     }
     if (await unlockFromSession()) { await ready(); return true; }
+    // Same-origin directory already stores this lot's session key after one unlock.
+    // Opening a reviewer under /safe-review/hN/ with no key goes back there.
+    // Keep the lock form as a fallback for standalone (local / single-lot) shells.
+    if (redirectToDirectory()) return false;
     if (!form) return false;
     form.addEventListener('submit', async function (ev) {
       ev.preventDefault();
@@ -376,6 +399,7 @@
     exportReview: exportReview, requestApproval: requestApproval, sha256Hex: sha256Hex, wireUnlock: wireUnlock, lotInfo: lotInfo, applyLotName: applyLotName,
     progressMsg: progressMsg,
     writeHandoff: writeHandoff, consumeHandoff: consumeHandoff,
+    directoryHref: directoryHref, redirectToDirectory: redirectToDirectory,
     ANS_KEY: ANS_KEY, PINS_KEY: PINS_KEY, ZONES_KEY: ZONES_KEY, APPROVE_KEY: APPROVE_KEY, REG_KEYS: REG_KEYS
   };
 })(window);
