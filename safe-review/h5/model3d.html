@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+<link rel="icon" href="data:,">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src blob: data:; media-src blob:; connect-src 'self' blob: https://d1h1on7f1v1lpy.cloudfront.net/; worker-src blob:; base-uri 'none'; form-action 'none'">
+<title>SAFE · 3D model</title>
+<style>
+:root{
+  --bg:#101412; --ink:#e8eeea; --ink2:#b4bfba; --ink3:#8a9691; --line:#2a332f;
+  --accent:#3c7a6f; --accent2:#1b3a35; --panel:rgba(16,20,18,.88);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 "Inter","Segoe UI",system-ui,sans-serif;overflow:hidden}
+#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#141a18,#1a1814)}
+#lock .box{width:400px;background:#fff;color:#1c2321;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px}
+#lock .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#7b8682}
+#lock h1{font-size:24px;margin:6px 0 4px}
+#lock p{color:#4a5551;margin:0 0 20px;font-size:14px}
+#lock input{width:100%;padding:12px 14px;border:1px solid #e3e7e4;border-radius:10px;font-size:15px;outline:none}
+#lock input:focus{border-color:#1f5f57;box-shadow:0 0 0 3px #e6f0ee}
+#lock button{margin-top:12px;width:100%;padding:12px;border:0;border-radius:10px;background:#1f5f57;color:#fff;font-weight:600;cursor:pointer;font:inherit}
+#lock .err{color:#8a3b3b;font-size:13px;min-height:20px;margin-top:8px}
+#app{display:none;position:fixed;inset:0}
+#view{position:absolute;inset:0}
+#view canvas{display:block;width:100%;height:100%}
+.bar{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+.bar .brand{font-weight:650;margin-right:8px}
+.bar .brand span{font-weight:400;color:var(--ink3);margin-left:6px}
+.bar a{color:#9fd4c8;text-decoration:none;font-size:13px}
+.bar a:hover{text-decoration:underline}
+.btn{border:1px solid var(--line);background:#1c2421;color:var(--ink);border-radius:8px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.qlab{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2);cursor:pointer;user-select:none}
+.qlab input{margin:0;accent-color:var(--accent)}
+.status{position:absolute;left:14px;bottom:14px;z-index:2;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--ink2);max-width:min(420px,70%)}
+.qnorth{position:absolute;top:62px;right:14px;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;z-index:2;pointer-events:none}
+.qnorth i{position:absolute;left:50%;top:6px;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:14px solid #fff;transform:translateX(-50%)}
+.qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700}
+.wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink2);z-index:1}
+.hint{margin-left:auto;font-size:12px;color:var(--ink3)}
+</style>
+</head>
+<body>
+<div id="lock">
+  <form class="box" id="lockform" autocomplete="off">
+    <div class="eyebrow">SAFE · Pass 1 review</div>
+    <h1><span class="lotname">SAFE</span> · 3D model</h1>
+    <p>This 3D model is encrypted. Enter the passphrase to open it.</p>
+    <input id="pw" type="password" autocomplete="off" autofocus>
+    <button type="submit" id="unl">Unlock</button>
+    <div class="err" id="err"></div>
+  </form>
+</div>
+<div id="app">
+  <div id="view"></div>
+  <div class="bar">
+    <div class="brand"><b class="lotname">SAFE</b> <span>3D model</span></div>
+    <a href="index.html">← Reviewer</a> <a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a> <a href="zones.html" target="_blank" rel="noopener">Zone pins</a> <a href="cameras.html" target="_blank" rel="noopener">Camera pins</a>
+    <button type="button" class="btn" id="btnReset">Reset view</button>
+    <button type="button" class="btn" id="btnTop">Top-down</button>
+    <label class="qlab"><input type="checkbox" id="lyParcel" checked> Parcel</label>
+    <label class="qlab"><input type="checkbox" id="lyTex" checked> Textures</label>
+    <label class="qlab"><input type="checkbox" id="lyWire"> Wireframe</label>
+    <span class="hint">Drag to orbit · scroll to zoom · right-drag to pan</span>
+  </div>
+  <div class="qnorth" id="qnorth" title="North"><i></i><b>N</b></div>
+  <div class="status" id="stat">Loading the 3D model…</div>
+  <div class="wait" id="wait">Loading the 3D model…</div>
+</div>
+<script src="review-config.js?v=62d8da00ca1f2afd"></script>
+<script src="vendor/safe-crypto.js?v=62d8da00ca1f2afd"></script>
+<script src="vendor/three-viewer.js?v=62d8da00ca1f2afd"></script>
+<script>
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+let KEY=null, D=null, V=null;
+async function fetchDec(f,opts){return SafeCrypto.fetchDec(f,opts);}
+async function afterUnlock(){
+  KEY=SafeCrypto.getKey();
+  D=JSON.parse(new TextDecoder().decode(await fetchDec('data.bin')));
+  document.getElementById('lock').remove();document.getElementById('app').style.display='block';
+  await start();
+}
+SafeCrypto.wireUnlock({onReady:afterUnlock});
+
+function toUTM10(lat,lon){
+  const a=6378137,f=1/298.257222101,k0=0.9996,lon0=-123*Math.PI/180,e0=500000;
+  const e=Math.sqrt(2*f-f*f),ep2=e*e/(1-e*e);
+  const latr=lat*Math.PI/180,lonr=lon*Math.PI/180,s=Math.sin(latr),c=Math.cos(latr);
+  const N=a/Math.sqrt(1-e*e*s*s),T=(s/c)*(s/c),C=ep2*c*c,A=(lonr-lon0)*c;
+  const e2=e*e,e4=e2*e2,e6=e4*e2;
+  const M=a*((1-e2/4-3*e4/64-5*e6/256)*latr-(3*e2/8+3*e4/32+45*e6/1024)*Math.sin(2*latr)+(15*e4/256+45*e6/1024)*Math.sin(4*latr)-(35*e6/3072)*Math.sin(6*latr));
+  return [k0*N*(A+(1-T+C)*A*A*A/6+(5-18*T+T*T+72*C-58*ep2)*A*A*A*A*A/120)+e0,
+          k0*(M+N*(s/c)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24+(61-58*T+T*T+600*C-330*ep2)*A*A*A*A*A*A/720))];
+}
+/* Meshes cut by `safe mesh crop` are standard glTF (Y up, X east, Z south) in the export's offset frame with real
+   elevations and no extras; the viewer works Z-up in local UTM metres. Rotate those into the viewer frame using the
+   offset recorded in the payload (D.mesh_frame), and raycast from above the mesh top instead of z=80. */
+function meshFrameFix(THREE,root,extras){
+  const ex=extras||{};
+  if(ex.offset_utm10n||!(typeof D!=='undefined'&&D&&D.mesh_frame))return ex;
+  const mf=D.mesh_frame;
+  if(mf.up==='y'){root.rotation.x=Math.PI/2;}
+  root.updateMatrixWorld(true);
+  const box=new THREE.Box3().setFromObject(root);
+  return {offset_utm10n:mf.offset||[0,0,0],center_local_xyz:[0,0,0],z_top:box.max.z+20,z_ground:box.min.z};
+}
+function llToMesh(lat,lon){
+  const [e,n]=toUTM10(lat,lon);const ex=(V&&V.extras)||{};
+  const off=ex.offset_utm10n||[0,0,0],c=ex.center_local_xyz||[0,0,0];
+  return [e-off[0]-c[0],n-off[1]-c[1]];
+}
+function heightAt(x,y){
+  if(!V||!V.root)return 8;
+  const THREE=V.THREE;
+  const ex=V.extras||{};
+  const ray=new THREE.Raycaster(new THREE.Vector3(x,y,ex.z_top!=null?ex.z_top:80),new THREE.Vector3(0,0,-1));
+  const hits=ray.intersectObject(V.root,true);
+  return hits.length?hits[0].point.z:(ex.z_ground!=null?ex.z_ground:8);
+}
+function stat(t){const e=document.getElementById('stat');if(e)e.textContent=t;}
+
+async function start(){
+  if(!window.SafeThree){stat('The 3D library did not load.');return;}
+  const {THREE,OrbitControls,GLTFLoader}=window.SafeThree;
+  const host=document.getElementById('view');
+  const scene=new THREE.Scene();scene.background=new THREE.Color(0x101412);
+  const w=host.clientWidth||800,h=host.clientHeight||600;
+  const cam=new THREE.PerspectiveCamera(50,w/Math.max(1,h),0.4,4000);cam.up.set(0,0,1);
+  const renderer=new THREE.WebGLRenderer({antialias:true});
+  renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
+  renderer.setSize(w,Math.max(1,h));
+  renderer.outputColorSpace=THREE.SRGBColorSpace;
+  renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure=1.05;
+  host.appendChild(renderer.domElement);
+  const controls=new OrbitControls(cam,renderer.domElement);
+  controls.enableDamping=true;controls.dampingFactor=0.08;controls.screenSpacePanning=true;
+  controls.maxPolarAngle=Math.PI*0.58;
+  const hemi=new THREE.HemisphereLight(0xe8f0ff,0x3d3428,0.85);
+  const sun=new THREE.DirectionalLight(0xfff3e0,1.05);
+  sun.position.set(120,-80,180);
+  const amb=new THREE.AmbientLight(0xffffff,0.28);
+  scene.add(hemi,sun,amb);
+  V={THREE,scene,cam,renderer,controls,host,root:null,extras:{},parcel:null,mats:[]};
+
+  stat('Downloading the 3D model…'); const buf=await fetchDec('mesh.bin',{onProgress:(a,b)=>stat(SafeCrypto.progressMsg(a,b))});
+  const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'}));
+  let gltf;
+  try{gltf=await new Promise((res,rej)=>new GLTFLoader().load(url,res,undefined,rej));}
+  catch(err){document.getElementById('wait').textContent='Could not load the 3D model.';stat('Load failed.');return;}
+  URL.revokeObjectURL(url);
+  V.root=gltf.scene;scene.add(V.root);
+  V.extras=(gltf.parser&&gltf.parser.json.meshes&&gltf.parser.json.meshes[0]&&gltf.parser.json.meshes[0].extras)||{};
+  V.extras=meshFrameFix(THREE,V.root,V.extras);
+  V.root.traverse(o=>{
+    if(!o.isMesh||!o.material)return;
+    // a cropped export carries no normals; lit materials render black without them
+    if(o.geometry&&!o.geometry.getAttribute('normal'))o.geometry.computeVertexNormals();
+    const list=[].concat(o.material);
+    const next=list.map(m=>{
+      if(m.map)m.map.colorSpace=THREE.SRGBColorSpace;
+      const std=new THREE.MeshStandardMaterial({
+        map:m.map||null,color:0xffffff,roughness:0.92,metalness:0,side:THREE.FrontSide
+      });
+      if(std.map){std.map.needsUpdate=true;std.userData._map=std.map;}
+      V.mats.push(std);
+      return std;
+    });
+    o.material=next.length===1?next[0]:next;
+  });
+  const wait=document.getElementById('wait');if(wait)wait.remove();
+  const v=V.extras, nV=v.vertices, nT=v.triangles;
+  // extras may not have counts; don't require them
+  stat('Nearmap textured mesh. Drag to move around the lot.');
+  buildParcel();
+  resetView(false);
+  applyMats();
+  const ro=new ResizeObserver(()=>{
+    const w=host.clientWidth,h=Math.max(1,host.clientHeight);if(!w)return;
+    cam.aspect=w/h;cam.updateProjectionMatrix();renderer.setSize(w,h);
+  });
+  ro.observe(host);
+  const loop=()=>{requestAnimationFrame(loop);controls.update();renderer.render(scene,cam);updateNorth();};
+  loop();
+  document.getElementById('btnReset').onclick=()=>resetView(false);
+  document.getElementById('btnTop').onclick=()=>resetView(true);
+  document.getElementById('lyParcel').onchange=()=>{if(V.parcel)V.parcel.visible=document.getElementById('lyParcel').checked;};
+  document.getElementById('lyTex').onchange=applyMats;
+  document.getElementById('lyWire').onchange=applyMats;
+}
+
+function applyMats(){
+  if(!V)return;
+  const tex=document.getElementById('lyTex').checked;
+  const wire=document.getElementById('lyWire').checked;
+  V.mats.forEach(m=>{
+    m.wireframe=wire;
+    if(tex){m.map=m.userData._map||m.map;m.color.set(0xffffff);}
+    else{if(m.map&&!m.userData._map)m.userData._map=m.map;m.map=null;m.color.set(0xc5c0b6);}
+    m.needsUpdate=true;
+  });
+  // stash maps on first call
+  V.mats.forEach(m=>{if(m.map&&!m.userData._map)m.userData._map=m.map;});
+}
+function buildParcel(){
+  if(!V||!D||!D.cam_ctx||!D.cam_ctx.parcel)return;
+  const THREE=V.THREE;
+  const ring=D.cam_ctx.parcel;
+  const pts=ring.map(p=>{const m=llToMesh(p[1],p[0]);return new THREE.Vector3(m[0],m[1],heightAt(m[0],m[1])+0.7);});
+  if(!pts[0].equals(pts[pts.length-1]))pts.push(pts[0].clone());
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  const line=new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffe066}));
+  V.scene.add(line);V.parcel=line;
+}
+function parcelSpan(){
+  const ring=(D&&D.cam_ctx&&D.cam_ctx.parcel)||[];
+  const pts=ring.map(p=>llToMesh(p[1],p[0]));
+  if(!pts.length)return {cx:0,cy:0,span:200,z:10};
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2;
+  const span=Math.max(Math.max(...xs)-Math.min(...xs),Math.max(...ys)-Math.min(...ys));
+  return {cx,cy,span,z:heightAt(cx,cy)};
+}
+function resetView(top){
+  if(!V)return;
+  const {cx,cy,span,z}=parcelSpan();
+  V.controls.target.set(cx,cy,z);
+  if(top){
+    V.cam.up.set(0,1,0);
+    V.cam.position.set(cx,cy-0.2,z+Math.max(180,span*1.25));
+  }else{
+    V.cam.up.set(0,0,1);
+    const d=Math.max(80,span*1.35);
+    V.cam.position.set(cx,cy-d*0.55,z+d*0.95);
+  }
+  V.controls.minDistance=12;V.controls.maxDistance=Math.max(900,span*5);
+  V.cam.lookAt(cx,cy,z);V.controls.update();
+  const b=document.getElementById('btnTop');if(b)b.classList.toggle('on',!!top);
+}
+function updateNorth(){
+  if(!V)return;
+  const THREE=V.THREE,t=V.controls.target.clone(),n=t.clone().add(new THREE.Vector3(0,20,0));
+  t.project(V.cam);n.project(V.cam);
+  const ang=Math.atan2(n.x-t.x,n.y-t.y);
+  const el=document.getElementById('qnorth');if(el)el.style.transform=`rotate(${ang}rad)`;
+}
+</script>
+</body>
+</html>
