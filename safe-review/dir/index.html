@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAFE review · Lane 1 directory</title>
+<style>
+:root{
+  --bg:#f5f6f4; --panel:#ffffff; --ink:#1c2321; --ink2:#4a5551; --ink3:#7b8682; --line:#e3e7e4; --line2:#eef1ef;
+  --accent:#1f5f57; --accent2:#e6f0ee; --amber:#a35d05; --amberbg:#fff4df; --amberline:#f3d29c;
+  --miss:#8a3b3b; --missbg:#fbeeee; --ok:#2f7a4a; --okbg:#e8f4ec; --blue:#2c5d8f; --bluebg:#eaf1f8;
+  --shadow:0 1px 2px rgba(20,30,25,.05),0 4px 14px rgba(20,30,25,.05);
+  --r:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.01em}
+a{color:var(--accent)}
+button{font:inherit}
+.num{font-variant-numeric:tabular-nums}
+#app{display:grid;grid-template-columns:248px minmax(0,1fr);min-height:100vh}
+aside{background:#17221f;color:#d7e0dc}
+aside .inner{position:sticky;top:0;max-height:100vh;overflow:auto;padding:26px 16px}
+aside .brand{padding:0 10px 22px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:14px}
+aside .brand .t{font-size:18px;font-weight:650;color:#fff}
+aside .brand .s{font-size:12.5px;color:#9fb0aa;margin-top:2px}
+aside nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:#c4d0cb;text-decoration:none;font-size:14px;margin-bottom:2px}
+aside nav a .n{width:20px;height:20px;border-radius:6px;background:rgba(255,255,255,.07);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#9fb0aa}
+aside nav a.on{background:#24403a;color:#fff}
+aside nav a.on .n{background:#3c7a6f;color:#fff}
+aside nav .navgrp{margin:12px 10px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f948d;font-weight:700}
+aside .foot{margin-top:24px;padding:14px 10px 0;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#8fa29b;line-height:1.5}
+main{padding:32px 36px 48px;max-width:1080px}
+.eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink3);font-weight:600}
+.lead{color:var(--ink2);margin:8px 0 0;max-width:720px}
+.note{margin:16px 0 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);font-size:13px;color:var(--ink2);max-width:720px}
+.list{display:flex;flex-direction:column;gap:12px;margin-top:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px 18px;text-decoration:none;color:inherit;display:block}
+a.card:hover{border-color:#c5d4cf;box-shadow:0 2px 8px rgba(20,30,25,.08)}
+a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
+.card.off{opacity:.92;cursor:default}
+.hd{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.hd h2{font-size:18px}
+.hd h2 span{font-weight:400;color:var(--ink3)}
+.meta{font-size:13px;color:var(--ink2);margin-top:6px}
+.meta code{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--ink);background:var(--line2);padding:1px 6px;border-radius:6px}
+.pills{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink3);background:var(--line2);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.tag.ok{background:var(--okbg);color:var(--ok)}
+.tag.amber{background:var(--amberbg);color:var(--amber)}
+.tag.grey{background:var(--line2);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.kpi{background:#fafbfa;border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
+.kpi .v{font-size:22px;font-weight:650;letter-spacing:-.02em;line-height:1.15}
+.kpi .v small{font-size:12.5px;font-weight:500;color:var(--ink3);margin-left:4px}
+.kpi .k{font-size:12px;color:var(--ink2);margin-top:2px}
+.go{margin-top:12px;font-size:13px;color:var(--accent);font-weight:600}
+.muted{color:var(--ink3)}
+@media (max-width:860px){
+  #app{grid-template-columns:1fr}
+  aside{display:none}
+  main{padding:22px 16px 36px}
+  .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <div class="inner">
+      <div class="brand"><div class="t">SAFE review</div><div class="s">Lane 1 reports</div></div>
+      <nav>
+        <div class="navgrp">Directory</div>
+        <a class="on" href="./"><span class="n">≡</span> All reports</a>
+      </nav>
+      <div class="foot">Counts only. Open a report to review it.</div>
+    </div>
+  </aside>
+  <main>
+    <div class="eyebrow">Lane 1</div>
+    <h1>Review directory</h1>
+    <p class="lead">Each card is one Lane 1 report. Open it to review the property. Progress is the number of cameras placed, zones, regions, and unanswered reviewer questions.</p>
+    <p class="note" id="qnote">Open questions are unanswered reviewer questions. If you have already unlocked a report in this browser on this site, the open count updates from those saved answers. Otherwise every question is shown as open. Pre-answers from the data still need a reviewer pick.</p>
+    <div class="list" id="list"></div>
+  </main>
+</div>
+<script>
+window.SAFE_REVIEW_DIRECTORY = {
+  "schema": "lane1/review-directory/1",
+  "built_at": "2026-11-22T00:26:47Z",
+  "lots": [
+    {
+      "code": "H1",
+      "label": "reference lot",
+      "lot_key": "a2ef91dd66ac",
+      "cameras_placed": 12,
+      "zones": 93,
+      "regions": 216,
+      "questions_total": 46,
+      "build_id": "695c7b99863fe754",
+      "built_at": "2026-11-20T19:06:38Z",
+      "has_site": true,
+      "deployed": true,
+      "live_at": "2026-11-20T19:11:12Z",
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h1/",
+      "href_local": "../h1/"
+    },
+    {
+      "code": "H2",
+      "label": "Highlands 2",
+      "lot_key": "a2e8e02d666b",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 432,
+      "questions_total": 21,
+      "build_id": "6c2c02f8d2f7abd7",
+      "built_at": "2026-11-20T18:13:28Z",
+      "has_site": true,
+      "deployed": true,
+      "live_at": "2026-11-20T18:22:57Z",
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h2/",
+      "href_local": "../h2/"
+    },
+    {
+      "code": "H3",
+      "label": "Highlands 3",
+      "lot_key": "f25fa0ed3bdf",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 449,
+      "questions_total": 16,
+      "build_id": "b0783f2d25355b57",
+      "built_at": "2026-11-22T00:18:43Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h3/",
+      "href_local": "../h3/"
+    },
+    {
+      "code": "H4",
+      "label": "Highlands 4",
+      "lot_key": "f799dfb4c5c1",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 299,
+      "questions_total": 18,
+      "build_id": "de32baae6f56ee8c",
+      "built_at": "2026-11-22T00:18:43Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h4/",
+      "href_local": "../h4/"
+    },
+    {
+      "code": "H5",
+      "label": "Highlands 5",
+      "lot_key": "5468a97f99cb",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 470,
+      "questions_total": 16,
+      "build_id": "62d8da00ca1f2afd",
+      "built_at": "2026-11-22T00:18:42Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h5/",
+      "href_local": "../h5/"
+    },
+    {
+      "code": "H6",
+      "label": "Highlands 6",
+      "lot_key": "6878a0481429",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 395,
+      "questions_total": 17,
+      "build_id": "348e42788337233b",
+      "built_at": "2026-11-22T00:18:42Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h6/",
+      "href_local": "../h6/"
+    },
+    {
+      "code": "H7",
+      "label": "Highlands 7",
+      "lot_key": "b02eb7c20330",
+      "cameras_placed": 8,
+      "zones": 0,
+      "regions": 443,
+      "questions_total": 27,
+      "build_id": "2cf53601149e1ef6",
+      "built_at": "2026-11-22T00:18:42Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h7/",
+      "href_local": "../h7/"
+    },
+    {
+      "code": "H8",
+      "label": "Highlands 8",
+      "lot_key": "23d94816b65c",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 350,
+      "questions_total": 18,
+      "build_id": "61273b0d1629a487",
+      "built_at": "2026-11-22T00:18:43Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h8/",
+      "href_local": "../h8/"
+    },
+    {
+      "code": "H9",
+      "label": "Highlands 9",
+      "lot_key": "996dfb11a63d",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 348,
+      "questions_total": 17,
+      "build_id": "c5526a3f0abff0a8",
+      "built_at": "2026-11-22T00:18:42Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h9/",
+      "href_local": "../h9/"
+    },
+    {
+      "code": "H10",
+      "label": "Highlands 10",
+      "lot_key": "d9f56f6c69bf",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 397,
+      "questions_total": 15,
+      "build_id": "8d6985860ef41c99",
+      "built_at": "2026-11-22T00:18:42Z",
+      "has_site": true,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "review_gate_pending",
+        "label": "Review gate pending"
+      },
+      "href_live": "/safe-review/h10/",
+      "href_local": "../h10/"
+    }
+  ]
+};
+</script>
+<script>
+(function () {
+  const DATA = window.SAFE_REVIEW_DIRECTORY || {lots: []};
+  const TZ = 'America/Chicago';
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function fmtWhen(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return esc(iso);
+    const text = new Intl.DateTimeFormat('en-US', {
+      timeZone: TZ, month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit'
+    }).format(d);
+    return text + ' CT';
+  }
+
+  function tryAnswers(lot) {
+    const total = lot.questions_total || 0;
+    let raw;
+    try { raw = localStorage.getItem('safe:' + lot.lot_key + ':answers'); } catch (e) { raw = null; }
+    if (!raw) return {open: total, answered: 0, source: 'build'};
+    try {
+      const env = JSON.parse(raw);
+      if (env && env.answers && typeof env.answers === 'object' && !env.ct) {
+        const n = Object.values(env.answers).filter(function (a) { return a && a.answer; }).length;
+        return {open: Math.max(0, total - n), answered: n, source: 'browser'};
+      }
+    } catch (e) {}
+    return {open: total, answered: null, source: 'sealed'};
+  }
+
+  function hrefFor(lot) {
+    if (lot.href_local) return lot.href_local;
+    if (lot.deployed || lot.live_detected) return lot.href_live || null;
+    return null;
+  }
+
+  function pill(kind, text) {
+    return '<span class="tag ' + kind + '">' + esc(text) + '</span>';
+  }
+
+  function render() {
+    const el = document.getElementById('list');
+    const lots = DATA.lots || [];
+    if (!lots.length) {
+      el.innerHTML = '<p class="muted">No Lane 1 reports in this directory.</p>';
+      return;
+    }
+    el.innerHTML = lots.map(function (lot) {
+      const q = tryAnswers(lot);
+      const href = hrefFor(lot);
+      const live = !!(lot.deployed || lot.live_detected);
+      const pills = [];
+      if (live) pills.push(pill('ok', lot.live_detected && !lot.deployed ? 'Live (detected)' : 'Live'));
+      else pills.push(pill('grey', 'Not deployed'));
+      if (lot.gate && lot.gate.label) pills.push(pill(lot.gate.key === 'signed_off' ? 'ok' : 'amber', lot.gate.label));
+      const meta = [];
+      if (lot.build_id) meta.push('build <code>' + esc(lot.build_id) + '</code>');
+      if (lot.built_at) meta.push('built ' + fmtWhen(lot.built_at));
+      const qsub = q.source === 'browser'
+        ? '<small>of ' + lot.questions_total + '</small>'
+        : (lot.questions_total ? '<small>of ' + lot.questions_total + '</small>' : '');
+      const qnote = q.source === 'sealed' ? ' · saved answers are locked in this browser' : '';
+      const go = href
+        ? '<div class="go">Open report →</div>'
+        : '<div class="go muted">Report is not on the live host yet</div>';
+      const inner =
+        '<div class="hd"><div><h2>' + esc(lot.code) + ' <span>· ' + esc(lot.label) + '</span></h2>' +
+        (meta.length ? '<div class="meta">' + meta.join(' · ') + '</div>' : '') +
+        '</div><div class="pills">' + pills.join('') + '</div></div>' +
+        '<div class="kpis">' +
+          '<div class="kpi"><div class="v num">' + esc(lot.cameras_placed) + '</div><div class="k">cameras placed</div></div>' +
+          '<div class="kpi"><div class="v num">' + esc(lot.zones) + '</div><div class="k">zones</div></div>' +
+          '<div class="kpi"><div class="v num">' + esc(lot.regions) + '</div><div class="k">regions</div></div>' +
+          '<div class="kpi"><div class="v num">' + esc(q.open) + qsub + '</div><div class="k">open questions' + qnote + '</div></div>' +
+        '</div>' + go;
+      if (href) return '<a class="card" href="' + esc(href) + '">' + inner + '</a>';
+      return '<div class="card off">' + inner + '</div>';
+    }).join('');
+  }
+
+  function probe() {
+    const lots = DATA.lots || [];
+    const jobs = lots.filter(function (lot) { return lot.href_live && !lot.href_local; }).map(function (lot) {
+      const url = lot.href_live.replace(/\/?$/, '/') + 'review-config.js';
+      return fetch(url, {method: 'GET', cache: 'no-store', mode: 'cors'}).then(function (r) {
+        if (r.ok) lot.live_detected = true;
+      }).catch(function () {});
+    });
+    return Promise.all(jobs).then(render);
+  }
+
+  render();
+  probe();
+})();
+</script>
+</body>
+</html>
