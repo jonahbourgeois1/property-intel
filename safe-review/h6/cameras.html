@@ -26,7 +26,8 @@
   #build { color:var(--ink-dim); font-size:11px; }
   .sp { flex:1; }
   .hnav { display:flex; gap:10px; }
-  .hnav a { color:var(--hot); text-decoration:none; font-size:12px; border:1px solid var(--line); padding:4px 9px; border-radius:4px; }
+  .hnav a { color:var(--hot); text-decoration:none; font-size:12px; border:1px solid var(--line); padding:8px 9px; border-radius:4px; min-height:44px; display:inline-flex; align-items:center; box-sizing:border-box; }
+  .hnav a.dir-link[hidden], .dir-link[hidden] { display:none !important; }
   .hnav a:hover { background:#2b333e; }
   main { flex:1 1 auto; min-height:0; display:grid; grid-template-columns: 300px minmax(0,1fr) 360px; }
   .panel { background:var(--panel); display:flex; flex-direction:column; min-height:0; min-width:0; }
@@ -93,7 +94,7 @@
   }
 </style>
 <script src="review-config.js?v=348e42788337233b"></script>
-<script src="vendor/safe-crypto.js?v=348e42788337233b"></script>
+<script src="vendor/safe-crypto.js?v=348e42788337233b"></script><script>(function(){function place(){var href=(window.SafeCrypto&&SafeCrypto.directoryHref&&SafeCrypto.directoryHref())||"";document.querySelectorAll("a.dir-link").forEach(function(a){if(href){a.setAttribute("href",href);a.removeAttribute("hidden");}else{a.setAttribute("hidden","");}});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",place);else place();})();</script>
 </head>
 <body>
 <div id="lock"><form id="lockform" autocomplete="off">
@@ -105,7 +106,7 @@
 </form></div>
 <header>
   <h1><span class="lotname">SAFE</span> cameras · pin placement</h1><span id="build"></span><span class="sp"></span>
-  <nav class="hnav"><a href="index.html#cameras">Reviewer</a><a href="index.html#alarms">Alarm (MAS)</a><a href="zones.html" target="_blank" rel="noopener">Zone pins</a><a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a><a href="model3d.html" target="_blank" rel="noopener">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
+  <nav class="hnav"><a class="dir-link" href="../dir/" hidden>All reports</a><a href="index.html#cameras">Reviewer</a><a href="index.html#alarms">Alarm (MAS)</a><a href="zones.html" target="_blank" rel="noopener">Zone pins</a><a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a><a href="model3d.html" target="_blank" rel="noopener">3D model</a><button type="button" class="btn" id="exportReview" style="margin-left:6px">Export my review</button><input id="revname" type="text" placeholder="Your name" style="width:120px;padding:4px 8px;border:1px solid var(--line);border-radius:4px;background:#1b2027;color:var(--ink)"></nav>
 </header>
 <main>
   <aside class="panel l">

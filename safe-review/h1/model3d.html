@@ -30,7 +30,8 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 .bar{position:absolute;top:0;left:0;right:0;z-index:2;display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
 .bar .brand{font-weight:650;margin-right:8px}
 .bar .brand span{font-weight:400;color:var(--ink3);margin-left:6px}
-.bar a{color:#9fd4c8;text-decoration:none;font-size:13px}
+.bar a{color:#9fd4c8;text-decoration:none;font-size:13px;min-height:44px;display:inline-flex;align-items:center;padding:0 8px;box-sizing:border-box}
+.bar a.dir-link[hidden],.dir-link[hidden]{display:none !important}
 .bar a:hover{text-decoration:underline}
 .btn{border:1px solid var(--line);background:#1c2421;color:var(--ink);border-radius:8px;padding:6px 11px;font:inherit;font-size:13px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
@@ -69,7 +70,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
   <div id="view"></div>
   <div class="bar">
     <div class="brand"><b class="lotname">SAFE</b> <span>3D model</span></div>
-    <a href="index.html">← Reviewer</a> <a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a> <a href="zones.html" target="_blank" rel="noopener">Zone pins</a> <a href="cameras.html" target="_blank" rel="noopener">Camera pins</a>
+    <a class="dir-link" href="../dir/" hidden>All reports</a> <a href="index.html">← Reviewer</a> <a href="nearmap-review.html" target="_blank" rel="noopener">Region editor</a> <a href="zones.html" target="_blank" rel="noopener">Zone pins</a> <a href="cameras.html" target="_blank" rel="noopener">Camera pins</a>
     <button type="button" class="btn" id="btnReset">Reset view</button>
     <button type="button" class="btn" id="btnTop">Top-down</button>
     <label class="qlab"><input type="checkbox" id="lyParcel" checked> Parcel</label>
@@ -82,7 +83,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
   <div class="wait" id="wait">Loading the 3D model…</div>
 </div>
 <script src="review-config.js?v=695c7b99863fe754"></script>
-<script src="vendor/safe-crypto.js?v=695c7b99863fe754"></script>
+<script src="vendor/safe-crypto.js?v=695c7b99863fe754"></script><script>(function(){function place(){var href=(window.SafeCrypto&&SafeCrypto.directoryHref&&SafeCrypto.directoryHref())||"";document.querySelectorAll("a.dir-link").forEach(function(a){if(href){a.setAttribute("href",href);a.removeAttribute("hidden");}else{a.setAttribute("hidden","");}});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",place);else place();})();</script>
 <script src="vendor/three-viewer.js?v=695c7b99863fe754"></script>
 <script>
 const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
