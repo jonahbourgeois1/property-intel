@@ -23,8 +23,8 @@ a{color:var(--accent)}
 button{font:inherit}
 .num{font-variant-numeric:tabular-nums}
 /* lock */
-#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#eef3f1,#f7f5ef)}
-#lock .box{width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px 34px 28px}
+#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(160deg,#eef3f1,#f7f5ef)}
+#lock .box{width:100%;max-width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px 34px 28px}
 #lock .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink3)}
 #lock h1{font-size:24px;margin:6px 0 4px}
 #lock p{color:var(--ink2);margin:0 0 20px;font-size:14px}
@@ -47,6 +47,7 @@ aside nav a.on{background:#24403a;color:#fff}
 aside nav a.on .n{background:#3c7a6f;color:#fff}
 aside nav .navgrp{margin:12px 10px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f948d;font-weight:700}
 aside nav .navgrp b{display:inline-block;width:16px;height:16px;border-radius:4px;background:#2c4a43;color:#d6e4df;text-align:center;line-height:16px;margin-right:6px;font-size:10px}
+.topbar,.nav-scrim{display:none}
 .l2row{cursor:pointer;padding:9px 12px;border-bottom:1px solid var(--line,#e6e9e7);display:flex;gap:10px;align-items:flex-start}
 .l2row:last-child{border-bottom:0}
 .l2row:hover{background:rgba(60,122,111,.06)}
@@ -471,6 +472,57 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .sys-group.empty>summary{color:var(--ink2)}
 .sys-group .sys-body{padding:0 8px 8px}
 .sys-plain{margin:0 0 8px;font-size:13px;color:var(--ink2)}
+
+/* Narrow screens: drawer nav, stacked cards, no page-wide horizontal scroll. Desktop rules above stay as they are. */
+@media (max-width:960px){
+  html,body{overflow-x:hidden}
+  #lock input,#lock button{min-height:44px}
+  #app,#app.show{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  .topbar{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:30;min-height:52px;padding:4px 10px;background:#17221f;color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
+  .topbar .t{font-size:16px;font-weight:650;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .nav-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
+  .nav-toggle:focus-visible{outline:2px solid #9fd4c8;outline-offset:2px}
+  .nav-toggle .bars{display:block;width:18px;height:2px;background:currentColor;border-radius:1px;box-shadow:0 -6px 0 currentColor,0 6px 0 currentColor}
+  aside{position:fixed;top:0;left:0;bottom:0;width:min(300px,86vw);z-index:40;transform:translateX(-100%);transition:transform .2s ease;box-shadow:none}
+  html.nav-open aside{transform:none;box-shadow:8px 0 24px rgba(0,0,0,.35)}
+  aside .inner{position:absolute;inset:0;max-height:none;height:100%}
+  .nav-scrim{display:none;position:fixed;inset:0;background:rgba(8,12,10,.45);z-index:35;border:0;padding:0;margin:0;width:100%;height:100%;cursor:pointer}
+  html.nav-open .nav-scrim{display:block}
+  html.nav-open,html.nav-open body{overflow:hidden}
+  aside nav a{min-height:44px}
+  main{padding:16px 14px 56px}
+  html.qmode main,html.splitmap main{padding:0}
+  .ph{flex-direction:column;align-items:flex-start;gap:10px}
+  .ph h2{font-size:22px}
+  .hero h1{font-size:24px}
+  .hero .l{padding:18px 16px}
+  .hero .r{min-height:200px}
+  .kv{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .g2,.g3,.g4,.packs,.cams,.gal{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid[style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr) !important}
+  .status{flex-direction:column}
+  .status>div{border-right:0;border-bottom:1px solid var(--line)}
+  .status>div:last-child{border-bottom:0}
+  .layer{grid-template-columns:minmax(0,1fr)}
+  .layer .src{text-align:left}
+  .zone{grid-template-columns:minmax(0,1fr)}
+  .assetwrap{grid-template-columns:minmax(0,1fr)}
+  .prov-item{flex-direction:column;gap:4px}
+  .prov-item b{min-width:0}
+  .card:has(table),.rdy{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .facts tr{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px 14px}
+  .facts td,.facts td.l,.facts td.v,.facts td.s{display:block;width:auto;max-width:100%;padding:0;border:0;text-align:left}
+  .facts tr+tr{border-top:1px solid var(--line2)}
+  .qtools input[type=search]{min-width:0;width:100%}
+  .amap-zoom button{width:44px;height:44px}
+  .seg button,.btnl,.qopt,.chip,.linkchip,.qly-btn,.qmap-tools .btnl{min-height:44px}
+  .legend label{min-height:44px}
+  #qly-panel{width:min(280px,calc(100% - 20px))}
+  #qly-panel .qly-row,#qly-panel summary{min-height:44px}
+}
+@media (max-width:560px){
+  .kv,.g2,.g3,.g4,.packs,.cams,.gal{grid-template-columns:minmax(0,1fr)}
+}
 </style>
 <script src="review-config.js?v=6c2c02f8d2f7abd7"></script>
 <script src="vendor/safe-crypto.js?v=6c2c02f8d2f7abd7"></script>
@@ -487,7 +539,12 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
   </form>
 </div>
 <div id="app">
-  <aside><div class="inner">
+  <button type="button" class="nav-scrim" id="navscrim" hidden aria-label="Close menu"></button>
+  <header class="topbar">
+    <button type="button" class="nav-toggle" id="navtoggle" aria-controls="sidenav" aria-expanded="false" aria-label="Open menu"><span class="bars" aria-hidden="true"></span></button>
+    <div class="t lotname">SAFE review</div>
+  </header>
+  <aside id="sidenav"><div class="inner">
     <div class="brand"><div class="t lotname">SAFE review</div><div class="s">Pass 1 review</div></div>
     <nav id="nav"></nav>
     <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" target="_blank" rel="noopener">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8" target="_blank" rel="noopener">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8" target="_blank" rel="noopener">Camera pins ↗</a></div></div>
@@ -501,6 +558,22 @@ let KEY=null, D=null; const URLS={};
 const SALT=SafeCrypto.SALT, ITER=SafeCrypto.ITER, CHECK=SafeCrypto.CHECK;
 async function dec(buf){return SafeCrypto.dec(buf);}
 async function fetchDec(f,opts){return SafeCrypto.fetchDec(f,opts);}
+
+function setupMobileNav(){
+  const html=document.documentElement, btn=document.getElementById('navtoggle'), scrim=document.getElementById('navscrim');
+  function open(on){
+    html.classList.toggle('nav-open', !!on);
+    if(scrim) scrim.hidden=!on;
+    if(btn){ btn.setAttribute('aria-expanded', on?'true':'false'); btn.setAttribute('aria-label', on?'Close menu':'Open menu'); }
+  }
+  if(btn) btn.addEventListener('click',()=>open(!html.classList.contains('nav-open')));
+  if(scrim) scrim.addEventListener('click',()=>open(false));
+  const nav=document.getElementById('nav');
+  if(nav) nav.addEventListener('click',ev=>{ if(ev.target.closest('a')) open(false); });
+  document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') open(false); });
+  window.addEventListener('resize',()=>{ if(window.matchMedia('(min-width:961px)').matches) open(false); });
+}
+setupMobileNav();
 async function afterUnlock(){
   KEY=SafeCrypto.getKey();
   D=normalizeD(JSON.parse(new TextDecoder().decode(await fetchDec('data.bin'))));
@@ -1114,7 +1187,9 @@ function rMeas(){
   });
   list+=`<div class="card mt"><div class="tblhead"><h3>Top 10 treetops within 30 m</h3><span class="tag">${esc(T('trees_tag','3D mesh'))}</span></div><table><thead><tr><th>#</th><th>Height</th><th>To roof edge</th><th>Bearing</th><th>${esc(T('lidar_col','Lidar'))}</th></tr></thead><tbody>${(D.trees||[]).map(t=>`<tr class="mrow" id="meas-tree-${t.rank}" data-mid="tree-${t.rank}"><td>T${t.rank}${has('tree-'+t.rank)?'':'<div class="tiny muted" style="margin-top:4px">No geometry on file</div>'}</td><td class="num"><b>${ftH(t.h)}</b></td><td class="num">${ftD(t.d)}</td><td class="num">${t.b}°</td><td class="num muted">${t.h2011!=null?ftH(t.h2011):'not checked'}</td></tr>`).join('')}</tbody></table></div>`;
   list+=`<div class="card pad mt"><h3>Caveats</h3><ul class="clean small">${(D.caveats||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
-  if(D.qa) list+=`<div class="card tile mt" onclick="lbOpen(D.qa,1)"><div class="im" style="background-image:url(${URLS.heights_qa});background-size:contain;background-color:#fff"></div><div class="cap"><b>Heights QA</b><div class="small muted">Click to enlarge</div></div></div>`;
+  // heights QA when the mesh rendered one, otherwise the first QA image on file (lots without a mesh have only measurements QA)
+  const qaI=(D.qa||[]).findIndex(q=>q.img==='heights_qa'&&URLS[q.img]), qaJ=qaI>=0?qaI:(D.qa||[]).findIndex(q=>URLS[q.img]);
+  if(qaJ>=0) list+=`<div class="card tile mt" onclick="lbOpen(D.qa,${qaJ})"><div class="im" style="background-image:url(${URLS[D.qa[qaJ].img]});background-size:contain;background-color:#fff"></div><div class="cap"><b>${esc(D.qa[qaJ].label)}</b><div class="small muted">Click to enlarge</div></div></div>`;
   const el=document.getElementById('pg-measurements');
   el.innerHTML=`<div class="qsplit"><div class="qmap">
       <div class="qmap-tools">
@@ -2851,9 +2926,12 @@ function linkTarget(link){
   if(link.kind==='outline'){
     if(link.id==='parcel') return {label:'parcel line',pts:(D.map||{}).parcel||[],ringsLL:D.cam_ctx&&D.cam_ctx.parcel?[D.cam_ctx.parcel]:null,shape:'poly'};
     const M=D.map||{};
-    const pts=(M.ai_roof||[]).flat().concat((M.trace||[]).flat());
+    // ai_roof / trace may be one ring or a list of rings; draw each ring on its own (never one combined polygon).
+    const pxRings=qRings(M.ai_roof).filter(r=>r&&r.length>2).map(r=>({r,c:'#dc2f02'}))
+      .concat(qRings(M.trace).filter(r=>r&&r.length>2).map(r=>({r,c:'#ff922b'})));
+    const pts=pxRings.map(x=>x.r).flat();
     const rings=((D.cam_ctx||{}).roof||[]).map(r=>r);
-    return {label:'roof outlines (nadir trace and AI roof)',pts,ringsLL:rings,shape:'poly',layers:{on:['roof_trace','roof_ai']}};
+    return {label:'roof outlines (nadir trace and AI roof)',pts,pxRings,ringsLL:rings,shape:'rings',layers:{on:['roof_trace','roof_ai']}};
   }
   if(link.kind==='measurement'){
     const row=measRow(link.id); if(!row) return {label:link.id};
@@ -3788,6 +3866,12 @@ function qSelMarkup(t){
   }
   const gold='#ffe066';
   let drew=false;
+  if(t.shape==='rings'){
+    // each outline keeps its layer colour (AI roof red, nadir trace orange) over a white halo, so the two can be compared
+    (t.pxRings||[]).forEach(x=>{h+=`<polygon class="qsel-halo" points="${pts(x.r)}" fill="none" stroke="#fff" stroke-width="5" stroke-linejoin="round" pointer-events="none"/>`;});
+    (t.pxRings||[]).forEach(x=>{h+=`<polygon class="qsel" points="${pts(x.r)}" fill="none" stroke="${x.c}" stroke-width="2.4" stroke-linejoin="round" pointer-events="none"/>`;});
+    return h;
+  }
   const grp=typeof regionGroup==='function'?regionGroup(t):{ids:t.rid?new Set([String(t.rid)]):new Set()};
   if(t.rid&&REGS){
     regionPolysPx(REGS).forEach(p=>{

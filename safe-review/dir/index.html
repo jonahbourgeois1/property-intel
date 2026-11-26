@@ -19,8 +19,8 @@ a{color:var(--accent)}
 button{font:inherit}
 .num{font-variant-numeric:tabular-nums}
 /* lock — same look as a reviewer */
-#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#eef3f1,#f7f5ef);z-index:20}
-#lock .box{width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px 34px 28px}
+#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(160deg,#eef3f1,#f7f5ef);z-index:20}
+#lock .box{width:100%;max-width:400px;background:#fff;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px 34px 28px}
 #lock .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink3)}
 #lock h1{font-size:24px;margin:6px 0 4px}
 #lock p{color:var(--ink2);margin:0 0 20px;font-size:14px}
@@ -69,11 +69,19 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
 .kpi .k{font-size:12px;color:var(--ink2);margin-top:2px}
 .go{margin-top:12px;font-size:13px;color:var(--accent);font-weight:600}
 .muted{color:var(--ink3)}
-@media (max-width:860px){
-  #app{grid-template-columns:1fr}
+@media (max-width:960px){
+  html,body{overflow-x:hidden}
+  #app,#app.show{grid-template-columns:minmax(0,1fr)}
   aside{display:none}
-  main{padding:22px 16px 36px}
+  main{padding:18px 14px 36px;max-width:100%}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .hd{flex-direction:column;align-items:flex-start}
+  .pills{justify-content:flex-start}
+  #lock input,#lock button{min-height:44px}
+  a.card{padding:16px}
+}
+@media (max-width:560px){
+  h1{font-size:26px}
 }
 </style>
 </head>
