@@ -226,13 +226,37 @@
 
 .qleg{display:inline-flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:11px;color:var(--muted,#6b7280)}
 .qleg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;border:1px solid rgba(0,0,0,.25)}
+
+  .mobile-note { display: none; }
+  @media (max-width: 960px) {
+    header { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+    #addr { flex: 1 1 100%; white-space: normal; }
+    .hnav { flex-wrap: wrap; width: 100%; gap: 8px; }
+    .hnav a { min-height: 44px; display: inline-flex; align-items: center; padding: 10px 12px; }
+    #lock input, #lock button { min-height: 44px; }
+    main {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(260px, 1fr) minmax(160px, 34vh);
+    }
+    .panel { border-left: 0; border-top: 1px solid var(--line); }
+    .btn, #tools .btn, #brushHistRow .btn, .submit-bar .btn, #assetLock .btn {
+      min-height: 44px; min-width: 44px; padding: 8px 12px;
+    }
+    #brushSize { min-height: 44px; }
+    .mobile-note {
+      display: block; font-size: 11px; color: var(--ink-dim);
+      max-width: 260px; margin: 0; padding: 2px 0 0; line-height: 1.4;
+    }
+    #regionsNote, .how { display: none; }
+
+  }
 </style>
 <script src="review-config.js?v=61273b0d1629a487"></script>
 <script src="vendor/safe-crypto.js?v=61273b0d1629a487"></script>
 </head>
 <body>
-<div id="lock" style="position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#141a18,#1a1814)">
-  <form class="box" id="lockform" autocomplete="off" style="width:400px;background:#fff;color:#1c2321;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px">
+<div id="lock" style="position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(160deg,#141a18,#1a1814)">
+  <form class="box" id="lockform" autocomplete="off" style="width:100%;max-width:400px;background:#fff;color:#1c2321;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px">
     <div style="font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#7b8682">SAFE · review</div>
     <h1 style="font-size:24px;margin:6px 0 4px"><span class="lotname">SAFE</span> region editor</h1>
     <p style="color:#4a5551;margin:0 0 20px;font-size:14px">This map is encrypted. Enter the passphrase to open it.</p>
@@ -264,6 +288,7 @@
         <button type="button" class="btn pins-only" id="seedPins" title="Pin each region except cover/veg skips; name is the region class">Auto Generate Pins</button>
         <span id="brushClass"></span>
       </div>
+      <p class="mobile-note">On a phone you can pan, pinch-zoom and view regions. Drawing and precise edits work best on a larger screen.</p>
       <label id="brushSizeRow" hidden>
         <span>Size</span>
         <input type="range" id="brushSize" min="4" max="48" value="12" step="1">
@@ -623,17 +648,42 @@
     return { latLng: new LatLng(l.lat, l.lng), pixel: new Point(x, y), stop: function () { stopped = true; }, get stopped() { return stopped; } };
   };
   Map.prototype._wire = function () {
-    var self = this, cv = this._cv, drag = null;
+    var self = this, cv = this._cv, drag = null, pinch = null, pointers = {};
     function local(ev) { var r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+    function list() {
+      return Object.keys(pointers).map(function (k) { return pointers[k]; });
+    }
     cv.addEventListener('pointerdown', function (ev) {
-      if (ev.button !== 0) return;
+      if (ev.pointerType !== 'touch' && ev.button !== 0) return;
       var p = local(ev);
-      drag = { x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, id: ev.pointerId };
+      pointers[ev.pointerId] = p;
       try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
+      var all = list();
+      if (all.length >= 2) {
+        var a = all[0], b = all[1];
+        var d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        pinch = { d0: d, z0: self._zoom, ll: self._toLL((a.x + b.x) / 2, (a.y + b.y) / 2) };
+        drag = null;
+        return;
+      }
+      drag = { x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, id: ev.pointerId };
     });
     cv.addEventListener('pointermove', function (ev) {
-      if (!drag) return;
+      if (!(ev.pointerId in pointers)) return;
       var p = local(ev);
+      pointers[ev.pointerId] = p;
+      if (pinch) {
+        var all = list();
+        if (all.length < 2) return;
+        var a = all[0], b = all[1];
+        var d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        self.zoomAround(pinch.z0 + Math.log2(d / pinch.d0), mx, my);
+        var now = self._toScreen(pinch.ll);
+        self.panBy(now.x - mx, now.y - my);
+        return;
+      }
+      if (!drag) return;
       if (!drag.moved && Math.hypot(p.x - drag.sx, p.y - drag.sy) > 4) drag.moved = true;
       if (drag.moved && self._opts.draggable !== false) {
         self.panBy(drag.x - p.x, drag.y - p.y);
@@ -642,10 +692,16 @@
       drag.x = p.x; drag.y = p.y;
     });
     function end(ev) {
-      if (!drag) return;
-      var d = drag; drag = null;
+      var d = drag;
+      delete pointers[ev.pointerId];
+      if (pinch) {
+        if (list().length < 2) pinch = null;
+        drag = null;
+        return;
+      }
+      drag = null;
       self.setOptions({});
-      if (ev.type === 'pointercancel' || d.moved) return;
+      if (ev.type === 'pointercancel' || !d || d.moved) return;
       var p = local(ev), hit = self._hit(p.x, p.y), e = self._evt(p.x, p.y);
       if (hit) { hit._ls.fire('click', e); if (e.stopped) return; }
       self._ls.fire('click', e);

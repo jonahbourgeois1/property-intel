@@ -70,12 +70,27 @@
   .status { flex:1 0 100%; min-height:1.2em; color:var(--ink-dim); font-size:12px; }
   .status.err { color:var(--err); }
   #lock { position:fixed; inset:0; z-index:50; background:var(--ground); display:flex; align-items:center; justify-content:center; }
-  #lock form { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:22px; width:340px; display:flex; flex-direction:column; gap:10px; }
+  #lock{padding:16px}
+  #lock form { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:22px; width:100%; max-width:340px; display:flex; flex-direction:column; gap:10px; }
   #lock input { padding:9px; border-radius:5px; border:1px solid var(--line); background:#1b2027; color:var(--ink); font:inherit; }
   #lock .err { color:var(--err); min-height:1.2em; font-size:12px; }
   #lb { position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.88); display:none; align-items:center; justify-content:center; flex-direction:column; gap:10px; }
   #lb img { max-width:92vw; max-height:84vh; border-radius:6px; }
   #lb .t { color:#fff; font-size:13px; }
+
+  @media (max-width:960px){
+    html,body{overflow-x:hidden}
+    header{flex-wrap:wrap;gap:8px;padding:8px 10px}
+    .hnav{flex-wrap:wrap;width:100%;gap:8px}
+    .hnav a,.hnav .btn,header .btn{min-height:44px;display:inline-flex;align-items:center;padding:10px 12px}
+    main{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(120px,26vh) minmax(200px,1fr) minmax(140px,32vh)}
+    .panel.l{border-right:0;border-bottom:1px solid var(--line)}
+    .panel.r{border-left:0;border-top:1px solid var(--line)}
+    #lock form{width:100%;max-width:340px;margin:16px}
+    #lock input,#lock button,.btn,#tools .btn{min-height:44px}
+    #zin,#zout{min-width:44px}
+    #tools{max-width:calc(100% - 16px)}
+  }
 </style>
 <script src="review-config.js?v=61273b0d1629a487"></script>
 <script src="vendor/safe-crypto.js?v=61273b0d1629a487"></script>
@@ -421,17 +436,42 @@
     return { latLng: new LatLng(l.lat, l.lng), pixel: new Point(x, y), stop: function () { stopped = true; }, get stopped() { return stopped; } };
   };
   Map.prototype._wire = function () {
-    var self = this, cv = this._cv, drag = null;
+    var self = this, cv = this._cv, drag = null, pinch = null, pointers = {};
     function local(ev) { var r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; }
+    function list() {
+      return Object.keys(pointers).map(function (k) { return pointers[k]; });
+    }
     cv.addEventListener('pointerdown', function (ev) {
-      if (ev.button !== 0) return;
+      if (ev.pointerType !== 'touch' && ev.button !== 0) return;
       var p = local(ev);
-      drag = { x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, id: ev.pointerId };
+      pointers[ev.pointerId] = p;
       try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
+      var all = list();
+      if (all.length >= 2) {
+        var a = all[0], b = all[1];
+        var d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        pinch = { d0: d, z0: self._zoom, ll: self._toLL((a.x + b.x) / 2, (a.y + b.y) / 2) };
+        drag = null;
+        return;
+      }
+      drag = { x: p.x, y: p.y, sx: p.x, sy: p.y, moved: false, id: ev.pointerId };
     });
     cv.addEventListener('pointermove', function (ev) {
-      if (!drag) return;
+      if (!(ev.pointerId in pointers)) return;
       var p = local(ev);
+      pointers[ev.pointerId] = p;
+      if (pinch) {
+        var all = list();
+        if (all.length < 2) return;
+        var a = all[0], b = all[1];
+        var d = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+        self.zoomAround(pinch.z0 + Math.log2(d / pinch.d0), mx, my);
+        var now = self._toScreen(pinch.ll);
+        self.panBy(now.x - mx, now.y - my);
+        return;
+      }
+      if (!drag) return;
       if (!drag.moved && Math.hypot(p.x - drag.sx, p.y - drag.sy) > 4) drag.moved = true;
       if (drag.moved && self._opts.draggable !== false) {
         self.panBy(drag.x - p.x, drag.y - p.y);
@@ -440,10 +480,16 @@
       drag.x = p.x; drag.y = p.y;
     });
     function end(ev) {
-      if (!drag) return;
-      var d = drag; drag = null;
+      var d = drag;
+      delete pointers[ev.pointerId];
+      if (pinch) {
+        if (list().length < 2) pinch = null;
+        drag = null;
+        return;
+      }
+      drag = null;
       self.setOptions({});
-      if (ev.type === 'pointercancel' || d.moved) return;
+      if (ev.type === 'pointercancel' || !d || d.moved) return;
       var p = local(ev), hit = self._hit(p.x, p.y), e = self._evt(p.x, p.y);
       if (hit) { hit._ls.fire('click', e); if (e.stopped) return; }
       self._ls.fire('click', e);

@@ -15,8 +15,8 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.45 "Inter","Segoe UI",system-ui,sans-serif;overflow:hidden}
-#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,#141a18,#1a1814)}
-#lock .box{width:400px;background:#fff;color:#1c2321;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px}
+#lock{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(160deg,#141a18,#1a1814)}
+#lock .box{width:100%;max-width:400px;background:#fff;color:#1c2321;border-radius:16px;box-shadow:0 10px 40px rgba(20,40,30,.12);padding:34px}
 #lock .eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#7b8682}
 #lock h1{font-size:24px;margin:6px 0 4px}
 #lock p{color:#4a5551;margin:0 0 20px;font-size:14px}
@@ -43,6 +43,15 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
 .qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700}
 .wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--ink2);z-index:1}
 .hint{margin-left:auto;font-size:12px;color:var(--ink3)}
+
+@media (max-width:960px){
+  #lock input,#lock button{min-height:44px}
+  .bar{padding:8px 10px;gap:8px}
+  .bar a,.btn,.qlab{min-height:44px;display:inline-flex;align-items:center;padding:8px 12px}
+  .hint{flex:1 0 100%;margin-left:0}
+  .qnorth{top:auto;bottom:14px;right:14px}
+  .status{max-width:calc(100% - 28px);left:10px;bottom:10px}
+}
 </style>
 </head>
 <body>
@@ -66,7 +75,7 @@ html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1
     <label class="qlab"><input type="checkbox" id="lyParcel" checked> Parcel</label>
     <label class="qlab"><input type="checkbox" id="lyTex" checked> Textures</label>
     <label class="qlab"><input type="checkbox" id="lyWire"> Wireframe</label>
-    <span class="hint">Drag to orbit · scroll to zoom · right-drag to pan</span>
+    <span class="hint">Drag to orbit · pinch or scroll to zoom · two-finger or right-drag to pan</span>
   </div>
   <div class="qnorth" id="qnorth" title="North"><i></i><b>N</b></div>
   <div class="status" id="stat">Loading the 3D model…</div>
