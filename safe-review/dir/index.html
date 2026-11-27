@@ -61,7 +61,9 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
 .tag{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink3);background:var(--line2);border-radius:999px;padding:2px 8px;white-space:nowrap}
 .tag.ok{background:var(--okbg);color:var(--ok)}
 .tag.amber{background:var(--amberbg);color:var(--amber)}
+.tag.blue{background:var(--bluebg);color:var(--blue)}
 .tag.grey{background:var(--line2);color:var(--ink2)}
+.tally{margin:16px 0 0;font-size:13px;color:var(--ink2)}
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
 .kpi{background:#fafbfa;border:1px solid var(--line2);border-radius:10px;padding:10px 12px}
 .kpi .v{font-size:22px;font-weight:650;letter-spacing:-.02em;line-height:1.15}
@@ -112,16 +114,17 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
   <main>
     <div class="eyebrow">Lane 1</div>
     <h1>Review directory</h1>
-    <p class="lead">Each card is one Lane 1 report. Open it in this tab to review the property without entering the passphrase again. Progress is the number of cameras placed, zones, regions, and unanswered reviewer questions.</p>
+    <p class="lead">Each card is one lot. Status shows how far Lane 1 has got. Open a built report in this tab to review it without entering the passphrase again. Counts are cameras placed, zones, regions, and unanswered reviewer questions.</p>
     <p class="note" id="qnote">Open questions are unanswered reviewer questions. If you have already unlocked a report in this browser on this site, the open count updates from those saved answers. Otherwise every question is shown as open. Pre-answers from the data still need a reviewer pick.</p>
+    <p class="tally" id="tally"></p>
     <div class="list" id="list"></div>
   </main>
 </div>
 <script src="vendor/safe-unlock.js"></script>
 <script>
 window.SAFE_REVIEW_DIRECTORY = {
-  "schema": "lane1/review-directory/1",
-  "built_at": "2026-11-22T01:38:33Z",
+  "schema": "lane1/review-directory/2",
+  "built_at": "2026-11-27T20:44:22Z",
   "lots": [
     {
       "code": "H1",
@@ -137,8 +140,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-20T19:11:12Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h1/",
       "href_local": null
@@ -157,8 +164,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-20T18:22:57Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h2/",
       "href_local": null
@@ -177,8 +188,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:36:29Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h3/",
       "href_local": null
@@ -197,8 +212,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:37:36Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h4/",
       "href_local": null
@@ -217,8 +236,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:38:07Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h5/",
       "href_local": null
@@ -237,8 +260,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:38:37Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h6/",
       "href_local": null
@@ -257,8 +284,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T01:29:22Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h7/",
       "href_local": null
@@ -277,8 +308,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:39:43Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h8/",
       "href_local": null
@@ -297,8 +332,12 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:40:12Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h9/",
       "href_local": null
@@ -317,10 +356,1070 @@ window.SAFE_REVIEW_DIRECTORY = {
       "deployed": true,
       "live_at": "2026-11-22T00:40:42Z",
       "gate": {
-        "key": "review_gate_pending",
-        "label": "Review gate pending"
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
+      },
+      "status": {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers"
       },
       "href_live": "/safe-review/h10/",
+      "href_local": null
+    },
+    {
+      "code": "H11",
+      "label": "Highlands 11",
+      "lot_key": "94d162844e78",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H12",
+      "label": "Highlands 12",
+      "lot_key": "84376903075d",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H13",
+      "label": "Highlands 13",
+      "lot_key": "b26a99880cc4",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H14",
+      "label": "Highlands 14",
+      "lot_key": "bc4c74881552",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H15",
+      "label": "Highlands 15",
+      "lot_key": "dea592884c77",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H16",
+      "label": "Highlands 16",
+      "lot_key": "4ac6b5c5d4ab",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H17",
+      "label": "Highlands 17",
+      "lot_key": "d4f7410aa177",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H18",
+      "label": "Highlands 18",
+      "lot_key": "dfa93090ad3a",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H19",
+      "label": "Highlands 19",
+      "lot_key": "17c2c16b6384",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H20",
+      "label": "Highlands 20",
+      "lot_key": "f5eb83606953",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H21",
+      "label": "Highlands 21",
+      "lot_key": "f7f70c1864ee",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H22",
+      "label": "Highlands 22",
+      "lot_key": "9bb0f93b07bc",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H23",
+      "label": "Highlands 23",
+      "lot_key": "59e664238dbf",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H24",
+      "label": "Highlands 24",
+      "lot_key": "b962e6976ad8",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H25",
+      "label": "Highlands 25",
+      "lot_key": "0f547374292e",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H26",
+      "label": "Highlands 26",
+      "lot_key": "b7ab24732c65",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H27",
+      "label": "Highlands 27",
+      "lot_key": "b48cb6f0d3b4",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H28",
+      "label": "Highlands 28",
+      "lot_key": "81d86490bf01",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H29",
+      "label": "Highlands 29",
+      "lot_key": "79a84abf81a3",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H30",
+      "label": "Highlands 30",
+      "lot_key": "e117b03efd62",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H31",
+      "label": "Highlands 31",
+      "lot_key": "25e38174732a",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H32",
+      "label": "Highlands 32",
+      "lot_key": "67386a9ee27a",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H33",
+      "label": "Highlands 33",
+      "lot_key": "31c40cc3c6a2",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H34",
+      "label": "Highlands 34",
+      "lot_key": "3db5fdd513f4",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H35",
+      "label": "Highlands 35",
+      "lot_key": "eec765b6cc21",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H36",
+      "label": "Highlands 36",
+      "lot_key": "2b10ad9ccf41",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H37",
+      "label": "Highlands 37",
+      "lot_key": "30eef69ea350",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H38",
+      "label": "Highlands 38",
+      "lot_key": "01693858d9c8",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H39",
+      "label": "Highlands 39",
+      "lot_key": "f401fc260668",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H40",
+      "label": "Highlands 40",
+      "lot_key": "ff4a85d6215f",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H41",
+      "label": "Highlands 41",
+      "lot_key": "3609a65f7eee",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H42",
+      "label": "Highlands 42",
+      "lot_key": "c87bbd3eb338",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H43",
+      "label": "Highlands 43",
+      "lot_key": "3edd3861f2e7",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H44",
+      "label": "Highlands 44",
+      "lot_key": "7ad5b0f88f58",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H45",
+      "label": "Highlands 45",
+      "lot_key": "19d7e7f5f801",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H46",
+      "label": "Highlands 46",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H47",
+      "label": "Highlands 47",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H48",
+      "label": "Highlands 48",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H49",
+      "label": "Highlands 49",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H50",
+      "label": "Highlands 50",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H51",
+      "label": "Highlands 51",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H52",
+      "label": "Highlands 52",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H53",
+      "label": "Highlands 53",
+      "lot_key": null,
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "status": {
+        "key": "not_started",
+        "label": "Not started"
+      },
+      "href_live": null,
+      "href_local": null
+    },
+    {
+      "code": "H54",
+      "label": "Highlands 54",
+      "lot_key": "9e13b9f2e7a9",
+      "cameras_placed": 0,
+      "zones": 0,
+      "regions": 0,
+      "questions_total": 0,
+      "build_id": null,
+      "built_at": null,
+      "has_site": false,
+      "deployed": false,
+      "live_at": null,
+      "gate": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "status": {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures"
+      },
+      "href_live": null,
       "href_local": null
     }
   ]
@@ -374,21 +1473,53 @@ window.SAFE_REVIEW_DIRECTORY = {
     return '<span class="tag ' + kind + '">' + esc(text) + '</span>';
   }
 
+  function lotStatus(lot) {
+    return (lot && (lot.status || lot.gate)) || {};
+  }
+
+  function statusKind(key) {
+    if (key === 'signed_off') return 'ok';
+    if (key === 'awaiting_captures' || key === 'awaiting_gis') return 'blue';
+    if (key === 'not_started') return 'grey';
+    return 'amber';
+  }
+
+  function renderTally(lots) {
+    const el = document.getElementById('tally');
+    if (!el) return;
+    const order = ['signed_off', 'awaiting_reviewers', 'in_progress', 'awaiting_captures', 'awaiting_gis', 'not_started'];
+    const counts = {};
+    const labels = {};
+    lots.forEach(function (lot) {
+      const st = lotStatus(lot);
+      const key = st.key || 'unknown';
+      counts[key] = (counts[key] || 0) + 1;
+      if (st.label) labels[key] = st.label;
+    });
+    const parts = [lots.length + ' lot' + (lots.length === 1 ? '' : 's')];
+    order.forEach(function (k) {
+      if (counts[k]) parts.push(counts[k] + ' ' + (labels[k] || k));
+    });
+    el.textContent = parts.join(' · ');
+  }
+
   function render() {
     const el = document.getElementById('list');
     const lots = DATA.lots || [];
+    renderTally(lots);
     if (!lots.length) {
-      el.innerHTML = '<p class="muted">No Lane 1 reports in this directory.</p>';
+      el.innerHTML = '<p class="muted">No lots in this directory.</p>';
       return;
     }
     el.innerHTML = lots.map(function (lot) {
       const q = tryAnswers(lot);
       const href = hrefFor(lot);
       const live = !!(lot.deployed || lot.live_detected);
+      const st = lotStatus(lot);
       const pills = [];
       if (live) pills.push(pill('ok', lot.live_detected && !lot.deployed ? 'Live (detected)' : 'Live'));
       else pills.push(pill('grey', 'Not deployed'));
-      if (lot.gate && lot.gate.label) pills.push(pill(lot.gate.key === 'signed_off' ? 'ok' : 'amber', lot.gate.label));
+      if (st.label) pills.push(pill(statusKind(st.key), st.label));
       const meta = [];
       if (lot.build_id) meta.push('build <code>' + esc(lot.build_id) + '</code>');
       if (lot.built_at) meta.push('built ' + fmtWhen(lot.built_at));
@@ -398,7 +1529,9 @@ window.SAFE_REVIEW_DIRECTORY = {
       const qnote = q.source === 'sealed' ? ' · saved answers are locked in this browser' : '';
       const go = href
         ? '<div class="go">Open report →</div>'
-        : '<div class="go muted">Report is not on the live host yet</div>';
+        : '<div class="go muted">' + (lot.has_site || lot.build_id
+            ? 'Report is not on the live host yet'
+            : 'Report is not built yet') + '</div>';
       const inner =
         '<div class="hd"><div><h2>' + esc(lot.code) + ' <span>· ' + esc(lot.label) + '</span></h2>' +
         (meta.length ? '<div class="meta">' + meta.join(' · ') + '</div>' : '') +
@@ -425,9 +1558,15 @@ window.SAFE_REVIEW_DIRECTORY = {
     return Promise.all(jobs).then(render);
   }
 
-  function allSessionKeys() {
+  function unlockableLots() {
     const lots = DATA.lots || [];
-    if (!lots.length || !Unlock) return false;
+    if (!Unlock) return [];
+    return lots.filter(function (lot) { return Unlock.configUrl(lot); });
+  }
+
+  function allSessionKeys() {
+    const lots = unlockableLots();
+    if (!lots.length) return false;
     return lots.every(function (lot) { return lot.lot_key && Unlock.hasSessionKey(lot.lot_key); });
   }
 
@@ -460,7 +1599,7 @@ window.SAFE_REVIEW_DIRECTORY = {
   document.getElementById('list').addEventListener('auxclick', handoffOnOpen);
 
   async function unlockLots(pw) {
-    const lots = DATA.lots || [];
+    const lots = unlockableLots();
     const results = await Promise.all(lots.map(async function (lot) {
       const url = Unlock.configUrl(lot);
       if (!url) return {code: lot.code, ok: false, reason: 'href'};
@@ -478,6 +1617,10 @@ window.SAFE_REVIEW_DIRECTORY = {
   }
 
   async function boot() {
+    if (!unlockableLots().length) {
+      showDirectory();
+      return;
+    }
     if (allSessionKeys()) {
       if (followFrom()) return;
       showDirectory();
