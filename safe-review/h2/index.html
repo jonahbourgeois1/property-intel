@@ -372,6 +372,7 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .qnorth b{position:absolute;left:0;right:0;bottom:5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.04em}
 
 .qmap-status{position:absolute;left:12px;bottom:12px;z-index:2;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:3px 9px;border-radius:999px;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#qmapstat.qmap-status{white-space:normal;max-width:calc(100% - 24px);border-radius:10px;line-height:1.35}
 .q3wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c4d0cb;background:#1b1f1d;z-index:1;padding:24px;text-align:center}
 .qside{overflow:auto;padding:0 26px 48px;background:var(--bg);min-width:0;min-height:0}
 .qside>:first-child{margin-top:22px}
@@ -423,25 +424,28 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .qly-btn.on,.qmap-tools .btnl.ghost.on{background:var(--accent);color:#fff!important;border-color:var(--accent)}
 .qly-btn:disabled,.qmap-tools .btnl.ghost:disabled{opacity:.45;cursor:not-allowed}
 #qly-3dnote{color:#c4d0cb;font-size:12px}
-#qly-panel{position:absolute;top:10px;left:10px;width:280px;max-height:calc(100% - 20px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;z-index:6;background:rgba(20,24,22,.96);border:1px solid #3a4440;border-radius:10px;padding:8px 10px 12px;color:#d7e0dc;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#qly-panel{position:absolute;top:10px;left:10px;width:min(280px,calc(100% - 16px));max-height:calc(100% - 20px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;z-index:6;background:rgba(20,24,22,.96);border:1px solid #3a4440;border-radius:10px;padding:8px 10px 12px;color:#d7e0dc;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 #qly-panel[hidden],#qly-legend[hidden],#qly-3dnote[hidden],#qly-toggle[hidden]{display:none !important}
-#qly-panel .qly-head{display:flex;align-items:center;gap:6px;margin:0 0 8px;font-weight:650;font-size:12.5px}
+#qly-panel .qly-head{display:flex;align-items:center;gap:6px;margin:0 0 6px;font-weight:650;font-size:12.5px}
 #qly-panel .qly-head span{flex:1}
-#qly-panel .qly-mini{padding:2px 7px;font-size:11px;background:#1c2321;border:1px solid #3a4440;color:#c4d0cb;border-radius:6px;cursor:pointer}
+#qly-panel .qly-all{display:flex;align-items:center;justify-content:center;width:100%;min-height:44px;margin:0 0 8px;padding:8px 12px;font-size:13.5px;font-weight:650;background:#1c2321;border:1px solid #3a4440;color:#e8eeeb;border-radius:8px;cursor:pointer}
+#qly-panel .qly-all:hover{border-color:#6abf69;color:#fff}
+#qly-panel .qly-mini{padding:2px 7px;font-size:11px;background:#1c2321;border:1px solid #3a4440;color:#c4d0cb;border-radius:6px;cursor:pointer;min-height:44px}
 #qly-panel .qly-mini:hover{border-color:#6abf69;color:#fff}
 #qly-panel details{border-top:1px solid #2a3230;padding:6px 0 2px;margin:0}
 #qly-panel details:first-of-type{border-top:0}
-#qly-panel summary{cursor:pointer;font-weight:650;font-size:11.5px;color:#e8eeeb;list-style:none;display:flex;align-items:center;gap:6px}
+#qly-panel summary{cursor:pointer;font-weight:650;font-size:11.5px;color:#e8eeeb;list-style:none;display:flex;align-items:center;gap:6px;min-height:44px}
 #qly-panel summary::-webkit-details-marker{display:none}
 #qly-panel summary:before{content:'▸';font-size:10px;color:#8fa29b}
 #qly-panel details[open] summary:before{content:'▾'}
-#qly-panel .qly-row{display:flex;align-items:center;gap:6px;padding:3px 0 3px 2px;cursor:pointer;user-select:none;color:#c4d0cb}
+#qly-panel .qly-row{display:flex;align-items:center;gap:8px;padding:4px 2px;min-height:44px;cursor:pointer;user-select:none;color:#c4d0cb}
 #qly-panel .qly-row.sub{padding-left:18px}
-#qly-panel .qly-row input{margin:0;accent-color:var(--accent);flex:none}
+#qly-panel .qly-row input{margin:0;accent-color:var(--accent);flex:none;width:20px;height:20px}
 #qly-panel .qly-row .sw{display:inline-block;width:10px;height:10px;border-radius:2px;flex:none;border:1px solid rgba(255,255,255,.25)}
 #qly-panel .qly-row .nm{flex:1;min-width:0;line-height:1.3}
 #qly-panel .qly-row .n{color:#8fa29b;font-variant-numeric:tabular-nums;font-size:11px}
 #qly-panel .qly-note{font-size:10.5px;color:#8fa29b;line-height:1.35;padding:2px 0 4px 2px}
+#qly-panel .qly-sel-note{font-size:11.5px;color:#d7e0dc;padding:0 0 8px}
 #qly-panel .qly-pack{display:flex;align-items:center;gap:6px;width:100%;font-weight:650}
 
 .qhyd-call{position:absolute;z-index:5;background:#1c2321;color:#fff;border:1px solid #ffe066;border-radius:6px;padding:5px 8px;font-size:11px;pointer-events:none;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.35)}
@@ -2912,10 +2916,10 @@ function rQuestions(){
   });
   el.querySelector('#qlist').addEventListener('change',e=>{const t=e.target.closest('textarea[data-q]');if(!t)return;const cur=ANS[t.dataset.q]||{};cur.note=t.value.slice(0,2000);cur.at=new Date().toISOString();ANS[t.dataset.q]=cur;queueSave();});
   el.querySelector('#qmode').addEventListener('click',e=>{const b=e.target.closest('[data-mode]');if(b)setQMode(b.dataset.mode);});
-  const lg=el.querySelector('#qly-legend');if(lg){const meta=(D.map&&D.map.zone_meta&&D.map.zone_meta.length)?D.map.zone_meta:(D.nearmap.zones||[]).map((z,i)=>({label:z.label,color:['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b'}));lg.innerHTML=meta.map(z=>`<span><i style="background:${z.color}"></i>${esc(z.label)}</span>`).join('')+(D.hydrant&&D.hydrant.px?`<span><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>`:'');}
   initQly();
   buildQlyPanel();
   wireQlyPanel();
+  syncQLegend();
   el.querySelector('#qreset').onclick=()=>resetQView();
   drawQ();
   initQMap();
@@ -3068,18 +3072,9 @@ function regionGroup(t){
 }
 let QLY_AUTO={zones:false,ai:[]};
 function qLayersFor(t){
-  // Turn on the layers a question needs (debris class, defensible-space bands) while it is selected, and turn
-  // the previous question's automatic layers back off. A layer the reviewer had switched on stays on.
-  initQly();let changed=false;
-  if(QLY_AUTO.zones&&QLY.zones){QLY.zones=false;changed=true;}
-  QLY_AUTO.ai.forEach(c=>{if(QLY.ai[c]){QLY.ai[c]=false;changed=true;}});
-  (QLY_AUTO.on||[]).forEach(k=>{if(QLY[k]){QLY[k]=false;changed=true;}});
-  QLY_AUTO={zones:false,ai:[]};
-  const L=(t&&t.layers)||{};
-  if(L.zones&&!QLY.zones){QLY.zones=true;QLY_AUTO.zones=true;changed=true;}
-  (L.on||[]).forEach(k=>{if(!QLY[k]){QLY[k]=true;(QLY_AUTO.on=QLY_AUTO.on||[]).push(k);changed=true;}});
-  (L.ai||[]).forEach(c=>{if(c&&!QLY.ai[c]){QLY.ai[c]=true;QLY_AUTO.ai.push(c);changed=true;}});
-  if(changed){if(typeof buildQlyPanel==='function')buildQlyPanel();if(Q3&&Q3.ready)syncQ3Overlays();}
+  // Layer visibility is only changed from the Layers panel and is remembered per lot.
+  // Selecting a question still highlights that question's feature even when those layers are off.
+  initQly();
 }
 function qStat(t){const e=document.getElementById('qmapstat');if(e)e.textContent=t||'';}
 function showQ(id){
@@ -3090,7 +3085,7 @@ function showQ(id){
   qLayersFor(t&&t.pts&&t.pts.length?t:null);
   if(!t||!(t.pts&&t.pts.length)){qStat(qHasLoc(q)?'No outline is available for this question':'This question is not tied to a place on the map');if(Q3&&Q3.ready)syncQ3Overlays();drawQ2();return;}
   if(typeof revealQMap==='function') revealQMap();
-  qStat('Showing '+t.label);
+  qStat('Showing '+t.label+(qSelLayersOff(t)?' — layers off':''));
   const fitPts=regionGroup(t).pts;
   if(QMODE==='2d'){if(QMAP)QMAP._user=false;drawQ2();fitQ2Bounds(fitPts.length?fitPts:t.pts);}
   else {drawQ2();if(Q3&&Q3.ready)focusQ3(t);}
@@ -3211,7 +3206,8 @@ function applyQ3LayerMode(){
   const note=document.getElementById('qly-3dnote');
   if(btn){btn.disabled=is3d;btn.hidden=is3d;if(!is3d){btn.classList.toggle('on',!!QLY_OPEN);btn.setAttribute('aria-expanded',QLY_OPEN?'true':'false');}}
   if(panel) panel.hidden=is3d||!QLY_OPEN;
-  if(legend) legend.hidden=is3d||!qlyOn('zones');
+  if(typeof syncQLegend==='function') syncQLegend();
+  if(legend&&is3d) legend.hidden=true;
   if(note) note.hidden=!is3d;
 }
 function nadirCropPts(which){
@@ -3615,7 +3611,76 @@ function initQly(){
     assets:false, cameras:false, zonepins:false,
     zone_sys, ai
   };
+  loadQly();
   return QLY;
+}
+function qlyStorageKey(){
+  try{
+    if(window.SafeCrypto&&SafeCrypto.ANS_KEY) return String(SafeCrypto.ANS_KEY).replace(/:answers$/,':q-layers');
+  }catch(e){}
+  return '';
+}
+function loadQly(){
+  const key=qlyStorageKey(); if(!key||!QLY) return;
+  try{
+    const raw=localStorage.getItem(key); if(!raw) return;
+    const doc=JSON.parse(raw); const L=doc.layers||doc;
+    ['labels','parcel','road','drive','roof_trace','roof_ai','roof_sbfo','zones','hydrant','assets','cameras','zonepins'].forEach(k=>{
+      if(typeof L[k]==='boolean') QLY[k]=L[k];
+    });
+    if(L.ai&&typeof L.ai==='object') Object.keys(L.ai).forEach(k=>{QLY.ai[k]=!!L.ai[k];});
+    if(L.zone_sys&&typeof L.zone_sys==='object') Object.keys(L.zone_sys).forEach(k=>{QLY.zone_sys[k]=!!L.zone_sys[k];});
+  }catch(e){}
+}
+function saveQly(){
+  const key=qlyStorageKey(); if(!key||!QLY) return;
+  const ai={}; Object.keys(QLY.ai||{}).forEach(k=>{ai[k]=!!QLY.ai[k];});
+  const zone_sys={}; Object.keys(QLY.zone_sys||{}).forEach(k=>{zone_sys[k]=!!QLY.zone_sys[k];});
+  try{localStorage.setItem(key,JSON.stringify({v:1,layers:{
+    labels:!!QLY.labels,parcel:!!QLY.parcel,road:!!QLY.road,drive:!!QLY.drive,
+    roof_trace:!!QLY.roof_trace,roof_ai:!!QLY.roof_ai,roof_sbfo:!!QLY.roof_sbfo,
+    zones:!!QLY.zones,hydrant:!!QLY.hydrant,assets:!!QLY.assets,cameras:!!QLY.cameras,zonepins:!!QLY.zonepins,
+    ai,zone_sys
+  }}));}catch(e){}
+}
+function qlyAnyOn(){
+  initQly();
+  if(['labels','parcel','road','drive','roof_trace','roof_ai','roof_sbfo','zones','hydrant','assets','cameras','zonepins'].some(k=>QLY[k])) return true;
+  if(Object.keys(QLY.ai||{}).some(k=>QLY.ai[k])) return true;
+  if(Object.keys(QLY.zone_sys||{}).some(k=>QLY.zone_sys[k])) return true;
+  return false;
+}
+function qSelLayersOff(t){
+  if(!t) return !qlyAnyOn();
+  const L=t.layers||{};
+  if(L.zones&&!qlyOn('zones')) return true;
+  if((L.ai||[]).some(c=>!qAiOn(c))) return true;
+  if(t.shape==='point'&&t.px&&D.hydrant&&D.hydrant.px&&t.px[0]===D.hydrant.px[0]&&t.px[1]===D.hydrant.px[1]&&!qlyOn('hydrant')) return true;
+  if(!qlyAnyOn()) return true;
+  return false;
+}
+function applyQlyChange(){
+  QLY_AUTO={zones:false,ai:[]};
+  saveQly();
+  if(typeof buildQlyPanel==='function') buildQlyPanel();
+  if(typeof drawQ2==='function') drawQ2();
+  if(Q3&&Q3.ready) syncQ3Overlays();
+}
+function syncQLegend(){
+  const lg=document.getElementById('qly-legend');
+  if(!lg) return;
+  if(QMODE==='3d'){lg.hidden=true;return;}
+  initQly();
+  const parts=[];
+  if(qlyOn('zones')){
+    const meta=(D.map&&D.map.zone_meta&&D.map.zone_meta.length)?D.map.zone_meta:(D.nearmap.zones||[]).map((z,i)=>({label:z.label,color:['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b'}));
+    (meta||[]).forEach(z=>{parts.push(`<span data-leg="zones"><i style="background:${z.color}"></i>${esc(z.label||'')}</span>`);});
+  }
+  if(qlyOn('hydrant')&&D.hydrant&&D.hydrant.px){
+    parts.push('<span data-leg="hydrant"><i style="background:#c1121f;border-radius:50%"></i>Hydrant</span>');
+  }
+  lg.innerHTML=parts.join('');
+  lg.hidden=!parts.length;
 }
 function qMergeRegionClasses(){
   initQly();
@@ -3681,7 +3746,8 @@ function buildQlyPanel(){
   const nAssets=((D.assets&&D.assets.located)||[]).length;
   const nCam=(QCAM_PINS||((D.cams||[]).filter(c=>c.px||(c.lat!=null&&c.lng!=null)))).length;
   const nZ=((QZONE_PINS||((D.mas&&D.mas.pins)||[])).filter(p=>p.lat!=null&&p.lng!=null)).length;
-  let h=`<div class="qly-head"><span>Layers</span><button type="button" class="qly-mini" data-qly-all="1">All on</button><button type="button" class="qly-mini" data-qly-all="0">All off</button></div>`;
+  const anyOn=qlyAnyOn();
+  let h=`<div class="qly-head"><span>Layers</span></div><button type="button" class="qly-all" id="qly-all" data-qly-all="${anyOn?'0':'1'}" aria-pressed="${anyOn?'true':'false'}">${anyOn?'Hide all layers':'Show all'}</button><div class="qly-note qly-sel-note">A selected question still appears on the map when layers are off.</div>`;
   h+=qRow('labels','Labels',{checked:QLY.labels});
   h+=`<details open><summary>Taxlot / GIS</summary>`;
   h+=qRow('parcel','Parcel / taxlot line',{checked:QLY.parcel,sw:'#ffe066'});
@@ -3754,10 +3820,7 @@ function wireQlyPanel(){
     const all=e.target.closest('[data-qly-all]');
     if(!all) return;
     qSetAll(all.getAttribute('data-qly-all')==='1');
-    QLY_AUTO={zones:false,ai:[]};
-    buildQlyPanel();
-    drawQ2();
-    if(Q3&&Q3.ready) syncQ3Overlays();
+    applyQlyChange();
   });
   panel.addEventListener('change',e=>{
     const el=e.target;
@@ -3766,23 +3829,15 @@ function wireQlyPanel(){
       const pack=(D.nearmap.packs||[]).find(p=>p.id===id);
       const names=Object.keys((pack&&pack.classes)||{});
       names.forEach(n=>{QLY.ai[n]=el.checked;});
-      QLY_AUTO.ai=QLY_AUTO.ai.filter(c=>!names.includes(c));
-      buildQlyPanel();
-      drawQ2();
-      if(Q3&&Q3.ready) syncQ3Overlays();
+      applyQlyChange();
       return;
     }
     const key=el.getAttribute('data-qly');
     if(!key) return;
-    if(key==='zones') QLY_AUTO.zones=false;
-    if(QLY_AUTO.on) QLY_AUTO.on=QLY_AUTO.on.filter(k=>k!==key);
-    if(key.indexOf('ai:')===0) QLY_AUTO.ai=QLY_AUTO.ai.filter(c=>c!==key.slice(3));
     if(key.indexOf('ai:')===0) QLY.ai[key.slice(3)]=el.checked;
     else if(key.indexOf('zsys:')===0) QLY.zone_sys[key.slice(5)]=el.checked;
     else QLY[key]=el.checked;
-    if(key.indexOf('ai:')===0||key==='zonepins'||key.indexOf('zsys:')===0) buildQlyPanel();
-    drawQ2();
-    if(Q3&&Q3.ready) syncQ3Overlays();
+    applyQlyChange();
   });
 }
 function qPxLL(lat,lng){
@@ -3857,15 +3912,8 @@ function drawQ2(){
   }
   if(qlyOn('zones')&&M.zones){const meta=M.zone_meta||[];const sel=(t&&t.shape==='band')?t.band:-1;
     M.zones.forEach((rings,i)=>{const col=(meta[i]&&meta[i].color)||['#ff6b6b','#ffa94d','#ffd43b'][i]||'#ffd43b';if(i===sel)return;
-      const dim=sel>=0;(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones${dim?' dim':''}" points="${pts(r)}" fill="${col}" fill-opacity="${dim?'.04':'.14'}" stroke="${col}" stroke-opacity="${dim?'.35':'1'}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});
-    if(sel>=0){const col=(meta[sel]&&meta[sel].color)||'#ff6b6b';const outer=(M.zones[sel]||[])[0]||[];
-      // Inner edge: the recorded inner ring, else the band inside it, else the structure outline (seeded maps).
-      let holes=((M.zone_inner||[])[sel]||[]).filter(r=>r&&r.length>2);
-      if(!holes.length&&sel>0) holes=((M.zones[sel-1]||[]).slice(0,1)).filter(r=>r&&r.length>2);
-      if(!holes.length) holes=qRings(M.ai_roof&&M.ai_roof.length?M.ai_roof:(M.trace&&M.trace.length?M.trace:(M.sbfo||[]))).filter(r=>r&&r.length>2);
-      if(outer.length){const d='M'+outer.map(p=>p[0]+','+p[1]).join('L')+'Z'+holes.map(r=>'M'+r.map(p=>p[0]+','+p[1]).join('L')+'Z').join('');
-        h+=`<path class="ly-zones zband-halo" d="${d}" fill="none" stroke="#fff" stroke-width="4.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`;
-        h+=`<path class="ly-zones zband" data-band="${sel}" d="${d}" fill="${col}" fill-opacity=".42" fill-rule="evenodd" stroke="${col}" stroke-width="2.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`;}}}
+      const dim=sel>=0;(rings||[]).forEach(r=>{if(r&&r.length)h+=`<polygon class="ly-zones${dim?' dim':''}" points="${pts(r)}" fill="${col}" fill-opacity="${dim?'.04':'.14'}" stroke="${col}" stroke-opacity="${dim?'.35':'1'}" stroke-width="2" stroke-dasharray="5 3"></polygon>`;});});}
+  h+=qBandSelMarkup(t);
   if(qlyOn('road')&&M.road&&M.road.length) qRings(M.road).forEach(r=>{h+=`<polyline class="ly-road" points="${pts(r)}" fill="none" stroke="#74c0fc" stroke-width="2.4" stroke-dasharray="8 5"/>`;});
   if(qlyOn('drive')&&M.drive&&M.drive.length) qRings(M.drive).forEach(r=>{h+=`<polyline class="ly-drive" points="${pts(r)}" fill="none" stroke="#f72585" stroke-width="2.6"/>`;});
   if(qlyOn('roof_sbfo')&&M.sbfo) qRings(M.sbfo).forEach(r=>{h+=`<polygon class="ly-sbfo" points="${pts(r)}" fill="none" stroke="#fab005" stroke-width="2.2" stroke-dasharray="6 4"/>`;});
@@ -3903,8 +3951,7 @@ function drawQ2(){
   }
   h+=qSelMarkup(t);
   nadirSetGeom(QMAP,h);
-  const lg=document.getElementById('qly-legend');
-  if(lg) lg.hidden=QMODE==='3d'||!qlyOn('zones');
+  syncQLegend();
   syncQHighlight();
   drawHydrantCallout();
 }
@@ -3939,6 +3986,21 @@ function syncQHighlight(){
     hyd[1].setAttribute('r',String(6/s));
     hyd[1].setAttribute('stroke-width',String(2/s));
   }
+}
+function qBandSelMarkup(t){
+  if(!t||t.shape!=='band') return '';
+  const M=D.map||{}; const sel=t.band;
+  if(sel==null||sel<0||!M.zones) return '';
+  const meta=M.zone_meta||[];
+  const col=(meta[sel]&&meta[sel].color)||'#ff6b6b';
+  const outer=(M.zones[sel]||[])[0]||[];
+  let holes=((M.zone_inner||[])[sel]||[]).filter(r=>r&&r.length>2);
+  if(!holes.length&&sel>0) holes=((M.zones[sel-1]||[]).slice(0,1)).filter(r=>r&&r.length>2);
+  if(!holes.length) holes=qRings(M.ai_roof&&M.ai_roof.length?M.ai_roof:(M.trace&&M.trace.length?M.trace:(M.sbfo||[]))).filter(r=>r&&r.length>2);
+  if(!outer.length) return '';
+  const d='M'+outer.map(p=>p[0]+','+p[1]).join('L')+'Z'+holes.map(r=>'M'+r.map(p=>p[0]+','+p[1]).join('L')+'Z').join('');
+  return `<path class="ly-zones zband-halo qsel" d="${d}" fill="none" stroke="#fff" stroke-width="4.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`+
+    `<path class="ly-zones zband qsel" data-band="${sel}" d="${d}" fill="${col}" fill-opacity=".42" fill-rule="evenodd" stroke="${col}" stroke-width="2.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>`;
 }
 function qSelMarkup(t){
   if(!t||t.shape==='band') return '';
@@ -3995,7 +4057,9 @@ function drawHydrantCallout(){
   const st=document.getElementById('qstage');
   let el=document.getElementById('qhyd-call');
   if(el) el.remove();
-  if(!st||(typeof qlyOn==='function'? !qlyOn('hydrant') : false)||!D.hydrant||!D.hydrant.px||!QMAP) return;
+  const sel=QSEL?linkTarget((D.questions.find(q=>q.id===QSEL)||{}).link):null;
+  const selHyd=!!(sel&&sel.shape==='point'&&sel.px&&D.hydrant&&D.hydrant.px&&sel.px[0]===D.hydrant.px[0]&&sel.px[1]===D.hydrant.px[1]);
+  if(!st||((typeof qlyOn==='function'? !qlyOn('hydrant') : false)&&!selHyd)||!D.hydrant||!D.hydrant.px||!QMAP) return;
   const inner=document.getElementById('q2inner'); if(!inner) return;
   const [hx,hy]=D.hydrant.px;
   const sr=st.getBoundingClientRect();
