@@ -11,6 +11,12 @@
   --miss:#8a3b3b; --missbg:#fbeeee; --ok:#2f7a4a; --okbg:#e8f4ec; --blue:#2c5d8f; --bluebg:#eaf1f8;
   --shadow:0 1px 2px rgba(20,30,25,.05),0 4px 14px rgba(20,30,25,.05);
   --r:12px;
+  --st-not_started:#b7c0bc;
+  --st-awaiting_gis:#7aa3c9;
+  --st-awaiting_captures:#2c5d8f;
+  --st-in_progress:#c48a12;
+  --st-awaiting_reviewers:#a35d05;
+  --st-signed_off:#2f7a4a;
 }
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Inter","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
@@ -71,6 +77,27 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
 .kpi .k{font-size:12px;color:var(--ink2);margin-top:2px}
 .go{margin-top:12px;font-size:13px;color:var(--accent);font-weight:600}
 .muted{color:var(--ink3)}
+.dash{margin:22px 0 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:18px 20px 16px}
+.dash[hidden]{display:none}
+.dash-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.dash-pct{font-size:40px;font-weight:650;letter-spacing:-.03em;line-height:1}
+.dash-pct .unit{font-size:18px;font-weight:600;color:var(--ink3);margin-left:2px}
+.dash-sub{font-size:13px;color:var(--ink2);margin-top:4px}
+.bar{height:10px;background:var(--line2);border-radius:999px;overflow:hidden;margin-top:14px}
+.bar > i{display:block;height:100%;background:var(--accent);width:0}
+.dash-stack{display:flex;height:10px;border-radius:999px;overflow:hidden;margin-top:16px;background:var(--line2)}
+.dash-stack > i{display:block;height:100%;padding:0;border:0}
+.dash-stages{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+.stage{border:1px solid var(--line2);border-radius:10px;padding:10px 12px;background:#fafbfa}
+.stage.zero{opacity:.62}
+.stage .n{font-size:20px;font-weight:650;letter-spacing:-.02em;line-height:1.15}
+.stage .k{font-size:12px;color:var(--ink2);margin-top:3px;line-height:1.35}
+.stage .p{font-size:12px;color:var(--ink3);margin-top:2px}
+.swatch{width:8px;height:8px;border-radius:99px;display:inline-block;margin-right:6px;vertical-align:middle}
+.dash-note{margin:10px 0 0;font-size:12px;color:var(--ink3);line-height:1.45}
+.lot-steps{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:var(--ink2)}
+.lot-steps .bar{flex:1;margin:0;height:6px}
+.lot-steps .n{white-space:nowrap}
 @media (max-width:960px){
   html,body{overflow-x:hidden}
   #app,#app.show{grid-template-columns:minmax(0,1fr)}
@@ -81,9 +108,13 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
   .pills{justify-content:flex-start}
   #lock input,#lock button{min-height:44px}
   a.card{padding:16px}
+  .dash{padding:14px}
+  .dash-stages{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media (max-width:560px){
   h1{font-size:26px}
+  .dash-pct{font-size:34px}
+  .dash-stages{grid-template-columns:minmax(0,1fr)}
 }
 </style>
 </head>
@@ -115,6 +146,19 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
     <div class="eyebrow">Lane 1</div>
     <h1>Review directory</h1>
     <p class="lead">Each card is one lot. Status shows how far Lane 1 has got. Open a built report in this tab to review it without entering the passphrase again. Counts are cameras placed, zones, regions, and unanswered reviewer questions.</p>
+    <section class="dash" id="dash" hidden>
+      <div class="dash-head">
+        <div>
+          <div class="eyebrow">Lane 1 completion</div>
+          <div class="dash-sub" id="dash-sub"></div>
+        </div>
+        <div class="dash-pct num" id="dash-pct"></div>
+      </div>
+      <div class="bar" id="dash-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-label="Lane 1 completion"><i id="dash-bar-fill"></i></div>
+      <div class="dash-stack" id="dash-stack"></div>
+      <div class="dash-stages" id="dash-stages"></div>
+      <p class="dash-note" id="dash-note">Completion is the share of Lane 1 steps done (12 steps: 0-10, including 2b), averaged equally across lots.</p>
+    </section>
     <p class="note" id="qnote">Open questions are unanswered reviewer questions. If you have already unlocked a report in this browser on this site, the open count updates from those saved answers. Otherwise every question is shown as open. Pre-answers from the data still need a reviewer pick.</p>
     <p class="tally" id="tally"></p>
     <div class="list" id="list"></div>
@@ -123,8 +167,8 @@ a.card:focus{outline:2px solid var(--accent);outline-offset:2px}
 <script src="vendor/safe-unlock.js"></script>
 <script>
 window.SAFE_REVIEW_DIRECTORY = {
-  "schema": "lane1/review-directory/2",
-  "built_at": "2026-11-27T20:44:22Z",
+  "schema": "lane1/review-directory/3",
+  "built_at": "2026-11-27T21:30:46Z",
   "lots": [
     {
       "code": "H1",
@@ -147,6 +191,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h1/",
       "href_local": null
     },
@@ -171,6 +217,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h2/",
       "href_local": null
     },
@@ -195,6 +243,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h3/",
       "href_local": null
     },
@@ -219,6 +269,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h4/",
       "href_local": null
     },
@@ -243,6 +295,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h5/",
       "href_local": null
     },
@@ -267,6 +321,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h6/",
       "href_local": null
     },
@@ -291,6 +347,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h7/",
       "href_local": null
     },
@@ -315,6 +373,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h8/",
       "href_local": null
     },
@@ -339,6 +399,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h9/",
       "href_local": null
     },
@@ -363,6 +425,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_reviewers",
         "label": "Awaiting reviewers"
       },
+      "steps_done": 11,
+      "steps_total": 12,
       "href_live": "/safe-review/h10/",
       "href_local": null
     },
@@ -387,6 +451,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -411,6 +477,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -435,6 +503,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -459,6 +529,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -483,6 +555,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -507,6 +581,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -531,6 +607,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -555,6 +633,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -579,6 +659,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -603,6 +685,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -627,6 +711,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -651,6 +737,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -675,6 +763,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -699,6 +789,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -723,6 +815,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -747,6 +841,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -771,6 +867,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -795,6 +893,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -819,6 +919,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -843,6 +945,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -867,6 +971,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -891,6 +997,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -915,6 +1023,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -939,6 +1049,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -963,6 +1075,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -987,6 +1101,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1011,6 +1127,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1035,6 +1153,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1059,6 +1179,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1083,6 +1205,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1107,6 +1231,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1131,6 +1257,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1155,6 +1283,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1179,6 +1309,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1203,6 +1335,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1227,6 +1361,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1251,6 +1387,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1275,6 +1413,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1299,6 +1439,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1323,6 +1465,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1347,6 +1491,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1371,6 +1517,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1395,6 +1543,8 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "not_started",
         "label": "Not started"
       },
+      "steps_done": 0,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     },
@@ -1419,10 +1569,56 @@ window.SAFE_REVIEW_DIRECTORY = {
         "key": "awaiting_captures",
         "label": "GIS done, awaiting captures"
       },
+      "steps_done": 2,
+      "steps_total": 12,
       "href_live": null,
       "href_local": null
     }
-  ]
+  ],
+  "progress": {
+    "lots": 54,
+    "steps_done": 182,
+    "steps_total": 648,
+    "pct": 28.1,
+    "stages": [
+      {
+        "key": "not_started",
+        "label": "Not started",
+        "count": 8,
+        "pct": 14.8
+      },
+      {
+        "key": "awaiting_gis",
+        "label": "Intake done, awaiting GIS",
+        "count": 0,
+        "pct": 0.0
+      },
+      {
+        "key": "awaiting_captures",
+        "label": "GIS done, awaiting captures",
+        "count": 36,
+        "pct": 66.7
+      },
+      {
+        "key": "in_progress",
+        "label": "In progress",
+        "count": 0,
+        "pct": 0.0
+      },
+      {
+        "key": "awaiting_reviewers",
+        "label": "Awaiting reviewers",
+        "count": 10,
+        "pct": 18.5
+      },
+      {
+        "key": "signed_off",
+        "label": "Review gate signed off",
+        "count": 0,
+        "pct": 0.0
+      }
+    ]
+  }
 };
 </script>
 <script>
@@ -1484,6 +1680,58 @@ window.SAFE_REVIEW_DIRECTORY = {
     return 'amber';
   }
 
+  function stageColor(key) {
+    return 'var(--st-' + (key || 'not_started') + ', var(--ink3))';
+  }
+
+  function fmtPct(n) {
+    const v = Number(n);
+    if (!isFinite(v)) return '0%';
+    return (Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, '') + '%';
+  }
+
+  function renderDashboard(lots) {
+    const root = document.getElementById('dash');
+    if (!root) return;
+    const prog = DATA.progress || {};
+    const stages = prog.stages || [];
+    const n = prog.lots != null ? prog.lots : (lots || []).length;
+    const pct = prog.pct != null ? prog.pct : 0;
+    if (!n) { root.hidden = true; return; }
+    root.hidden = false;
+    const pctEl = document.getElementById('dash-pct');
+    if (pctEl) pctEl.innerHTML = '<span>' + esc(fmtPct(pct).replace('%','')) + '</span><span class="unit">%</span>';
+    const sub = document.getElementById('dash-sub');
+    if (sub) {
+      const done = prog.steps_done != null ? prog.steps_done : '';
+      const total = prog.steps_total != null ? prog.steps_total : '';
+      sub.textContent = (done !== '' && total !== '')
+        ? (n + ' lot' + (n === 1 ? '' : 's') + ' · ' + done + ' of ' + total + ' steps done')
+        : (n + ' lot' + (n === 1 ? '' : 's'));
+    }
+    const bar = document.getElementById('dash-bar');
+    const fill = document.getElementById('dash-bar-fill');
+    if (bar) bar.setAttribute('aria-valuenow', String(pct));
+    if (fill) fill.style.width = pct + '%';
+    const stack = document.getElementById('dash-stack');
+    if (stack) {
+      stack.setAttribute('aria-label', 'Lots by Lane 1 status');
+      stack.innerHTML = stages.filter(function (s) { return s.count; }).map(function (s) {
+        return '<i style="width:' + esc(s.pct) + '%;background:' + stageColor(s.key) + '" title="' + esc(s.label) + ': ' + esc(s.count) + '"></i>';
+      }).join('');
+    }
+    const box = document.getElementById('dash-stages');
+    if (box) {
+      box.innerHTML = stages.map(function (s) {
+        return '<div class="stage' + (s.count ? '' : ' zero') + '">' +
+          '<div class="n num">' + esc(s.count) + '</div>' +
+          '<div class="k"><span class="swatch" style="background:' + stageColor(s.key) + '"></span>' + esc(s.label) + '</div>' +
+          '<div class="p num">' + esc(fmtPct(s.pct)) + '</div>' +
+          '</div>';
+      }).join('');
+    }
+  }
+
   function renderTally(lots) {
     const el = document.getElementById('tally');
     if (!el) return;
@@ -1506,6 +1754,7 @@ window.SAFE_REVIEW_DIRECTORY = {
   function render() {
     const el = document.getElementById('list');
     const lots = DATA.lots || [];
+    renderDashboard(lots);
     renderTally(lots);
     if (!lots.length) {
       el.innerHTML = '<p class="muted">No lots in this directory.</p>';
@@ -1532,7 +1781,7 @@ window.SAFE_REVIEW_DIRECTORY = {
         : '<div class="go muted">' + (lot.has_site || lot.build_id
             ? 'Report is not on the live host yet'
             : 'Report is not built yet') + '</div>';
-      const inner =
+      let inner =
         '<div class="hd"><div><h2>' + esc(lot.code) + ' <span>· ' + esc(lot.label) + '</span></h2>' +
         (meta.length ? '<div class="meta">' + meta.join(' · ') + '</div>' : '') +
         '</div><div class="pills">' + pills.join('') + '</div></div>' +
@@ -1541,7 +1790,15 @@ window.SAFE_REVIEW_DIRECTORY = {
           '<div class="kpi"><div class="v num">' + esc(lot.zones) + '</div><div class="k">zones</div></div>' +
           '<div class="kpi"><div class="v num">' + esc(lot.regions) + '</div><div class="k">regions</div></div>' +
           '<div class="kpi"><div class="v num">' + esc(q.open) + qsub + '</div><div class="k">open questions' + qnote + '</div></div>' +
-        '</div>' + go;
+        '</div>';
+      if (lot.steps_total) {
+        const sp = lot.steps_total ? (100 * (lot.steps_done || 0) / lot.steps_total) : 0;
+        inner += '<div class="lot-steps"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="' +
+          esc(lot.steps_total) + '" aria-valuenow="' + esc(lot.steps_done || 0) +
+          '" aria-label="Lane 1 steps"><i style="width:' + sp + '%"></i></div>' +
+          '<span class="n num">' + esc(lot.steps_done || 0) + '/' + esc(lot.steps_total) + ' steps</span></div>';
+      }
+      inner += go;
       if (href) return '<a class="card" data-lot-key="' + esc(lot.lot_key || '') + '" href="' + esc(href) + '">' + inner + '</a>';
       return '<div class="card off">' + inner + '</div>';
     }).join('');
