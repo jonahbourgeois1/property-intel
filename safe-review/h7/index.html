@@ -47,6 +47,9 @@ aside nav a.on{background:#24403a;color:#fff}
 aside nav a.on .n{background:#3c7a6f;color:#fff}
 aside nav .navgrp{margin:12px 10px 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#7f948d;font-weight:700}
 aside nav .navgrp b{display:inline-block;width:16px;height:16px;border-radius:4px;background:#2c4a43;color:#d6e4df;text-align:center;line-height:16px;margin-right:6px;font-size:10px}
+aside a.dir-link{display:flex;align-items:center;gap:10px;margin:0 10px 12px;padding:9px 10px;min-height:44px;border-radius:8px;color:#c4d0cb;text-decoration:none;font-size:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05)}
+aside a.dir-link:hover{background:rgba(255,255,255,.08);color:#fff}
+aside a.dir-link[hidden],.dir-link[hidden]{display:none !important}
 .topbar,.nav-scrim{display:none}
 .l2row{cursor:pointer;padding:9px 12px;border-bottom:1px solid var(--line,#e6e9e7);display:flex;gap:10px;align-items:flex-start}
 .l2row:last-child{border-bottom:0}
@@ -337,8 +340,8 @@ html.qmode,html.splitmap,html.qmode body,html.splitmap body{height:100vh;overflo
 html.qmode #app,html.splitmap #app{height:100vh;overflow:hidden}
 html.qmode main,html.splitmap main{padding:0;overflow:hidden;min-height:0;display:flex;flex-direction:column}
 html.qmode main .wrap,html.splitmap main .wrap{max-width:none;width:100%;margin:0;flex:1;min-height:0;display:flex;flex-direction:column}
-html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on,html.splitmap #pg-alarms.on,html.splitmap #pg-cameras.on,html.splitmap .page.l2page.on{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
-.qsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1;min-height:0;height:100%}
+html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-assets.on,html.splitmap #pg-measurements.on,html.splitmap #pg-alarms.on,html.splitmap #pg-cameras.on,html.splitmap .page.l2page.on{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;width:100%;height:100%;overflow:hidden}
+.qsplit{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);flex:1 1 auto;min-height:0;min-width:0;width:100%;height:auto;align-self:stretch}
 .qmap{position:relative;min-width:0;min-height:0;background:#141816;display:flex;flex-direction:column;border-right:1px solid var(--line)}
 .qmap-tools{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;padding:10px 12px;background:rgba(20,24,22,.92);color:#d7e0dc;z-index:3;flex-shrink:0}
 .qmap-tools .seg{background:#1c2321;border-color:#3a4440}
@@ -370,9 +373,17 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 
 .qmap-status{position:absolute;left:12px;bottom:12px;z-index:2;color:#fff;font-size:12px;background:rgba(0,0,0,.45);padding:3px 9px;border-radius:999px;pointer-events:none;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .q3wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#c4d0cb;background:#1b1f1d;z-index:1;padding:24px;text-align:center}
-.qside{overflow:auto;padding:22px 26px 48px;background:var(--bg);min-width:0}
+.qside{overflow:auto;padding:0 26px 48px;background:var(--bg);min-width:0;min-height:0}
+.qside>:first-child{margin-top:22px}
 .qside .ph{margin-bottom:14px}
-.qside .qbar{position:sticky;top:0;background:var(--bg);z-index:3}
+.qhead{position:static;z-index:4;background:var(--bg);padding:8px 26px 10px;margin:0}
+.qhead .qbar,.qside .qhead .qbar,.qside .qbar{position:static;top:auto;background:transparent;box-shadow:none;z-index:auto;padding:6px 0;margin:0;gap:8px}
+.qsplit-questions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);grid-template-areas:"tools head" "map side";flex:1;min-height:0;height:100%}
+.qsplit-questions>.qchrome{display:contents}
+.qsplit-questions .qmap-tools{grid-area:tools}
+.qsplit-questions .qhead{grid-area:head;min-width:0;align-self:stretch;box-shadow:none;border-bottom:1px solid var(--line)}
+.qsplit-questions .qmap{grid-area:map;min-height:0;overflow:hidden}
+.qsplit-questions .qside{grid-area:side;overflow:auto;min-height:0;min-width:0}
 .q.sel{box-shadow:0 0 0 2px var(--accent)}
 .botest{margin-top:6px;padding:6px 8px 6px 9px;border-radius:7px;border-left:3px solid var(--ink3);background:var(--line2);color:var(--ink);font-size:13px;line-height:1.4}
 .botest.ok{border-left-color:var(--ok);background:var(--okbg)}
@@ -394,9 +405,12 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .qopt.est.bad{box-shadow:0 0 0 1.5px var(--miss);border-color:var(--miss)}
 .qopt.est:not(.on){background:#fff;color:var(--ink)}
 @media (max-width:900px){
-  .qsplit{grid-template-columns:1fr;grid-template-rows:minmax(240px,42vh) minmax(0,1fr)}
-  .qmap{border-right:0;border-bottom:1px solid var(--line)}
+  .qsplit{grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr)}
+  .qmap{border-right:0;border-bottom:1px solid var(--line);max-height:34vh;min-height:0;overflow:hidden}
+  .qmap-stage{min-height:120px}
   .qmap-hint{margin-left:0}
+  html.qmap-compact .qmap{max-height:22vh}
+  html.qmap-compact .qmap-hint{display:none}
 }
 
 .qleg{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;font-size:11px;color:var(--ink2);margin-left:6px}
@@ -441,7 +455,9 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 .keyfact.compact .kf-kicker{flex:none;font-size:10px}
 .keyfact.compact .kf-body{margin:0;font-size:12.5px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;color:#f6e7cf}
 .keyfact.compact .kf-link{flex:none;font-size:12px;white-space:nowrap}
-.qside{padding:14px 18px 32px}
+.qside{padding:0 18px 32px}
+.qside>:first-child{margin-top:14px}
+.qhead{margin:0;padding-left:18px;padding-right:18px}
 .qside .ph{margin-bottom:8px}
 .qside .ph h2{margin:2px 0 4px;font-size:22px}
 .qside .lead{font-size:13px;margin:0}
@@ -478,6 +494,8 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
   html,body{overflow-x:hidden}
   #lock input,#lock button{min-height:44px}
   #app,#app.show{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+  #app>.topbar{grid-row:1;grid-column:1}
+  #app>main{grid-row:2;grid-column:1;min-height:0}
   .topbar{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:30;min-height:52px;padding:4px 10px;background:#17221f;color:#fff;border-bottom:1px solid rgba(255,255,255,.08)}
   .topbar .t{font-size:16px;font-weight:650;color:#fff;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .nav-toggle{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;padding:0;border:0;border-radius:10px;background:rgba(255,255,255,.08);color:#fff;cursor:pointer}
@@ -489,7 +507,36 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
   .nav-scrim{display:none;position:fixed;inset:0;background:rgba(8,12,10,.45);z-index:35;border:0;padding:0;margin:0;width:100%;height:100%;cursor:pointer}
   html.nav-open .nav-scrim{display:block}
   html.nav-open,html.nav-open body{overflow:hidden}
-  aside nav a{min-height:44px}
+  aside nav a,aside a.dir-link{min-height:44px}
+  aside a.dir-link{margin:0 0 10px}
+  .qhead{margin:0;padding-left:14px;padding-right:14px}
+  html.qmode .qsplit,html.splitmap .qsplit{grid-template-rows:auto minmax(0,1fr);width:100%;min-width:0;min-height:0;flex:1 1 auto;align-self:stretch}
+  html.qmode .qmap,html.splitmap .qmap{max-height:34vh;min-height:0;overflow:hidden}
+  html.qmode .qmap-stage,html.splitmap .qmap-stage{min-height:120px}
+  html.qmap-compact .qmap{max-height:22vh}
+  html.qmode .qsplit-questions{
+    display:flex;flex-direction:column;overflow:auto;-webkit-overflow-scrolling:touch;
+    height:100%;min-height:0;grid-template-areas:none;grid-template-rows:none;grid-template-columns:none;
+  }
+  html.qmode .qsplit-questions>.qchrome{
+    display:contents;position:static;box-shadow:none;background:transparent;
+  }
+  html.qmode .qsplit-questions .qmap-tools{
+    order:1;position:static;flex:none;
+    flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;
+    max-width:100%;
+  }
+  html.qmode .qsplit-questions .qmap-tools>*{flex:none}
+  html.qmode .qsplit-questions .qmap{order:2;flex:none;max-height:none;min-height:0;overflow:visible;width:100%;position:relative}
+  html.qmode .qsplit-questions .qmap-stage{min-height:180px;height:32vh;max-height:34vh}
+  html.qmode .qsplit-questions .qhead{order:3;position:static;margin:0;padding:8px 14px 10px;box-shadow:none;border-bottom:0;background:var(--bg);z-index:auto}
+  html.qmode .qsplit-questions .qhead .qbar,html.qmode .qsplit-questions .qbar,html.qmode .qsplit-questions .chips,html.qmode .qsplit-questions .qbar-filters{position:static;top:auto;z-index:auto}
+  html.qmode .qsplit-questions .qbar-filters .chips{
+    display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;gap:8px;
+  }
+  html.qmode .qsplit-questions .qbar-filters .chips .chip{flex:none}
+  html.qmode .qsplit-questions .qside{order:4;overflow:visible;flex:none;padding:12px 14px 48px}
+  html.qmode .qsplit-questions .qside>:first-child{margin-top:12px}
   main{padding:16px 14px 56px}
   html.qmode main,html.splitmap main{padding:0}
   .ph{flex-direction:column;align-items:flex-start;gap:10px}
@@ -525,7 +572,7 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
 }
 </style>
 <script src="review-config.js?v=563aef7b9865d8d1"></script>
-<script src="vendor/safe-crypto.js?v=563aef7b9865d8d1"></script>
+<script src="vendor/safe-crypto.js?v=563aef7b9865d8d1"></script><script>(function(){function place(){var href=(window.SafeCrypto&&SafeCrypto.directoryHref&&SafeCrypto.directoryHref())||"";document.querySelectorAll("a.dir-link").forEach(function(a){if(href){a.setAttribute("href",href);a.removeAttribute("hidden");}else{a.setAttribute("hidden","");}});}if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",place);else place();})();</script>
 </head>
 <body>
 <div id="lock">
@@ -546,6 +593,7 @@ html.qmode #pg-questions.on,html.splitmap #pg-questions.on,html.splitmap #pg-ass
   </header>
   <aside id="sidenav"><div class="inner">
     <div class="brand"><div class="t lotname">SAFE review</div><div class="s">Pass 1 review</div></div>
+    <a class="dir-link" id="dirlink" href="../dir/" hidden>All reports</a>
     <nav id="nav"></nav>
     <div class="foot">Pass 1 data prep only.<br>No recommendations, ratings or judgments.<br><br><span id="footsurvey"></span><div style="margin-top:10px"><a href="model3d.html" target="_blank" rel="noopener">3D model viewer ↗</a><br><a href="nearmap-review.html" style="color:#9fd4c8" target="_blank" rel="noopener">Region editor ↗</a><br><a href="cameras.html" style="color:#9fd4c8" target="_blank" rel="noopener">Camera pins ↗</a></div></div>
   </div></aside>
@@ -568,7 +616,7 @@ function setupMobileNav(){
   }
   if(btn) btn.addEventListener('click',()=>open(!html.classList.contains('nav-open')));
   if(scrim) scrim.addEventListener('click',()=>open(false));
-  const nav=document.getElementById('nav');
+  const nav=document.getElementById('sidenav');
   if(nav) nav.addEventListener('click',ev=>{ if(ev.target.closest('a')) open(false); });
   document.addEventListener('keydown',ev=>{ if(ev.key==='Escape') open(false); });
   window.addEventListener('resize',()=>{ if(window.matchMedia('(min-width:961px)').matches) open(false); });
@@ -732,6 +780,7 @@ function render(){
     navh+=`<a href="#${k}" data-k="${k}"><span class="n">${i}</span>${esc(lab)}${counts[k]?`<span class="c">${counts[k]}</span>`:''}</a>`;
   });
   document.getElementById('nav').innerHTML=navh;
+  if(window.SafeCrypto&&SafeCrypto.bindDirectoryLinks) SafeCrypto.bindDirectoryLinks();
   // editor links: no camera roster -> no camera-pin editor; no map -> no region editor
   document.querySelectorAll('.foot a[href^="cameras.html"]').forEach(a=>{a.hidden=HIDE.has('cameras');});
   document.querySelectorAll('.foot a[href^="nearmap-review.html"]').forEach(a=>{a.hidden=!D.map;});
@@ -758,7 +807,7 @@ function route(){
   document.body.classList.toggle('splitmap',split);
   document.querySelectorAll('section.page').forEach(s=>s.classList.toggle('on',s.id==='pg-'+key));
   document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.k===key));
-  if(key==='questions'){if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
+  if(key==='questions'){wireQsideScroll(questionsScrollRoot()||document.querySelector('#pg-questions .qside'));if(QMODE==='2d')scheduleFitQ2();else if(Q3&&Q3.resize)Q3.resize();}
   if(key==='assets') refreshNadirMap(AMAP);
   if(key==='measurements') refreshNadirMap(MMAP);
   if(key==='alarms') refreshNadirMap(ZMAP);
@@ -2787,9 +2836,38 @@ function qHasLoc(q){
   if(l.kind==='measurement'){const m=measPts(measRow(l.id));return !!(m.pts&&m.pts.length);}
   return false;
 }
+function questionsScrollRoot(){
+  const split=document.querySelector('#pg-questions .qsplit-questions');
+  if(split && window.matchMedia('(max-width:960px)').matches) return split;
+  return document.querySelector('#pg-questions .qside');
+}
+function revealQMap(){
+  if(!window.matchMedia('(max-width:960px)').matches) return;
+  const split=document.querySelector('#pg-questions .qsplit-questions');
+  const map=document.querySelector('#pg-questions .qmap');
+  if(!split||!map) return;
+  const target=Math.max(0, map.offsetTop - 4);
+  if(Math.abs(split.scrollTop-target)>24) split.scrollTo({top:target,behavior:'smooth'});
+}
+function wireQsideScroll(side){
+  const root=questionsScrollRoot()||side;
+  if(!root||root._qCompactWired) return;
+  root._qCompactWired=true;
+  const sync=()=>{
+    const on=root.scrollTop>16 && window.matchMedia('(max-width:960px)').matches;
+    const html=document.documentElement;
+    if(html.classList.contains('qmap-compact')===on) return;
+    html.classList.toggle('qmap-compact',on);
+    if(typeof QMAP!=='undefined'&&QMAP){ if(QMAP._user&&typeof applyNadirMap==='function') applyNadirMap(QMAP); else if(typeof scheduleFitQ2==='function') scheduleFitQ2(); }
+    if(typeof Q3!=='undefined'&&Q3&&Q3.resize) Q3.resize();
+  };
+  root.addEventListener('scroll',sync,{passive:true});
+  window.addEventListener('resize',sync);
+  sync();
+}
 function rQuestions(){
   const Q=D.questions;const gs=QGROUPS();
-  let h=`<div class="qsplit"><div class="qmap" id="qmap">
+  let h=`<div class="qsplit qsplit-questions"><div class="qchrome">
       <div class="qmap-tools">
         <div class="seg" id="qmode"><button type="button" data-mode="2d" class="on">2D</button><button type="button" data-mode="3d">3D</button></div>
         <button type="button" class="btnl ghost qly-btn" id="qly-toggle" aria-expanded="false" aria-controls="qly-panel">Layers</button>
@@ -2798,6 +2876,12 @@ function rQuestions(){
         <button type="button" class="btnl ghost" id="qreset" style="padding:5px 10px">Reset view</button><a class="btnl ghost" href="model3d.html" target="_blank" rel="noopener" style="padding:5px 10px;text-decoration:none">Open 3D viewer</a>
         <span class="qmap-hint" id="qmaphint">Click a question to show it on the map</span>
       </div>
+      <div class="qhead">
+      <div class="qbar qbar-actions"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><button type="button" class="btnl ghost" id="qapprove" style="padding:6px 12px" title="Ask for Pass 1 approval. The pipeline checks the gate; export your review after this.">Request approval</button><span class="qstat" id="qstat"></span></div>
+      <div class="qbar qbar-filters"><div class="chips" id="qchips"><button class="chip on" data-g="all">All<b>${Q.length}</b></button>${gs.map(g=>`<button class="chip" data-g="${esc(g)}">${esc(g)}<b>${Q.filter(q=>q.group===g).length}</b></button>`).join('')}</div><label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="qopen"> Unanswered only</label><input type="search" id="qtxt" placeholder="Search questions…" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;min-width:180px"></div>
+      </div>
+      </div>
+      <div class="qmap" id="qmap">
       <div class="qmap-stage" id="qstage">
         <div id="qly-panel" role="region" aria-label="Map layers" hidden></div>
         <div id="q2d" class="qpane on"></div>
@@ -2808,14 +2892,13 @@ function rQuestions(){
     </div>
     <div class="qside">
       ${waterBanner(' · <a href="#fire">Fire tab</a>', true)}${head(secLab('questions'),'Reviewer questions','Click a question to show it on the map. Answer from the nadir, 3D model and outlines. Answers save automatically.')}
-      <div class="qbar"><div class="chips" id="qchips"><button class="chip on" data-g="all">All<b>${Q.length}</b></button>${gs.map(g=>`<button class="chip" data-g="${esc(g)}">${esc(g)}<b>${Q.filter(q=>q.group===g).length}</b></button>`).join('')}</div><label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="qopen"> Unanswered only</label><input type="search" id="qtxt" placeholder="Search questions…" style="padding:7px 11px;border:1px solid var(--line);border-radius:9px;min-width:180px"></div>
-      <div class="qbar" style="top:auto;padding-top:0"><div class="qprog"><i id="qprogbar" style="width:0"></i></div><span class="small" id="qprogtxt"></span><label class="small" style="display:inline-flex;align-items:center;gap:6px">Name <input id="qrevname" type="text" style="width:140px;padding:5px 8px;border:1px solid var(--line);border-radius:8px" placeholder="Your name"></label><button class="btnl ghost" id="qsave" style="padding:6px 12px">Save answers</button><button type="button" class="btnl ghost" id="qexport" style="padding:6px 12px">Export my review</button><button type="button" class="btnl ghost" id="qapprove" style="padding:6px 12px" title="Ask for Pass 1 approval. The pipeline checks the gate; export your review after this.">Request approval</button><span class="qstat" id="qstat"></span></div>
       <div id="qlist"></div>
     </div></div>`;
   const el=document.getElementById('pg-questions');el.innerHTML=h;
   el.querySelectorAll('#qchips .chip').forEach(c=>c.onclick=()=>{QG=c.dataset.g;el.querySelectorAll('#qchips .chip').forEach(x=>x.classList.toggle('on',x===c));drawQ()});
   el.querySelector('#qopen').onchange=e=>{QOPEN=e.target.checked;drawQ()};el.querySelector('#qtxt').oninput=e=>{QTXT=e.target.value.toLowerCase();drawQ()};
   el.querySelector('#qsave').onclick=()=>saveAnswers();const nm=el.querySelector('#qrevname');if(nm){nm.value=SafeCrypto.reviewerName();nm.onchange=()=>SafeCrypto.setReviewerName(nm.value);}const qa=el.querySelector('#qapprove');if(qa)qa.onclick=async()=>{if(nm)SafeCrypto.setReviewerName(nm.value);if(!SafeCrypto.reviewerName()){qStatus('Add your name first.','err');return;}const n=D.questions.filter(q=>ANS[q.id]&&ANS[q.id].answer).length;const note=prompt('Note for the approver (optional):')||'';try{await saveAnswers();await SafeCrypto.requestApproval(note,{answered:n,total:D.questions.length});qStatus('Approval requested. Now use Export my review and send the file.');}catch(e){qStatus('Could not record the request: '+e.message,'err');}};el.querySelector('#qexport').onclick=async()=>{if(nm)SafeCrypto.setReviewerName(nm.value);qStatus('Exporting…');try{await SafeCrypto.exportReview();qStatus('Downloaded the review export.');}catch(e){qStatus('Export failed: '+e.message,'err');}};
+  wireQsideScroll(el.querySelector('.qside'));
   el.querySelector('#qlist').addEventListener('click',e=>{
     const b=e.target.closest('.qopt');
     if(b){const id=b.dataset.q;const cur=ANS[id]||{};
@@ -3006,6 +3089,7 @@ function showQ(id){
   const t=linkTarget(q.link);
   qLayersFor(t&&t.pts&&t.pts.length?t:null);
   if(!t||!(t.pts&&t.pts.length)){qStat(qHasLoc(q)?'No outline is available for this question':'This question is not tied to a place on the map');if(Q3&&Q3.ready)syncQ3Overlays();drawQ2();return;}
+  if(typeof revealQMap==='function') revealQMap();
   qStat('Showing '+t.label);
   const fitPts=regionGroup(t).pts;
   if(QMODE==='2d'){if(QMAP)QMAP._user=false;drawQ2();fitQ2Bounds(fitPts.length?fitPts:t.pts);}
